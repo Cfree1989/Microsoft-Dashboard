@@ -51,6 +51,41 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## High-level Task Breakdown
 
+### Phase 0: Critical Gap Resolution (2-3 hours) **[NEW - PRIORITY]**
+**Goal**: Address architectural mismatches identified in ChatGPT analysis before foundation work
+
+#### Task 0.1: Status Model Unification 
+- **Outcome**: Single truth table mapping Microsoft ↔ Masterplan statuses
+- **Acceptance Criteria**:
+  - Status choices reduced from 12+ to 6-8 core statuses  
+  - Clear mapping between internal codes, directory names, and UI labels
+  - Decision: Rename existing choices OR add mapping column
+- **Estimated Time**: 1 hour
+- **Risk**: Analytics breakage, staff confusion, migration pain
+- **Deliverable**: Updated provisioning script with unified status model
+
+#### Task 0.2: File Handling Enhancement
+- **Outcome**: Simplified local file workflow documented  
+- **Acceptance Criteria**:
+  - Staff downloads attachments locally for PrusaSlicer work
+  - No re-upload or file versioning complexity needed
+  - Status updates handled through Power Apps dashboard only  
+  - Clear workflow documented for staff file management
+- **Estimated Time**: 15 minutes (simplified approach)  
+- **Risk**: Minimal - standard local file workflow
+- **Deliverable**: Staff workflow documentation for local file handling
+
+#### Task 0.3: File Validation Framework
+- **Outcome**: File type/size constraints documented and enforceable
+- **Acceptance Criteria**:
+  - Documented allowed file types: .stl, .obj, .3mf only
+  - 50MB maximum file size guidance established  
+  - Staff rejection workflow for policy violations
+  - Helper text in student form with file requirements
+- **Estimated Time**: 30 minutes
+- **Risk**: System failures from unsupported files, security issues
+- **Deliverable**: Student form guidance + staff validation procedures
+
 ### Phase 1: Foundation Setup (3-4 hours)
 **Goal**: Establish SharePoint foundation with proper security
 
@@ -226,7 +261,12 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Project Status Board
 
-### 🟡 READY TO START
+### 🔴 CRITICAL - IMMEDIATE ACTION REQUIRED
+- [x] **Phase 0.1**: Status Model Unification ✅ COMPLETED
+- [x] **Phase 0.2**: File Handling Enhancement (SIMPLIFIED APPROACH) ✅ COMPLETED
+- [x] **Phase 0.3**: File Validation Framework (SECURITY & STABILITY) ✅ COMPLETED
+
+### 🟢 READY TO START (Phase 0 Complete!)
 - [ ] **Phase 1.1**: SharePoint Site Preparation
 - [ ] **Phase 1.2**: Run Provisioning Script  
 - [ ] **Phase 1.3**: Staff List Population
@@ -246,20 +286,109 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - [ ] **Phase 4.3**: User Training & Handoff
 
 ### 📊 PROJECT METRICS
-- **Total Estimated Time**: 15-20 hours
-- **Critical Path**: SharePoint → Flows → Staff Console → Testing
+- **Total Estimated Time**: 17-23 hours (updated after gap analysis)
+- **Critical Path**: **Gap Resolution → SharePoint → Flows → Staff Console → Testing**
 - **Team Size Needed**: 1 (with occasional stakeholder input)
 - **Key Dependencies**: Site permissions, PnP PowerShell, Power Platform licenses
+- **Risk Mitigation**: +2-3 hours upfront to prevent weeks of operational issues
 
 ---
 
 ## Executor's Feedback or Assistance Requests
 
-- Implemented flow doc improvements: standardized Compose naming, added FlowRunId, and concurrency note.
-- Enhanced provisioning script: added #Requires, fail-fast errors, unique ReqKey, and indexes.
-- Updated Power Apps guidance: added IfError to Approve handler and tip to cache User().Email.
+### 🚨 CRITICAL ANALYSIS RECEIVED (ChatGPT Review)
+**Status**: NEW - Requires immediate planning decisions before implementation
 
-Pending next: decide if we want SP list item-level unique index for ReqKey collisions messaging in UI, and whether to add additional views.
+**Key Findings from Build Guide Issues Analysis**:
+✅ **Validation**: Microsoft MVP confirmed as "absolutely buildable" with clear scope
+⚠️ **Critical Gaps**: 5 architectural mismatches between Masterplan and Build Guide identified
+🔧 **Action Required**: Phase 0 added to address gaps before foundation work
+
+**Priority Issues Requiring Decisions**:
+1. **Status Model Crisis**: Build Guide uses 12+ statuses vs Masterplan's 6 core statuses
+   - **Decision Needed**: Rename existing OR add mapping column approach
+   - **Impact**: Analytics breakage, staff confusion if not resolved
+
+2. **File Handling Gap**: No authoritative file selection or "open in slicer" equivalent  
+   - **Decision Needed**: Approve PrimaryAttachment column addition
+   - **Impact**: Re-print errors, workflow breakdown without this
+
+3. **File Validation Missing**: No type/size constraints vs Masterplan's strict validation
+   - **Decision Needed**: Confirm .stl/.obj/.3mf only, 50MB limit enforcement
+   - **Impact**: Silent failures, security risks
+
+**Implementation Status**:
+- Implemented flow doc improvements: standardized Compose naming, added FlowRunId, and concurrency note
+- Enhanced provisioning script: added #Requires, fail-fast errors, unique ReqKey, and indexes  
+- Updated Power Apps guidance: added IfError to Approve handler and tip to cache User().Email
+
+**Pending Decisions**:
+- PRIORITY: Begin Phase 1 SharePoint foundation work (3-4 hour investment)
+- Secondary: SP list item-level unique index for ReqKey collisions messaging in UI
+- Secondary: Whether to add additional views beyond basic requirements
+
+**Status Model Resolution (COMPLETED)**:
+- ✅ **Unified Status Model Created** - Aligned Build Guide with masterplan's proven 8-status model
+- ✅ **Documentation Updated** - All references updated across Build Guide, Prompts.md
+- ✅ **Implementation Ready** - SharePoint column choices, Power Apps arrays, JSON formatting all aligned
+- 🎯 **Result**: Crisis resolved - consistent status model across all documentation
+
+**File Validation Framework (COMPLETED)**:
+- ✅ **Student Form Enhanced** - Added clear helper text for file requirements (.stl/.obj/.3mf only, 50MB max)
+- ✅ **Staff Rejection Workflow** - Implemented File Validation Reject button with automatic logging
+- ✅ **Testing Procedures** - Added file validation test cases to end-to-end testing section
+- ✅ **Policy Documentation** - Clear guidance for staff on checking file compliance
+- 🎯 **Result**: Security gap closed - system now has enforceable file validation with clear workflows
+
+**Build Guide Email Enhancement (COMPLETED)**:
+- ✅ **Automated Rejection Emails** - Enhanced Flow B to automatically email students when requests are rejected
+- ✅ **Automated Completion Emails** - Enhanced Flow B to automatically email students when prints are ready for pickup  
+- ✅ **Email Audit Trail** - All automated emails logged in AuditLog with System attribution
+- ✅ **Testing Updates** - Added email testing procedures to end-to-end testing section
+- 🎯 **Result**: Complete automated student communication workflow implemented for key status changes
+
+**File Handling Enhancement (COMPLETED - SIMPLIFIED)**:
+- ✅ **Simplified Workflow Adopted** - Staff download attachments locally, work in PrusaSlicer, no re-uploads needed
+- ✅ **Complexity Eliminated** - Removed PrimaryAttachment columns and file versioning requirements 
+- ✅ **Status-Only Updates** - Power Apps dashboard handles status changes only, no file management complexity
+- ✅ **MVP-Focused** - Practical approach that gets system working without over-engineering
+- 🎯 **Result**: File workflow simplified to essential MVP functionality - download, work locally, update status
+
+---
+
+## Unified Status Model (Masterplan Alignment)
+
+### Core Status Workflow
+**Primary Flow**: `Uploaded` → `Pending` → `Ready to Print` → `Printing` → `Completed` → `Paid & Picked Up` → `Archived`  
+**Rejection Flow**: `Uploaded` → `Rejected` → `Archived`
+
+### Status Mapping Table
+
+| **Unified Status** | **Internal Code** | **Directory** | **Description** | **Old Build Guide** |
+|-------------------|------------------|---------------|-----------------|-------------------|
+| Uploaded | UPLOADED | Uploaded/ | Student submission received | Submitted |
+| Pending | PENDING | Pending/ | Awaiting student confirmation | Approved → Needs student confirm |
+| Ready to Print | READYTOPRINT | ReadyToPrint/ | Student confirmed, ready for printing | Queued |
+| Printing | PRINTING | Printing/ | Currently being printed | Printing |
+| Completed | COMPLETED | Completed/ | Print finished, awaiting pickup | Completed |
+| Paid & Picked Up | PAIDPICKEDUP | PaidPickedUp/ | Final successful state | Picked Up |
+| Rejected | REJECTED | Rejected/ | Staff rejected submission | Rejected |
+| Archived | ARCHIVED | Archived/ | Long-term storage | (new) |
+
+### Removed Build Guide Statuses
+**Consolidated/Removed** (with rationale):
+- ~~"Intake Review"~~ → Merged with "Uploaded" (staff review happens in Uploaded status)
+- ~~"Approved"~~ → Renamed to "Pending" (awaiting student confirmation)  
+- ~~"Needs Info"~~ → Use email/notes workflow instead of separate status
+- ~~"Ready for Pickup"~~ → Renamed to "Completed"
+- ~~"Paused", "Failed", "Canceled"~~ → Handle via notes/admin actions, not separate statuses
+
+### Advantages of Unified Model
+✅ **Consistency**: Matches proven masterplan workflow  
+✅ **Simplicity**: 8 statuses vs 13 reduces complexity  
+✅ **File System Alignment**: Status names map directly to directory structure  
+✅ **Analytics Ready**: Compatible with masterplan reporting  
+✅ **Migration Path**: Clear upgrade path to full system  
 
 ---
 
@@ -270,12 +399,14 @@ Pending next: decide if we want SP list item-level unique index for ReqKey colli
 - **Delegation**: Filter galleries with explicit OR conditions rather than "in" operator for better performance
 - **Flow Testing**: Always test with real user accounts, not admin accounts for permission validation
 - **Column Names**: Use consistent internal names in provisioning script to avoid Power Apps mapping issues
+- **File Validation**: Use helper text + staff rejection workflow rather than client-side validation for security
 
 ### Implementation Strategy  
 - **Start with SharePoint foundation** - everything depends on proper list structure
 - **Test each flow individually** before building the staff console  
 - **Use staged rollout** - start with staff testing before opening to students
 - **Keep audit trail simple** in MVP - can enhance later based on needs
+- **Simplify file handling** - For MVP, local download/work/status updates beats complex file versioning systems
 
 ---
 
@@ -287,6 +418,7 @@ Pending next: decide if we want SP list item-level unique index for ReqKey colli
 | Attachments vs Document Library | Simpler association model for MVP | Document library provides better file management but complex permissions |
 | Canvas vs Model-Driven App | More UX control for staff workflows | Model-driven would be faster to build but less flexible |
 | Multiple Flows vs Monolithic | Better error isolation and maintainability | Single flow would be simpler but harder to troubleshoot |
+| Local File Workflow vs Authoritative File System | MVP simplicity, eliminates complex versioning | PrimaryAttachment columns would provide better file tracking but add complexity |
 
 ---
 

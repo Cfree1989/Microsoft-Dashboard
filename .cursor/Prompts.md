@@ -69,21 +69,21 @@ Absolutely, Conrad — here’s a **complete, build-ready blueprint** for your M
 | Due Date | DueDate | Date | Optional |
 | Dimensions (mm) | Dimensions | Single line | e.g., `120 x 80 x 40` |
 | Notes | Notes | Multiple lines | Plain text |
-| Status | Status | Choice | **Default:** `Submitted`. Full set: `Submitted, Intake Review, Needs Info, Approved, Rejected, Queued, Printing, Paused, Failed, Completed, Ready for Pickup, Picked Up, Canceled` |
+| Status | Status | Choice | **Default:** `Uploaded`. Full set: `Uploaded, Pending, Ready to Print, Printing, Completed, Paid & Picked Up, Rejected, Archived` |
 | Priority | Priority | Choice | (Low, Normal, High, Rush) |
 | Assigned To | AssignedTo | Person/Group | Staff who owns it |
 | Estimated Hours | EstHours | Number | Staff-only |
 | Staff Notes | StaffNotes | Multiple lines | Staff-only |
-| Last Action | LastAction | Choice | (Created, Updated, Status Change, File Added, Needs Info, Approved, Rejected, Queued, Printing, Paused, Failed, Completed, Ready for Pickup, Picked Up, Canceled, Comment Added, Email Sent) |
+| Last Action | LastAction | Choice | (Created, Updated, Status Change, File Added, Approved, Rejected, Printing, Completed, Picked Up, Comment Added, Email Sent) |
 | Last Action By | LastActionBy | Person | Staff or Student |
 | Last Action At | LastActionAt | Date/Time | Defaults to `Created`/Flow |
 | Student LSU ID | StudentLSUID | Single line | Optional |
 
 **Views**
 - **Students – My Requests** (filter: `Created By` is `[Me]`)
-- **Staff – Queue** (filters: Status in `Submitted, Intake Review, Needs Info, Approved, Queued`)
+- **Staff – Queue** (filters: Status in `Uploaded, Pending, Ready to Print, Printing`)
 - **Printing** (Status = `Printing`)
-- **Completed This Week** (Status in `Completed, Ready for Pickup, Picked Up` + [Modified] in the last 7 days)
+- **Completed This Week** (Status in `Completed, Paid & Picked Up` + [Modified] in the last 7 days)
 
 **Item-level permissions (to protect student privacy)**
 - List settings → **Advanced settings**:
@@ -144,32 +144,22 @@ This list is used by the Power App to determine **staff UI** and to facilitate *
     "background-color": {
       "operator": "?",
       "operands": [
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "submitted" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "uploaded" ] },
         "#0078D4",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "intake review" ] },
-        "#605E5C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "needs info" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "pending" ] },
         "#FFB900",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "approved" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "ready to print" ] },
+        "#107C10",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "printing" ] },
+        "#6B69D6",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "completed" ] },
+        "#004E8C",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "paid & picked up" ] },
         "#107C10",
         { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "rejected" ] },
         "#D13438",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "queued" ] },
-        "#8E8CD8",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "printing" ] },
-        "#6B69D6",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "paused" ] },
-        "#744DA9",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "failed" ] },
-        "#A4262C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "completed" ] },
-        "#004E8C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "ready for pickup" ] },
-        "#009E49",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "picked up" ] },
-        "#107C10",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "canceled" ] },
-        "#C50F1F",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "archived" ] },
+        "#605E5C",
         "#333333"
       ]
     }
@@ -259,8 +249,8 @@ ClearCollect(colStaff, Filter(Staff, Active = true));
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(Member.Email) = varMeEmail)) > 0);
 
 // Common choices
-Set(varStatuses, ["Submitted","Intake Review","Needs Info","Approved","Rejected","Queued","Printing","Paused","Failed","Completed","Ready for Pickup","Picked Up","Canceled"]);
-Set(varQuickQueue, ["Submitted","Intake Review","Approved","Queued","Printing"]);
+Set(varStatuses, ["Uploaded","Pending","Ready to Print","Printing","Completed","Paid & Picked Up","Rejected","Archived"]);
+Set(varQuickQueue, ["Uploaded","Pending","Ready to Print","Printing"]);
 ```
 
 **Screen: Dashboard**
@@ -289,7 +279,7 @@ Set(varLastActor,
 
 // Update item
 Patch(PrintRequests, ThisItem, {
-    Status: "Approved",
+    Status: "Pending",
     LastAction: "Approved",
     LastActionBy: varLastActor,
     LastActionAt: Now(),
@@ -302,7 +292,7 @@ Patch(PrintRequests, ThisItem, {
     "Status Change",
     "Status",
     ThisItem.Status,
-    "Approved",
+    "Pending",
     varMeEmail,
     "Power Apps",
     "Approved in Staff Console"
@@ -311,30 +301,9 @@ Patch(PrintRequests, ThisItem, {
 Notify("Marked Approved.", NotificationType.Success);
 ```
 
-**Other buttons (copy/paste and change literals)**: `Reject`, `Queue`, `Start Printing` (`Printing`), `Pause`, `Fail`, `Complete`, `Ready for Pickup`, `Picked Up`, `Needs Info`, `Cancel`.
+**Other buttons (copy/paste and change literals)**: `Reject`, `Ready to Print`, `Start Printing` (`Printing`), `Complete`, `Picked Up`.
 
-**Example — Needs Info**:
-```powerfx
-Patch(PrintRequests, ThisItem, {
-    Status: "Needs Info",
-    LastAction: "Needs Info",
-    LastActionBy: varLastActor,
-    LastActionAt: Now()
-});
-
-'PR-Action_LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    ThisItem.Status,
-    "Needs Info",
-    varMeEmail,
-    "Power Apps",
-    "Additional info requested"
-);
-
-Notify("Set to Needs Info and student will be notified.", NotificationType.Information);
-```
+**Note**: For status issues that previously used "Needs Info", use staff notes and email workflows instead of a separate status.
 
 > You can also add a **Dropdown** bound to `varStatuses` to allow any status change with one handler.
 
@@ -660,32 +629,22 @@ Only paste **JSON** here. Use this **only** for the **Status** pill styling:
     "background-color": {
       "operator": "?",
       "operands": [
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "submitted" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "uploaded" ] },
         "#0078D4",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "intake review" ] },
-        "#605E5C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "needs info" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "pending" ] },
         "#FFB900",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "approved" ] },
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "ready to print" ] },
+        "#107C10",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "printing" ] },
+        "#6B69D6",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "completed" ] },
+        "#004E8C",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "paid & picked up" ] },
         "#107C10",
         { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "rejected" ] },
         "#D13438",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "queued" ] },
-        "#8E8CD8",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "printing" ] },
-        "#6B69D6",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "paused" ] },
-        "#744DA9",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "failed" ] },
-        "#A4262C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "completed" ] },
-        "#004E8C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "ready for pickup" ] },
-        "#009E49",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "picked up" ] },
-        "#107C10",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "canceled" ] },
-        "#C50F1F",
+        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "archived" ] },
+        "#605E5C",
         "#333333"
       ]
     }
@@ -761,8 +720,8 @@ Set(varMeName, User().FullName);
 ClearCollect(colStaff, Filter(Staff, Active = true));
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(Member.Email) = varMeEmail)) > 0);
 
-Set(varStatuses, ["Submitted","Intake Review","Needs Info","Approved","Rejected","Queued","Printing","Paused","Failed","Completed","Ready for Pickup","Picked Up","Canceled"]);
-Set(varQuickQueue, ["Submitted","Intake Review","Approved","Queued","Printing"]);
+Set(varStatuses, ["Uploaded","Pending","Ready to Print","Printing","Completed","Paid & Picked Up","Rejected","Archived"]);
+Set(varQuickQueue, ["Uploaded","Pending","Ready to Print","Printing"]);
 ```
 
 **Queue Gallery (Items):**
@@ -779,7 +738,7 @@ SortByColumns(
 > ```powerfx
 > Filter(
 >   PrintRequests,
->   Status = "Submitted" || Status = "Intake Review" || Status = "Approved" || Status = "Queued" || Status = "Printing"
+>   Status = "Uploaded" || Status = "Pending" || Status = "Ready to Print" || Status = "Printing"
 > )
 > ```
 
@@ -812,7 +771,7 @@ Patch(PrintRequests, ThisItem, {
     "Status Change",
     "Status",
     ThisItem.Status,
-    "Approved",
+    "Pending",
     varMeEmail,
     "Power Apps",
     "Approved in Staff Console"
