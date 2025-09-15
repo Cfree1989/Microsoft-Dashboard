@@ -182,41 +182,74 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 ### Flow A — PR-Create: Set ReqKey + Acknowledge (Automated)
 **Purpose:** When a new request is created, assign a **ReqKey**, log a **Created** event, and email the student.
 
+#### Step-by-Step Setup:
+
 1. **Create → Automated cloud flow**
    - Name: `PR-Create: Set ReqKey + Acknowledge`
    - Trigger: **SharePoint – When an item is created**
    - Site address: your FabLab site → List: `PrintRequests`
-2. **New step → Compose** (name: Compose ReqKey)
-   - Inputs:
+
+2. **New step → Compose** (rename to: "Compose ReqKey")
+   - **Inputs**:
 ```
 @{concat('REQ-', right(concat('00000', string(triggerOutputs()?['body/ID'])), 5))}
 ```
-3. **Update item** (SharePoint)
-   - Site/List: same as trigger
-   - ID: `ID` (from trigger)
-   - **ReqKey**: use **Outputs** of *Compose ReqKey*
+
+3. **New step → Update item** (SharePoint)
+   - **Site Address**: same as trigger
+   - **List Name**: PrintRequests
+   - **Id**: `ID` (from trigger)
+   - **ReqKey**: `Outputs` (from Compose ReqKey step)
    - **StudentEmail**:
 ```
 @{toLower(triggerOutputs()?['body/Author/Email'])}
 ```
-4. **Create item** in `AuditLog`
-   - Title: `Created`
-   - RequestID: `ID` (from trigger)
-   - ReqKey: Outputs of *Compose ReqKey*
-   - Action: `Created`
-   - Actor: map to **Author Claims** (person field will resolve)
-   - ActorRole: `Student`
-   - ClientApp: `SharePoint Form`
-5. **Send an email from a shared mailbox (V2)** to the student
-   - Shared mailbox: `coad-fablab@lsu.edu`
-   - To: **StudentEmail** (from the item or step 3)
-   - Subject: `We received your 3D Print request – @{outputs('Compose ReqKey')}`
-   - Body (example):
+   - **Title**: `Title` (from trigger) ← prevents clearing required field
+   - **Course**: `Course` (from trigger) ← OR use "Limit columns by view" to avoid mapping required fields
+
+4. **New step → Create item** (SharePoint → AuditLog)
+   - **Site Address**: same
+   - **List Name**: AuditLog
+   - **Title**: `Created`
+   - **RequestID**: `ID` (from trigger)
+   - **ReqKey**: `Outputs` (from Compose ReqKey)
+   - **Action Value**: `Created`
+   - **FieldName**: (leave blank)
+   - **OldValue**: (leave blank)
+   - **NewValue**: (leave blank)
+   - **Actor Claims**: `Author Claims` (from trigger)
+   - **ActorRole Value**: `Student`
+   - **ClientApp Value**: `SharePoint Form`
+   - **ActionAt** (optional):
+```
+@{utcNow()}
+```
+   - **FlowRunId** (optional):
+```
+@{workflow()['run']['name']}
+```
+   - **Notes**: (leave blank)
+
+5. **New step → Send an email from a shared mailbox (V2)**
+   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+   - **To**: `StudentEmail` (from Update item step)
+   - **Subject**:
+```
+We received your 3D Print request – @{outputs('Compose ReqKey')}
+```
+   - **Body**:
 ```html
 <p>We received your 3D Print request.</p>
 <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']}</p>
-<p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request (@{outputs('Compose ReqKey')})</a></p>
+<p><strong>Request ID:</strong> @{outputs('Compose ReqKey')}</p>
+<p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
+<p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
 <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p>Our team will review your request and contact you with any questions. You'll receive updates as your request progresses through our queue.</p>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
 > **Tip:** If the **Actor** person field fails to resolve, use **Author Claims** from the trigger.
@@ -232,140 +265,230 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 ### Flow B — PR-Audit: Log changes + Email notifications (Automated)
 **Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes.
 
+#### Step-by-Step Setup:
+
 1. **Create → Automated cloud flow**
    - Name: `PR-Audit: Log changes + Email notifications`
    - Trigger: **SharePoint – When an item is created or modified**
-   - Site/List: `PrintRequests`
-2. **Get changes for an item or a file (properties only)**
-   - Site/List: same
-   - ID: `ID` (from trigger)
-   - Since: **Trigger Window Start Token** (dynamic content)
-   - Settings: Using the trigger token compares current values to those at the start of the flow run and is the simplest, reliable approach.
-3. Add **Condition** steps using the action's outputs **Has Column Changed: {Field}** for fields you care about (repeat per field):
-   - Status, AssignedTo, Priority, Method, PrinterSelection, Color, DueDate, EstHours, WeightEstimate, StaffNotes, Attachments
-4. For each field that changed → **Create item** in `AuditLog`:
-   - Title: `Field Change: <FieldName>`
-   - RequestID: `ID` (from trigger)
-   - ReqKey: `ReqKey` (from the current item)
-   - Action: `Status Change` (if Status changed) else `Updated`
-   - FieldName: the literal field name (e.g., `Status`)
-   - OldValue: *(optional for MVP)*
-   - NewValue: the current field value from the trigger body
-   - Actor: **Editor Claims** (from trigger)
-   - ActorRole: `Staff` if the editor is a staff account; otherwise `Student`
-   - ClientApp: `SharePoint Form` or `Power Apps`
-   - Example mapping for the `Actor` person field: set it to `Editor Claims` from the trigger; SharePoint resolves the person value automatically.
+   - **Site Address**: your FabLab site
+   - **List Name**: PrintRequests
 
-5. **Add Status-Based Email Logic**: After the audit logging, add **Condition** to check if Status field changed:
-   - **Condition**: `Has Column Changed: Status` equals `true`
-   - **Yes branch**: Add nested conditions for specific status values
-   - Tip: Keep email logic inside this branch so multiple field changes on the same edit don’t send duplicate emails.
+2. **New step → Get changes for an item or a file (properties only)**
+   - **Site Address**: same as trigger
+   - **List Name**: PrintRequests
+   - **Id**: `ID` (from trigger)
+   - **Since**: `Trigger Window Start Token` (from dynamic content)
+   - This compares current values to those at flow start time.
 
-6. (Optional, recommended) **Pending → Student Confirmation Email**
-   - Purpose from masterplan: `Pending` means “awaiting student confirmation.” You can notify students automatically when staff approve a request.
-   - Add nested condition under the Status-changed branch:
-     - If `Status` equals `Pending` → send one of the following:
-       - Option A — Simple confirmation email:
-         ```html
-         <p>Your 3D Print request has been approved. Please review and confirm.</p>
-         <p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request</a></p>
-         <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-         <p>Reply to this email to confirm you’re ready to proceed. If changes are needed, reply with details.</p>
-         ```
-       - Option B — “Send email with options (V2)” action:
-         - Subject: `Please confirm your 3D Print request – @{triggerOutputs()?['body/ReqKey']}`
-         - Options: `Confirm | Needs Changes`
-         - After the action, add a step to **Get response details** and branch:
-           - If `SelectedOption` = `Confirm` → (optional) set `Status` to `Ready to Print` or leave as-is for staff to proceed
-           - If `SelectedOption` = `Needs Changes` → alert staff by email or add to `StaffNotes`
-   - Keep this optional for MVP. If you prefer a no-confirmation workflow, skip this branch and move directly from `Pending` to staff processing.
+3. **New step → Condition** (rename to: "Check if Status Changed")
+   - **Choose a value**: `Has Column Changed: Status` (from Get changes output)
+   - **Condition**: is equal to
+   - **Choose a value**: `true`
 
-6. **Rejection Email** (inside Status changed = Yes):
-   - **Condition**: `Status` (from trigger body) equals `Rejected`
-   - **Yes branch**: **Send an email from a shared mailbox (V2)**
-     - Shared mailbox: `coad-fablab@lsu.edu`
-     - To: `StudentEmail` (from trigger body)
-     - Subject: `Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}`
-     - Body:
+4. **Yes branch → Create item** (SharePoint → AuditLog) for Status changes:
+   - **Site Address**: same
+   - **List Name**: AuditLog
+   - **Title**: `Status Change`
+   - **RequestID**: `ID` (from trigger)
+   - **ReqKey**: `ReqKey` (from trigger body)
+   - **Action Value**: `Status Change`
+   - **FieldName**: `Status`
+   - **OldValue**: (optional - leave blank for MVP)
+   - **NewValue**: `Status` (from trigger body)
+   - **Actor Claims**: `Editor Claims` (from trigger)
+   - **ActorRole Value**: `Staff` (or conditionally check if editor is staff)
+   - **ClientApp Value**: `SharePoint Form`
+   - **ActionAt**:
+```
+@{utcNow()}
+```
+   - **FlowRunId**:
+```
+@{workflow()['run']['name']}
+```
+
+5. **Add parallel Condition branches** for other fields (repeat pattern above):
+   - **AssignedTo**: `Has Column Changed: AssignedTo` = true
+   - **Priority**: `Has Column Changed: Priority` = true  
+   - **Method**: `Has Column Changed: Method` = true
+   - **PrinterSelection**: `Has Column Changed: PrinterSelection` = true
+   - **EstHours**: `Has Column Changed: EstHours` = true
+   - **WeightEstimate**: `Has Column Changed: WeightEstimate` = true
+   - **StaffNotes**: `Has Column Changed: StaffNotes` = true
+   - Each creates an AuditLog entry with appropriate FieldName and NewValue from trigger body.
+
+6. **Status-Based Email Logic** (inside the "Check if Status Changed" Yes branch):
+
+   **Add nested Condition** ("Check Status = Rejected"):
+   - **Choose a value**: `Status` (from trigger body)
+   - **Condition**: is equal to
+   - **Choose a value**: `Rejected`
+   
+   **Yes branch → Send an email from a shared mailbox (V2)**:
+   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+   - **To**: `StudentEmail` (from trigger body)
+   - **Subject**:
+```
+Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}
+```
+   - **Body**:
 ```html
 <p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
 <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
 <p><strong>Reason:</strong> Please check the staff notes in your request for specific details.</p>
-<p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p>You may submit a new corrected request at any time.</p>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p>You may submit a new corrected request at any time through the FabLab website.</p>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-7. **Completion Email** (inside Status changed = Yes):
-   - **Condition**: `Status` (from trigger body) equals `Completed`
-   - **Yes branch**: **Send an email from a shared mailbox (V2)**
-     - Shared mailbox: `coad-fablab@lsu.edu`
-     - To: `StudentEmail` (from trigger body)  
-     - Subject: `Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}`
-     - Body:
+   **Add parallel nested Condition** ("Check Status = Completed"):
+   - **Choose a value**: `Status` (from trigger body)
+   - **Condition**: is equal to
+   - **Choose a value**: `Completed`
+   
+   **Yes branch → Send an email from a shared mailbox (V2)**:
+   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+   - **To**: `StudentEmail` (from trigger body)
+   - **Subject**:
+```
+Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}
+```
+   - **Body**:
 ```html
 <p>Great news! Your 3D print is completed and ready for pickup.</p>
 <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
+<p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
+<p><strong>Printer Used:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
+<br>
 <p><strong>Next Steps:</strong></p>
 <ul>
-  <li>Visit the FabLab to pay and collect your print</li>
+  <li>Visit the Digital Fabrication Lab to pay and collect your print</li>
   <li>Payment will be calculated based on actual material used</li>
   <li>Bring your student ID for verification</li>
+  <li>Lab hours: [Add your lab hours here]</li>
 </ul>
-<p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-8. **Email Audit Logging**: For both email types, add **Create item** in `AuditLog`:
-   - Title: `Email Sent: Rejection` or `Email Sent: Completion`
-   - RequestID: `ID` (from trigger)
-   - ReqKey: `ReqKey` (from trigger body)
-   - Action: `Email Sent`
-   - FieldName: `StudentEmail`
-   - NewValue: Email address sent to
-   - Actor: `System` (automated)
-   - ActorRole: `System`
-   - ClientApp: `Power Automate`
-   - Optional: Add a Compose at the top with `@{workflow()['run']['name']}` and store it in `FlowRunId` for traceability.
+7. **Email Audit Logging** (add after each email step):
+   
+   For **Rejection Email → Create item** (AuditLog):
+   - **Title**: `Email Sent: Rejection`
+   - **RequestID**: `ID` (from trigger)
+   - **ReqKey**: `ReqKey` (from trigger body)
+   - **Action Value**: `Email Sent`
+   - **FieldName**: `StudentEmail`
+   - **NewValue**: `StudentEmail` (from trigger body)
+   - **Actor Claims**: (leave blank for system)
+   - **ActorRole Value**: `System`
+   - **ClientApp Value**: `Power Automate`
+   - **ActionAt**: `@{utcNow()}`
+   - **FlowRunId**: `@{workflow()['run']['name']}`
+   - **Notes**: `Rejection notification sent to student`
+
+   For **Completion Email → Create item** (AuditLog):
+   - **Title**: `Email Sent: Completion`
+   - **RequestID**: `ID` (from trigger)
+   - **ReqKey**: `ReqKey` (from trigger body)
+   - **Action Value**: `Email Sent`
+   - **FieldName**: `StudentEmail`
+   - **NewValue**: `StudentEmail` (from trigger body)
+   - **Actor Claims**: (leave blank for system)
+   - **ActorRole Value**: `System`
+   - **ClientApp Value**: `Power Automate`
+   - **ActionAt**: `@{utcNow()}`
+   - **FlowRunId**: `@{workflow()['run']['name']}`
+   - **Notes**: `Completion notification sent to student`
 
 > **Note:** Power Automate doesn't directly provide the *previous* value in a simple way. For MVP, logging the **new** value is sufficient; if needed you can look up the previous version in SharePoint version history.
 
 ### Flow C — PR-Action: Log action (Instant, called from Power Apps)
 **Purpose:** When staff press a button in the staff app (e.g., Approve), log that action with the true actor identity.
 
+#### Step-by-Step Setup:
+
 1. **Create → Instant cloud flow**
    - Name: `PR-Action: Log action`
    - Trigger: **Power Apps**
-2. **Add input parameters** (from Power Apps):
-   - `RequestID` (Text)
-   - `Action` (Text) — e.g., `Status Change`
-   - `FieldName` (Text) — e.g., `Status`
-   - `OldValue` (Text)
-   - `NewValue` (Text)
-   - `ActorEmail` (Text)
-   - `ClientApp` (Text) — `Power Apps`
-   - `Notes` (Text)
-3. **Get item** (SharePoint)
-   - Site/List: `PrintRequests`
-   - ID: `RequestID` (from trigger)
-4. **Create item** (SharePoint → `AuditLog`)
-   - Title: `Action: @{triggerBody()['Action']}`
-   - RequestID: `RequestID`
-   - ReqKey: from **Get item**
-   - Action: `Action` (trigger input)
-   - FieldName: `FieldName`
-   - OldValue: `OldValue`
-   - NewValue: `NewValue`
-   - Actor: `ActorEmail` (SharePoint person field resolves email)
-   - ActorRole: `Staff`
-   - ClientApp: `ClientApp`
-   - Notes: `Notes`
-5. (Optional) **Respond to Power Apps** with `true` to confirm success.
-   - Power Apps tip: Call the flow within `IfError()`, then `Notify()` on success/failure to improve UX.
+   - Skip the "Choose how to trigger this flow" step (Power Apps will be added automatically)
+
+2. **Add input parameters** from Power Apps trigger:
+   Click **Add an input** for each:
+   - **RequestID** (Text) → "The ID of the request being modified"
+   - **Action** (Text) → "The action being performed (e.g., Status Change)"
+   - **FieldName** (Text) → "The field being changed (e.g., Status)"
+   - **OldValue** (Text) → "Previous value of the field"
+   - **NewValue** (Text) → "New value of the field"
+   - **ActorEmail** (Text) → "Email of the staff member performing the action"
+   - **ClientApp** (Text) → "Source application (Power Apps)"
+   - **Notes** (Text) → "Additional context or notes"
+
+3. **New step → Get item** (SharePoint)
+   - **Site Address**: your FabLab site
+   - **List Name**: PrintRequests
+   - **Id**: `RequestID` (from Power Apps trigger)
+
+4. **New step → Create item** (SharePoint → AuditLog)
+   - **Site Address**: same
+   - **List Name**: AuditLog
+   - **Title**: 
+```
+Action: @{triggerBody()['text']}
+```
+   - **RequestID**: `RequestID` (from Power Apps)
+   - **ReqKey**: `ReqKey` (from Get item step)
+   - **Action Value**: `Action` (from Power Apps)
+   - **FieldName**: `FieldName` (from Power Apps)
+   - **OldValue**: `OldValue` (from Power Apps)
+   - **NewValue**: `NewValue` (from Power Apps)
+   - **Actor Claims**: `ActorEmail` (from Power Apps - SharePoint resolves to person)
+   - **ActorRole Value**: `Staff`
+   - **ClientApp Value**: `ClientApp` (from Power Apps)
+   - **ActionAt**:
+```
+@{utcNow()}
+```
+   - **FlowRunId**:
+```
+@{workflow()['run']['name']}
+```
+   - **Notes**: `Notes` (from Power Apps)
+
+5. **New step → Respond to a PowerApp or flow** (optional but recommended)
+   - **Text**: `true`
+   - This confirms success back to Power Apps
+
+#### Power Apps Integration Notes:
+- **Call the flow within `IfError()`** for better error handling:
+```powerfx
+IfError(
+    'PR-Action: Log action'.Run(
+        Text(ThisItem.ID),
+        "Status Change",
+        "Status",
+        ThisItem.Status,
+        "Ready to Print",
+        varMeEmail,
+        "Power Apps",
+        "Approved in Staff Console"
+    ),
+    Notify("Failed to log action: " & FirstError.Message, NotificationType.Error),
+    Notify("Action logged successfully.", NotificationType.Success)
+)
+```
 
 ---
 
 ## Part 3 — Power Apps
 
-### A) Student Submission Form (Customize SharePoint Form)
+### A Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
 2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
 3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstHours, WeightEstimate, LastAction, LastActionBy, LastActionAt.
@@ -409,7 +532,7 @@ Notify("Request submitted. You'll receive an email confirmation shortly.", Notif
 ```
 7. **Publish** the form and close the editor.
 
-### B) Staff Console (Canvas App — Tablet)
+### B Staff Console (Canvas App — Tablet)
 1. Open **Power Apps** → **Create → Canvas app** (Tablet).
 2. **Data** → Add data: SharePoint → connect to your site → add `PrintRequests`, `AuditLog`, `Staff`.
 3. Add your **instant flow**: `PR-Action: Log action` (from the Data / Power Automate panel).
