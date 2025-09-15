@@ -6,10 +6,11 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 
 ## What you will build
 
-- A SharePoint site with three lists: **PrintRequests**, **AuditLog**, and **Staff**.
-- A customized **SharePoint form** (Power Apps) for students to submit requests with attachments.
-- A **Power Apps canvas app** for staff to manage the queue and change statuses.
+- A SharePoint site with three lists: **PrintRequests** (17 fields total), **AuditLog**, and **Staff**.
+- A **simplified student form** (9 fields) with smart printer selection based on build plate dimensions.
+- A **Power Apps staff console** focused on operational management (8 staff-only fields).
 - Three **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated rejection/completion emails, and log staff actions.
+- **Clean separation**: Students focus on project definition, staff control technical execution.
 
 > **Scope & constraints (MVP):** Internal-only (LSU accounts), file management via SharePoint **attachments**, staff attribution on every action, and a complete **AuditLog**.
 
@@ -45,6 +46,7 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 #### 2a. Add columns to `PrintRequests`
 Use the table below. For each row: **Add column** → pick **Type** → set the **Name** → (if Choice) enter the list of choices → **Save**.
 
+**Student-Facing Fields** (what students see and fill out):
 | Column (Display Name) | Type | Choices / Notes |
 |---|---|---|
 | Title | Single line of text | Request title (already exists) |
@@ -54,29 +56,46 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | Course | Single line of text | Optional |
 | Department | Choice | Architecture; Engineering; Art & Design; Other |
 | ProjectType | Choice | Class Project; Research; Personal; Other |
-| Quantity | Number | Default 1 |
-| Material | Choice | PLA; PETG; TPU; Resin; Other |
 | Color | Choice | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
-| Infill | Number | 0–100 |
-| LayerHeight | Choice | 0.08; 0.12; 0.16; 0.2; 0.28 |
-| Supports | Yes/No | Default No |
-| Rafts | Yes/No | Default No |
+| Method | Choice | Filament; Resin |
+| PrinterSelection | Choice | Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in) |
 | DueDate | Date | Optional |
-| Dimensions | Single line of text | Example: `120 x 80 x 40` |
 | Notes | Multiple lines of text | Plain text |
+
+**Staff-Only Fields** (hidden from students, managed by staff):
+| Column (Display Name) | Type | Choices / Notes |
+|---|---|---|
 | Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived (Default: Uploaded) |
 | Priority | Choice | Low; Normal; High; Rush |
 | AssignedTo | Person | Staff owner |
-| EstHours | Number | Staff-only |
+| EstHours | Number | Staff estimation |
+| EstWeight | Number | Staff estimation |
 | StaffNotes | Multiple lines of text | Staff-only |
 | LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Printing; Completed; Picked Up; Comment Added; Email Sent |
 | LastActionBy | Person | Who did it |
 | LastActionAt | Date and Time | Timestamp |
-| StudentLSUID | Single line of text | Optional |
 
 #### 2b. Create helpful **Views**
-1. **My Requests** (for students): Filter **Created By is [Me]**. Show `Title, ReqKey, Status, Modified`.
-2. **Staff – Queue**: Filter **Status** in `Uploaded, Pending, Ready to Print, Printing`. Sort by **Modified (descending)**.
+Create two modern views to simplify day‑to‑day use. These are lenses on the same data; permissions still control which rows users can see.
+
+My Requests (students)
+1. Open the `PrintRequests` list → View menu → Create new view → Name: `My Requests` → Show as: List → Create.
+2. View menu → Edit current view → Filter: check "Show items only when the following is true" → set `Created By` is equal to `[Me]` → Sort by `Modified` Descending → OK.
+3. View menu → Add or remove fields → keep only `Title, ReqKey, Status, Modified` → Apply. Drag to order.
+4. Optional: Make it a public view. Copy the URL to use in emails:
+   - URL: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
+
+Staff – Queue (staff)
+1. View menu → Create new view → Name: `Staff – Queue` → Show as: List → Create.
+2. Open the filter pane (funnel icon) → select `Status` values `Uploaded, Pending, Ready to Print, Printing` (optionally `Completed`) → Apply.
+3. View menu → Add or remove fields → select `Title, ReqKey, Status, Priority, Assigned To, Modified, Created by` → Apply. Drag to order.
+4. Click the `Modified` header → Newest. View menu → Save view.
+5. Optional: Make it public and (for staff) Set current view as default. Public URL for reference:
+   - URL: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx`
+
+Notes
+- "Add or remove fields" controls which columns a view shows; it does not change permissions.
+- Item‑level permissions still ensure students see only their own items.
 
 #### 2c. Add **Status** color “chips” (optional but nice)
 1. Open **All Items** view → hover **Status** column → **Column settings → Format this column → Advanced mode**.
@@ -186,9 +205,12 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 <p>We received your 3D Print request.</p>
 <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']}</p>
 <p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request (@{outputs('Compose ReqKey')})</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
 ```
 
 > **Tip:** If the **Actor** person field fails to resolve, use **Author Claims** from the trigger.
+
+> **How to get or verify the My Requests link:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL. For LSU FabLab, use: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`.
 
 ### Flow B — PR-Audit: Log changes + Email notifications (Automated)
 **Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes.
@@ -202,7 +224,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - ID: `ID` (from trigger)
    - Since: **Trigger Window Start Token** (dynamic content)
 3. Add **Condition** steps using the action's outputs **Has Column Changed: {Field}** for fields you care about (repeat per field):
-   - Status, AssignedTo, Priority, Infill, LayerHeight, Supports, Rafts, DueDate, EstHours, StaffNotes, Attachments
+   - Status, AssignedTo, Priority, Method, PrinterSelection, Color, DueDate, EstHours, WeightEstimate, StaffNotes, Attachments
 4. For each field that changed → **Create item** in `AuditLog`:
    - Title: `Field Change: <FieldName>`
    - RequestID: `ID` (from trigger)
@@ -302,8 +324,8 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 
 ### A) Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
-2. Ensure these **data cards** are present: Title, Student, StudentEmail, Course, Department, ProjectType, Quantity, Material, Color, Infill, LayerHeight, Supports, Rafts, Dimensions, DueDate, Notes, **Attachments**.
-3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, AssignedTo, StaffNotes, EstHours, LastAction, LastActionBy, LastActionAt.
+2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
+3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstHours, WeightEstimate, LastAction, LastActionBy, LastActionAt.
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```
@@ -357,20 +379,20 @@ ClearCollect(colStaff, Filter(Staff, Active = true));
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(Member.Email) = varMeEmail)) > 0);
 
 Set(varStatuses, ["Uploaded","Pending","Ready to Print","Printing","Completed","Paid & Picked Up","Rejected","Archived"]);
-Set(varQuickQueue, ["Uploaded","Pending","Ready to Print","Printing"]);
+Set(varQuickQueue, ["Uploaded","Pending","Ready to Print","Printing","Completed"]);
 ```
 5. **Main screen**: Insert a **Gallery** (Vertical). Set **Items**:
 ```powerfx
 SortByColumns(
     Filter(
         PrintRequests,
-        Status = "Uploaded" || Status = "Pending" || Status = "Ready to Print" || Status = "Printing"
+        Status = "Uploaded" || Status = "Pending" || Status = "Ready to Print" || Status = "Printing" || Status = "Completed"
     ),
     "Modified",
     Descending
 )
 ```
-6. Add a **Detail/Edit screen** bound to `PrintRequests`. Include Staff fields (AssignedTo, StaffNotes, EstHours, Priority, Status).
+6. Add a **Detail/Edit screen** bound to `PrintRequests`. Include Staff fields (AssignedTo, StaffNotes, EstHours, WeightEstimate, Priority, Status).
 7. On that screen, add buttons for actions (Approve, Queue, Printing, Needs Info, Ready for Pickup, Picked Up, etc.). First, prepare a reusable **person** value (Screen.OnVisible):
 ```powerfx
 Set(varActor,
@@ -384,7 +406,7 @@ Set(varActor,
 8. Example **Approve** button (OnSelect):
 ```powerfx
 Patch(PrintRequests, ThisItem, {
-    Status: "Pending",
+    Status: "Ready to Print",
     LastAction: "Approved",
     LastActionBy: varActor,
     LastActionAt: Now(),
@@ -396,15 +418,20 @@ Patch(PrintRequests, ThisItem, {
     "Status Change",
     "Status",
     ThisItem.Status,
-    "Pending",
+    "Ready to Print",
     varMeEmail,
     "Power Apps",
     "Approved in Staff Console"
 );
 
-Notify("Marked Approved.", NotificationType.Success);
+Notify("Marked Ready to Print.", NotificationType.Success);
 ```
-9. Duplicate the button and change the **Status** value for other actions: `Queued`, `Printing`, `Needs Info`, `Ready for Pickup`, `Picked Up`, etc.
+9. Create additional action buttons for other status transitions:
+   - **Reject Button**: Status → "Rejected"
+   - **Start Printing Button**: Status → "Printing"
+   - **Complete Printing Button**: Status → "Completed" 
+   - **Ready for Pickup Button**: Status → "Paid & Picked Up"
+   - **Archive Button**: Status → "Archived"
 10. **File Validation Reject Button** (for policy violations):
 ```powerfx
 Patch(PrintRequests, ThisItem, {
@@ -450,14 +477,42 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 
 ---
 
+## Benefits of Refined Field Structure
+
+### **Student Experience Improvements**
+- **Simplified Interface**: Only 9 essential fields vs 15+ complex parameters
+- **Self-Service Sizing**: Build plate dimensions visible upfront prevent "doesn't fit" rejections  
+- **Smart Printer Selection**: Method choice (Filament/Resin) automatically filters compatible printers
+- **No Technical Overwhelm**: Staff handle complex parameters (infill, supports, layer height)
+
+### **Staff Workflow Enhancements**  
+- **Expert Control**: All technical printing decisions made by knowledgeable staff
+- **Better Planning**: Weight estimation for material costing and time estimation
+- **Focused Interface**: Clean separation between student project info and staff operations
+- **Reduced Rejections**: Students self-select appropriate printers based on build volume
+
+### **System Architecture Benefits**
+- **Cleaner Data Model**: 9 student + 8 staff fields vs 20+ mixed-purpose fields
+- **Better Performance**: Fewer form validations and conditional logic needed
+- **Easier Maintenance**: Clear field ownership reduces configuration complexity
+- **Future Scalability**: Clean separation supports advanced features like automated slicing
+
+---
+
 ## Part 4 — Testing (End-to-End)
 
 1. As a **student** account: Submit a new request with an attachment.
+   - Fill out student fields: Title, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes
+   - Test **Printer Selection filtering**: Select "Resin" method → only "Form 3" should appear in printer choices
+   - Open the **My Requests** view link to confirm the new item appears for the student:
+     `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
    - Expect: **ReqKey** is set (e.g., `REQ-00001`), a **Created** entry in `AuditLog`, and a confirmation **email**.
 2. As **staff**: Open the **Staff Console**, select the new item, click **Approve**.
-   - Expect: `Status` changes to Approved, `LastAction/By/At` populated, and an **AuditLog** entry from Flow C.
-3. Edit a field like **Infill** in the SharePoint form.
-   - Expect: **PR-Audit** flow logs a `Field Change: Infill` entry.
+   - Expect: `Status` changes to "Ready to Print", `LastAction/By/At` populated, and an **AuditLog** entry from Flow C.
+3. Edit a staff field like **Priority** or **EstHours** in the SharePoint list (as staff).
+   - Expect: **PR-Audit** flow logs a field change entry.
+   - Open the **Staff – Queue** view link and verify the item shows while in active statuses:
+     `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx`
 4. **File Validation Testing**:
    - Submit a request with a `.pdf` or `.docx` file (invalid type)
    - As **staff**: Use the File Validation Reject button
@@ -490,10 +545,12 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 
 ## Time Estimate (Beginner)
 
-- SharePoint lists & columns: **2–3 hours**
-- Power Automate flows: **4–6 hours**
-- Power Apps (form + staff app): **8–12 hours**
-- Testing & fixes: **3–5 hours**
+- SharePoint lists & columns: **1.5–2 hours** *(simplified with fewer fields)*
+- Power Automate flows: **3–4 hours** *(fewer field validations needed)*  
+- Power Apps (form + staff app): **6–8 hours** *(cleaner interface, less complex logic)*
+- Testing & fixes: **2–3 hours** *(fewer edge cases with simplified structure)*
+
+**Total: 12.5–17 hours** *(vs 17-26 hours with complex field structure)*
 
 ---
 

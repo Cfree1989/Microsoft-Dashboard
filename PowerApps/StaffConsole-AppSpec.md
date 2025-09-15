@@ -10,8 +10,8 @@ Set(varMeName, User().FullName);
 ClearCollect(colStaff, Filter(Staff, Active = true));
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(Member.Email) = varMeEmail)) > 0);
 
-Set(varStatuses, ["Submitted","Intake Review","Needs Info","Approved","Rejected","Queued","Printing","Paused","Failed","Completed","Ready for Pickup","Picked Up","Canceled"]);
-Set(varQuickQueue, ["Submitted","Intake Review","Approved","Queued","Printing"]);
+Set(varStatuses, ["Uploaded","Pending","Ready to Print","Printing","Completed","Paid & Picked Up","Rejected","Archived"]);
+Set(varQuickQueue, ["Uploaded","Pending","Ready to Print","Printing","Completed"]);
 ```
 
 ## Queue Gallery (Items)
@@ -19,7 +19,7 @@ Set(varQuickQueue, ["Submitted","Intake Review","Approved","Queued","Printing"])
 SortByColumns(
     Filter(
         PrintRequests,
-        Status = "Submitted" || Status = "Intake Review" || Status = "Approved" || Status = "Queued" || Status = "Printing"
+        Status = "Uploaded" || Status = "Pending" || Status = "Ready to Print" || Status = "Printing" || Status = "Completed"
     ),
     "Modified",
     Descending
@@ -41,7 +41,7 @@ Set(varActor,
 ```powerfx
 IfError(
     Patch(PrintRequests, ThisItem, {
-        Status: "Approved",
+        Status: "Ready to Print",
         LastAction: "Approved",
         LastActionBy: varActor,
         LastActionAt: Now(),
@@ -52,14 +52,29 @@ IfError(
         "Status Change",
         "Status",
         ThisItem.Status,
-        "Approved",
+        "Ready to Print",
         varMeEmail,
         "Power Apps",
         "Approved in Staff Console"
     );
-    Notify("Marked Approved.", NotificationType.Success),
+    Notify("Marked Ready to Print.", NotificationType.Success),
     Notify("Could not update item. Please try again or contact support.", NotificationType.Error)
 )
 ```
 
-Duplicate this button for other statuses (Queued, Printing, Needs Info, Ready for Pickup, Picked Up, etc.) and adjust literals.
+## Additional Action Buttons
+
+Create similar buttons for other status transitions:
+
+- **Reject Button**: Status → "Rejected"
+- **Start Printing Button**: Status → "Printing" 
+- **Complete Printing Button**: Status → "Completed"
+- **Ready for Pickup Button**: Status → "Paid & Picked Up"
+- **Archive Button**: Status → "Archived"
+
+## Printer Selection UX Notes
+
+For the student form, implement conditional logic:
+- When Method = "Resin" → Show only "Form 3 (145×145×185mm)" 
+- When Method = "Filament" → Show all FDM printers with dimensions
+- Display build plate dimensions prominently to help students self-select appropriate printer

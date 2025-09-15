@@ -96,25 +96,23 @@ function Add-ChoiceField {
 Add-TextField -DisplayName 'ReqKey' -InternalName 'ReqKey' -Unique
 Add-PersonField -DisplayName 'Student' -InternalName 'Student'
 Add-TextField -DisplayName 'StudentEmail' -InternalName 'StudentEmail'
+# Student-Facing Fields
 Add-TextField -DisplayName 'Course/Section' -InternalName 'Course'
 Add-ChoiceField -DisplayName 'Department' -InternalName 'Department' -Choices @('Architecture','Engineering','Art & Design','Other')
 Add-ChoiceField -DisplayName 'Project Type' -InternalName 'ProjectType' -Choices @('Class Project','Research','Personal','Other')
-Add-NumberField -DisplayName 'Quantity' -InternalName 'Quantity'
-Add-ChoiceField -DisplayName 'Material' -InternalName 'Material' -Choices @('PLA','PETG','ABS','Resin','Other')
 Add-ChoiceField -DisplayName 'Color' -InternalName 'Color' -Choices @('Any','Black','White','Gray','Red','Green','Blue','Yellow','Other')
-Add-NumberField -DisplayName 'Infill %' -InternalName 'Infill'
-Add-ChoiceField -DisplayName 'Layer Height (mm)' -InternalName 'LayerHeight' -Choices @('0.08','0.12','0.16','0.2','0.28')
-Add-YesNoField -DisplayName 'Supports' -InternalName 'Supports'
-Add-YesNoField -DisplayName 'Rafts' -InternalName 'Rafts'
+Add-ChoiceField -DisplayName 'Method' -InternalName 'Method' -Choices @('Filament','Resin')
+Add-ChoiceField -DisplayName 'Printer Selection' -InternalName 'PrinterSelection' -Choices @('Prusa MK4S (9.8×8.3×8.7in)','Prusa XL (14.2×14.2×14.2in)','Raised3D Pro 2 Plus (12.0×12.0×13.4in)','Form 3 (5.7×5.7×7.3in)')
 Add-DateField -DisplayName 'Due Date' -InternalName 'DueDate'
-Add-TextField -DisplayName 'Dimensions (mm)' -InternalName 'Dimensions'
 Add-NoteField -DisplayName 'Notes' -InternalName 'Notes'
-Add-ChoiceField -DisplayName 'Status' -InternalName 'Status' -Choices @('Submitted','Intake Review','Needs Info','Approved','Rejected','Queued','Printing','Paused','Failed','Completed','Ready for Pickup','Picked Up','Canceled') -Default 'Submitted'
+# Staff-Only Fields
+Add-ChoiceField -DisplayName 'Status' -InternalName 'Status' -Choices @('Uploaded','Pending','Ready to Print','Printing','Completed','Paid & Picked Up','Rejected','Archived') -Default 'Uploaded'
 Add-ChoiceField -DisplayName 'Priority' -InternalName 'Priority' -Choices @('Low','Normal','High','Rush')
 Add-PersonField -DisplayName 'Assigned To' -InternalName 'AssignedTo'
 Add-NumberField -DisplayName 'Estimated Hours' -InternalName 'EstHours'
+Add-NumberField -DisplayName 'Weight Estimate' -InternalName 'WeightEstimate'
 Add-NoteField -DisplayName 'Staff Notes' -InternalName 'StaffNotes'
-Add-ChoiceField -DisplayName 'Last Action' -InternalName 'LastAction' -Choices @('Created','Updated','Status Change','File Added','Needs Info','Approved','Rejected','Queued','Printing','Paused','Failed','Completed','Ready for Pickup','Picked Up','Canceled','Comment Added','Email Sent')
+Add-ChoiceField -DisplayName 'Last Action' -InternalName 'LastAction' -Choices @('Created','Updated','Status Change','File Added','Approved','Rejected','Printing','Completed','Picked Up','Comment Added','Email Sent')
 Add-PersonField -DisplayName 'Last Action By' -InternalName 'LastActionBy'
 Add-DateField -DisplayName 'Last Action At' -InternalName 'LastActionAt'
 Add-TextField -DisplayName 'Student LSU ID' -InternalName 'StudentLSUID'
@@ -139,7 +137,7 @@ if(-not (Get-PnPView -List $listName -Identity 'My Requests' -ErrorAction Silent
   Add-PnPView -List $listName -Title 'My Requests' -Fields $fieldsDefault -Query '<Where><Eq><FieldRef Name="Author"/><Value Type="Integer"><UserID/></Value></Eq></Where>' | Out-Null
 }
 if(-not (Get-PnPView -List $listName -Identity 'Staff – Queue' -ErrorAction SilentlyContinue)){
-  $query = '<Where><Or><Or><Or><Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Submitted</Value></Eq><Eq><FieldRef Name="Status"/><Value Type="Choice">Intake Review</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Approved</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Queued</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Printing</Value></Eq></Or></Where><OrderBy><FieldRef Name="Modified" Ascending="FALSE"/></OrderBy>'
+  $query = '<Where><Or><Or><Or><Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Uploaded</Value></Eq><Eq><FieldRef Name="Status"/><Value Type="Choice">Pending</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Ready to Print</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Printing</Value></Eq></Or><Eq><FieldRef Name="Status"/><Value Type="Choice">Completed</Value></Eq></Or></Where><OrderBy><FieldRef Name="Modified" Ascending="FALSE"/></OrderBy>'
   Add-PnPView -List $listName -Title 'Staff – Queue' -Fields $fieldsDefault -Query $query | Out-Null
 }
 

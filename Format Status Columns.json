@@ -1,0 +1,25 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "span",
+  "style": {
+    "padding": "4px 8px",
+    "border-radius": "16px",
+    "font-weight": 600,
+    "color": "#ffffff",
+    "background-color": {
+      "operator": "?",
+      "operands": [
+        { "operator": "==", "operands": [ "@currentField", "Uploaded" ] }, "#0078D4",
+        { "operator": "==", "operands": [ "@currentField", "Pending" ] }, "#FFB900",
+        { "operator": "==", "operands": [ "@currentField", "Ready to Print" ] }, "#107C10",
+        { "operator": "==", "operands": [ "@currentField", "Printing" ] }, "#6B69D6",
+        { "operator": "==", "operands": [ "@currentField", "Completed" ] }, "#004E8C",
+        { "operator": "==", "operands": [ "@currentField", "Paid & Picked Up" ] }, "#009E49",
+        { "operator": "==", "operands": [ "@currentField", "Rejected" ] }, "#D13438",
+        { "operator": "==", "operands": [ "@currentField", "Archived" ] }, "#605E5C",
+        "#333333"
+      ]
+    }
+  },
+  "txtContent": "@currentField"
+}

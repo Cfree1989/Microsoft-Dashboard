@@ -75,16 +75,16 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Risk**: Minimal - standard local file workflow
 - **Deliverable**: Staff workflow documentation for local file handling
 
-#### Task 0.3: File Validation Framework
-- **Outcome**: File type/size constraints documented and enforceable
+#### Task 0.3: Field Structure Refinement ✅ COMPLETED
+- **Outcome**: Simplified student vs staff field separation implemented
 - **Acceptance Criteria**:
-  - Documented allowed file types: .stl, .obj, .3mf only
-  - 50MB maximum file size guidance established  
-  - Staff rejection workflow for policy violations
-  - Helper text in student form with file requirements
-- **Estimated Time**: 30 minutes
-- **Risk**: System failures from unsupported files, security issues
-- **Deliverable**: Student form guidance + staff validation procedures
+  - Student fields reduced to 9 essential project definition fields
+  - Staff fields focused on operational management (8 fields)
+  - Printer selection includes build plate dimensions for self-service sizing
+  - Method choice (Filament/Resin) replaces complex material parameters
+- **Estimated Time**: 45 minutes (completed)
+- **Risk**: Minimal - cleaner architecture reduces complexity
+- **Deliverable**: Updated field structure across all documentation
 
 ### Phase 1: Foundation Setup (3-4 hours)
 **Goal**: Establish SharePoint foundation with proper security
@@ -261,10 +261,10 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Project Status Board
 
-### 🔴 CRITICAL - IMMEDIATE ACTION REQUIRED
+### 🔴 CRITICAL - IMMEDIATE ACTION REQUIRED  
 - [x] **Phase 0.1**: Status Model Unification ✅ COMPLETED
-- [x] **Phase 0.2**: File Handling Enhancement (SIMPLIFIED APPROACH) ✅ COMPLETED
-- [x] **Phase 0.3**: File Validation Framework (SECURITY & STABILITY) ✅ COMPLETED
+- [x] **Phase 0.2**: File Handling Enhancement (SIMPLIFIED APPROACH) ✅ COMPLETED  
+- [x] **Phase 0.3**: Field Structure Refinement ✅ COMPLETED
 
 ### 🟢 READY TO START (Phase 0 Complete!)
 - [ ] **Phase 1.1**: SharePoint Site Preparation
@@ -353,6 +353,72 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - ✅ **Status-Only Updates** - Power Apps dashboard handles status changes only, no file management complexity
 - ✅ **MVP-Focused** - Practical approach that gets system working without over-engineering
 - 🎯 **Result**: File workflow simplified to essential MVP functionality - download, work locally, update status
+
+**Field Structure Refinement (COMPLETED)**:
+- ✅ **Student Fields Simplified** - Reduced from 15+ fields to 9 focused project definition fields
+- ✅ **Staff Control Enhanced** - 8 dedicated staff fields for operational management and audit trail
+- ✅ **Printer Selection UX** - Built-in build plate dimensions (9.8×8.3×8.7in, 14.2×14.2×14.2in, etc.) for self-service sizing
+- ✅ **Method-Driven Workflow** - Filament/Resin choice drives logical printer filtering (Form 3 resin-only)
+- ✅ **Documentation Updated** - Provisioning script, Power Apps specs, SharePoint formatting, and Build Guide all aligned
+- ✅ **Build Guide Enhanced** - Added benefits explanation, updated time estimates (12.5-17 hrs vs 17-26 hrs)
+- ✅ **Reduced Complexity** - Eliminated technical parameters (infill, layer height, supports) from student interface
+- 🎯 **Result**: Clean separation of concerns - students focus on project definition, staff manage technical execution
+
+---
+
+## Refined Field Structure (Student vs Staff Separation)
+
+### Student-Facing Fields (9 Total)
+**Focus**: Project definition and basic specifications
+
+| Field | Type | Choices/Notes | Purpose |
+|-------|------|---------------|---------|
+| Title | Single line of text | Request title | Project description |
+| ReqKey | Single line of text | Auto-filled by flow (REQ-00042) | Unique tracking identifier |
+| Student | Person | Required, auto-filled | Requester identification |
+| StudentEmail | Single line of text | Auto-filled from account | Contact information |
+| Course | Single line of text | Optional | Academic context |
+| Department | Choice | Architecture; Engineering; Art & Design; Other | Organizational routing |
+| ProjectType | Choice | Class Project; Research; Personal; Other | Priority/billing context |
+| Color | Choice | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other | Aesthetic preference |
+| Method | Choice | Filament; Resin | Print technology selection |
+| Printer Selection | Choice | See printer specs below | Equipment + size constraints |
+| DueDate | Date | Optional | Timeline planning |
+| Notes | Multiple lines of text | Plain text | Additional instructions |
+
+### Staff-Only Fields (8 Total)  
+**Focus**: Operational management and audit trail
+
+| Field | Type | Choices/Notes | Purpose |
+|-------|------|---------------|---------|
+| Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived | Workflow state management |
+| Priority | Choice | Low; Normal; High; Rush | Queue prioritization |
+| EstHours | Number | Staff estimation | Time planning |
+| Weight Estimate | Number | Staff estimation | Material costing |
+| StaffNotes | Multiple lines of text | Internal only | Staff communication |
+| LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Printing; Completed; Picked Up; Comment Added; Email Sent | Audit trail categorization |
+| LastActionBy | Person | Auto-filled | Accountability tracking |
+| LastActionAt | Date and Time | Auto-filled timestamp | Audit trail timing |
+
+### Printer Selection with Build Plate Dimensions
+
+**Students will see size constraints to self-select appropriate printer:**
+
+| Printer | Method | Build Plate (inches) | Notes |
+|---------|--------|----------------------|-------|
+| Prusa MK4S | Filament | 9.8 × 8.3 × 8.7 | High-quality FDM, good for detailed work |
+| Prusa XL | Filament | 14.2 × 14.2 × 14.2 | Large format FDM, multi-color capable |
+| Raised3D Pro 2 Plus | Filament | 12.0 × 12.0 × 13.4 | Professional FDM, reliable for complex prints |
+| Form 3 | Resin | 5.7 × 5.7 × 7.3 | SLA printer, high detail, limited to resin method |
+
+**UX Design**: When student selects "Resin" method, printer choices filter to show only Form 3. When selecting "Filament", all FDM printers display with their build volumes in inches.
+
+### Benefits of Refined Structure
+✅ **Student Experience**: Simplified from 15+ fields to 9 focused project fields  
+✅ **Staff Control**: All technical decisions (infill, layer height, supports) managed by experts  
+✅ **Self-Service Sizing**: Students see build plate dimensions and select appropriate printer  
+✅ **Workflow Efficiency**: Method + Printer combination creates logical decision tree  
+✅ **Reduced Rejections**: Size constraints visible upfront prevent "doesn't fit" issues  
 
 ---
 

@@ -20,7 +20,7 @@
                 "@currentField"
               ]
             },
-            "submitted"
+            "uploaded"
           ]
         },
         "#0078D4",
@@ -33,20 +33,7 @@
                 "@currentField"
               ]
             },
-            "intake review"
-          ]
-        },
-        "#605E5C",
-        {
-          "operator": "==",
-          "operands": [
-            {
-              "operator": "toLowerCase",
-              "operands": [
-                "@currentField"
-              ]
-            },
-            "needs info"
+            "pending"
           ]
         },
         "#FFB900",
@@ -59,36 +46,10 @@
                 "@currentField"
               ]
             },
-            "approved"
+            "ready to print"
           ]
         },
         "#107C10",
-        {
-          "operator": "==",
-          "operands": [
-            {
-              "operator": "toLowerCase",
-              "operands": [
-                "@currentField"
-              ]
-            },
-            "rejected"
-          ]
-        },
-        "#D13438",
-        {
-          "operator": "==",
-          "operands": [
-            {
-              "operator": "toLowerCase",
-              "operands": [
-                "@currentField"
-              ]
-            },
-            "queued"
-          ]
-        },
-        "#8E8CD8",
         {
           "operator": "==",
           "operands": [
@@ -111,32 +72,6 @@
                 "@currentField"
               ]
             },
-            "paused"
-          ]
-        },
-        "#744DA9",
-        {
-          "operator": "==",
-          "operands": [
-            {
-              "operator": "toLowerCase",
-              "operands": [
-                "@currentField"
-              ]
-            },
-            "failed"
-          ]
-        },
-        "#A4262C",
-        {
-          "operator": "==",
-          "operands": [
-            {
-              "operator": "toLowerCase",
-              "operands": [
-                "@currentField"
-              ]
-            },
             "completed"
           ]
         },
@@ -150,7 +85,7 @@
                 "@currentField"
               ]
             },
-            "ready for pickup"
+            "paid & picked up"
           ]
         },
         "#009E49",
@@ -163,10 +98,10 @@
                 "@currentField"
               ]
             },
-            "picked up"
+            "rejected"
           ]
         },
-        "#107C10",
+        "#D13438",
         {
           "operator": "==",
           "operands": [
@@ -176,13 +111,14 @@
                 "@currentField"
               ]
             },
-            "canceled"
+            "archived"
           ]
         },
-        "#C50F1F",
+        "#605E5C",
         "#333333"
       ]
     }
   },
   "txtContent": "@currentField"
+}
 }
