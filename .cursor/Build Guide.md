@@ -103,32 +103,24 @@ Notes
 
 ```json
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/column-formatting.schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
   "elmType": "span",
-  "attributes": { "class": "ms-fontColor-white" },
   "style": {
     "padding": "4px 8px",
     "border-radius": "16px",
     "font-weight": 600,
+    "color": "#ffffff",
     "background-color": {
       "operator": "?",
       "operands": [
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "uploaded" ] },
-        "#0078D4",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "pending" ] },
-        "#FFB900",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "ready to print" ] },
-        "#107C10",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "printing" ] },
-        "#6B69D6",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "completed" ] },
-        "#004E8C",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "paid & picked up" ] },
-        "#107C10",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "rejected" ] },
-        "#D13438",
-        { "operator": "==", "operands": [ { "operator": "toLowerCase", "operands": [ "@currentField" ] }, "archived" ] },
-        "#605E5C",
+        { "operator": "==", "operands": [ "@currentField", "Uploaded" ] }, "#0078D4",
+        { "operator": "==", "operands": [ "@currentField", "Pending" ] }, "#FFB900",
+        { "operator": "==", "operands": [ "@currentField", "Ready to Print" ] }, "#107C10",
+        { "operator": "==", "operands": [ "@currentField", "Printing" ] }, "#6B69D6",
+        { "operator": "==", "operands": [ "@currentField", "Completed" ] }, "#004E8C",
+        { "operator": "==", "operands": [ "@currentField", "Paid & Picked Up" ] }, "#009E49",
+        { "operator": "==", "operands": [ "@currentField", "Rejected" ] }, "#D13438",
+        { "operator": "==", "operands": [ "@currentField", "Archived" ] }, "#605E5C",
         "#333333"
       ]
     }
@@ -223,6 +215,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - Site/List: same
    - ID: `ID` (from trigger)
    - Since: **Trigger Window Start Token** (dynamic content)
+   - Settings: Using the trigger token compares current values to those at the start of the flow run and is the simplest, reliable approach.
 3. Add **Condition** steps using the action's outputs **Has Column Changed: {Field}** for fields you care about (repeat per field):
    - Status, AssignedTo, Priority, Method, PrinterSelection, Color, DueDate, EstHours, WeightEstimate, StaffNotes, Attachments
 4. For each field that changed → **Create item** in `AuditLog`:
@@ -236,10 +229,12 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - Actor: **Editor Claims** (from trigger)
    - ActorRole: `Staff` if the editor is a staff account; otherwise `Student`
    - ClientApp: `SharePoint Form` or `Power Apps`
+   - Example mapping for the `Actor` person field: set it to `Editor Claims` from the trigger; SharePoint resolves the person value automatically.
 
 5. **Add Status-Based Email Logic**: After the audit logging, add **Condition** to check if Status field changed:
    - **Condition**: `Has Column Changed: Status` equals `true`
    - **Yes branch**: Add nested conditions for specific status values
+   - Tip: Keep email logic inside this branch so multiple field changes on the same edit don’t send duplicate emails.
 
 6. **Rejection Email** (inside Status changed = Yes):
    - **Condition**: `Status` (from trigger body) equals `Rejected`
@@ -283,6 +278,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - Actor: `System` (automated)
    - ActorRole: `System`
    - ClientApp: `Power Automate`
+   - Optional: Add a Compose at the top with `@{workflow()['run']['name']}` and store it in `FlowRunId` for traceability.
 
 > **Note:** Power Automate doesn't directly provide the *previous* value in a simple way. For MVP, logging the **new** value is sufficient; if needed you can look up the previous version in SharePoint version history.
 
@@ -317,6 +313,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - ClientApp: `ClientApp`
    - Notes: `Notes`
 5. (Optional) **Respond to Power Apps** with `true` to confirm success.
+   - Power Apps tip: Call the flow within `IfError()`, then `Notify()` on success/failure to improve UX.
 
 ---
 
