@@ -3,21 +3,17 @@
 **Trigger:** SharePoint — When an item is **created** (List: `PrintRequests`)
 
 ## Steps
-1) **Initialize variable** `vId` (String)
-```
-@{triggerOutputs()?['body/ID']}
-```
-2) **Compose** — `ReqKey`
+1) **Compose** — `ReqKey`
 ```
 @{concat('REQ-', right(concat('00000', string(triggerOutputs()?['body/ID'])), 5))}
 ```
-3) **Update item** (SharePoint)
+2) **Update item** (SharePoint)
 - ReqKey = **Outputs** of Compose ReqKey
 - StudentEmail =
 ```
 @{toLower(triggerOutputs()?['body/Author/Email'])}
 ```
-4) **Create item** in `AuditLog`
+3) **Create item** in `AuditLog`
 - Title = `Created`
 - RequestID = `@{triggerOutputs()?['body/ID']}`
 - ReqKey = **Outputs** of Compose ReqKey
@@ -27,7 +23,7 @@
 - ClientApp = `SharePoint Form`
 - FlowRunId = `@{workflow().run.name}`
 
-5) **Send an email (V2)** to **StudentEmail**
+4) **Send an email (V2)** to **StudentEmail**
 - Subject: `We received your 3D Print request - @{outputs('Compose ReqKey')}`
 - Body: include link to the item:
 ```

@@ -161,6 +161,24 @@ Notes
 
 You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensure you are in the same environment as your SharePoint site.
 
+### What type of flows are these? Where do I create them?
+- All flows here are **cloud flows** (not desktop flows).
+- Navigation: Power Automate → left nav **Create** → choose the flow type:
+  - **Automated cloud flow** for Flow A and Flow B (they run automatically on SharePoint triggers)
+  - **Instant cloud flow** for Flow C (it is called from Power Apps)
+
+### Before you start (one-time setup)
+- Make sure you have these connections (Power Automate will prompt if missing):
+  - SharePoint (uses your Microsoft 365 account)  
+  - Office 365 Outlook (for Send an email (V2))
+- Use the correct site: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+- Lists used: `PrintRequests`, `AuditLog`
+- Turn each flow **On** after saving, and add at least one test item in `PrintRequests` to test triggers.
+- Recommended: Use the lab shared mailbox for all emails: `coad-fablab@lsu.edu`.
+  - Preferred action: "Send an email from a shared mailbox (V2)"
+  - Shared mailbox: `coad-fablab@lsu.edu`
+  - If only "Send an email (V2)" is available, set Advanced option "From (Send as)" = `coad-fablab@lsu.edu` (requires Send As permission).
+
 ### Flow A — PR-Create: Set ReqKey + Acknowledge (Automated)
 **Purpose:** When a new request is created, assign a **ReqKey**, log a **Created** event, and email the student.
 
@@ -189,7 +207,8 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - Actor: map to **Author Claims** (person field will resolve)
    - ActorRole: `Student`
    - ClientApp: `SharePoint Form`
-5. **Send an email (V2)** to the student
+5. **Send an email from a shared mailbox (V2)** to the student
+   - Shared mailbox: `coad-fablab@lsu.edu`
    - To: **StudentEmail** (from the item or step 3)
    - Subject: `We received your 3D Print request – @{outputs('Compose ReqKey')}`
    - Body (example):
@@ -203,6 +222,12 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 > **Tip:** If the **Actor** person field fails to resolve, use **Author Claims** from the trigger.
 
 > **How to get or verify the My Requests link:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL. For LSU FabLab, use: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`.
+
+#### URL glossary (replace placeholders)
+- **Site root placeholder**: `https://{tenant}.sharepoint.com/sites/FabLab` → replace with your actual site URL. For LSU FabLab it is `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`.
+- **Per‑item link (used in emails)**: `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}` points to the SharePoint Display Form for the specific item created or edited. Keep the `@{...}` expression exactly; Flow fills in the item ID at runtime.
+- **My Requests view (students)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx` — public link to the student‑filtered view. Use in the confirmation email.
+- **Staff – Queue view (staff)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx` — staff dashboard view link (optional to share with staff).
 
 ### Flow B — PR-Audit: Log changes + Email notifications (Automated)
 **Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes.
@@ -236,9 +261,29 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
    - **Yes branch**: Add nested conditions for specific status values
    - Tip: Keep email logic inside this branch so multiple field changes on the same edit don’t send duplicate emails.
 
+6. (Optional, recommended) **Pending → Student Confirmation Email**
+   - Purpose from masterplan: `Pending` means “awaiting student confirmation.” You can notify students automatically when staff approve a request.
+   - Add nested condition under the Status-changed branch:
+     - If `Status` equals `Pending` → send one of the following:
+       - Option A — Simple confirmation email:
+         ```html
+         <p>Your 3D Print request has been approved. Please review and confirm.</p>
+         <p><a href="https://{tenant}.sharepoint.com/sites/FabLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request</a></p>
+         <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+         <p>Reply to this email to confirm you’re ready to proceed. If changes are needed, reply with details.</p>
+         ```
+       - Option B — “Send email with options (V2)” action:
+         - Subject: `Please confirm your 3D Print request – @{triggerOutputs()?['body/ReqKey']}`
+         - Options: `Confirm | Needs Changes`
+         - After the action, add a step to **Get response details** and branch:
+           - If `SelectedOption` = `Confirm` → (optional) set `Status` to `Ready to Print` or leave as-is for staff to proceed
+           - If `SelectedOption` = `Needs Changes` → alert staff by email or add to `StaffNotes`
+   - Keep this optional for MVP. If you prefer a no-confirmation workflow, skip this branch and move directly from `Pending` to staff processing.
+
 6. **Rejection Email** (inside Status changed = Yes):
    - **Condition**: `Status` (from trigger body) equals `Rejected`
-   - **Yes branch**: **Send an email (V2)**
+   - **Yes branch**: **Send an email from a shared mailbox (V2)**
+     - Shared mailbox: `coad-fablab@lsu.edu`
      - To: `StudentEmail` (from trigger body)
      - Subject: `Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}`
      - Body:
@@ -252,7 +297,8 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 
 7. **Completion Email** (inside Status changed = Yes):
    - **Condition**: `Status` (from trigger body) equals `Completed`
-   - **Yes branch**: **Send an email (V2)**
+   - **Yes branch**: **Send an email from a shared mailbox (V2)**
+     - Shared mailbox: `coad-fablab@lsu.edu`
      - To: `StudentEmail` (from trigger body)  
      - Subject: `Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}`
      - Body:
@@ -473,26 +519,6 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 > **Troubleshooting:** If a Person field fails to patch, verify the **internal name** or rebuild `varActor` using your email.
 
 ---
-
-## Benefits of Refined Field Structure
-
-### **Student Experience Improvements**
-- **Simplified Interface**: Only 9 essential fields vs 15+ complex parameters
-- **Self-Service Sizing**: Build plate dimensions visible upfront prevent "doesn't fit" rejections  
-- **Smart Printer Selection**: Method choice (Filament/Resin) automatically filters compatible printers
-- **No Technical Overwhelm**: Staff handle complex parameters (infill, supports, layer height)
-
-### **Staff Workflow Enhancements**  
-- **Expert Control**: All technical printing decisions made by knowledgeable staff
-- **Better Planning**: Weight estimation for material costing and time estimation
-- **Focused Interface**: Clean separation between student project info and staff operations
-- **Reduced Rejections**: Students self-select appropriate printers based on build volume
-
-### **System Architecture Benefits**
-- **Cleaner Data Model**: 9 student + 8 staff fields vs 20+ mixed-purpose fields
-- **Better Performance**: Fewer form validations and conditional logic needed
-- **Easier Maintenance**: Clear field ownership reduces configuration complexity
-- **Future Scalability**: Clean separation supports advanced features like automated slicing
 
 ---
 

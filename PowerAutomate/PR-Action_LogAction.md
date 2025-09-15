@@ -28,3 +28,21 @@
 - Notes = Notes
 - FlowRunId = `@{workflow().run.name}`
 3) **Respond to Power Apps** (optional): return `true`/`success`.
+
+> Power Apps tip: Wrap the call in `IfError()` and surface `Notify()` messages for success/failure.
+> ```powerfx
+> IfError(
+>   'PR-Action: Log action'.Run(
+>     Text(ThisItem.ID),
+>     "Status Change",
+>     "Status",
+>     ThisItem.Status,
+>     "Ready to Print",
+>     varMeEmail,
+>     "Power Apps",
+>     "Approved in Staff Console"
+>   ),
+>   Notify("Could not log action.", NotificationType.Error),
+>   Notify("Action logged.", NotificationType.Success)
+> )
+> ```
