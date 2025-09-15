@@ -1,0 +1,188 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/column-formatting.schema.json",
+  "elmType": "span",
+  "attributes": {
+    "class": "ms-fontColor-white"
+  },
+  "style": {
+    "padding": "4px 8px",
+    "border-radius": "16px",
+    "font-weight": 600,
+    "background-color": {
+      "operator": "?",
+      "operands": [
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "submitted"
+          ]
+        },
+        "#0078D4",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "intake review"
+          ]
+        },
+        "#605E5C",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "needs info"
+          ]
+        },
+        "#FFB900",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "approved"
+          ]
+        },
+        "#107C10",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "rejected"
+          ]
+        },
+        "#D13438",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "queued"
+          ]
+        },
+        "#8E8CD8",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "printing"
+          ]
+        },
+        "#6B69D6",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "paused"
+          ]
+        },
+        "#744DA9",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "failed"
+          ]
+        },
+        "#A4262C",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "completed"
+          ]
+        },
+        "#004E8C",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "ready for pickup"
+          ]
+        },
+        "#009E49",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "picked up"
+          ]
+        },
+        "#107C10",
+        {
+          "operator": "==",
+          "operands": [
+            {
+              "operator": "toLowerCase",
+              "operands": [
+                "@currentField"
+              ]
+            },
+            "canceled"
+          ]
+        },
+        "#C50F1F",
+        "#333333"
+      ]
+    }
+  },
+  "txtContent": "@currentField"
+}
