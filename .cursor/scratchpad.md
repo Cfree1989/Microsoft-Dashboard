@@ -4,7 +4,7 @@
 ## Background and Motivation
 
 ### Project Context
-Building a **comprehensive 3D Print Request Queue Management System** for LSU's FabLab using entirely Microsoft Power Platform technologies. The system must handle student submissions, staff workflow management, complete audit trails, and maintain security/privacy requirements.
+Building a **comprehensive 3D Print Request Queue Management System** for LSU's Fabrication Lab using entirely Microsoft Power Platform technologies. The system must handle student submissions, staff workflow management, complete audit trails, and maintain security/privacy requirements.
 
 ### Key Requirements
 - **Internal LSU accounts only** (no external access)
@@ -93,7 +93,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Outcome**: Site exists with proper groups and permissions
 - **Acceptance Criteria**: 
   - Site accessible at target URL
-  - "FabLab Staff" owners group created  
+  - "Fabrication Lab Staff" owners group created  
   - "LSU Students" members group configured
 - **Estimated Time**: 30 minutes
 - **Dependencies**: Site collection admin rights
@@ -296,6 +296,21 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Executor's Feedback or Assistance Requests
 
+### 📋 PRD Creation Task (Executor Mode) - ✅ COMPLETED + UPDATED
+**Status**: COMPLETED - Professional PRD delivered with operational clarification
+**Deliverables**: 
+- `PRD_Creation_Assistant.md` - PRD creation framework and session log
+- `Fabrication Lab_3D_Print_System_PRD.md` - Comprehensive 34-page PRD document  
+**Achievement**: Successfully transformed Build Guide.md (706 lines) into executive-ready PRD with 27 detailed features, user personas, success metrics, and implementation roadmap
+**Business Value**: Professional stakeholder alignment document ready for project approval and development handoff
+**Key Update**: Clarified operational preference for **shared queue approach** - no individual request assignment, all staff can work on any request collectively  
+**Technical Update**: Build Guide and PowerApps spec updated to remove automatic AssignedTo assignment in Approve button  
+**File Naming Implementation**: Added standardized file naming convention from masterplan (`FirstAndLastName_PrintMethod_Color_SimpleJobID.extension`) with Power Automate expressions and PowerShell functions  
+**Dashboard Design**: Created complete Power Apps Canvas app design guide matching Dashboard.png - clean navigation, no refresh functionality needed (Power Apps handles data updates natively)  
+**Lightbulb Toggle Feature**: Enhanced dashboard with animated glow effects for job attention management - lightbulb ON/OFF toggle with pulsing gold animation, requires NeedsAttention (Yes/No) SharePoint field  
+**UI Refinement**: Removed "Open File" button from action buttons since SharePoint attachments don't support external launch functionality  
+**Archive Button Implementation**: Added complete Power Fx implementation for Archive button with proper flow integration, error handling, and user feedback notifications
+
 ### 🚨 CRITICAL ANALYSIS RECEIVED (ChatGPT Review)
 **Status**: NEW - Requires immediate planning decisions before implementation
 
@@ -473,6 +488,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Use staged rollout** - start with staff testing before opening to students
 - **Keep audit trail simple** in MVP - can enhance later based on needs
 - **Simplify file handling** - For MVP, local download/work/status updates beats complex file versioning systems
+- **Lightbulb toggle pattern** - Use Icon.Lightbulb/LightbulbSolid with color animation for clear on/off states; Timer control needed for glow effects
 
 ---
 

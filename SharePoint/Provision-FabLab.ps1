@@ -1,6 +1,6 @@
 <#!
 .SYNOPSIS
-Provision SharePoint lists, columns, views, permissions, and column formatting for the FabLab 3D Print MVP.
+Provision SharePoint lists, columns, views, permissions, and column formatting for the Fabrication Lab 3D Print MVP.
 
 .REQUIREMENTS
 - PowerShell 7+ recommended
@@ -8,7 +8,7 @@ Provision SharePoint lists, columns, views, permissions, and column formatting f
   Install-Module PnP.PowerShell -Scope CurrentUser
 
 .USAGE
-  pwsh ./Provision-FabLab.ps1 -SiteUrl "https://<tenant>.sharepoint.com/sites/FabLab"
+  pwsh ./Provision-Fabrication Lab.ps1 -SiteUrl "https://<tenant>.sharepoint.com/sites/Fabrication Lab"
 
 #>
 #Requires -Version 7.2

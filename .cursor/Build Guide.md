@@ -1,4 +1,4 @@
-# FabLab 3D Print Request System — **Beginner Build Guide**
+# Fabrication Lab 3D Print Request System — **Beginner Build Guide**
 
 This hands-on guide will help you build a complete MVP system for managing 3D print requests using **SharePoint**, **Power Automate**, and **Power Apps**. It is written for first-time users — no prior experience required.
 
@@ -31,7 +31,7 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 2. Choose **Team site**.
 3. Name it: `Digital Fabrication Lab`.
 4. Privacy: **Private** (recommended for MVP).
-5. Add your FabLab staff as **Owners** (you can adjust later).
+5. Add your Fabrication Lab staff as **Owners** (you can adjust later).
 
 ### 2. Create the list: `PrintRequests`
 1. In the site, click **New → List**.
@@ -67,7 +67,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 |---|---|---|
 | Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived (Default: Uploaded) |
 | Priority | Choice | Low; Normal; High; Rush |
-| AssignedTo | Person | Staff owner |
+| AssignedTo | Person | Optional manual assignment |
 | EstHours | Number | Staff estimation |
 | EstWeight | Number | Staff estimation |
 | StaffNotes | Multiple lines of text | Staff-only |
@@ -174,10 +174,10 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 - Use the correct site: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 - Lists used: `PrintRequests`, `AuditLog`
 - Turn each flow **On** after saving, and add at least one test item in `PrintRequests` to test triggers.
-- Recommended: Use the lab shared mailbox for all emails: `coad-fablab@lsu.edu`.
+- Recommended: Use the lab shared mailbox for all emails: `coad-Fabrication Lab@lsu.edu`.
   - Preferred action: "Send an email from a shared mailbox (V2)"
-  - Shared mailbox: `coad-fablab@lsu.edu`
-  - If only "Send an email (V2)" is available, set Advanced option "From (Send as)" = `coad-fablab@lsu.edu` (requires Send As permission).
+  - Shared mailbox: `coad-Fabrication Lab@lsu.edu`
+  - If only "Send an email (V2)" is available, set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu` (requires Send As permission).
 
 ### Flow A — PR-Create: Set ReqKey + Acknowledge (Automated)
 **Purpose:** When a new request is created, assign a **ReqKey**, log a **Created** event, and email the student.
@@ -187,7 +187,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 1. **Create → Automated cloud flow**
    - Name: `PR-Create: Set ReqKey + Acknowledge`
    - Trigger: **SharePoint – When an item is created**
-   - Site address: your FabLab site → List: `PrintRequests`
+   - Site address: your Fabrication Lab site → List: `PrintRequests`
 
 2. **New step → Compose** (rename to: "Compose ReqKey")
    - **Inputs**:
@@ -195,19 +195,35 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 @{concat('REQ-', right(concat('00000', string(triggerOutputs()?['body/ID'])), 5))}
 ```
 
-3. **New step → Update item** (SharePoint)
+3. **New step → Compose** (rename to: "Generate Standardized Filename")
+   - **Inputs**:
+```
+@{concat(
+  replace(replace(replace(replace(replace(triggerOutputs()?['body/Student/DisplayName'], ' ', ''), '-', ''), '''', ''), '.', ''), ',', ''),
+  '_',
+  triggerOutputs()?['body/Method'],
+  '_', 
+  triggerOutputs()?['body/Color'],
+  '_',
+  right(outputs('Compose ReqKey'), 5),
+  '.',
+  last(split(triggerOutputs()?['body/Attachments'][0]['Name'], '.'))
+)}
+```
+
+4. **New step → Update item** (SharePoint)
    - **Site Address**: same as trigger
    - **List Name**: PrintRequests
    - **Id**: `ID` (from trigger)
    - **ReqKey**: `Outputs` (from Compose ReqKey step)
+   - **Title**: `Outputs` (from Generate Standardized Filename step, without extension) ← standardized display name
    - **StudentEmail**:
 ```
 @{toLower(triggerOutputs()?['body/Author/Email'])}
 ```
-   - **Title**: `Title` (from trigger) ← prevents clearing required field
    - **Course**: `Course` (from trigger) ← OR use "Limit columns by view" to avoid mapping required fields
 
-4. **New step → Create item** (SharePoint → AuditLog)
+5. **New step → Create item** (SharePoint → AuditLog)
    - **Site Address**: same
    - **List Name**: AuditLog
    - **Title**: `Created`
@@ -230,8 +246,8 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 ```
    - **Notes**: (leave blank)
 
-5. **New step → Send an email from a shared mailbox (V2)**
-   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+6. **New step → Send an email from a shared mailbox (V2)**
+   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
    - **To**: `StudentEmail` (from Update item step)
    - **Subject**:
 ```
@@ -240,7 +256,7 @@ We received your 3D Print request – @{outputs('Compose ReqKey')}
    - **Body**:
 ```html
 <p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> @{triggerOutputs()?['body/Title']}</p>
+<p><strong>Request:</strong> @{outputs('Generate Standardized Filename')}</p>
 <p><strong>Request ID:</strong> @{outputs('Compose ReqKey')}</p>
 <p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
 <p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
@@ -254,10 +270,10 @@ We received your 3D Print request – @{outputs('Compose ReqKey')}
 
 > **Tip:** If the **Actor** person field fails to resolve, use **Author Claims** from the trigger.
 
-> **How to get or verify the My Requests link:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL. For LSU FabLab, use: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`.
+> **How to get or verify the My Requests link:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL. For LSU Fabrication Lab, use: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`.
 
 #### URL glossary (replace placeholders)
-- **Site root placeholder**: `https://{tenant}.sharepoint.com/sites/FabLab` → replace with your actual site URL. For LSU FabLab it is `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`.
+- **Site root**: For LSU Fabrication Lab it is `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`.
 - **Per‑item link (used in emails)**: `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}` points to the SharePoint Display Form for the specific item created or edited. Keep the `@{...}` expression exactly; Flow fills in the item ID at runtime.
 - **My Requests view (students)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx` — public link to the student‑filtered view. Use in the confirmation email.
 - **Staff – Queue view (staff)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx` — staff dashboard view link (optional to share with staff).
@@ -270,7 +286,7 @@ We received your 3D Print request – @{outputs('Compose ReqKey')}
 1. **Create → Automated cloud flow**
    - Name: `PR-Audit: Log changes + Email notifications`
    - Trigger: **SharePoint – When an item is created or modified**
-   - **Site Address**: your FabLab site
+   - **Site Address**: your Fabrication Lab site
    - **List Name**: PrintRequests
 
 2. **New step → Get changes for an item or a file (properties only)**
@@ -325,7 +341,7 @@ We received your 3D Print request – @{outputs('Compose ReqKey')}
    - **Choose a value**: `Rejected`
    
    **Yes branch → Send an email from a shared mailbox (V2)**:
-   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
    - **To**: `StudentEmail` (from trigger body)
    - **Subject**:
 ```
@@ -340,7 +356,7 @@ Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}
 <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
 <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
 <br>
-<p>You may submit a new corrected request at any time through the FabLab website.</p>
+<p>You may submit a new corrected request at any time through the Fabrication Lab website.</p>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
@@ -350,7 +366,7 @@ Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}
    - **Choose a value**: `Completed`
    
    **Yes branch → Send an email from a shared mailbox (V2)**:
-   - **Shared Mailbox**: `coad-fablab@lsu.edu`
+   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
    - **To**: `StudentEmail` (from trigger body)
    - **Subject**:
 ```
@@ -431,7 +447,7 @@ Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}
    - **Notes** (Text) → "Additional context or notes"
 
 3. **New step → Get item** (SharePoint)
-   - **Site Address**: your FabLab site
+   - **Site Address**: your Fabrication Lab site
    - **List Name**: PrintRequests
    - **Id**: `RequestID` (from Power Apps trigger)
 
@@ -575,8 +591,7 @@ Patch(PrintRequests, ThisItem, {
     Status: "Ready to Print",
     LastAction: "Approved",
     LastActionBy: varActor,
-    LastActionAt: Now(),
-    AssignedTo: varActor
+    LastActionAt: Now()
 });
 
 'PR-Action: Log action'.Run(
@@ -702,4 +717,4 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 
 ## You’re Done!
 
-You now have a working MVP for FabLab 3D printing requests with audit trails and staff attribution, built entirely with Microsoft 365 tools. If you’d like, I can also provide an **importable Solution** (flows + app) tailored to your tenant/site URL to save more time.
+You now have a working MVP for Fabrication Lab 3D printing requests with audit trails and staff attribution, built entirely with Microsoft 365 tools. If you’d like, I can also provide an **importable Solution** (flows + app) tailored to your tenant/site URL to save more time.

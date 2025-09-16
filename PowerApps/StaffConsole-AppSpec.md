@@ -44,8 +44,7 @@ IfError(
         Status: "Ready to Print",
         LastAction: "Approved",
         LastActionBy: varActor,
-        LastActionAt: Now(),
-        AssignedTo: varActor
+        LastActionAt: Now()
     });
     'PR-Action_LogAction'.Run(
         Text(ThisItem.ID),
