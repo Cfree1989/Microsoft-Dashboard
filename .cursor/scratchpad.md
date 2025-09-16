@@ -309,7 +309,9 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 **Dashboard Design**: Created complete Power Apps Canvas app design guide matching Dashboard.png - clean navigation, no refresh functionality needed (Power Apps handles data updates natively)  
 **Lightbulb Toggle Feature**: Enhanced dashboard with animated glow effects for job attention management - lightbulb ON/OFF toggle with pulsing gold animation, requires NeedsAttention (Yes/No) SharePoint field  
 **UI Refinement**: Removed "Open File" button from action buttons since SharePoint attachments don't support external launch functionality  
-**Archive Button Implementation**: Added complete Power Fx implementation for Archive button with proper flow integration, error handling, and user feedback notifications
+**Archive Button Implementation**: Added complete Power Fx implementation for Archive button with proper flow integration, error handling, and user feedback notifications  
+**Rejection Modal System**: Implemented comprehensive rejection modal with mandatory staff dropdown, multiple rejection reason checkboxes, custom comments, and proper validation - matches masterplan design for shared workstation accountability  
+**Client-Side File Validation**: Enhanced student submission form with real-time file format (.stl/.obj/.3mf) and size (150MB) validation, preventing invalid submissions from reaching staff - removed file format/size from rejection reasons since they're now prevented at source
 
 ### 🚨 CRITICAL ANALYSIS RECEIVED (ChatGPT Review)
 **Status**: NEW - Requires immediate planning decisions before implementation
@@ -329,7 +331,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
    - **Impact**: Re-print errors, workflow breakdown without this
 
 3. **File Validation Missing**: No type/size constraints vs Masterplan's strict validation
-   - **Decision Needed**: Confirm .stl/.obj/.3mf only, 50MB limit enforcement
+   - **Decision Needed**: Confirm .stl/.obj/.3mf only, 150MB limit enforcement
    - **Impact**: Silent failures, security risks
 
 **Implementation Status**:
@@ -349,7 +351,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - 🎯 **Result**: Crisis resolved - consistent status model across all documentation
 
 **File Validation Framework (COMPLETED)**:
-- ✅ **Student Form Enhanced** - Added clear helper text for file requirements (.stl/.obj/.3mf only, 50MB max)
+- ✅ **Student Form Enhanced** - Added clear helper text for file requirements (.stl/.obj/.3mf only, 150MB max)
 - ✅ **Staff Rejection Workflow** - Implemented File Validation Reject button with automatic logging
 - ✅ **Testing Procedures** - Added file validation test cases to end-to-end testing section
 - ✅ **Policy Documentation** - Clear guidance for staff on checking file compliance
@@ -488,7 +490,8 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Use staged rollout** - start with staff testing before opening to students
 - **Keep audit trail simple** in MVP - can enhance later based on needs
 - **Simplify file handling** - For MVP, local download/work/status updates beats complex file versioning systems
-- **Lightbulb toggle pattern** - Use Icon.Lightbulb/LightbulbSolid with color animation for clear on/off states; Timer control needed for glow effects
+- **Lightbulb toggle pattern** - Use Icon.Lightbulb/LightbulbSolid with color animation for clear on/off states; Timer control needed for glow effects  
+- **Staff attribution modal pattern** - Always include mandatory staff dropdown using `colStaff` collection; validate selection before enabling action buttons; use proper SharePoint Person field formatting in Patch operations
 
 ---
 

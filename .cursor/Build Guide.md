@@ -511,12 +511,12 @@ IfError(
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```
-   "File Upload (Required: .stl, .obj, or .3mf files only • Max 50MB per file)"
+   "File Upload (Required: .stl, .obj, or .3mf files only • Max 150MB per file)"
    ```
    - Add a **Text label** above the Attachments card with validation guidance:
    ```
    "📁 ACCEPTED FILE TYPES: .stl, .obj, .3mf only
-   📏 MAXIMUM SIZE: 50MB per file
+   📏 MAXIMUM SIZE: 150MB per file
    ⚠️ Files not meeting these requirements will be rejected by staff"
    ```
 5. **Defaults** (select the card → set the property shown):
@@ -622,7 +622,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(ThisItem.StaffNotes), "", ThisItem.StaffNotes & " | "),
-        "REJECTED: File does not meet requirements (.stl/.obj/.3mf only, max 50MB) - " & Text(Now(), "mm/dd/yyyy")
+        "REJECTED: File does not meet requirements (.stl/.obj/.3mf only, max 150MB) - " & Text(Now(), "mm/dd/yyyy")
     )
 });
 
@@ -634,7 +634,7 @@ Patch(PrintRequests, ThisItem, {
     "Rejected",
     varMeEmail,
     "Power Apps",
-    "File validation failure - does not meet .stl/.obj/.3mf or 50MB requirements"
+    "File validation failure - does not meet .stl/.obj/.3mf or 150MB requirements"
 );
 
 Notify("Request rejected due to file policy violation. Student will be notified.", NotificationType.Warning);
@@ -643,7 +643,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 > **Staff File Management Workflow**: 
 > 1. **File Validation**: Check attachments for:
 >    - **File type**: Only .stl, .obj, .3mf extensions allowed
->    - **File size**: Each file must be ≤50MB  
+>    - **File size**: Each file must be ≤150MB  
 >    - **Completeness**: At least one valid 3D model file required
 > 2. **File Processing**: 
 >    - **Download** the attachment locally to your workstation
