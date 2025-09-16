@@ -68,12 +68,20 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived (Default: Uploaded) |
 | Priority | Choice | Low; Normal; High; Rush |
 | AssignedTo | Person | Optional manual assignment |
-| EstHours | Number | Staff estimation |
-| EstWeight | Number | Staff estimation |
+| EstimatedTime | Number | Staff estimation (print time in hours) |
+| EstimatedWeight | Number | Staff estimation (weight in grams) |
+| EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.20/gram, $3.00 minimum) |
 | StaffNotes | Multiple lines of text | Staff-only |
 | LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Printing; Completed; Picked Up; Comment Added; Email Sent |
 | LastActionBy | Person | Who did it |
 | LastActionAt | Date and Time | Timestamp |
+
+> **💰 Pricing Structure for EstimatedCost Calculation:**
+> - **Filament prints:** $0.10 per gram
+> - **Resin prints:** $0.20 per gram  
+> - **Minimum charge:** $3.00 per print (applied automatically)
+> - **Formula:** `Cost = Max($3.00, Weight × Method Rate)`
+> - **EstimatedTime:** Optional for operational tracking (not used in pricing)
 
 #### 2b. Create helpful **Views**
 Create two modern views to simplify day‑to‑day use. These are lenses on the same data; permissions still control which rows users can see.
@@ -328,8 +336,9 @@ We received your 3D Print request – @{outputs('Compose ReqKey')}
    - **Priority**: `Has Column Changed: Priority` = true  
    - **Method**: `Has Column Changed: Method` = true
    - **PrinterSelection**: `Has Column Changed: PrinterSelection` = true
-   - **EstHours**: `Has Column Changed: EstHours` = true
-   - **WeightEstimate**: `Has Column Changed: WeightEstimate` = true
+   - **EstimatedTime**: `Has Column Changed: EstimatedTime` = true
+   - **EstimatedWeight**: `Has Column Changed: EstimatedWeight` = true
+   - **EstimatedCost**: `Has Column Changed: EstimatedCost` = true
    - **StaffNotes**: `Has Column Changed: StaffNotes` = true
    - Each creates an AuditLog entry with appropriate FieldName and NewValue from trigger body.
 
@@ -507,7 +516,7 @@ IfError(
 ### A Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
 2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
-3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstHours, WeightEstimate, LastAction, LastActionBy, LastActionAt.
+3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, LastAction, LastActionBy, LastActionAt, NeedsAttention, Expanded.
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```
@@ -574,7 +583,7 @@ SortByColumns(
     Descending
 )
 ```
-6. Add a **Detail/Edit screen** bound to `PrintRequests`. Include Staff fields (AssignedTo, StaffNotes, EstHours, WeightEstimate, Priority, Status).
+6. Add a **Detail/Edit screen** bound to `PrintRequests`. Include Staff fields (AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, Priority, Status).
 7. On that screen, add buttons for actions (Approve, Queue, Printing, Needs Info, Ready for Pickup, Picked Up, etc.). First, prepare a reusable **person** value (Screen.OnVisible):
 ```powerfx
 Set(varActor,
@@ -670,7 +679,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    - Expect: **ReqKey** is set (e.g., `REQ-00001`), a **Created** entry in `AuditLog`, and a confirmation **email**.
 2. As **staff**: Open the **Staff Console**, select the new item, click **Approve**.
    - Expect: `Status` changes to "Ready to Print", `LastAction/By/At` populated, and an **AuditLog** entry from Flow C.
-3. Edit a staff field like **Priority** or **EstHours** in the SharePoint list (as staff).
+3. Edit a staff field like **Priority** or **EstimatedTime** in the SharePoint list (as staff).
    - Expect: **PR-Audit** flow logs a field change entry.
    - Open the **Staff – Queue** view link and verify the item shows while in active statuses:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx`

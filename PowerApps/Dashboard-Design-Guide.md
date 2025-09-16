@@ -555,33 +555,31 @@ Label.Size = 12
 
 ### Estimated Print Time Input
 ```powerfx
-// Print Time Label
-Label.Text = "Estimated Print Time (hours): *"
+// Print Time Label  
+Label.Text = "Estimated Print Time (hours): (Optional)"
 Label.Font = Font.'Segoe UI Semibold'
 Label.Size = 16
 Label.Color = RGBA(50, 50, 50, 1)
 
 // Print Time Text Input
 TextInput.Format = TextFormat.Number
-TextInput.HintText = "Enter time in hours (e.g., 2.5)"
+TextInput.HintText = "Enter time in hours (e.g., 2.5) - for operational tracking"
 TextInput.Width = 200
 TextInput.Height = 40
 TextInput.BorderColor = If(
-    IsBlank(txtEstimatedTime.Text) || !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0,
-    RGBA(209, 52, 56, 1),  // Red border if invalid
+    !IsBlank(txtEstimatedTime.Text) && (!IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0),
+    RGBA(209, 52, 56, 1),  // Red border if invalid (but only when not blank)
     RGBA(200, 200, 200, 1) // Normal border
 )
 
-// Time Validation Message
+// Time Validation Message (only for invalid entries, not blank)
 Label.Text = If(
-    IsBlank(txtEstimatedTime.Text), 
-    "Print time is required",
-    !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0,
-    "Please enter a valid time greater than 0",
+    !IsBlank(txtEstimatedTime.Text) && (!IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0),
+    "Please enter a valid time greater than 0 or leave blank",
     ""
 )
 Label.Color = RGBA(209, 52, 56, 1)
-Label.Visible = IsBlank(txtEstimatedTime.Text) || !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0
+Label.Visible = !IsBlank(txtEstimatedTime.Text) && (!IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0)
 Label.Font = Font.'Segoe UI'
 Label.Size = 12
 ```
@@ -596,13 +594,21 @@ Label.Color = RGBA(50, 50, 50, 1)
 
 // Cost Display (Auto-calculated)
 Label.Text = If(
-    IsNumeric(txtEstimatedWeight.Text) && IsNumeric(txtEstimatedTime.Text),
+    IsNumeric(txtEstimatedWeight.Text),
     "$" & Text(
-        // Cost calculation: $0.10 per gram + $2.00 per hour
-        (Value(txtEstimatedWeight.Text) * 0.10) + (Value(txtEstimatedTime.Text) * 2.00),
+        // Cost calculation: Method-specific pricing with $3.00 minimum
+        // Filament: $0.10/gram, Resin: $0.20/gram
+        Max(
+            3.00,  // $3.00 minimum charge
+            Value(txtEstimatedWeight.Text) * If(
+                varSelectedItem.Method = "Resin", 
+                0.20,  // Resin: $0.20 per gram
+                0.10   // Filament: $0.10 per gram
+            )
+        ),
         "[$-en-US]#,##0.00"
     ),
-    "$0.00"
+    "$3.00"  // Show minimum when weight not available
 )
 Label.Font = Font.'Segoe UI Semibold'
 Label.Size = 18
@@ -645,10 +651,8 @@ Set(varApprovalFormValid,
     !IsBlank(ddApprovalStaffSelection.Selected) && 
     !IsBlank(txtEstimatedWeight.Text) && 
     IsNumeric(txtEstimatedWeight.Text) && 
-    Value(txtEstimatedWeight.Text) > 0 &&
-    !IsBlank(txtEstimatedTime.Text) && 
-    IsNumeric(txtEstimatedTime.Text) && 
-    Value(txtEstimatedTime.Text) > 0
+    Value(txtEstimatedWeight.Text) > 0
+    // Note: EstimatedTime is optional for cost calculation (cost is based on weight + method only)
 )
 
 // Confirm Approval Button  
@@ -662,9 +666,16 @@ Button.DisplayMode = If(varApprovalFormValid,
     DisplayMode.Disabled
 )
 Button.OnSelect = 
-    // Calculate total cost
+    // Calculate total cost with method-specific pricing and $3.00 minimum
     Set(varCalculatedCost, 
-        (Value(txtEstimatedWeight.Text) * 0.10) + (Value(txtEstimatedTime.Text) * 2.00)
+        Max(
+            3.00,  // $3.00 minimum charge
+            Value(txtEstimatedWeight.Text) * If(
+                varSelectedItem.Method = "Resin", 
+                0.20,  // Resin: $0.20 per gram
+                0.10   // Filament: $0.10 per gram  
+            )
+        )
     );
     
     // Update the record
@@ -685,8 +696,8 @@ Button.OnSelect =
         StaffNotes: Concatenate(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
             "APPROVED by " & ddApprovalStaffSelection.Selected.Member.DisplayName & 
-            ": Weight=" & txtEstimatedWeight.Text & "g, Time=" & txtEstimatedTime.Text & 
-            "h, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+            ": Weight=" & txtEstimatedWeight.Text & "g, Method=" & varSelectedItem.Method & 
+            ", Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") & " (Min $3.00)" &
             If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") & 
             " - " & Text(Now(), "mm/dd/yyyy")
         )
@@ -703,8 +714,8 @@ Button.OnSelect =
             ddApprovalStaffSelection.Selected.Member.Email,  // ActorEmail (selected staff)
             "Power Apps",                       // ClientApp
             "Approved by " & ddApprovalStaffSelection.Selected.Member.DisplayName & 
-            ". Weight: " & txtEstimatedWeight.Text & "g, Time: " & txtEstimatedTime.Text & 
-            "h, Cost: $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") & 
+            ". Weight: " & txtEstimatedWeight.Text & "g, Method: " & varSelectedItem.Method & 
+            ", Cost: $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") & " (includes $3.00 min)" & 
             If(!IsBlank(txtApprovalComments.Text), ". Notes: " & txtApprovalComments.Text, "")
         ),
         Notify("Could not log approval action.", NotificationType.Error),
@@ -728,8 +739,9 @@ Button.OnSelect =
 - `colStaff` (Collection) - Active staff members from Staff list
 
 **SharePoint Fields Required:**
-- Uses existing `EstimatedWeight` (Number) and `EstimatedTime` (Number) columns
+- Uses existing `EstimatedWeight` (Number) and `EstimatedTime` (Number) columns  
 - Uses existing `EstimatedCost` (Currency) column
+- **Pricing:** Filament $0.10/gram, Resin $0.20/gram, $3.00 minimum charge
 
 **Email Integration:**
 - Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
@@ -1221,6 +1233,7 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 - Add `NeedsAttention` (Yes/No) column to PrintRequests list with default value: Yes
 - Ensure `Staff` list exists with `Member` (Person) and `Active` (Yes/No) columns
 - Uses existing `EstimatedWeight` (Number), `EstimatedTime` (Number), and `EstimatedCost` (Currency) columns
+- **Lab Pricing:** Filament $0.10/gram, Resin $0.20/gram, $3.00 minimum charge
 
 **Automated Email Integration:**
 - Rejection emails automatically sent via Flow B (PR-Audit) when status = "Rejected"
