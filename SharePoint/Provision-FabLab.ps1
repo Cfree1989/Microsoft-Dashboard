@@ -102,7 +102,7 @@ Add-PersonField -DisplayName 'Student' -InternalName 'Student'
 Add-TextField -DisplayName 'StudentEmail' -InternalName 'StudentEmail'
 # Student-Facing Fields
 Add-TextField -DisplayName 'Course/Section' -InternalName 'Course'
-Add-ChoiceField -DisplayName 'Department' -InternalName 'Department' -Choices @('Architecture','Engineering','Art & Design','Other')
+Add-ChoiceField -DisplayName 'Discipline' -InternalName 'Discipline' -Choices @('Architecture','Engineering','Art & Design','Other')
 Add-ChoiceField -DisplayName 'Project Type' -InternalName 'ProjectType' -Choices @('Class Project','Research','Personal','Other')
 Add-ChoiceField -DisplayName 'Color' -InternalName 'Color' -Choices @('Any','Black','White','Gray','Red','Green','Blue','Yellow','Other')
 Add-ChoiceField -DisplayName 'Method' -InternalName 'Method' -Choices @('Filament','Resin')

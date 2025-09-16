@@ -408,7 +408,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - Student (Person) - Requester identification
 - StudentEmail (Single line text) - Contact information
 - Course (Single line text) - Academic context
-- Department (Choice) - Architecture; Engineering; Art & Design; Other
+- Discipline (Choice) - Architecture; Engineering; Art & Design; Other
 - ProjectType (Choice) - Class Project; Research; Personal; Other
 - Color (Choice) - Material color preference
 - Method (Choice) - Filament; Resin

@@ -167,26 +167,7 @@ Icon.Tooltip = If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing a
 
 ---
 
-## 5. Status Indicators
-
-### Unreviewed Badge
-```powerfx
-// Unreviewed Indicator
-Rectangle.Visible = IsBlank(ThisItem.StaffViewedAt)
-Rectangle.Fill = RGBA(255, 185, 0, 1)
-Rectangle.RadiusTopLeft = 12
-Rectangle.RadiusTopRight = 12
-Rectangle.RadiusBottomLeft = 12
-Rectangle.RadiusBottomRight = 12
-
-Label.Text = "👁 Unreviewed"
-Label.Color = Color.White
-Label.Font = Font.'Segoe UI Semibold'
-```
-
----
-
-## 6. Lightbulb Toggle & Glow Effects
+## 5. Lightbulb Toggle & Glow Effects
 
 ### Attention Toggle (Lightbulb Icon)
 ```powerfx
@@ -240,11 +221,10 @@ Timer.Visible = false
 **SharePoint Field Required:**
 - Add `NeedsAttention` (Yes/No) column to PrintRequests list
 - Default value: Yes (new jobs automatically need attention)
-- This replaces the previous `StaffViewedAt` logic with explicit staff control
 
 ---
 
-## 7. Action Buttons
+## 6. Action Buttons
 
 ### Primary Action Buttons
 ```powerfx
@@ -264,33 +244,12 @@ Button.OnSelect = Set(varShowRejectModal, ThisItem.ID); Set(varSelectedItem, Thi
 Button.Text = "📦 Archive"
 Button.Fill = RGBA(255, 140, 0, 1)
 Button.Color = Color.White
-Button.OnSelect = 
-    // Update the record first
-    Patch(PrintRequests, ThisItem, {
-        Status: "Archived", 
-        NeedsAttention: false
-    });
-    
-    // Log the action with proper error handling
-    IfError(
-        'PR-Action: Log action'.Run(
-            Text(ThisItem.ID),           // RequestID
-            "Archived",                  // Action  
-            "Status",                    // FieldName
-            ThisItem.Status,             // OldValue (current status)
-            "Archived",                  // NewValue
-            User().Email,                // ActorEmail
-            "Power Apps",                // ClientApp
-            "Job archived by staff"      // Notes
-        ),
-        Notify("Could not log archive action.", NotificationType.Error),
-        Notify("Job archived successfully.", NotificationType.Success)
-    )
+Button.OnSelect = Set(varShowArchiveModal, ThisItem.ID); Set(varSelectedItem, ThisItem)
 ```
 
 ---
 
-## 8. Rejection Modal
+## 7. Rejection Modal
 
 ### Rejection Modal Container
 ```powerfx
@@ -491,7 +450,7 @@ Button.OnSelect =
 
 ---
 
-## 8b. Approval Modal
+## 7b. Approval Modal
 
 ### Approval Modal Container
 ```powerfx
@@ -778,7 +737,191 @@ Button.OnSelect =
 
 ---
 
-## 9. Expandable Details
+## 7c. Archive Confirmation Modal
+
+### Archive Modal Container
+```powerfx
+// Modal Overlay (Full Screen)
+Container.Visible = If(varShowArchiveModal > 0, true, false)
+Container.Fill = RGBA(0, 0, 0, 0.7)  // Dark overlay
+Container.X = 0
+Container.Y = 0
+Container.Width = Parent.Width
+Container.Height = Parent.Height
+
+// Modal Content Box (White rectangle in center)
+Rectangle.Fill = Color.White
+Rectangle.BorderColor = RGBA(200, 200, 200, 1)
+Rectangle.BorderThickness = 2
+Rectangle.Width = 500
+Rectangle.Height = 450
+Rectangle.X = (Parent.Width - 500) / 2
+Rectangle.Y = (Parent.Height - 450) / 2
+Rectangle.RadiusTopLeft = 8
+Rectangle.RadiusTopRight = 8
+Rectangle.RadiusBottomLeft = 8
+Rectangle.RadiusBottomRight = 8
+```
+
+### Modal Header and Content
+```powerfx
+// Modal Title
+Label.Text = "Archive Request - " & varSelectedItem.ReqKey
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 20
+Label.Color = RGBA(255, 140, 0, 1)
+Label.X = Modal.X + 20
+Label.Y = Modal.Y + 20
+
+// Warning Icon and Message
+Icon.Icon = Icon.Warning
+Icon.Color = RGBA(255, 140, 0, 1)
+Icon.Size = 32
+
+Label.Text = "This action will permanently archive the request and cannot be undone."
+Label.Font = Font.'Segoe UI'
+Label.Size = 14
+Label.Color = RGBA(209, 52, 56, 1)
+
+// Student Info
+Label.Text = "Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"
+Label.Font = Font.'Segoe UI'
+Label.Size = 14
+Label.Color = RGBA(70, 70, 70, 1)
+
+// Request Title
+Label.Text = "Request: " & varSelectedItem.Title
+Label.Font = Font.'Segoe UI'
+Label.Size = 14
+Label.Color = RGBA(70, 70, 70, 1)
+
+// Current Status
+Label.Text = "Current Status: " & varSelectedItem.Status
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 14
+Label.Color = RGBA(70, 70, 70, 1)
+```
+
+### Staff Attribution Dropdown (Mandatory)
+```powerfx
+// Staff Selection Label
+Label.Text = "Performing Action As: *"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 16
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Staff Dropdown
+Dropdown.Items = colStaff
+Dropdown.DisplayFields = ["Member"]
+Dropdown.SearchFields = ["Member"]
+Dropdown.DefaultSelectedItems = Filter(colStaff, Lower(Member.Email) = varMeEmail)
+Dropdown.Width = 300
+Dropdown.BorderColor = If(IsBlank(ddArchiveStaffSelection.Selected), 
+    RGBA(209, 52, 56, 1),  // Red border if not selected
+    RGBA(200, 200, 200, 1) // Normal border
+)
+Dropdown.HintText = "Select your name to continue"
+```
+
+### Archive Reason Text Area
+```powerfx
+// Archive Reason Label
+Label.Text = "Archive Reason (optional):"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 14
+
+// Archive Reason Text Input
+TextInput.Mode = TextMode.MultiLine
+TextInput.HintText = "Optional: Explain why this request is being archived (e.g., duplicate, withdrawn by student, obsolete)..."
+TextInput.Width = 440
+TextInput.Height = 80
+TextInput.BorderColor = RGBA(200, 200, 200, 1)
+```
+
+### Modal Action Buttons
+```powerfx
+// Cancel Button
+Button.Text = "Cancel"
+Button.Fill = RGBA(150, 150, 150, 1)
+Button.Color = Color.White
+Button.Width = 120
+Button.Height = 40
+Button.OnSelect = 
+    Set(varShowArchiveModal, 0); 
+    Set(varSelectedItem, Blank()); 
+    Reset(txtArchiveReason);
+    Reset(ddArchiveStaffSelection)
+
+// Confirm Archive Button  
+Button.Text = "⚠️ Confirm Archive"
+Button.Fill = RGBA(255, 140, 0, 1)
+Button.Color = Color.White
+Button.Width = 180
+Button.Height = 40
+Button.DisplayMode = If(IsBlank(ddArchiveStaffSelection.Selected), 
+    DisplayMode.Disabled, 
+    DisplayMode.Edit
+)
+Button.OnSelect = 
+    // Update the record
+    Patch(PrintRequests, varSelectedItem, {
+        Status: "Archived", 
+        NeedsAttention: false,
+        LastAction: "Archived",
+        LastActionBy: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddArchiveStaffSelection.Selected.Member.Email,
+            DisplayName: ddArchiveStaffSelection.Selected.Member.DisplayName,
+            Email: ddArchiveStaffSelection.Selected.Member.Email
+        },
+        LastActionAt: Now(),
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            "ARCHIVED by " & ddArchiveStaffSelection.Selected.Member.DisplayName &
+            If(!IsBlank(txtArchiveReason.Text), ": " & txtArchiveReason.Text, "") & 
+            " - " & Text(Now(), "mm/dd/yyyy")
+        )
+    });
+    
+    // Log the action with selected staff attribution
+    IfError(
+        'PR-Action: Log action'.Run(
+            Text(varSelectedItem.ID),           // RequestID
+            "Archived",                         // Action  
+            "Status",                           // FieldName
+            varSelectedItem.Status,             // OldValue
+            "Archived",                         // NewValue
+            ddArchiveStaffSelection.Selected.Member.Email,  // ActorEmail (selected staff)
+            "Power Apps",                       // ClientApp
+            "Archived by " & ddArchiveStaffSelection.Selected.Member.DisplayName & 
+            If(!IsBlank(txtArchiveReason.Text), ". Reason: " & txtArchiveReason.Text, "")
+        ),
+        Notify("Could not log archive action.", NotificationType.Error),
+        Notify("Request archived successfully.", NotificationType.Success)
+    );
+    
+    // Clear modal and reset form
+    Set(varShowArchiveModal, 0); 
+    Set(varSelectedItem, Blank());
+    Reset(txtArchiveReason);
+    Reset(ddArchiveStaffSelection)
+```
+
+**Required Variables:**
+- `varShowArchiveModal` (Number) - ID of item being archived, 0 = hidden
+- `varSelectedItem` (Record) - Currently selected gallery item
+- `colStaff` (Collection) - Active staff members from Staff list
+
+**Safety Features:**
+- Confirmation modal prevents accidental clicks
+- Staff attribution tracks who performed the action
+- Warning message emphasizes permanent nature
+- Optional reason field for documentation
+- Disabled confirm button until staff is selected
+
+---
+
+## 8. Expandable Details
 
 ### Expandable Content
 ```powerfx
@@ -788,18 +931,224 @@ Icon.OnSelect = Patch(PrintRequests, ThisItem, {Expanded: !ThisItem.Expanded})
 
 // Details Container (Visible when expanded)
 Container.Visible = ThisItem.Expanded || varExpandAll
+```
 
-// Additional Details in Expanded View
-Label.Text = "Course: " & ThisItem.Course
-Label.Text = "Department: " & ThisItem.Department  
-Label.Text = "Project Type: " & ThisItem.ProjectType
-Label.Text = "Due Date: " & Text(ThisItem.DueDate, "mm/dd/yyyy")
-Label.Text = "Notes: " & ThisItem.Notes
+### Staff Notes Section
+```powerfx
+// Staff Notes Header
+Label.Text = "Staff Notes"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 14
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Modern Inline Text Input for Staff Notes
+TextInput.Mode = TextMode.MultiLine
+TextInput.Default = ThisItem.StaffNotes
+TextInput.HintText = "No notes added yet — click to add"
+TextInput.Height = If(IsBlank(ThisItem.StaffNotes), 40, Min(120, Len(ThisItem.StaffNotes) / 50 * 20 + 40))
+TextInput.Width = Parent.Width - 40
+TextInput.BorderStyle = BorderStyle.None
+TextInput.Fill = RGBA(248, 248, 248, 1)  // Light gray background
+TextInput.Color = RGBA(70, 70, 70, 1)
+TextInput.Font = Font.'Segoe UI'
+TextInput.Size = 12
+TextInput.DisplayMode = DisplayMode.Edit
+TextInput.OnChange = 
+    // Simple approach: Save immediately when user stops typing
+    // This follows modern Power Apps patterns for inline editing
+    Patch(
+        PrintRequests, 
+        ThisItem, 
+        {StaffNotes: TextInput.Text}
+    )
+
+// Alternative: Manual Save Approach (for better control and audit logging)
+Button.Text = "💾 Save Notes"
+Button.Fill = RGBA(70, 130, 220, 1)
+Button.Color = Color.White
+Button.Width = 100
+Button.Height = 32
+Button.Font = Font.'Segoe UI'
+Button.Size = 11
+Button.Visible = TextInput.Text <> ThisItem.StaffNotes && !IsBlank(TextInput.Text)
+Button.OnSelect = 
+    // Manual save with audit logging
+    Patch(
+        PrintRequests, 
+        ThisItem, 
+        {StaffNotes: TextInput.Text}
+    );
+    // Log the staff notes change
+    IfError(
+        'PR-Action: Log action'.Run(
+            Text(ThisItem.ID),
+            "Staff Notes Updated",
+            "StaffNotes",
+            If(IsBlank(ThisItem.StaffNotes), "(blank)", ThisItem.StaffNotes),
+            TextInput.Text,
+            User().Email,
+            "Power Apps",
+            "Staff notes updated by " & User().FullName
+        ),
+        Notify("Could not log notes change.", NotificationType.Error),
+        Notify("Staff notes saved successfully.", NotificationType.Success)
+    )
+
+// Modern Pattern Notes:
+// 1. OnChange approach: Immediate save, follows editable gallery patterns
+// 2. Manual save approach: Better for audit logging and user control
+// 3. TextInput.Default loads existing values automatically
+// 4. HintText provides modern placeholder experience
+// 5. BorderStyle.None with Fill creates clean inline editing experience
+```
+
+### Additional Details Section (Modern Container-Based Design)
+```powerfx
+// Additional Details Header
+Label.Text = "Additional Details"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 14
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Modern Card-Style Details Container
+Container.X = 0
+Container.Y = HeaderLabel.Y + HeaderLabel.Height + 8
+Container.Width = Parent.Width - 40
+Container.Height = 120  // Fixed height for consistent layout
+Container.Fill = RGBA(250, 250, 250, 1)  // Very light gray background
+Container.BorderStyle = BorderStyle.Solid
+Container.BorderColor = RGBA(230, 230, 230, 1)
+Container.BorderThickness = 1
+Container.RadiusTopLeft = 6
+Container.RadiusTopRight = 6
+Container.RadiusBottomLeft = 6
+Container.RadiusBottomRight = 6
+
+// Responsive Two-Column Layout using modern positioning patterns
+// Left Column Container
+Container_Left.X = 12  // Margin from parent container
+Container_Left.Y = 12
+Container_Left.Width = (Parent.Width - 36) / 2  // Half width with spacing
+Container_Left.Height = Parent.Height - 24
+
+// Right Column Container  
+Container_Right.X = Container_Left.X + Container_Left.Width + 12  // Position right of left container with gap
+Container_Right.Y = 12
+Container_Right.Width = Parent.Width - Container_Right.X - 12  // Fill remaining width with margin
+Container_Right.Height = Parent.Height - 24
+
+// Modern Detail Item Component Pattern (Left Column)
+// Job ID Row with Copy Functionality
+Container_JobID.X = 0
+Container_JobID.Y = 0
+Container_JobID.Width = Container_Left.Width
+Container_JobID.Height = 24
+
+Label_JobID.Text = "Job ID:"
+Label_JobID.X = 0
+Label_JobID.Y = (Container_JobID.Height - Label_JobID.Height) / 2  // Center vertically
+Label_JobID.Font = Font.'Segoe UI'
+Label_JobID.Size = 11
+Label_JobID.Color = RGBA(100, 100, 100, 1)
+Label_JobID.Width = 50
+
+Label_JobIDValue.Text = ThisItem.ReqKey
+Label_JobIDValue.X = Label_JobID.X + Label_JobID.Width + 8
+Label_JobIDValue.Y = (Container_JobID.Height - Label_JobIDValue.Height) / 2
+Label_JobIDValue.Font = Font.'Segoe UI Semibold'
+Label_JobIDValue.Size = 11
+Label_JobIDValue.Color = RGBA(70, 70, 70, 1)
+Label_JobIDValue.Width = Container_JobID.Width - Label_JobIDValue.X - 24
+
+Icon_Copy.Icon = Icon.Copy
+Icon_Copy.X = Container_JobID.Width - 20
+Icon_Copy.Y = (Container_JobID.Height - 16) / 2  // Center vertically
+Icon_Copy.Size = 14
+Icon_Copy.Color = RGBA(70, 130, 220, 1)  // Blue for interactivity
+Icon_Copy.OnSelect = 
+    CopyToClipboard(ThisItem.ReqKey);
+    Notify("Job ID copied: " & ThisItem.ReqKey, NotificationType.Success)
+
+// Created Timestamp Row
+Container_Created.X = 0
+Container_Created.Y = Container_JobID.Y + Container_JobID.Height + 8
+Container_Created.Width = Container_Left.Width
+Container_Created.Height = 24
+
+Label_Created.Text = "Created:"
+Label_Created.X = 0
+Label_Created.Y = (Container_Created.Height - Label_Created.Height) / 2
+Label_Created.Font = Font.'Segoe UI'
+Label_Created.Size = 11
+Label_Created.Color = RGBA(100, 100, 100, 1)
+Label_Created.Width = 50
+
+Label_CreatedValue.Text = Text(ThisItem.Created, "mmm dd, yyyy")  // Shortened format for space
+Label_CreatedValue.X = Label_Created.X + Label_Created.Width + 8
+Label_CreatedValue.Y = (Container_Created.Height - Label_CreatedValue.Height) / 2
+Label_CreatedValue.Font = Font.'Segoe UI'
+Label_CreatedValue.Size = 11
+Label_CreatedValue.Color = RGBA(70, 70, 70, 1)
+Label_CreatedValue.Width = Container_Created.Width - Label_CreatedValue.X
+
+// Right Column Details
+// Discipline Row
+Container_Discipline.X = 0
+Container_Discipline.Y = 0
+Container_Discipline.Width = Container_Right.Width
+Container_Discipline.Height = 24
+
+Label_Discipline.Text = "Discipline:"
+Label_Discipline.X = 0
+Label_Discipline.Y = (Container_Discipline.Height - Label_Discipline.Height) / 2
+Label_Discipline.Font = Font.'Segoe UI'
+Label_Discipline.Size = 11
+Label_Discipline.Color = RGBA(100, 100, 100, 1)
+Label_Discipline.Width = 60
+
+Label_DisciplineValue.Text = ThisItem.Discipline
+Label_DisciplineValue.X = Label_Discipline.X + Label_Discipline.Width + 8
+Label_DisciplineValue.Y = (Container_Discipline.Height - Label_DisciplineValue.Height) / 2
+Label_DisciplineValue.Font = Font.'Segoe UI'
+Label_DisciplineValue.Size = 11
+Label_DisciplineValue.Color = RGBA(70, 70, 70, 1)
+Label_DisciplineValue.Width = Container_Discipline.Width - Label_DisciplineValue.X
+
+// Class Row
+Container_Class.X = 0
+Container_Class.Y = Container_Discipline.Y + Container_Discipline.Height + 8
+Container_Class.Width = Container_Right.Width
+Container_Class.Height = 24
+
+Label_Class.Text = "Class:"
+Label_Class.X = 0
+Label_Class.Y = (Container_Class.Height - Label_Class.Height) / 2
+Label_Class.Font = Font.'Segoe UI'
+Label_Class.Size = 11
+Label_Class.Color = RGBA(100, 100, 100, 1)
+Label_Class.Width = 60
+
+Label_ClassValue.Text = ThisItem.Course
+Label_ClassValue.X = Label_Class.X + Label_Class.Width + 8
+Label_ClassValue.Y = (Container_Class.Height - Label_ClassValue.Height) / 2
+Label_ClassValue.Font = Font.'Segoe UI'
+Label_ClassValue.Size = 11
+Label_ClassValue.Color = RGBA(70, 70, 70, 1)
+Label_ClassValue.Width = Container_Class.Width - Label_ClassValue.X
+
+// Modern Pattern Benefits:
+// 1. Container-based layout with proper nesting
+// 2. Responsive two-column design using modern positioning formulas
+// 3. Consistent spacing and alignment using relative positioning
+// 4. Card-style visual design with subtle borders and backgrounds
+// 5. Improved interactivity with better copy icon styling
+// 6. Vertical centering using modern centering formulas
+// 7. Scalable component pattern for easy maintenance
 ```
 
 ---
 
-## 10. Implementation Steps
+## 9. Implementation Steps
 
 ### Step 1: Create Canvas App Structure
 1. Create new Canvas app (Tablet layout)
@@ -811,6 +1160,7 @@ Label.Text = "Notes: " & ThisItem.Notes
    ClearCollect(colStaff, Filter(Staff, Active = true));
    Set(varShowRejectModal, 0);  // Controls rejection modal visibility
    Set(varShowApprovalModal, 0);  // Controls approval modal visibility
+   Set(varShowArchiveModal, 0);  // Controls archive modal visibility
    Set(varApprovalFormValid, false);  // Approval form validation state
    ```
 4. Add Timer control for glow animations (Duration: 1500ms, AutoStart: true, Repeat: true)
@@ -837,19 +1187,7 @@ Label.Text = "Notes: " & ThisItem.Notes
 
 ---
 
-## 11. Advanced Features
-
-### Visual Alerts (NEW badge, pulsing)
-```powerfx
-// Pulsing Animation for Unreviewed Jobs
-Rectangle.Fill = If(IsBlank(ThisItem.StaffViewedAt), 
-    If(Mod(Timer.Value, 2000) < 1000, 
-        RGBA(255, 185, 0, 1), 
-        RGBA(255, 185, 0, 0.6)
-    ),
-    Transparent
-)
-```
+## 10. Advanced Features
 
 ### Sound Notifications
 ```powerfx
@@ -868,11 +1206,12 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 - ✅ Clean navigation (Dashboard, Admin, Analytics tabs)
 - ✅ Status tabs with live counts 
 - ✅ Job cards with all details (name, time, identifier, email, printer, color)
-- ✅ Status indicators (Unreviewed badge)
+- ✅ Status indicators with lightbulb attention system
 - ✅ **Lightbulb toggle system** - staff can mark jobs as needing attention
 - ✅ **Animated glow effects** - cards pulse with gold glow when flagged
 - ✅ **Complete rejection modal** - staff dropdown, reason checkboxes, custom comments
-- ✅ **Complete approval modal** - staff dropdown, weight/time inputs, auto-cost calculation
+- ✅ **Complete approval modal** - staff dropdown, weight/time inputs, auto-cost calculation  
+- ✅ **Complete archive modal** - staff dropdown, confirmation warning, optional reason
 - ✅ Action buttons (Approve, Reject, Archive) with full functionality
 - ✅ Search functionality with attention-based filtering
 - ✅ Expandable details
@@ -888,4 +1227,4 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 - Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
 - Includes detailed rejection reasons, approval estimates, costs, and staff attribution
 
-**Total build time: 10-12 hours** for a complete implementation with rejection and approval modals.
+**Total build time: 12-14 hours** for a complete implementation with rejection, approval, and archive modals.
