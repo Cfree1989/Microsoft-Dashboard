@@ -172,7 +172,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **User Benefit:** Prevents invalid file submissions, reduces processing delays
 - **Acceptance Criteria:**
   - Accepted formats: .stl, .obj, .3mf only
-  - Maximum file size: 50MB per file
+  - Maximum file size: 150MB per file
   - Helper text visible on form with requirements
   - Staff rejection workflow for non-compliant files
 
@@ -265,7 +265,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - Handle up to 500 print requests without performance degradation
 - Power Apps delegation warnings managed gracefully
 - Email notifications delivered within 5 minutes of status changes
-- File attachments up to 50MB per file supported
+- File attachments up to 150MB per file supported
 
 ### Security Requirements
 - All data stored within LSU Microsoft 365 tenant

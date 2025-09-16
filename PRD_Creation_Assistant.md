@@ -193,7 +193,7 @@ Based on the Build Guide.md analysis:
 | Project Definition Form | 9 simplified fields for project specification | P0 | Easy request submission without technical complexity |
 | Smart Printer Selection | Build plate dimensions shown for self-service sizing | P0 | Reduces rejections due to size incompatibility |
 | Method-Driven Workflow | Filament/Resin choice drives printer filtering | P0 | Logical equipment selection process |
-| File Validation | Clear requirements (.stl/.obj/.3mf, 50MB max) | P0 | Prevents invalid file submissions |
+| File Validation | Clear requirements (.stl/.obj/.3mf, 150MB max) | P0 | Prevents invalid file submissions |
 | Auto-Confirmation | Automated email upon successful submission | P0 | Immediate feedback and request tracking |
 
 **3. Staff Management Features**
