@@ -70,6 +70,10 @@ function Add-NumberField { param([string]$DisplayName,[string]$InternalName)
   $existing = Get-PnPField -List $listName -Identity $InternalName -ErrorAction SilentlyContinue
   if(-not $existing){ Add-PnPField -List $listName -DisplayName $DisplayName -InternalName $InternalName -Type Number -AddToDefaultView | Out-Null }
 }
+function Add-CurrencyField { param([string]$DisplayName,[string]$InternalName)
+  $existing = Get-PnPField -List $listName -Identity $InternalName -ErrorAction SilentlyContinue
+  if(-not $existing){ Add-PnPField -List $listName -DisplayName $DisplayName -InternalName $InternalName -Type Currency -AddToDefaultView | Out-Null }
+}
 function Add-YesNoField { param([string]$DisplayName,[string]$InternalName,[switch]$DefaultYes)
   $existing = Get-PnPField -List $listName -Identity $InternalName -ErrorAction SilentlyContinue
   if(-not $existing){ Add-PnPField -List $listName -DisplayName $DisplayName -InternalName $InternalName -Type Boolean -AddToDefaultView | Out-Null }
@@ -109,8 +113,9 @@ Add-NoteField -DisplayName 'Notes' -InternalName 'Notes'
 Add-ChoiceField -DisplayName 'Status' -InternalName 'Status' -Choices @('Uploaded','Pending','Ready to Print','Printing','Completed','Paid & Picked Up','Rejected','Archived') -Default 'Uploaded'
 Add-ChoiceField -DisplayName 'Priority' -InternalName 'Priority' -Choices @('Low','Normal','High','Rush')
 Add-PersonField -DisplayName 'Assigned To' -InternalName 'AssignedTo'
-Add-NumberField -DisplayName 'Estimated Hours' -InternalName 'EstHours'
-Add-NumberField -DisplayName 'Weight Estimate' -InternalName 'WeightEstimate'
+Add-NumberField -DisplayName 'Estimated Time' -InternalName 'EstimatedTime'
+Add-NumberField -DisplayName 'Estimated Weight' -InternalName 'EstimatedWeight'
+Add-CurrencyField -DisplayName 'Estimated Cost' -InternalName 'EstimatedCost'
 Add-NoteField -DisplayName 'Staff Notes' -InternalName 'StaffNotes'
 Add-ChoiceField -DisplayName 'Last Action' -InternalName 'LastAction' -Choices @('Created','Updated','Status Change','File Added','Approved','Rejected','Printing','Completed','Picked Up','Comment Added','Email Sent')
 Add-PersonField -DisplayName 'Last Action By' -InternalName 'LastActionBy'

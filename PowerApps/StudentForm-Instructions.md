@@ -27,7 +27,7 @@ If(SharePointForm1.Mode = FormMode.New, "Uploaded", Parent.Default)
 ```
 
 ## Hide Staff-only cards
-Set **Visible = false** for: `Status`, `Priority`, `AssignedTo`, `StaffNotes`, `EstHours`, `WeightEstimate`, `LastAction`, `LastActionBy`, `LastActionAt`.
+Set **Visible = false** for: `Status`, `Priority`, `AssignedTo`, `StaffNotes`, `EstimatedTime`, `EstimatedWeight`, `EstimatedCost`, `LastAction`, `LastActionBy`, `LastActionAt`.
 
 ## Printer Selection Logic
 

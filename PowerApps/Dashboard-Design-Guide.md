@@ -15,11 +15,11 @@ Button.Fill = If(varCurrentPage = "Dashboard", RGBA(70, 130, 220, 1), RGBA(245, 
 Button.Color = If(varCurrentPage = "Dashboard", Color.White, RGBA(100, 100, 100, 1))
 Button.OnSelect = Set(varCurrentPage, "Dashboard")
 
-// Admin Button
-Button.OnSelect = Navigate(AdminScreen)
+// Admin Button (Placeholder)
+Button.OnSelect = Notify("Admin features coming soon!", NotificationType.Information)
 
-// Analytics Button  
-Button.OnSelect = Navigate(AnalyticsScreen)
+// Analytics Button (Placeholder)
+Button.OnSelect = Notify("Analytics features coming soon!", NotificationType.Information)
 ```
 
 ---
@@ -252,7 +252,7 @@ Timer.Visible = false
 Button.Text = "✓ Approve"
 Button.Fill = RGBA(16, 124, 16, 1)
 Button.Color = Color.White
-Button.OnSelect = // Launch approval modal
+Button.OnSelect = Set(varShowApprovalModal, ThisItem.ID); Set(varSelectedItem, ThisItem)
 
 // Reject Button (Red)
 Button.Text = "✗ Reject"
@@ -491,6 +491,293 @@ Button.OnSelect =
 
 ---
 
+## 8b. Approval Modal
+
+### Approval Modal Container
+```powerfx
+// Modal Overlay (Full Screen)
+Container.Visible = If(varShowApprovalModal > 0, true, false)
+Container.Fill = RGBA(0, 0, 0, 0.7)  // Dark overlay
+Container.X = 0
+Container.Y = 0
+Container.Width = Parent.Width
+Container.Height = Parent.Height
+
+// Modal Content Box (White rectangle in center)
+Rectangle.Fill = Color.White
+Rectangle.BorderColor = RGBA(200, 200, 200, 1)
+Rectangle.BorderThickness = 2
+Rectangle.Width = 600
+Rectangle.Height = 650
+Rectangle.X = (Parent.Width - 600) / 2
+Rectangle.Y = (Parent.Height - 650) / 2
+Rectangle.RadiusTopLeft = 8
+Rectangle.RadiusTopRight = 8
+Rectangle.RadiusBottomLeft = 8
+Rectangle.RadiusBottomRight = 8
+```
+
+### Modal Header and Content
+```powerfx
+// Modal Title
+Label.Text = "Approve Request - " & varSelectedItem.ReqKey
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 20
+Label.Color = RGBA(16, 124, 16, 1)
+Label.X = Modal.X + 20
+Label.Y = Modal.Y + 20
+
+// Student Info
+Label.Text = "Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"
+Label.Font = Font.'Segoe UI'
+Label.Size = 14
+Label.Color = RGBA(70, 70, 70, 1)
+
+// Request Title
+Label.Text = "Request: " & varSelectedItem.Title
+Label.Font = Font.'Segoe UI'
+Label.Size = 14
+Label.Color = RGBA(70, 70, 70, 1)
+```
+
+### Staff Attribution Dropdown (Mandatory)
+```powerfx
+// Staff Selection Label
+Label.Text = "Performing Action As: *"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 16
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Staff Dropdown
+Dropdown.Items = colStaff
+Dropdown.DisplayFields = ["Member"]
+Dropdown.SearchFields = ["Member"]
+Dropdown.DefaultSelectedItems = Filter(colStaff, Lower(Member.Email) = varMeEmail)
+Dropdown.Width = 300
+Dropdown.BorderColor = If(IsBlank(ddApprovalStaffSelection.Selected), 
+    RGBA(209, 52, 56, 1),  // Red border if not selected
+    RGBA(200, 200, 200, 1) // Normal border
+)
+Dropdown.HintText = "Select your name to continue"
+```
+
+### Estimated Weight Input
+```powerfx
+// Weight Label
+Label.Text = "Estimated Weight (grams): *"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 16
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Weight Text Input
+TextInput.Format = TextFormat.Number
+TextInput.HintText = "Enter weight in grams (e.g., 25)"
+TextInput.Width = 200
+TextInput.Height = 40
+TextInput.BorderColor = If(
+    IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0,
+    RGBA(209, 52, 56, 1),  // Red border if invalid
+    RGBA(200, 200, 200, 1) // Normal border
+)
+
+// Weight Validation Message
+Label.Text = If(
+    IsBlank(txtEstimatedWeight.Text), 
+    "Weight is required",
+    !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0,
+    "Please enter a valid weight greater than 0",
+    ""
+)
+Label.Color = RGBA(209, 52, 56, 1)
+Label.Visible = IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0
+Label.Font = Font.'Segoe UI'
+Label.Size = 12
+```
+
+### Estimated Print Time Input
+```powerfx
+// Print Time Label
+Label.Text = "Estimated Print Time (hours): *"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 16
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Print Time Text Input
+TextInput.Format = TextFormat.Number
+TextInput.HintText = "Enter time in hours (e.g., 2.5)"
+TextInput.Width = 200
+TextInput.Height = 40
+TextInput.BorderColor = If(
+    IsBlank(txtEstimatedTime.Text) || !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0,
+    RGBA(209, 52, 56, 1),  // Red border if invalid
+    RGBA(200, 200, 200, 1) // Normal border
+)
+
+// Time Validation Message
+Label.Text = If(
+    IsBlank(txtEstimatedTime.Text), 
+    "Print time is required",
+    !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0,
+    "Please enter a valid time greater than 0",
+    ""
+)
+Label.Color = RGBA(209, 52, 56, 1)
+Label.Visible = IsBlank(txtEstimatedTime.Text) || !IsNumeric(txtEstimatedTime.Text) || Value(txtEstimatedTime.Text) <= 0
+Label.Font = Font.'Segoe UI'
+Label.Size = 12
+```
+
+### Cost Calculation Display
+```powerfx
+// Cost Calculation Label
+Label.Text = "Estimated Cost:"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 16
+Label.Color = RGBA(50, 50, 50, 1)
+
+// Cost Display (Auto-calculated)
+Label.Text = If(
+    IsNumeric(txtEstimatedWeight.Text) && IsNumeric(txtEstimatedTime.Text),
+    "$" & Text(
+        // Cost calculation: $0.10 per gram + $2.00 per hour
+        (Value(txtEstimatedWeight.Text) * 0.10) + (Value(txtEstimatedTime.Text) * 2.00),
+        "[$-en-US]#,##0.00"
+    ),
+    "$0.00"
+)
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 18
+Label.Color = RGBA(16, 124, 16, 1)
+```
+
+### Additional Comments Text Area
+```powerfx
+// Comments Label
+Label.Text = "Additional Comments (optional):"
+Label.Font = Font.'Segoe UI Semibold'
+Label.Size = 14
+
+// Comments Text Input
+TextInput.Mode = TextMode.MultiLine
+TextInput.HintText = "Add any special instructions or notes for the student..."
+TextInput.Width = 540
+TextInput.Height = 80
+TextInput.BorderColor = RGBA(200, 200, 200, 1)
+```
+
+### Modal Action Buttons
+```powerfx
+// Cancel Button
+Button.Text = "Cancel"
+Button.Fill = RGBA(150, 150, 150, 1)
+Button.Color = Color.White
+Button.Width = 120
+Button.Height = 40
+Button.OnSelect = 
+    Set(varShowApprovalModal, 0); 
+    Set(varSelectedItem, Blank()); 
+    Reset(txtEstimatedWeight);
+    Reset(txtEstimatedTime);
+    Reset(txtApprovalComments);
+    Reset(ddApprovalStaffSelection)
+
+// Form Validation Logic
+Set(varApprovalFormValid, 
+    !IsBlank(ddApprovalStaffSelection.Selected) && 
+    !IsBlank(txtEstimatedWeight.Text) && 
+    IsNumeric(txtEstimatedWeight.Text) && 
+    Value(txtEstimatedWeight.Text) > 0 &&
+    !IsBlank(txtEstimatedTime.Text) && 
+    IsNumeric(txtEstimatedTime.Text) && 
+    Value(txtEstimatedTime.Text) > 0
+)
+
+// Confirm Approval Button  
+Button.Text = "✓ Confirm Approval"
+Button.Fill = RGBA(16, 124, 16, 1)
+Button.Color = Color.White
+Button.Width = 160
+Button.Height = 40
+Button.DisplayMode = If(varApprovalFormValid, 
+    DisplayMode.Edit, 
+    DisplayMode.Disabled
+)
+Button.OnSelect = 
+    // Calculate total cost
+    Set(varCalculatedCost, 
+        (Value(txtEstimatedWeight.Text) * 0.10) + (Value(txtEstimatedTime.Text) * 2.00)
+    );
+    
+    // Update the record
+    Patch(PrintRequests, varSelectedItem, {
+        Status: "Ready to Print", 
+        NeedsAttention: false,
+        LastAction: "Approved",
+        LastActionBy: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddApprovalStaffSelection.Selected.Member.Email,
+            DisplayName: ddApprovalStaffSelection.Selected.Member.DisplayName,
+            Email: ddApprovalStaffSelection.Selected.Member.Email
+        },
+        LastActionAt: Now(),
+        EstimatedWeight: Value(txtEstimatedWeight.Text),
+        EstimatedTime: Value(txtEstimatedTime.Text),
+        EstimatedCost: varCalculatedCost,
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            "APPROVED by " & ddApprovalStaffSelection.Selected.Member.DisplayName & 
+            ": Weight=" & txtEstimatedWeight.Text & "g, Time=" & txtEstimatedTime.Text & 
+            "h, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+            If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") & 
+            " - " & Text(Now(), "mm/dd/yyyy")
+        )
+    });
+    
+    // Log the action with selected staff attribution
+    IfError(
+        'PR-Action: Log action'.Run(
+            Text(varSelectedItem.ID),           // RequestID
+            "Approved",                         // Action  
+            "Status",                           // FieldName
+            varSelectedItem.Status,             // OldValue
+            "Ready to Print",                   // NewValue
+            ddApprovalStaffSelection.Selected.Member.Email,  // ActorEmail (selected staff)
+            "Power Apps",                       // ClientApp
+            "Approved by " & ddApprovalStaffSelection.Selected.Member.DisplayName & 
+            ". Weight: " & txtEstimatedWeight.Text & "g, Time: " & txtEstimatedTime.Text & 
+            "h, Cost: $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") & 
+            If(!IsBlank(txtApprovalComments.Text), ". Notes: " & txtApprovalComments.Text, "")
+        ),
+        Notify("Could not log approval action.", NotificationType.Error),
+        Notify("Request approved successfully. Student will be notified with cost estimate.", NotificationType.Success)
+    );
+    
+    // Clear modal and reset form
+    Set(varShowApprovalModal, 0); 
+    Set(varSelectedItem, Blank());
+    Reset(txtEstimatedWeight); 
+    Reset(txtEstimatedTime);
+    Reset(txtApprovalComments);
+    Reset(ddApprovalStaffSelection)
+```
+
+**Required Variables:**
+- `varShowApprovalModal` (Number) - ID of item being approved, 0 = hidden
+- `varSelectedItem` (Record) - Currently selected gallery item
+- `varCalculatedCost` (Number) - Auto-calculated cost based on weight and time
+- `varApprovalFormValid` (Boolean) - Form validation state
+- `colStaff` (Collection) - Active staff members from Staff list
+
+**SharePoint Fields Required:**
+- Uses existing `EstimatedWeight` (Number) and `EstimatedTime` (Number) columns
+- Uses existing `EstimatedCost` (Currency) column
+
+**Email Integration:**
+- Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
+- Includes estimated weight, time, cost, and any additional comments
+
+---
+
 ## 9. Expandable Details
 
 ### Expandable Content
@@ -522,7 +809,9 @@ Label.Text = "Notes: " & ThisItem.Notes
    Set(varMeEmail, Lower(User().Email));
    Set(varMeName, User().FullName);
    ClearCollect(colStaff, Filter(Staff, Active = true));
-   Set(varShowRejectModal, 0);  // Controls modal visibility
+   Set(varShowRejectModal, 0);  // Controls rejection modal visibility
+   Set(varShowApprovalModal, 0);  // Controls approval modal visibility
+   Set(varApprovalFormValid, false);  // Approval form validation state
    ```
 4. Add Timer control for glow animations (Duration: 1500ms, AutoStart: true, Repeat: true)
 
@@ -583,6 +872,7 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 - ✅ **Lightbulb toggle system** - staff can mark jobs as needing attention
 - ✅ **Animated glow effects** - cards pulse with gold glow when flagged
 - ✅ **Complete rejection modal** - staff dropdown, reason checkboxes, custom comments
+- ✅ **Complete approval modal** - staff dropdown, weight/time inputs, auto-cost calculation
 - ✅ Action buttons (Approve, Reject, Archive) with full functionality
 - ✅ Search functionality with attention-based filtering
 - ✅ Expandable details
@@ -591,9 +881,11 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 **SharePoint Requirements:**
 - Add `NeedsAttention` (Yes/No) column to PrintRequests list with default value: Yes
 - Ensure `Staff` list exists with `Member` (Person) and `Active` (Yes/No) columns
+- Uses existing `EstimatedWeight` (Number), `EstimatedTime` (Number), and `EstimatedCost` (Currency) columns
 
 **Automated Email Integration:**
 - Rejection emails automatically sent via Flow B (PR-Audit) when status = "Rejected"
-- Includes detailed rejection reasons and staff attribution
+- Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
+- Includes detailed rejection reasons, approval estimates, costs, and staff attribution
 
-**Total build time: 8-10 hours** for a complete implementation with rejection modal.
+**Total build time: 10-12 hours** for a complete implementation with rejection and approval modals.

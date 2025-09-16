@@ -416,12 +416,13 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - DueDate (Date) - Timeline planning
 - Notes (Multiple lines text) - Additional instructions
 
-**Staff-Only Fields (8):**
+**Staff-Only Fields (9):**
 - Status (Choice) - 8-state workflow progression
 - Priority (Choice) - Queue management
 - AssignedTo (Person) - Optional field for manual assignment if needed (not used in automated workflows)
-- EstHours (Number) - Time estimation
-- EstWeight (Number) - Material costing
+- EstimatedTime (Number) - Time estimation
+- EstimatedWeight (Number) - Material costing
+- EstimatedCost (Currency) - Calculated cost estimation
 - StaffNotes (Multiple lines text) - Internal communication
 - LastAction (Choice) - Action categorization
 - LastActionBy (Person) - Accountability tracking

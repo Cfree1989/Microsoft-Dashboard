@@ -7,7 +7,7 @@
 - Since: **Trigger Window Start Token** (compares with the version at trigger time)
 
 2) Add **Condition** blocks using **Has Column Changed** outputs for fields:
-- Status, AssignedTo, Priority, Method, PrinterSelection, Color, DueDate, EstHours, EstWeight, StaffNotes, Attachments
+- Status, AssignedTo, Priority, Method, PrinterSelection, Color, DueDate, EstimatedTime, EstimatedWeight, EstimatedCost, StaffNotes, Attachments
 
 3) For each changed field, **Create item** in `AuditLog`:
 - Title: `Field Change: <FieldName>`
