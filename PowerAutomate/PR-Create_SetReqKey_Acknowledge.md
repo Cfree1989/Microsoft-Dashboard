@@ -183,7 +183,7 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 3. **Configure retry policy**
 4. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Dynamic content** → **Actor Email** (from trigger)
+   - **To:** **Dynamic content** → **Student Email** (from trigger)
    - **Subject:** Type `Action needed: attach your 3D print file`
    - **Body:** Paste this HTML:
 ```html
@@ -268,7 +268,7 @@ and(
    - **Status:** Type `Uploaded`
    - **NeedsAttention:** Select `Yes`
    - **LastAction:** Type `Created`
-   - **LastActionBy:** **Dynamic content** → **Author Claims** (from trigger)
+   - **LastActionBy:** **Dynamic content** → **Student Claims** (from trigger)
    - **LastActionAt:** **Expression** → `utcNow()`
 
 **Action 2: Create item (AuditLog)**
@@ -285,7 +285,7 @@ and(
    - **FieldName:** Leave blank
    - **OldValue:** Leave blank
    - **NewValue:** **Expression** → `outputs('Generate Standardized Display Name')`
-   - **Actor Claims:** **Dynamic content** → **Author Claims** (from trigger)
+   - **Actor Claims:** **Dynamic content** → **Student Claims** (from trigger)
    - **ActorRole Value:** Type `Student`
    - **ClientApp Value:** Type `SharePoint Form`
    - **ActionAt:** **Expression** → `utcNow()`
@@ -385,7 +385,7 @@ and(
    - **ClientApp Value:** Type `Power Automate`
    - **ActionAt:** **Expression** → `utcNow()`
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** **Expression** → `File rejected: @{items('File_Validation_Gate')?['Name']} does not follow naming policy`
+   - **Notes:** Type `File rejected: @{items('File_Validation_Gate')['Name']} does not follow naming policy`
 
 **Action 3: Send rejection email**
 1. Click **+ Add an action** in False branch
@@ -393,7 +393,7 @@ and(
 3. **Configure retry policy**
 4. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Dynamic content** → **Author Email** (from trigger) or **Expression** → `triggerOutputs()['body']['Author']['Email']`
+   - **To:** **Dynamic content** → **Student Email** (from trigger) or **Expression** → `triggerOutputs()['body']['Author']['Email']`
    - **Subject:** Type `Action needed: rename your 3D print file`
    - **Body:** Paste this HTML:
 ```html
@@ -530,7 +530,7 @@ function New-StandardizedFilename {
 
 - **Infinite Loop Prevention:** Flow only triggers on CREATE, not MODIFY
 - **Attachment Validation:** Enforces filename policy on each attachment
-- **Person Field Resolution:** Uses Author Claims for reliable person mapping  
+- **Person Field Resolution:** Uses Student Claims for reliable person mapping  
 - **Email Delivery:** Uses shared mailbox for consistent sender identity
 - **Retry Strategy:** Exponential backoff prevents overwhelming SharePoint
 - **Flow Termination:** Invalid files stop processing before confirmation emails

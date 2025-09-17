@@ -145,7 +145,7 @@ Notes
    - Request (Lookup → list: PrintRequests → field: ID)
    - RequestID (Number)
    - ReqKey (Single line)
-   - Action (Choice) → Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; System
+   - Action (Choice) → Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System
    - FieldName (Single line)
    - OldValue (Multiple lines)
    - NewValue (Multiple lines)
