@@ -188,14 +188,14 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
   - If only "Send an email (V2)" is available, set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu` (requires Send As permission).
 
 ### Flow A — PR-Create: Set ReqKey + Acknowledge (Automated)
-**Purpose:** When a new request is created, assign a **ReqKey**, compute a standardized base filename string (for Title/email/validation; no file rename), validate attachment filename(s), log a **Created** event, and email the student with confirmation.
+**Purpose:** When a new request is created, assign a **ReqKey**, compute a standardized display name string (used for the list item Title/email/validation; no file rename), validate attachment filename(s), log a **Created** event, and email the student with confirmation.
 
 📋 **Full implementation details:** See [`PowerAutomate/PR-Create_SetReqKey_Acknowledge.md`](PowerAutomate/PR-Create_SetReqKey_Acknowledge.md)
 
 **Quick Summary:**
 - **Type:** Automated cloud flow
 - **Trigger:** SharePoint - When an item is created
-- **Actions:** Generate ReqKey → Compute standardized base filename → Attachment filename validation gate → Update SharePoint item → Log to AuditLog → Send confirmation email
+- **Actions:** Generate ReqKey → Compute standardized display name → Attachment filename validation gate → Update SharePoint item → Log to AuditLog → Send confirmation email
 
 ### Flow B — PR-Audit: Log changes + Email notifications (Automated)
 **Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes (Rejected/Completed).

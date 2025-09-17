@@ -96,6 +96,17 @@ Add **Condition** blocks using **Has Column Changed** outputs:
 - Condition: `Has Column Changed: StaffNotes` = true
 - AuditLog: FieldName = `StaffNotes`, NewValue = `@{triggerOutputs()?['body/StaffNotes']}`
 
+**Beginner UI steps — how to build these Conditions:**
+1. Add a **Condition** action.
+2. Click the left **Choose a value** box. In the side panel, stay on the **Dynamic content** tab and search for "Has Column Changed".
+3. Pick the exact field, e.g., **Has Column Changed: Status**.
+4. Set the middle dropdown to **is equal to**.
+5. In the right box, type `true` (without quotes).
+6. Put the relevant **Create item (AuditLog)** step in the **Yes** branch.
+7. Repeat for each field you want to track by adding new parallel Conditions.
+
+**Tip:** To make these run in parallel, add each Condition one after another at the same level (not nested). Power Automate will show parallel paths side-by-side.
+
 ### 4. **Status-Based Email Logic** (Inside Status Change "Yes" branch)
 
 #### **Nested Condition: "Check Status = Rejected"**
@@ -229,6 +240,14 @@ To customize the email templates:
 **Alternative (if shared mailbox unavailable):** "Send an email (V2)"
 - Set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu`
 - Requires "Send As" permission configured in Exchange Admin
+
+**Beginner UI steps — setting retry policy on email/audit actions:**
+1. Open the action card (e.g., **Send an email from a shared mailbox (V2)** or **Create item**).
+2. Click the **three dots (… )** in the top-right of the action.
+3. Choose **Settings**.
+4. Turn **Retry Policy** to **On** (if shown) or expand **Retry Policy**.
+5. Pick **Exponential**, set **Count = 4**, **Minimum interval = 1 minute** (or 30 seconds in Flow C, as specified).
+6. Click **Done**.
 
 ### Email Template Customization Points
 Update these sections in the email templates for your lab:

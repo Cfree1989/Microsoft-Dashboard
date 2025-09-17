@@ -2,40 +2,93 @@
 
 **Trigger:** SharePoint — When an item is **created** (List: `PrintRequests`)
 
-**Purpose:** When a new request is created, assign a **ReqKey**, generate standardized filename, log a **Created** event, and email the student with confirmation.
+**Purpose:** When a new request is created, assign a **ReqKey**, compute a standardized display name string (used for Title/email/validation; no file rename), log a **Created** event, and email the student with confirmation.
+
+---
+
+## Quick Overview
+
+This flow runs automatically when someone submits a new 3D print request. Here's what happens:
+
+1. **Generate unique ID** (REQ-00001 format)
+2. **Create standardized name** (JaneDoe_Filament_Blue_00001)
+3. **Validate file names** (must follow FirstLast_Method_Color.ext format)
+4. **If valid:** Update request, log action, send confirmation email
+5. **If invalid:** Reject request, send rejection email, stop flow
 
 ---
 
 ## Error Handling Configuration
+
 **Configure retry policies on all actions for resilience:**
 - **Retry Policy Type:** Exponential
 - **Retry Count:** 4
 - **Initial Interval:** 1 minute
 - **Apply to:** Update item, Create item (AuditLog), Send email actions
 
+**How to set retry policy on any action:**
+1. Click the **three dots (…)** on the action card
+2. Choose **Settings**
+3. Turn **Retry Policy** to **On**
+4. Configure:
+   - **Type:** Select **Exponential**
+   - **Count:** Set to **4**
+   - **Minimum Interval:** Type **PT1M** (ISO 8601 format for 1 minute)
+5. Click **Done**
+
+**ISO 8601 Duration Format Examples:**
+- 30 seconds = **PT30S**
+- 1 minute = **PT1M**
+- 2 minutes = **PT2M**
+- 90 seconds = **PT1M30S**
+
 ---
 
 ## Step-by-Step Implementation
 
-### Flow Creation Setup
+### Step 1: Flow Creation Setup
 
-1. **Create → Automated cloud flow**
-   - Name: `PR-Create: Set ReqKey + Acknowledge`
-   - Trigger: **SharePoint – When an item is created**
-   - Site address: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - List: `PrintRequests`
+**UI steps:**
+1. Go to **Power Automate** → **Create** → **Automated cloud flow**
+2. Name: `PR-Create: Set ReqKey + Acknowledge`
+3. Choose trigger: **SharePoint – When an item is created**
+4. Fill in:
+   - **Site address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List name:** `PrintRequests`
+5. Click **Create**
 
-### 2. **Compose Action: "Generate ReqKey"** (rename the compose action)
-**Inputs:**
+---
+
+### Step 2: Generate ReqKey
+
+**What this does:** Creates a unique request ID like "REQ-00001" from the SharePoint item ID.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Compose**
+3. Rename the action to: `Generate ReqKey`
+   - Click the **three dots (…)** → **Rename** → type `Generate ReqKey`
+4. In the **Inputs** box, click the **Expression** tab (fx)
+5. Paste this expression:
 ```
 concat('REQ-', formatNumber(triggerOutputs()?['body/ID'], '00000'))
-
 ```
+6. Click **Update** → **Save**
 
-*This creates a padded 5-digit request key like "REQ-00001" from the SharePoint item ID.*
+**Result:** This creates "REQ-00001", "REQ-00002", etc.
 
-### 3. **Compose Action: "Generate Standardized Filename"** (rename the compose action)
-**Inputs:**
+---
+
+### Step 3: Generate Standardized Display Name
+
+**What this does:** Creates a clean, standardized name like "JaneDoe_Filament_Blue_00001" for use in titles and emails (does not rename files).
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Compose**
+3. Rename the action to: `Generate Standardized Display Name`
+4. In the **Inputs** box, click the **Expression** tab (fx)
+5. Paste this expression:
 ```
 concat(
   replace(replace(replace(replace(replace(
@@ -52,129 +105,205 @@ concat(
   formatNumber(triggerOutputs()?['body/ID'], '00000')
 )
 ```
+6. Click **Update** → **Save**
 
-*This computes a standardized base filename string like "JaneDoe_Filament_Blue_00001" (no extension). It does not rename any files; it's used only for metadata, validation, or messaging.*
-
-#### **Expression Breakdown:**
-1. **FirstAndLastName**: `replace(replace(replace(replace(replace(triggerOutputs()?['body/Student/DisplayName'], ' ', ''), '-', ''), '''', ''), '.', ''), ',', '')`
-   - Removes spaces, hyphens, apostrophes, periods, and commas from student name
-2. **PrintMethod**: `triggerOutputs()?['body/Method']` (Filament or Resin)
-3. **Color**: `triggerOutputs()?['body/Color']`
-4. **SimpleJobID**: `formatNumber(triggerOutputs()?['body/ID'], '00000')`
-
-### 3a. Attachment Filename Validation Gate (No in-place rename)
-Add these steps immediately after Step 3 and before Step 4:
-
-1) **Get attachments** (SharePoint)
-- Site/List: `PrintRequests`
-- Id: `ID` (from trigger)
-
-2) **Apply to each** — value from Get attachments
-- Set Concurrency to 1
-
-3) **Condition** — validate filename format and extension
-Use this expression (replace `Apply_to_each` with your loop's actual name if different):
-```
-and(
-  or(
-    equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'stl'),
-    equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'obj'),
-    equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), '3mf'),
-    equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'idea'),
-    equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'form')
-  ),
-  equals(length(split(first(split(items('Apply_to_each')?['Name'], '.')), '_')), 3),
-  greater(length(first(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'))), 0),
-  greater(length(first(skip(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'), 1))), 0),
-  greater(length(last(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'))), 0)
-)
-```
-
-4) **If Yes (valid)**
-- Proceed with the existing flow (Update item, AuditLog, Email) for this submission
-- Optional: Create `AuditLog` entry noting "Attachment filename valid"
-
-5) **If No (invalid)**
-- Update item (PrintRequests):
-  - `Status` = `Rejected`
-  - `NeedsAttention` = `Yes`
-  - `LastAction` = `Rejected`
-  - `LastActionBy` = `System`
-  - `LastActionAt` = `@{utcNow()}`
-- Create item (AuditLog): Title `Rejected: Invalid filename`, include the offending name `@{items('Apply_to_each')?['Name']}` in Notes
-- Send rejection email to student with rename policy and accepted extensions
-- Terminate (Status: Canceled) to prevent confirmation email
-
-Guard the confirmation email step so it only runs when the Condition passes (i.e., only on the valid path).
-
-#### **Character Cleaning Rules:**
-The following characters are removed from student names to ensure filesystem compatibility:
+**Character cleaning rules applied:**
 - **Spaces** → Removed (Jane Doe → JaneDoe)
 - **Hyphens** → Removed (Mary-Jane → MaryJane)
 - **Apostrophes** → Removed (O'Connor → OConnor)
 - **Periods** → Removed (Jr. → Jr)
 - **Commas** → Removed (Smith, John → SmithJohn)
 
-This ensures filenames work across Windows, Mac, and Linux filesystems without issues.
+This ensures names work across Windows, Mac, and Linux filesystems.
 
-> Note: Steps 4–7 run only in the YES (valid) branch of the Attachment Filename Validation Gate.
+---
 
-### 4. **Update item** (SharePoint) - **Configure Retry Policy: Exponential, 4 retries**
-- **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-- **List Name:** `PrintRequests`
-- **Id:** `ID` (from trigger)
-- **ReqKey:** `Outputs` (from Generate ReqKey step)
-- **Title:** 
-```
-@{outputs('Generate Standardized Filename')}
-```
-- **StudentEmail:**
-```
-@{toLower(triggerOutputs()?['body/Author/Email'])}
-```
-- **Status:** `Uploaded` (default)
-- **NeedsAttention:** `Yes` (new requests need attention)
-- **LastAction:** `Created`
-- **LastActionBy:** `Author Claims` (from trigger)
-- **LastActionAt:** 
-```
-@{utcNow()}
+### Step 4: Attachment Validation System
+
+**What this does:** First checks if any files are attached, then validates that each file follows the naming policy (FirstLast_Method_Color.ext) and has approved extensions (.stl, .obj, .3mf, .idea, .form).
+
+#### 4a) Get Attachments
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Get attachments** (SharePoint)
+3. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Dynamic content** → select **ID** (from trigger)
+
+#### 4b) No Attachments Guard (Condition)
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Condition**
+3. Set up condition:
+   - Left box: **Expression** → `equals(length(body('Get_attachments')?['value']), 0)`
+   - Middle: **is equal to**
+   - Right box: `true`
+
+##### Yes Branch (No Files Attached) — Reject Immediately:
+
+**Action 1: Update item to Rejected**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Update item** (SharePoint)
+3. **Configure retry policy**
+4. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Status:** Type `Rejected`
+   - **NeedsAttention:** Select `Yes`
+   - **LastAction:** Type `Rejected`
+   - **LastActionBy:** Type `System`
+   - **LastActionAt:** **Expression** → `utcNow()`
+
+**Action 2: Log no attachments rejection**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Create item** (SharePoint)
+3. **Configure retry policy**
+4. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Rejected: No files attached`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
+   - **Action Value:** Type `Rejected`
+   - **FieldName:** Type `Attachments`
+   - **NewValue:** Type `No files attached`
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `Request rejected: No files were attached to the submission`
+
+**Action 3: Send no files rejection email**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. **Configure retry policy**
+4. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **Actor Email** (from trigger)
+   - **Subject:** Type `Action needed: attach your 3D print file`
+   - **Body:** Paste this HTML:
+```html
+<p>We're unable to process your 3D print request because no files were attached.</p>
+<p><strong>Required:</strong> At least one 3D model file must be attached</p>
+<p><strong>Accepted formats:</strong> .stl, .obj, .3mf, .idea, .form</p>
+<p><strong>File naming:</strong> FirstLast_Method_Color.ext</p>
+<p><strong>Example:</strong> JaneDoe_Resin_Clear.3mf</p>
+<br>
+<p>Please attach your file and submit a new request. Thank you!</p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-### 5. **Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
-- **Site Address:** same
-- **List Name:** `AuditLog`
-- **Title:** `Request Created`
-- **RequestID:** `@{triggerOutputs()?['body/ID']}`
-- **ReqKey:** `Outputs` (from Generate ReqKey)
-- **Action Value:** `Created`
-- **FieldName:** (leave blank)
-- **OldValue:** (leave blank)  
-- **NewValue:** `@{outputs('Generate Standardized Filename')}`
-- **Actor Claims:** `Author Claims` (from trigger)
-- **ActorRole Value:** `Student`
-- **ClientApp Value:** `SharePoint Form`
-- **ActionAt:**
-```
-@{utcNow()}
-```
-- **FlowRunId:**
-```
-@{workflow()['run']['name']}
-```
-- **Notes:** `New 3D print request submitted with standardized filename`
+**Action 4: Terminate flow**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Terminate**
+3. Fill in:
+   - **Status:** Select `Cancelled`
 
-### 6. **Send an email from a shared mailbox (V2)** - **Configure Retry Policy: Exponential, 4 retries**
-- **Shared Mailbox:** `coad-Fabrication Lab@lsu.edu`
-- **To:** `StudentEmail` (from Update item step)
-- **Subject:**
+##### No Branch (Files Present) — Continue to File Validation:
+
+#### 4c) File Validation Gate (Apply to Each Loop)
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Apply to each**
+3. In **Select an output from previous steps:** Click **Dynamic content** → select **value** (from Get attachments)
+4. **Rename the loop:** Click the **three dots (…)** on the loop → **Rename** → type `File Validation Gate`
+5. **Set concurrency:** Click **three dots (…)** → **Settings** → turn on **Concurrency Control** → set **Degree of Parallelism** = **1** → **Done**
+
+*Note: Concurrency = 1 ensures that if any file fails validation, the flow stops cleanly.*
+
+#### 4c) Filename Validation Condition
+
+**UI steps:**
+1. **Inside the loop**, click **+ Add an action**
+2. Search for and select **Condition**
+3. **Set up the condition:**
+   - Click the left **Choose a value** box
+   - Switch to **Expression** tab (fx)
+   - Paste this expression (spaces in loop names become underscores):
 ```
-We received your 3D Print request – @{outputs('Generate ReqKey')}
+and(
+  or(
+    equals(toLower(last(split(items('File_Validation_Gate')?['Name'], '.'))), 'stl'),
+    equals(toLower(last(split(items('File_Validation_Gate')?['Name'], '.'))), 'obj'),
+    equals(toLower(last(split(items('File_Validation_Gate')?['Name'], '.'))), '3mf'),
+    equals(toLower(last(split(items('File_Validation_Gate')?['Name'], '.'))), 'idea'),
+    equals(toLower(last(split(items('File_Validation_Gate')?['Name'], '.'))), 'form')
+  ),
+  equals(length(split(first(split(items('File_Validation_Gate')?['Name'], '.')), '_')), 3),
+  greater(length(first(split(first(split(items('File_Validation_Gate')?['Name'], '.')), '_'))), 0),
+  greater(length(first(skip(split(first(split(items('File_Validation_Gate')?['Name'], '.')), '_'), 1))), 0),
+  greater(length(last(split(first(split(items('File_Validation_Gate')?['Name'], '.')), '_'))), 0)
+)
 ```
-- **Body:**
+4. Click **Update**
+5. Set middle dropdown to **is equal to**
+6. In right box, type `true` (without quotes)
+7. Click **Save**
+
+
+#### 4d) True Branch (Green Box) — Valid Filename
+
+**What this does:** When filename passes validation, continue with normal flow processing.
+
+**UI steps:**
+1. Click the **+ (plus)** inside the **True** (green) box
+2. Add these actions in order:
+
+**Action 1: Update item (SharePoint)**
+1. Search for and select **Update item** (SharePoint)
+2. **Configure retry policy** (see instructions at top)
+3. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
+   - **Title:** **Expression** → `outputs('Generate Standardized Display Name')`
+   - **StudentEmail:** **Expression** → `toLower(triggerOutputs()?['body/Author/Email'])`
+   - **Status:** Type `Uploaded`
+   - **NeedsAttention:** Select `Yes`
+   - **LastAction:** Type `Created`
+   - **LastActionBy:** **Dynamic content** → **Author Claims** (from trigger)
+   - **LastActionAt:** **Expression** → `utcNow()`
+
+**Action 2: Create item (AuditLog)**
+1. Click **+ Add an action** in True branch
+2. Search for and select **Create item** (SharePoint)
+3. **Configure retry policy**
+4. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Request Created`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
+   - **Action Value:** Type `Created`
+   - **FieldName:** Leave blank
+   - **OldValue:** Leave blank
+   - **NewValue:** **Expression** → `outputs('Generate Standardized Display Name')`
+   - **Actor Claims:** **Dynamic content** → **Author Claims** (from trigger)
+   - **ActorRole Value:** Type `Student`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `New 3D print request submitted with standardized display name`
+
+**Action 3: Send confirmation email**
+1. Click **+ Add an action** in True branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. **Configure retry policy**
+4. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **StudentEmail** (from Update item)
+   - **Subject:** **Expression** → `We received your 3D Print request – @{outputs('Generate ReqKey')}`
+   - **Body:** Paste this HTML:
 ```html
 <p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> @{outputs('Generate Standardized Filename')}</p>
+<p><strong>Request:</strong> @{outputs('Generate Standardized Display Name')}</p>
 <p><strong>Request ID:</strong> @{outputs('Generate ReqKey')}</p>
 <p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
 <p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
@@ -198,88 +327,130 @@ We received your 3D Print request – @{outputs('Generate ReqKey')}
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-### 7. **Create item** in `AuditLog` (Email Sent) - **Configure Retry Policy: Exponential, 4 retries**
-- **Site Address:** same
-- **List Name:** `AuditLog`
-- **Title:** `Email Sent: Confirmation`
-- **RequestID:** `@{triggerOutputs()?['body/ID']}`
-- **ReqKey:** `Outputs` (from Generate ReqKey)
-- **Action Value:** `Email Sent`
-- **FieldName:** `StudentEmail`
-- **NewValue:** `@{outputs('Update item')?['body/StudentEmail']}`
-- **Actor Claims:** (leave blank for system)
-- **ActorRole Value:** `System`
-- **ClientApp Value:** `Power Automate`
-- **ActionAt:**
-```
-@{utcNow()}
-```
-- **FlowRunId:**
-```
-@{workflow()['run']['name']}
-```
-- **Notes:** `Confirmation email sent to student`
+**Action 4: Log email sent**
+1. Click **+ Add an action** in True branch
+2. Search for and select **Create item** (SharePoint)
+3. **Configure retry policy**
+4. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Confirmation`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **NewValue:** **Expression** → `outputs('Update item')?['body/StudentEmail']`
+   - **Actor Claims:** Leave blank
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `Confirmation email sent to student`
 
----
+#### 4e) False Branch (Red Box) — Invalid Filename
 
-## Rejection Email (Invalid Filename) — Template
+**What this does:** When filename fails validation, reject the request and stop the flow.
 
-Use in the NO (invalid) branch after updating the item and creating the AuditLog entry.
+**UI steps:**
+1. Click the **+ (plus)** inside the **False** (red) box
+2. Add these actions in order:
 
-- Subject:
-```
-Action needed: rename your 3D print file
-```
+**Action 1: Update item to Rejected**
+1. Search for and select **Update item** (SharePoint)
+2. **Configure retry policy**
+3. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Status:** Type `Rejected`
+   - **NeedsAttention:** Select `Yes`
+   - **LastAction:** Type `Rejected`
+   - **LastActionBy:** Type `System`
+   - **LastActionAt:** **Expression** → `utcNow()`
 
-- Body (HTML):
+**Action 2: Log rejection**
+1. Click **+ Add an action** in False branch
+2. Search for and select **Create item** (SharePoint)
+3. **Configure retry policy**
+4. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Rejected: Invalid filename`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
+   - **Action Value:** Type `Rejected`
+   - **FieldName:** Type `Attachments`
+   - **NewValue:** Type `Invalid filename format`
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** **Expression** → `File rejected: @{items('File_Validation_Gate')?['Name']} does not follow naming policy`
+
+**Action 3: Send rejection email**
+1. Click **+ Add an action** in False branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. **Configure retry policy**
+4. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **Author Email** (from trigger) or **Expression** → `triggerOutputs()['body']['Author']['Email']`
+   - **Subject:** Type `Action needed: rename your 3D print file`
+   - **Body:** Paste this HTML:
 ```html
-<p>We’re unable to process your request because the attached file name doesn’t follow our format.</p>
+<p>We're unable to process your request because the attached file name doesn't follow our format.</p>
 <p><strong>Required format:</strong> FirstLast_Method_Color.ext</p>
 <p><strong>Examples:</strong> JaneDoe_Resin_Clear.3mf</p>
 <p><strong>Accepted types:</strong> .stl, .obj, .3mf, .idea, .form</p>
 <p>Please rename your file accordingly and submit a new request. Thank you!</p>
 ```
 
-> Ensure the confirmation email step is not executed in the invalid branch.
+**Action 4: Terminate flow**
+1. Click **+ Add an action** in False branch
+2. Search for and select **Terminate**
+3. Fill in:
+   - **Status:** Select `Cancelled`
+   - This stops the flow so no confirmation email is sent
+
 
 ---
 
-## Filename Policy — Text for SharePoint Form UI
+## Filename Policy for SharePoint Form
 
-Use this text in your form (Power Apps customized form or a read-only instructions field placed at the top):
+Add this text to your SharePoint form so users know the file naming requirements:
 
+**Text to display:**
 - Please name your file: FirstLast_Method_Color.ext
 - Example: JaneDoe_Resin_Clear.3mf
 - Accepted types: .stl, .obj, .3mf, .idea, .form
 - Submissions not following this format may be rejected.
 
-Power Apps placement (quick steps):
-- Customize the list form in Power Apps → insert a Label at the top of the main screen
-- Set Text to the bullets above, enable auto-height, set Wrap = true
-- Optional: use a yellow info icon and bold for the first line
+**How to add to Power Apps form:**
+1. Customize the list form in Power Apps
+2. Insert a **Label** at the top of the main screen
+3. Set **Text** to the policy above
+4. Enable **Auto Height**, set **Wrap** = true
+5. Optional: Add yellow background and bold formatting
 
-Modern list (no Power Apps) alternative:
-- Add a single-line read-only column named "Submission Instructions"
-- Default value: the policy text above; show this column first in the form
+**Alternative for modern SharePoint lists:**
+1. Add a single-line text column named "Submission Instructions"
+2. Set as read-only with default value = policy text
+3. Show this column first in the form
 
 ---
 
 ## URL Reference Guide
 
-**Replace these placeholders with your actual SharePoint site URLs:**
+**Replace these with your actual SharePoint URLs:**
 
-- **Site root**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-- **Per-item link (used in emails)**: `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}` 
-  - Points to the SharePoint Display Form for the specific item
-  - Keep the `@{...}` expression exactly as shown - Power Automate fills in the item ID at runtime
-- **My Requests view (students)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
-  - Public link to the student-filtered view for use in confirmation emails
+- **Site root:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+- **Item details link:** `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}`
+- **My Requests view:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
 
-**How to get your My Requests view URL:** 
-1. In SharePoint, open `PrintRequests` list
-2. Switch to the "My Requests" view 
+**To get your My Requests view URL:**
+1. In SharePoint, open the `PrintRequests` list
+2. Switch to the "My Requests" view
 3. Copy the full browser URL
-4. Use this URL in the email body
+4. Use this URL in email templates
 
 ---
 
@@ -326,22 +497,23 @@ function New-StandardizedFilename {
 # Result: "JaneDoe_Filament_Blue_00001.stl"
 ```
 
+---
 
-### Benefits of This Naming Convention
+## Benefits of This Naming Convention
 
-✅ **Consistency**: All files follow identical naming pattern  
-✅ **Searchability**: Easy to find files by student, method, or color  
-✅ **Sortability**: Files sort logically by name  
-✅ **Collision Prevention**: SimpleJobID ensures unique filenames  
-✅ **Metadata Embedded**: Key information visible in filename  
-✅ **Cross-Platform Safe**: No special characters that cause filesystem issues
+✅ **Consistency:** All files follow identical naming pattern  
+✅ **Searchability:** Easy to find files by student, method, or color  
+✅ **Sortability:** Files sort logically by name  
+✅ **Collision Prevention:** SimpleJobID ensures unique filenames  
+✅ **Metadata Embedded:** Key information visible in filename  
+✅ **Cross-Platform Safe:** No special characters that cause filesystem issues
 
 ---
 
 ## Key Features Added
 
-✅ **Standardized Filename Generation** - Creates consistent, searchable filenames with character cleaning  
-✅ **Enhanced Title Update** - Uses standardized name (without extension) as display name  
+✅ **Standardized Display Name Generation** - Creates consistent, searchable names with character cleaning  
+✅ **Enhanced Title Update** - Uses standardized display name (no file rename)  
 ✅ **Complete Audit Logging** - Includes FlowRunId, ActionAt timestamps, and filename in audit trail  
 ✅ **Email Audit Trail** - Logs all sent emails for compliance tracking  
 ✅ **Rich HTML Email** - Professional formatting with complete request information  
@@ -350,7 +522,7 @@ function New-StandardizedFilename {
 ✅ **Comprehensive Links** - Both item detail and "My Requests" view links  
 ✅ **Cross-Platform Compatibility** - Filename safe across all operating systems  
 ✅ **PowerShell Integration** - Offline filename generation for administrative tasks  
-✅ **Expression Documentation** - Detailed breakdown of filename generation logic  
+✅ **Detailed Documentation** - Step-by-step UI instructions throughout
 
 ---
 
@@ -361,17 +533,22 @@ function New-StandardizedFilename {
 - **Person Field Resolution:** Uses Author Claims for reliable person mapping  
 - **Email Delivery:** Uses shared mailbox for consistent sender identity
 - **Retry Strategy:** Exponential backoff prevents overwhelming SharePoint
+- **Flow Termination:** Invalid files stop processing before confirmation emails
 
 ---
 
 ## Testing Checklist
 
 - [ ] ReqKey generates in format "REQ-00001"
-- [ ] Standardized filename created correctly
+- [ ] Standardized display name computed correctly
 - [ ] Title field updated without file extension
 - [ ] StudentEmail populated from author
 - [ ] NeedsAttention set to Yes
 - [ ] LastAction fields populated
-- [ ] Two AuditLog entries created (Created + Email Sent)
-- [ ] Confirmation email received with all links working
+- [ ] Valid filename: Two AuditLog entries created (Created + Email Sent)
+- [ ] Valid filename: Confirmation email received with all links working
+- [ ] Invalid filename: Request marked as Rejected
+- [ ] Invalid filename: Rejection email sent with policy reminder
+- [ ] Invalid filename: Flow terminates (no confirmation email)
 - [ ] Retry policies trigger on simulated failures
+- [ ] Concurrency setting prevents race conditions

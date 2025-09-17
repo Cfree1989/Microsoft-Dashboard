@@ -70,6 +70,17 @@ Click **Add an input** for each of the following parameters defined above in the
 
 *This ensures RequestID, Action, NewValue, and ActorEmail are provided.*
 
+**Beginner UI steps — where to paste this in Power Automate:**
+1. Add a **Condition** action after the **Get item** step.
+2. Click the first left box labeled **Choose a value** to open the side panel.
+3. Switch to the **Expression** tab (fx) at the top of the panel.
+4. Paste the whole expression above and click **Update**.
+5. Set the middle dropdown to **is equal to**.
+6. In the right box, type `true` (without quotes).
+7. Click **Save** on the flow.
+
+If you cannot reach the Expression tab, add a **Compose** action named `Are Inputs Present` and paste the expression into **Inputs**. Then set the Condition to compare `Outputs` of `Are Inputs Present` **is equal to** `true`.
+
 ### 5. **Yes Branch - Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
 - **Site Address:** same
 - **List Name:** `AuditLog`
