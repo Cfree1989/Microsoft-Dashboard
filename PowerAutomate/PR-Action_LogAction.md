@@ -33,16 +33,36 @@ Configure these input parameters when creating the instant flow:
 
 ## Step-by-Step Implementation
 
-### 1. **Get item** (SharePoint) - **Configure Retry Policy: Exponential, 4 retries**
+### Flow Creation Setup
+
+1. **Create → Instant cloud flow**
+   - Name: `PR-Action: Log action`
+   - Trigger: **Power Apps**
+   - Skip the "Choose how to trigger this flow" step (Power Apps trigger will be added automatically)
+
+### 2. **Add input parameters** from Power Apps trigger
+
+Click **Add an input** for each of the following parameters defined above in the Trigger Inputs section. Power Automate will create these automatically when you add them:
+
+- **RequestID** (Text) → "The ID of the request being modified"
+- **Action** (Text) → "The action being performed (e.g., Status Change)"
+- **FieldName** (Text) → "The field being changed (e.g., Status)"
+- **OldValue** (Text) → "Previous value of the field"
+- **NewValue** (Text) → "New value of the field"
+- **ActorEmail** (Text) → "Email of the staff member performing the action"
+- **ClientApp** (Text) → "Source application (Power Apps)"
+- **Notes** (Text) → "Additional context or notes"
+
+### 3. **Get item** (SharePoint) - **Configure Retry Policy: Exponential, 4 retries**
 - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 - **List Name:** `PrintRequests`
 - **Id:** `RequestID` (from Power Apps trigger input)
 
 *This retrieves the ReqKey and validates the item exists before logging.*
 
-### 2. **Condition: Validate Required Inputs**
+### 4. **Condition: Validate Required Inputs**
 - **Choose a value:** 
-```javascript
+```
 @{and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_4'])), not(empty(triggerBody()['text_5'])))}
 ```
 - **Condition:** is equal to
@@ -50,11 +70,11 @@ Configure these input parameters when creating the instant flow:
 
 *This ensures RequestID, Action, NewValue, and ActorEmail are provided.*
 
-### 3. **Yes Branch - Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
+### 5. **Yes Branch - Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
 - **Site Address:** same
 - **List Name:** `AuditLog`
 - **Title:**
-```javascript
+```
 @{concat('Staff Action: ', triggerBody()['text_1'])}
 ```
 - **RequestID:** `RequestID` (from Power Apps trigger input)
@@ -67,19 +87,19 @@ Configure these input parameters when creating the instant flow:
 - **ActorRole Value:** `Staff`
 - **ClientApp Value:** `ClientApp` (from Power Apps trigger input)
 - **ActionAt:**
-```javascript
+```
 @{utcNow()}
 ```
 - **FlowRunId:**
-```javascript
+```
 @{workflow()['run']['name']}
 ```
 - **Notes:** 
-```javascript
+```
 @{if(empty(triggerBody()['text_7']), concat('Action performed by staff via Power Apps: ', triggerBody()['text_1']), triggerBody()['text_7'])}
 ```
 
-### 4. **Respond to a PowerApp or flow** - Success Response
+### 6. **Respond to a PowerApp or flow** - Success Response
 - **Response:** 
 ```json
 {
@@ -90,7 +110,7 @@ Configure these input parameters when creating the instant flow:
 }
 ```
 
-### 5. **No Branch - Respond to PowerApp** - Error Response
+### 7. **No Branch - Respond to PowerApp** - Error Response
 - **Response:**
 ```json
 {
@@ -99,6 +119,21 @@ Configure these input parameters when creating the instant flow:
   "timestamp": "@{utcNow()}"
 }
 ```
+
+---
+
+## Power Apps Connection Setup
+
+### Adding the Flow to Your Power Apps
+1. In Power Apps Studio, go to **Data** → **Add data**
+2. Search for "Power Automate" and select it
+3. Find your "PR-Action: Log action" flow and add it
+4. The flow will appear in your app's data sources as `'PR-Action: Log action'`
+
+### Flow Trigger Management
+- The instant flow trigger automatically creates the required input parameters
+- Power Apps will show these parameters when you call the flow
+- Ensure all required parameters are mapped correctly in your Power Apps formulas
 
 ---
 

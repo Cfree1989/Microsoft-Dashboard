@@ -19,7 +19,15 @@
 
 ## Step-by-Step Implementation
 
-### 1. **Get changes for an item or a file (properties only)**
+### Flow Creation Setup
+
+1. **Create → Automated cloud flow**
+   - Name: `PR-Audit: Log changes + Email notifications`
+   - Trigger: **SharePoint – When an item is created or modified**
+   - **Site Address**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name**: `PrintRequests`
+
+### 2. **Get changes for an item or a file (properties only)**
 - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 - **List Name:** `PrintRequests`
 - **Id:** `ID` (from trigger)
@@ -27,7 +35,7 @@
 
 *This compares current values to those at flow start time, preventing infinite loops.*
 
-### 2. **Parallel Condition Branches for Field Changes**
+### 3. **Parallel Condition Branches for Field Changes**
 
 Add **Condition** blocks using **Has Column Changed** outputs:
 
@@ -88,7 +96,7 @@ Add **Condition** blocks using **Has Column Changed** outputs:
 - Condition: `Has Column Changed: StaffNotes` = true
 - AuditLog: FieldName = `StaffNotes`, NewValue = `@{triggerOutputs()?['body/StaffNotes']}`
 
-### 3. **Status-Based Email Logic** (Inside Status Change "Yes" branch)
+### 4. **Status-Based Email Logic** (Inside Status Change "Yes" branch)
 
 #### **Nested Condition: "Check Status = Rejected"**
 - **Choose a value:** `@{triggerOutputs()?['body/Status']}`
@@ -194,15 +202,56 @@ Add **Condition** blocks using **Has Column Changed** outputs:
   - **FlowRunId:** `@{workflow()['run']['name']}`
   - **Notes:** `Completion notification sent to student`
 
+---
+
+## Advanced Implementation Notes
+
+### Person Field Resolution
+If the **Actor** person field fails to resolve, use **Editor Claims** from the trigger instead of trying to resolve email addresses manually.
+
+### Infinite Loop Prevention
+This flow uses the **Trigger Window Start Token** in the "Get changes" action, which compares current values to those at flow start time, preventing infinite loops when the flow updates SharePoint items.
+
+### Email Customization
+To customize the email templates:
+1. Modify the HTML in the email body sections
+2. Add conditional content using Power Automate expressions like:
+   ```
+   @{if(not(empty(triggerOutputs()?['body/EstimatedCost'])), concat('Cost: $', string(triggerOutputs()?['body/EstimatedCost'])), 'Cost: TBD')}
+   ```
+3. Update lab hours and contact information in the completion email
+
+### Shared Mailbox Setup
+**Preferred Email Action:** "Send an email from a shared mailbox (V2)"
+- **Shared mailbox**: `coad-Fabrication Lab@lsu.edu`
+- Requires that the flow owner has "Send As" permissions on the shared mailbox
+
+**Alternative (if shared mailbox unavailable):** "Send an email (V2)"
+- Set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu`
+- Requires "Send As" permission configured in Exchange Admin
+
+### Email Template Customization Points
+Update these sections in the email templates for your lab:
+- **Lab hours**: Currently set to "Monday-Friday 9AM-5PM, Saturday 10AM-2PM"
+- **Lab location**: Currently "Design Building, Room 101"
+- **Contact information**: Update any phone numbers or additional contact methods
+- **Pickup procedures**: Modify payment and ID verification requirements
+
 #### **Additional Status Email Conditions** (Optional Enhancement)
 
 **Parallel Nested Condition: "Check Status = Ready to Print"**
-- Sends approval notification with cost estimates when status changes to "Ready to Print"
+- **Choose a value:** `@{triggerOutputs()?['body/Status']}`
+- **Condition:** is equal to
+- **Choose a value:** `Ready to Print`
+- **Yes Branch:** Send approval notification with cost estimates
 
 **Parallel Nested Condition: "Check Status = Printing"**
-- Sends "printing started" notification to keep students informed
+- **Choose a value:** `@{triggerOutputs()?['body/Status']}`
+- **Condition:** is equal to
+- **Choose a value:** `Printing`
+- **Yes Branch:** Send "printing started" notification to keep students informed
 
-### 4. **Attachments Change Detection** (Optional)
+### 5. **Attachments Change Detection** (Optional)
 
 **Condition:** `Has Column Changed: Attachments` = true
 
@@ -226,6 +275,8 @@ Add **Condition** blocks using **Has Column Changed** outputs:
 ✅ **Concurrency Control** - Prevents race conditions in audit logging  
 ✅ **Dynamic Email Content** - Shows cost/time estimates when available  
 ✅ **Professional Communication** - Detailed pickup instructions and lab info  
+✅ **Shared Mailbox Integration** - Consistent sender identity across all emails  
+✅ **Customizable Templates** - Easy to update lab-specific information  
 
 ---
 
@@ -250,3 +301,6 @@ Add **Condition** blocks using **Has Column Changed** outputs:
 - [ ] Retry policies trigger on simulated failures
 - [ ] Cost estimates display correctly in completion emails
 - [ ] Attachment changes logged properly (if implemented)
+- [ ] Shared mailbox configuration working properly
+- [ ] Email links resolve to correct SharePoint URLs
+- [ ] Lab hours and location information accurate in emails

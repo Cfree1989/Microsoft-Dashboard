@@ -188,326 +188,45 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
   - If only "Send an email (V2)" is available, set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu` (requires Send As permission).
 
 ### Flow A — PR-Create: Set ReqKey + Acknowledge (Automated)
-**Purpose:** When a new request is created, assign a **ReqKey**, log a **Created** event, and email the student.
+**Purpose:** When a new request is created, assign a **ReqKey**, compute a standardized base filename string (for Title/email/validation; no file rename), validate attachment filename(s), log a **Created** event, and email the student with confirmation.
 
-#### Step-by-Step Setup:
+📋 **Full implementation details:** See [`PowerAutomate/PR-Create_SetReqKey_Acknowledge.md`](PowerAutomate/PR-Create_SetReqKey_Acknowledge.md)
 
-1. **Create → Automated cloud flow**
-   - Name: `PR-Create: Set ReqKey + Acknowledge`
-   - Trigger: **SharePoint – When an item is created**
-   - Site address: your Fabrication Lab site → List: `PrintRequests`
-
-2. **New step → Compose** (rename to: "Compose ReqKey")
-   - **Inputs**:
-```
-@{concat('REQ-', right(concat('00000', string(triggerOutputs()?['body/ID'])), 5))}
-```
-
-3. **New step → Compose** (rename to: "Generate Standardized Filename")
-   - **Inputs**:
-```
-@{concat(
-  replace(replace(replace(replace(replace(triggerOutputs()?['body/Student/DisplayName'], ' ', ''), '-', ''), '''', ''), '.', ''), ',', ''),
-  '_',
-  triggerOutputs()?['body/Method'],
-  '_', 
-  triggerOutputs()?['body/Color'],
-  '_',
-  right(outputs('Compose ReqKey'), 5),
-  '.',
-  last(split(triggerOutputs()?['body/Attachments'][0]['Name'], '.'))
-)}
-```
-
-4. **New step → Update item** (SharePoint)
-   - **Site Address**: same as trigger
-   - **List Name**: PrintRequests
-   - **Id**: `ID` (from trigger)
-   - **ReqKey**: `Outputs` (from Compose ReqKey step)
-   - **Title**: `Outputs` (from Generate Standardized Filename step, without extension) ← standardized display name
-   - **StudentEmail**:
-```
-@{toLower(triggerOutputs()?['body/Author/Email'])}
-```
-   - **Course**: `Course` (from trigger) ← OR use "Limit columns by view" to avoid mapping required fields
-
-5. **New step → Create item** (SharePoint → AuditLog)
-   - **Site Address**: same
-   - **List Name**: AuditLog
-   - **Title**: `Created`
-   - **RequestID**: `ID` (from trigger)
-   - **ReqKey**: `Outputs` (from Compose ReqKey)
-   - **Action Value**: `Created`
-   - **FieldName**: (leave blank)
-   - **OldValue**: (leave blank)
-   - **NewValue**: (leave blank)
-   - **Actor Claims**: `Author Claims` (from trigger)
-   - **ActorRole Value**: `Student`
-   - **ClientApp Value**: `SharePoint Form`
-   - **ActionAt** (optional):
-```
-@{utcNow()}
-```
-   - **FlowRunId** (optional):
-```
-@{workflow()['run']['name']}
-```
-   - **Notes**: (leave blank)
-
-6. **New step → Send an email from a shared mailbox (V2)**
-   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
-   - **To**: `StudentEmail` (from Update item step)
-   - **Subject**:
-```
-We received your 3D Print request – @{outputs('Compose ReqKey')}
-```
-   - **Body**:
-```html
-<p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> @{outputs('Generate Standardized Filename')}</p>
-<p><strong>Request ID:</strong> @{outputs('Compose ReqKey')}</p>
-<p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
-<p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p>Our team will review your request and contact you with any questions. You'll receive updates as your request progresses through our queue.</p>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-```
-
-> **Tip:** If the **Actor** person field fails to resolve, use **Author Claims** from the trigger.
-
-> **How to get or verify the My Requests link:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL. For LSU Fabrication Lab, use: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`.
-
-#### URL glossary (replace placeholders)
-- **Site root**: For LSU Fabrication Lab it is `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`.
-- **Per‑item link (used in emails)**: `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}` points to the SharePoint Display Form for the specific item created or edited. Keep the `@{...}` expression exactly; Flow fills in the item ID at runtime.
-- **My Requests view (students)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx` — public link to the student‑filtered view. Use in the confirmation email.
-- **Staff – Queue view (staff)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx` — staff dashboard view link (optional to share with staff).
+**Quick Summary:**
+- **Type:** Automated cloud flow
+- **Trigger:** SharePoint - When an item is created
+- **Actions:** Generate ReqKey → Compute standardized base filename → Attachment filename validation gate → Update SharePoint item → Log to AuditLog → Send confirmation email
 
 ### Flow B — PR-Audit: Log changes + Email notifications (Automated)
-**Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes.
+**Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes (Rejected/Completed).
 
-#### Step-by-Step Setup:
+📋 **Full implementation details:** See [`PowerAutomate/PR-Audit_LogChanges.md`](PowerAutomate/PR-Audit_LogChanges.md)
 
-1. **Create → Automated cloud flow**
-   - Name: `PR-Audit: Log changes + Email notifications`
-   - Trigger: **SharePoint – When an item is created or modified**
-   - **Site Address**: your Fabrication Lab site
-   - **List Name**: PrintRequests
-
-2. **New step → Get changes for an item or a file (properties only)**
-   - **Site Address**: same as trigger
-   - **List Name**: PrintRequests
-   - **Id**: `ID` (from trigger)
-   - **Since**: `Trigger Window Start Token` (from dynamic content)
-   - This compares current values to those at flow start time.
-
-3. **New step → Condition** (rename to: "Check if Status Changed")
-   - **Choose a value**: `Has Column Changed: Status` (from Get changes output)
-   - **Condition**: is equal to
-   - **Choose a value**: `true`
-
-4. **Yes branch → Create item** (SharePoint → AuditLog) for Status changes:
-   - **Site Address**: same
-   - **List Name**: AuditLog
-   - **Title**: `Status Change`
-   - **RequestID**: `ID` (from trigger)
-   - **ReqKey**: `ReqKey` (from trigger body)
-   - **Action Value**: `Status Change`
-   - **FieldName**: `Status`
-   - **OldValue**: (optional - leave blank for MVP)
-   - **NewValue**: `Status` (from trigger body)
-   - **Actor Claims**: `Editor Claims` (from trigger)
-   - **ActorRole Value**: `Staff` (or conditionally check if editor is staff)
-   - **ClientApp Value**: `SharePoint Form`
-   - **ActionAt**:
-```
-@{utcNow()}
-```
-   - **FlowRunId**:
-```
-@{workflow()['run']['name']}
-```
-
-5. **Add parallel Condition branches** for other fields (repeat pattern above):
-   - **AssignedTo**: `Has Column Changed: AssignedTo` = true
-   - **Priority**: `Has Column Changed: Priority` = true  
-   - **Method**: `Has Column Changed: Method` = true
-   - **PrinterSelection**: `Has Column Changed: PrinterSelection` = true
-   - **EstimatedTime**: `Has Column Changed: EstimatedTime` = true
-   - **EstimatedWeight**: `Has Column Changed: EstimatedWeight` = true
-   - **EstimatedCost**: `Has Column Changed: EstimatedCost` = true
-   - **StaffNotes**: `Has Column Changed: StaffNotes` = true
-   - Each creates an AuditLog entry with appropriate FieldName and NewValue from trigger body.
-
-6. **Status-Based Email Logic** (inside the "Check if Status Changed" Yes branch):
-
-   **Add nested Condition** ("Check Status = Rejected"):
-   - **Choose a value**: `Status` (from trigger body)
-   - **Condition**: is equal to
-   - **Choose a value**: `Rejected`
-   
-   **Yes branch → Send an email from a shared mailbox (V2)**:
-   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
-   - **To**: `StudentEmail` (from trigger body)
-   - **Subject**:
-```
-Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}
-```
-   - **Body**:
-```html
-<p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
-<p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
-<p><strong>Reason:</strong> Please check the staff notes in your request for specific details.</p>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p>You may submit a new corrected request at any time through the Fabrication Lab website.</p>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-```
-
-   **Add parallel nested Condition** ("Check Status = Completed"):
-   - **Choose a value**: `Status` (from trigger body)
-   - **Condition**: is equal to
-   - **Choose a value**: `Completed`
-   
-   **Yes branch → Send an email from a shared mailbox (V2)**:
-   - **Shared Mailbox**: `coad-Fabrication Lab@lsu.edu`
-   - **To**: `StudentEmail` (from trigger body)
-   - **Subject**:
-```
-Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}
-```
-   - **Body**:
-```html
-<p>Great news! Your 3D print is completed and ready for pickup.</p>
-<p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
-<p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
-<p><strong>Printer Used:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
-<br>
-<p><strong>Next Steps:</strong></p>
-<ul>
-  <li>Visit the Digital Fabrication Lab to pay and collect your print</li>
-  <li>Payment will be calculated based on actual material used</li>
-  <li>Bring your student ID for verification</li>
-  <li>Lab hours: [Add your lab hours here]</li>
-</ul>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-```
-
-7. **Email Audit Logging** (add after each email step):
-   
-   For **Rejection Email → Create item** (AuditLog):
-   - **Title**: `Email Sent: Rejection`
-   - **RequestID**: `ID` (from trigger)
-   - **ReqKey**: `ReqKey` (from trigger body)
-   - **Action Value**: `Email Sent`
-   - **FieldName**: `StudentEmail`
-   - **NewValue**: `StudentEmail` (from trigger body)
-   - **Actor Claims**: (leave blank for system)
-   - **ActorRole Value**: `System`
-   - **ClientApp Value**: `Power Automate`
-   - **ActionAt**: `@{utcNow()}`
-   - **FlowRunId**: `@{workflow()['run']['name']}`
-   - **Notes**: `Rejection notification sent to student`
-
-   For **Completion Email → Create item** (AuditLog):
-   - **Title**: `Email Sent: Completion`
-   - **RequestID**: `ID` (from trigger)
-   - **ReqKey**: `ReqKey` (from trigger body)
-   - **Action Value**: `Email Sent`
-   - **FieldName**: `StudentEmail`
-   - **NewValue**: `StudentEmail` (from trigger body)
-   - **Actor Claims**: (leave blank for system)
-   - **ActorRole Value**: `System`
-   - **ClientApp Value**: `Power Automate`
-   - **ActionAt**: `@{utcNow()}`
-   - **FlowRunId**: `@{workflow()['run']['name']}`
-   - **Notes**: `Completion notification sent to student`
-
-> **Note:** Power Automate doesn't directly provide the *previous* value in a simple way. For MVP, logging the **new** value is sufficient; if needed you can look up the previous version in SharePoint version history.
+**Quick Summary:**
+- **Type:** Automated cloud flow
+- **Trigger:** SharePoint - When an item is created or modified
+- **Actions:** Get field changes → Log all field changes to AuditLog → Send status-based emails (rejection/completion) → Log email actions
 
 ### Flow C — PR-Action: Log action (Instant, called from Power Apps)
-**Purpose:** When staff press a button in the staff app (e.g., Approve), log that action with the true actor identity.
+**Purpose:** When staff press buttons in the Power Apps staff console (e.g., Approve, Reject), log that action with proper actor attribution and comprehensive audit details.
 
-#### Step-by-Step Setup:
+📋 **Full implementation details:** See [`PowerAutomate/PR-Action_LogAction.md`](PowerAutomate/PR-Action_LogAction.md)
 
-1. **Create → Instant cloud flow**
-   - Name: `PR-Action: Log action`
-   - Trigger: **Power Apps**
-   - Skip the "Choose how to trigger this flow" step (Power Apps will be added automatically)
+**Quick Summary:**
+- **Type:** Instant cloud flow (called from Power Apps)
+- **Trigger:** Power Apps with 8 input parameters
+- **Actions:** Validate inputs → Get SharePoint item → Create AuditLog entry → Return success response
 
-2. **Add input parameters** from Power Apps trigger:
-   Click **Add an input** for each:
-   - **RequestID** (Text) → "The ID of the request being modified"
-   - **Action** (Text) → "The action being performed (e.g., Status Change)"
-   - **FieldName** (Text) → "The field being changed (e.g., Status)"
-   - **OldValue** (Text) → "Previous value of the field"
-   - **NewValue** (Text) → "New value of the field"
-   - **ActorEmail** (Text) → "Email of the staff member performing the action"
-   - **ClientApp** (Text) → "Source application (Power Apps)"
-   - **Notes** (Text) → "Additional context or notes"
+### URL Reference Guide
 
-3. **New step → Get item** (SharePoint)
-   - **Site Address**: your Fabrication Lab site
-   - **List Name**: PrintRequests
-   - **Id**: `RequestID` (from Power Apps trigger)
+Update these URLs for your specific SharePoint site:
 
-4. **New step → Create item** (SharePoint → AuditLog)
-   - **Site Address**: same
-   - **List Name**: AuditLog
-   - **Title**: 
-```
-Action: @{triggerBody()['text']}
-```
-   - **RequestID**: `RequestID` (from Power Apps)
-   - **ReqKey**: `ReqKey` (from Get item step)
-   - **Action Value**: `Action` (from Power Apps)
-   - **FieldName**: `FieldName` (from Power Apps)
-   - **OldValue**: `OldValue` (from Power Apps)
-   - **NewValue**: `NewValue` (from Power Apps)
-   - **Actor Claims**: `ActorEmail` (from Power Apps - SharePoint resolves to person)
-   - **ActorRole Value**: `Staff`
-   - **ClientApp Value**: `ClientApp` (from Power Apps)
-   - **ActionAt**:
-```
-@{utcNow()}
-```
-   - **FlowRunId**:
-```
-@{workflow()['run']['name']}
-```
-   - **Notes**: `Notes` (from Power Apps)
+- **Site root**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+- **Per‑item link (used in emails)**: `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}`
+- **My Requests view (students)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
+- **Staff – Queue view (staff)**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx`
 
-5. **New step → Respond to a PowerApp or flow** (optional but recommended)
-   - **Text**: `true`
-   - This confirms success back to Power Apps
-
-#### Power Apps Integration Notes:
-- **Call the flow within `IfError()`** for better error handling:
-```powerfx
-IfError(
-    'PR-Action: Log action'.Run(
-        Text(ThisItem.ID),
-        "Status Change",
-        "Status",
-        ThisItem.Status,
-        "Ready to Print",
-        varMeEmail,
-        "Power Apps",
-        "Approved in Staff Console"
-    ),
-    Notify("Failed to log action: " & FirstError.Message, NotificationType.Error),
-    Notify("Action logged successfully.", NotificationType.Success)
-)
-```
+> **How to get your My Requests view URL:** In SharePoint, open `PrintRequests`, switch to the "My Requests" view, then copy the full browser URL.
 
 ---
 
@@ -520,13 +239,13 @@ IfError(
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```
-   "File Upload (Required: .stl, .obj, or .3mf files only • Max 150MB per file)"
+  "File Upload (Required: .stl, .obj, .3mf, .idea, .form • Max 150MB per file)"
    ```
    - Add a **Text label** above the Attachments card with validation guidance:
    ```
-   "📁 ACCEPTED FILE TYPES: .stl, .obj, .3mf only
-   📏 MAXIMUM SIZE: 150MB per file
-   ⚠️ Files not meeting these requirements will be rejected by staff"
+  "ACCEPTED FILE TYPES: .stl, .obj, .3mf, .idea, .form
+   MAXIMUM SIZE: 150MB per file
+   Files not meeting these requirements will be rejected by staff"
    ```
 5. **Defaults** (select the card → set the property shown):
    - Student → **DefaultSelectedItems**:
@@ -650,14 +369,8 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 ```
 
 > **Staff File Management Workflow**: 
-> 1. **File Validation**: Check attachments for:
->    - **File type**: Only .stl, .obj, .3mf extensions allowed
->    - **File size**: Each file must be ≤150MB  
->    - **Completeness**: At least one valid 3D model file required
-> 2. **File Processing**: 
->    - **Download** the attachment locally to your workstation
->    - **Open** the file in PrusaSlicer for slicing and preparation
->    - **Save/modify** locally as needed for printing requirements
+> 1. **Filename Policy** (enforced by Flow A): Attachments must be named `FirstLast_Method_Color.ext` with extensions in `.stl, .obj, .3mf, .idea, .form` (≤150MB each). Invalid submissions are auto‑rejected.
+> 2. **Download and Process** valid attachments locally (no in‑place rename in SharePoint). Use your normal slicer workflow.
 >    - **No re-upload required** - work with local files throughout the process
 > 3. **Status Management**: Use Power Apps dashboard buttons to update request status as work progresses
 > 

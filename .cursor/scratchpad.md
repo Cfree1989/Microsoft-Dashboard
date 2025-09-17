@@ -1,3 +1,99 @@
+## Background and Motivation
+
+We need to enforce a filename policy for student-submitted SharePoint list attachments without renaming files in place (to avoid link churn and confusion). The system should accept submissions whose attachment filenames follow the convention and auto-reject those that do not, notifying the student with clear instructions.
+
+## Key Challenges and Analysis
+
+- SharePoint list attachments cannot be truly renamed; rename implies re-upload/delete, which can break links and user expectations.
+- We want a low-risk, clear UX: keep the original attachment untouched, enforce naming via policy and automated validation.
+- Filenames must match: FirstLast_Method_Color.ext
+  - Allowed extensions: stl, obj, 3mf, idea, form (case-insensitive)
+  - Must have exactly three underscore-separated segments before the extension; each non-empty.
+  - Student display names may include middle names/initials; Step 3 already generates a cleaned base name used elsewhere but is not used to rename.
+
+## High-level Task Breakdown
+
+1) Add attachment retrieval loop
+   - After Step 3 (Generate Standardized Filename), add "Get attachments" (SharePoint) and an "Apply to each" over its `value`.
+   - Set loop Concurrency = 1.
+
+2) Implement filename validation Condition inside the loop
+   - Expression (replace `Apply_to_each` with your loop name if different):
+   ```
+   and(
+     or(
+       equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'stl'),
+       equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'obj'),
+       equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), '3mf'),
+       equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'idea'),
+       equals(toLower(last(split(items('Apply_to_each')?['Name'], '.'))), 'form')
+     ),
+     equals(length(split(first(split(items('Apply_to_each')?['Name'], '.')), '_')), 3),
+     greater(length(first(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'))), 0),
+     greater(length(first(skip(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'), 1))), 0),
+     greater(length(last(split(first(split(items('Apply_to_each')?['Name'], '.')), '_'))), 0)
+   )
+   ```
+
+3) Yes (valid) branch
+   - Proceed with current flow steps (Update item, AuditLog, Confirmation email) for this item.
+   - Optionally add an "AuditLog" entry noting "Attachment filename valid".
+
+4) No (invalid) branch
+   - Update the `PrintRequests` item:
+     - `Status` = `Rejected`
+     - `NeedsAttention` = `Yes`
+     - `LastAction` = `Rejected`
+     - `LastActionBy` = `System`
+     - `LastActionAt` = `@{utcNow()}`
+   - Create `AuditLog` item:
+     - `Title` = `Rejected: Invalid filename`
+     - `ReqKey`, `RequestID`, `ActionAt`, `FlowRunId` populated per existing pattern
+     - `Notes` = include the offending filename `items('Apply_to_each')?['Name']`
+   - Send rejection email to the student with rename instructions and accepted extensions.
+   - Terminate the flow for this item (Status = Failed or Canceled) to prevent confirmation email from sending.
+
+5) Guard confirmation email
+   - Ensure the confirmation email step only executes on the valid path.
+   - If email currently sits outside the loop, guard it with a check that all attachments were valid (for single-attachment scenario, checking the Condition is sufficient).
+
+6) Documentation updates
+   - Update `PowerAutomate/PR-Create_SetReqKey_Acknowledge.md` to add the new validation step, condition expression, and rejection path.
+   - Add the filename policy text to the SharePoint form and to the doc.
+
+## Project Status Board (active)
+
+1. Add Get attachments + Apply to each after Step 3 [pending]
+2. Add filename validation Condition in loop [pending]
+3. Wire valid branch to proceed with existing Update/Audit/Email [pending]
+4. Implement reject branch: Update item, AuditLog, rejection email, terminate [pending]
+5. Guard confirmation email to run only when valid [pending]
+6. Add filename policy text to SharePoint form [pending]
+7. Update `PR-Create_SetReqKey_Acknowledge.md` documentation [pending]
+8. Test matrix: valid/invalid names and all allowed extensions [pending]
+
+## Success Criteria
+
+- Valid filenames (matching pattern + allowed extension) result in normal processing and confirmation email.
+- Invalid filenames cause: item marked Rejected, NeedsAttention = Yes, AuditLog entry created, and rejection email sent. No confirmation email is sent.
+- Supports extensions: stl, obj, 3mf, idea, form (case-insensitive).
+- No attachment rename is attempted; original attachment remains as submitted.
+
+## Quick Reference (expressions and fields)
+
+- Condition expression for validation (inside Apply to each): see Task 2 above.
+- Offending name in emails/logs: `items('Apply_to_each')?['Name']`
+- Time: `utcNow()`
+- Flow run id: `workflow()['run']['name']`
+
+## Executor's Feedback or Assistance Requests
+
+- None yet. If multiple attachments per item must all be valid before confirming, we may add an aggregate validity flag (Initialize variable before loop, set false on any invalid, check after loop).
+
+## Lessons
+
+- Avoid in-place rename of list attachments; prefer policy + validation to maintain link stability.
+
 # Microsoft Dashboard - 3D Print Queue System
 *Planning & Implementation Tracker*
 
