@@ -27,191 +27,278 @@
    - **Site Address**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name**: `PrintRequests`
 
-### 2. **Get changes for an item or a file (properties only)**
-- **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-- **List Name:** `PrintRequests`
-- **Id:** `ID` (from trigger)
-- **Since:** **Trigger Window Start Token** (from dynamic content)
+### Step 2: Get Changes for Item
+
+**What this does:** Retrieves what fields changed since the flow started, preventing infinite loops.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Get changes for an item or a file (properties only)** (SharePoint)
+3. Rename the action to: `Get Item Changes`
+   - Click the **three dots (…)** → **Rename** → type `Get Item Changes`
+4. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Since:** **Dynamic content** → **Trigger Window Start Token** (from trigger)
 
 *This compares current values to those at flow start time, preventing infinite loops.*
 
-### 3. **Parallel Condition Branches for Field Changes**
+### Step 3: Parallel Field Change Detection
 
-Add **Condition** blocks using **Has Column Changed** outputs:
+**What this does:** Creates separate condition branches that run in parallel to detect changes to specific fields and log them appropriately.
 
-#### **Status Change Condition**
-- **Choose a value:** `Has Column Changed: Status` (from Get changes output)
-- **Condition:** is equal to
-- **Choose a value:** `true`
+**Implementation approach:** Add multiple **Condition** actions at the same level (not nested) to create parallel branches.
 
-**Yes Branch:**
-- **Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
-  - **Site Address:** same
-  - **List Name:** `AuditLog`
-  - **Title:** `Status Change`
-  - **RequestID:** `@{triggerOutputs()?['body/ID']}`
-  - **ReqKey:** `@{triggerOutputs()?['body/ReqKey']}`
-  - **Action Value:** `Status Change`
-  - **FieldName:** `Status`
-  - **OldValue:** (leave blank for MVP)
-  - **NewValue:** `@{triggerOutputs()?['body/Status']}`
-  - **Actor Claims:** `Editor Claims` (from trigger)
-  - **ActorRole Value:** `Staff`
-  - **ClientApp Value:** `SharePoint Form`
-  - **ActionAt:** `@{utcNow()}`
-  - **FlowRunId:** `@{workflow()['run']['name']}`
-  - **Notes:** `Status updated from previous value to @{triggerOutputs()?['body/Status']}`
+#### Step 3a: Status Change Detection
 
-#### **Additional Field Change Conditions** (Create parallel branches for each):
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Condition**
+3. Rename the condition to: `Check Status Changed`
+   - Click the **three dots (…)** → **Rename** → type `Check Status Changed`
+4. Set up condition:
+   - Left box: **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
+   - Middle: **is equal to**
+   - Right box: `true`
 
-**AssignedTo Change:**
-- Condition: `Has Column Changed: AssignedTo` = true
-- AuditLog: FieldName = `AssignedTo`, NewValue = `@{triggerOutputs()?['body/AssignedTo/DisplayName']}`
+##### Yes Branch - Log Status Change:
 
-**Priority Change:**
-- Condition: `Has Column Changed: Priority` = true  
-- AuditLog: FieldName = `Priority`, NewValue = `@{triggerOutputs()?['body/Priority']}`
+**Action 1: Log status change**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Create item** (SharePoint)
+3. Rename the action to: `Log Status Change`
+   - Click the **three dots (…)** → **Rename** → type `Log Status Change`
+4. **Configure retry policy** (see instructions at top)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Status Change`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **Action Value:** Type `Status Change`
+   - **FieldName:** Type `Status`
+   - **OldValue:** Leave blank for MVP
+   - **NewValue:** **Dynamic content** → **Status** (from trigger)
+   - **Actor Claims:** **Dynamic content** → **Editor Claims** (from trigger)
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** **Expression** → `concat('Status updated from previous value to ', triggerOutputs()?['body/Status'])`
 
-**Method Change:**
-- Condition: `Has Column Changed: Method` = true
-- AuditLog: FieldName = `Method`, NewValue = `@{triggerOutputs()?['body/Method']}`
+#### Step 3b: Additional Field Change Detection
 
-**PrinterSelection Change:**
-- Condition: `Has Column Changed: PrinterSelection` = true
-- AuditLog: FieldName = `PrinterSelection`, NewValue = `@{triggerOutputs()?['body/PrinterSelection']}`
+**Create parallel conditions for each field following the same pattern as Step 3a:**
 
-**EstimatedTime Change:**
-- Condition: `Has Column Changed: EstimatedTime` = true
-- AuditLog: FieldName = `EstimatedTime`, NewValue = `@{triggerOutputs()?['body/EstimatedTime']}`
+**AssignedTo Change Detection:**
+1. Add **Condition** → Rename to: `Check AssignedTo Changed`
+2. Condition: **Has Column Changed: AssignedTo** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log AssignedTo Change`
+4. AuditLog fields: FieldName = `AssignedTo`, NewValue = **Expression** → `triggerOutputs()?['body/AssignedTo/DisplayName']`
 
-**EstimatedWeight Change:**
-- Condition: `Has Column Changed: EstimatedWeight` = true
-- AuditLog: FieldName = `EstimatedWeight`, NewValue = `@{triggerOutputs()?['body/EstimatedWeight']}`
+**Priority Change Detection:**
+1. Add **Condition** → Rename to: `Check Priority Changed`
+2. Condition: **Has Column Changed: Priority** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log Priority Change`
+4. AuditLog fields: FieldName = `Priority`, NewValue = **Dynamic content** → **Priority**
 
-**EstimatedCost Change:**
-- Condition: `Has Column Changed: EstimatedCost` = true
-- AuditLog: FieldName = `EstimatedCost`, NewValue = `@{triggerOutputs()?['body/EstimatedCost']}`
+**Method Change Detection:**
+1. Add **Condition** → Rename to: `Check Method Changed`
+2. Condition: **Has Column Changed: Method** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log Method Change`
+4. AuditLog fields: FieldName = `Method`, NewValue = **Dynamic content** → **Method**
 
-**StaffNotes Change:**
-- Condition: `Has Column Changed: StaffNotes` = true
-- AuditLog: FieldName = `StaffNotes`, NewValue = `@{triggerOutputs()?['body/StaffNotes']}`
+**PrinterSelection Change Detection:**
+1. Add **Condition** → Rename to: `Check PrinterSelection Changed`
+2. Condition: **Has Column Changed: PrinterSelection** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log PrinterSelection Change`
+4. AuditLog fields: FieldName = `PrinterSelection`, NewValue = **Dynamic content** → **PrinterSelection**
 
-**Beginner UI steps — how to build these Conditions:**
-1. Add a **Condition** action.
-2. Click the left **Choose a value** box. In the side panel, stay on the **Dynamic content** tab and search for "Has Column Changed".
-3. Pick the exact field, e.g., **Has Column Changed: Status**.
-4. Set the middle dropdown to **is equal to**.
-5. In the right box, type `true` (without quotes).
-6. Put the relevant **Create item (AuditLog)** step in the **Yes** branch.
-7. Repeat for each field you want to track by adding new parallel Conditions.
+**EstimatedTime Change Detection:**
+1. Add **Condition** → Rename to: `Check EstimatedTime Changed`
+2. Condition: **Has Column Changed: EstimatedTime** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedTime Change`
+4. AuditLog fields: FieldName = `EstimatedTime`, NewValue = **Dynamic content** → **EstimatedTime**
 
-**Tip:** To make these run in parallel, add each Condition one after another at the same level (not nested). Power Automate will show parallel paths side-by-side.
+**EstimatedWeight Change Detection:**
+1. Add **Condition** → Rename to: `Check EstimatedWeight Changed`
+2. Condition: **Has Column Changed: EstimatedWeight** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedWeight Change`
+4. AuditLog fields: FieldName = `EstimatedWeight`, NewValue = **Dynamic content** → **EstimatedWeight**
 
-### 4. **Status-Based Email Logic** (Inside Status Change "Yes" branch)
+**EstimatedCost Change Detection:**
+1. Add **Condition** → Rename to: `Check EstimatedCost Changed`
+2. Condition: **Has Column Changed: EstimatedCost** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedCost Change`
+4. AuditLog fields: FieldName = `EstimatedCost`, NewValue = **Dynamic content** → **EstimatedCost**
 
-#### **Nested Condition: "Check Status = Rejected"**
-- **Choose a value:** `@{triggerOutputs()?['body/Status']}`
-- **Condition:** is equal to
-- **Choose a value:** `Rejected`
+**StaffNotes Change Detection:**
+1. Add **Condition** → Rename to: `Check StaffNotes Changed`
+2. Condition: **Has Column Changed: StaffNotes** = true
+3. Yes Branch: Add **Create item** → Rename to: `Log StaffNotes Change`
+4. AuditLog fields: FieldName = `StaffNotes`, NewValue = **Dynamic content** → **StaffNotes**
 
-**Yes Branch - Send Rejection Email:**
-- **Send an email from a shared mailbox (V2)** - **Configure Retry Policy: Exponential, 4 retries**
-  - **Shared Mailbox:** `coad-Fabrication Lab@lsu.edu`
-  - **To:** `@{triggerOutputs()?['body/StudentEmail']}`
-  - **Subject:**
-  ```
-  Your 3D Print request has been rejected – @{triggerOutputs()?['body/ReqKey']}
-  ```
-  - **Body:**
-  ```html
-  <p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
-  <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
-  <p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
-  <p><strong>Printer Requested:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
-  <br>
-  <p><strong>Reason for Rejection:</strong></p>
-  <p>Please check the staff notes in your request for specific details about why your request was rejected.</p>
-  <br>
-  <p><strong>Next Steps:</strong></p>
-  <ul>
-    <li>Review the feedback provided in staff notes</li>
-    <li>Make necessary adjustments to your design or request</li>
-    <li>Submit a new corrected request through the Fabrication Lab website</li>
-    <li>Contact our staff if you have questions about the feedback</li>
-  </ul>
-  <br>
-  <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-  <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-  <br>
-  <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-  ```
+**How to build parallel field change conditions:**
+1. Add a **Condition** action at the root level
+2. Rename with descriptive name (e.g., "Check [FieldName] Changed")
+3. Click the left **Choose a value** box
+4. In **Dynamic content** tab, search for "Has Column Changed"
+5. Pick the specific field (e.g., **Has Column Changed: Priority**)
+6. Set middle dropdown to **is equal to**
+7. In right box, type `true` (without quotes)
+8. In **Yes** branch, add **Create item** action with descriptive rename
+9. Configure all AuditLog fields consistently
+10. **Configure retry policy** on the Create item action
+11. Repeat for each field, adding conditions at the same level for parallelism
 
-- **Create item** in `AuditLog` (Email Sent - Rejection) - **Configure Retry Policy: Exponential, 4 retries**
-  - **Title:** `Email Sent: Rejection`
-  - **RequestID:** `@{triggerOutputs()?['body/ID']}`
-  - **ReqKey:** `@{triggerOutputs()?['body/ReqKey']}`
-  - **Action Value:** `Email Sent`
-  - **FieldName:** `StudentEmail`
-  - **NewValue:** `@{triggerOutputs()?['body/StudentEmail']}`
-  - **Actor Claims:** (leave blank for system)
-  - **ActorRole Value:** `System`
-  - **ClientApp Value:** `Power Automate`
-  - **ActionAt:** `@{utcNow()}`
-  - **FlowRunId:** `@{workflow()['run']['name']}`
-  - **Notes:** `Rejection notification sent to student`
+### Step 4: Status-Based Email Notifications
 
-#### **Parallel Nested Condition: "Check Status = Completed"**
-- **Choose a value:** `@{triggerOutputs()?['body/Status']}`
-- **Condition:** is equal to
-- **Choose a value:** `Completed`
+**What this does:** Inside the "Check Status Changed" Yes branch, add nested conditions to send emails when status changes to specific values.
 
-**Yes Branch - Send Completion Email:**
-- **Send an email from a shared mailbox (V2)** - **Configure Retry Policy: Exponential, 4 retries**
-  - **Shared Mailbox:** `coad-Fabrication Lab@lsu.edu`
-  - **To:** `@{triggerOutputs()?['body/StudentEmail']}`
-  - **Subject:**
-  ```
-  Your 3D print is ready for pickup – @{triggerOutputs()?['body/ReqKey']}
-  ```
-  - **Body:**
-  ```html
-  <p>Great news! Your 3D print is completed and ready for pickup.</p>
-  <p><strong>Request:</strong> @{triggerOutputs()?['body/Title']} (@{triggerOutputs()?['body/ReqKey']})</p>
-  <p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
-  <p><strong>Printer Used:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
-  <p><strong>Color:</strong> @{triggerOutputs()?['body/Color']}</p>
-  @{if(not(empty(triggerOutputs()?['body/EstimatedWeight'])), concat('<p><strong>Estimated Weight:</strong> ', string(triggerOutputs()?['body/EstimatedWeight']), 'g</p>'), '')}
-  @{if(not(empty(triggerOutputs()?['body/EstimatedTime'])), concat('<p><strong>Print Time:</strong> ', string(triggerOutputs()?['body/EstimatedTime']), ' hours</p>'), '')}
-  @{if(not(empty(triggerOutputs()?['body/EstimatedCost'])), concat('<p><strong>Estimated Cost:</strong> $', string(triggerOutputs()?['body/EstimatedCost'])), '')}
-  <br>
-  <p><strong>Next Steps:</strong></p>
-  <ul>
-    <li>Visit the Digital Fabrication Lab to pay and collect your print</li>
-    <li>Payment will be calculated based on actual material used</li>
-    <li>Bring your student ID for verification</li>
-    <li>Lab hours: Monday-Friday 9AM-5PM, Saturday 10AM-2PM</li>
-    <li>Location: Design Building, Room 101</li>
-  </ul>
-  <br>
-  <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-  <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-  <br>
-  <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-  ```
+#### Step 4a: Rejection Email Logic
 
-- **Create item** in `AuditLog` (Email Sent - Completion) - **Configure Retry Policy: Exponential, 4 retries**
-  - **Title:** `Email Sent: Completion`
-  - **RequestID:** `@{triggerOutputs()?['body/ID']}`
-  - **ReqKey:** `@{triggerOutputs()?['body/ReqKey']}`
-  - **Action Value:** `Email Sent`
-  - **FieldName:** `StudentEmail`
-  - **NewValue:** `@{triggerOutputs()?['body/StudentEmail']}`
-  - **Actor Claims:** (leave blank for system)
-  - **ActorRole Value:** `System`
-  - **ClientApp Value:** `Power Automate`
-  - **ActionAt:** `@{utcNow()}`
-  - **FlowRunId:** `@{workflow()['run']['name']}`
-  - **Notes:** `Completion notification sent to student`
+**UI steps (inside the Status Change Yes branch):**
+1. Click **+ Add an action** in the Status Change Yes branch
+2. Search for and select **Condition**
+3. Rename the condition to: `Check Status Rejected`
+   - Click the **three dots (…)** → **Rename** → type `Check Status Rejected`
+4. Set up condition:
+   - Left box: **Dynamic content** → **Status** (from trigger)
+   - Middle: **is equal to**
+   - Right box: Type `Rejected`
+
+##### Yes Branch - Send Rejection Email:
+
+**Action 1: Send rejection email**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. Rename the action to: `Send Rejection Email`
+   - Click the **three dots (…)** → **Rename** → type `Send Rejection Email`
+4. **Configure retry policy**
+5. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Subject:** **Expression** → `concat('Your 3D Print request has been rejected – ', triggerOutputs()?['body/ReqKey'])`
+   - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
+```html
+<p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
+<p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
+<p><strong>Method:</strong> [Dynamic content: Method]</p>
+<p><strong>Printer Requested:</strong> [Dynamic content: PrinterSelection]</p>
+<br>
+<p><strong>Reason for Rejection:</strong></p>
+<p>Please check the staff notes in your request for specific details about why your request was rejected.</p>
+<br>
+<p><strong>Next Steps:</strong></p>
+<ul>
+  <li>Review the feedback provided in staff notes</li>
+  <li>Make necessary adjustments to your design or request</li>
+  <li>Submit a new corrected request through the Fabrication Lab website</li>
+  <li>Contact our staff if you have questions about the feedback</li>
+</ul>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID]">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+
+**Action 2: Log rejection email sent**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Create item** (SharePoint)
+3. Rename the action to: `Log Rejection Email Sent`
+   - Click the **three dots (…)** → **Rename** → type `Log Rejection Email Sent`
+4. **Configure retry policy**
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Rejection`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Actor Claims:** Leave blank for system
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `Rejection notification sent to student`
+
+#### Step 4b: Completion Email Logic
+
+**UI steps (create parallel to the Rejection condition):**
+1. Click **+ Add an action** at the same level as the Rejection condition
+2. Search for and select **Condition**
+3. Rename the condition to: `Check Status Completed`
+   - Click the **three dots (…)** → **Rename** → type `Check Status Completed`
+4. Set up condition:
+   - Left box: **Dynamic content** → **Status** (from trigger)
+   - Middle: **is equal to**
+   - Right box: Type `Completed`
+
+##### Yes Branch - Send Completion Email:
+
+**Action 1: Send completion email**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. Rename the action to: `Send Completion Email`
+   - Click the **three dots (…)** → **Rename** → type `Send Completion Email`
+4. **Configure retry policy**
+5. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Subject:** **Expression** → `concat('Your 3D print is ready for pickup – ', triggerOutputs()?['body/ReqKey'])`
+   - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
+```html
+<p>Great news! Your 3D print is completed and ready for pickup.</p>
+<p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
+<p><strong>Method:</strong> [Dynamic content: Method]</p>
+<p><strong>Printer Used:</strong> [Dynamic content: PrinterSelection]</p>
+<p><strong>Color:</strong> [Dynamic content: Color]</p>
+<p><strong>Estimated Weight:</strong> [Dynamic content: EstimatedWeight]g (if available)</p>
+<p><strong>Print Time:</strong> [Dynamic content: EstimatedTime] hours (if available)</p>
+<p><strong>Estimated Cost:</strong> $[Dynamic content: EstimatedCost] (if available)</p>
+<br>
+<p><strong>Next Steps:</strong></p>
+<ul>
+  <li>Visit the Digital Fabrication Lab to pay and collect your print</li>
+  <li>Payment will be calculated based on actual material used</li>
+  <li>Bring your student ID for verification</li>
+  <li>Lab hours: Monday-Friday 9AM-5PM, Saturday 10AM-2PM</li>
+  <li>Location: Design Building, Room 101</li>
+</ul>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID]">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+
+**Note:** For conditional fields (Weight, Time, Cost), you can use expressions to only show them when values exist, or simply use Dynamic content and they'll be blank if empty.
+
+**Action 2: Log completion email sent**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Create item** (SharePoint)
+3. Rename the action to: `Log Completion Email Sent`
+   - Click the **three dots (…)** → **Rename** → type `Log Completion Email Sent`
+4. **Configure retry policy**
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Completion`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Actor Claims:** Leave blank for system
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `Completion notification sent to student`
 
 ---
 
@@ -241,13 +328,21 @@ To customize the email templates:
 - Set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu`
 - Requires "Send As" permission configured in Exchange Admin
 
-**Beginner UI steps — setting retry policy on email/audit actions:**
-1. Open the action card (e.g., **Send an email from a shared mailbox (V2)** or **Create item**).
-2. Click the **three dots (… )** in the top-right of the action.
-3. Choose **Settings**.
-4. Turn **Retry Policy** to **On** (if shown) or expand **Retry Policy**.
-5. Pick **Exponential**, set **Count = 4**, **Minimum interval = 1 minute** (or 30 seconds in Flow C, as specified).
-6. Click **Done**.
+**How to configure retry policy on any action:**
+1. Click the **three dots (…)** on the action card
+2. Choose **Settings**
+3. Turn **Retry Policy** to **On**
+4. Configure:
+   - **Type:** Select **Exponential**
+   - **Count:** Set to **4**
+   - **Minimum Interval:** Type **PT1M** (ISO 8601 format for 1 minute)
+5. Click **Done**
+
+**ISO 8601 Duration Format Examples:**
+- 30 seconds = **PT30S**
+- 1 minute = **PT1M**
+- 2 minutes = **PT2M**
+- 90 seconds = **PT1M30S**
 
 ### Email Template Customization Points
 Update these sections in the email templates for your lab:
@@ -270,18 +365,53 @@ Update these sections in the email templates for your lab:
 - **Choose a value:** `Printing`
 - **Yes Branch:** Send "printing started" notification to keep students informed
 
-### 5. **Attachments Change Detection** (Optional)
+### Step 5: Attachments Change Detection (Optional Enhancement)
 
-**Condition:** `Has Column Changed: Attachments` = true
+**What this does:** Logs when files are added or removed from requests.
 
-**Yes Branch:**
-- **Get attachments** action
-- **Apply to each** attachment:
-  - **Create item** in `AuditLog`
-    - **Action Value:** `File Added`
-    - **FieldName:** `Attachments`
-    - **NewValue:** `@{items('Apply_to_each')?['DisplayName']}`
-    - **Notes:** `New file attachment: @{items('Apply_to_each')?['DisplayName']}`
+#### Step 5a: Detect Attachment Changes
+
+**UI steps:**
+1. Add **Condition** at root level
+2. Rename to: `Check Attachments Changed`
+3. Condition: **Has Column Changed: Attachments** = true
+
+#### Step 5b: Log Attachment Details
+
+**Yes Branch actions:**
+
+**Action 1: Get current attachments**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Get attachments** (SharePoint)
+3. Rename to: `Get Current Attachments`
+4. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+
+**Action 2: Log each attachment**
+1. Click **+ Add an action**
+2. Search for and select **Apply to each**
+3. Rename to: `Log Each Attachment`
+4. Select output: **Dynamic content** → **value** (from Get Current Attachments)
+5. Inside the loop, add **Create item** (SharePoint)
+6. Rename to: `Log Attachment Change`
+7. **Configure retry policy**
+8. Fill in:
+   - **Site Address:** Same as above
+   - **List Name:** `AuditLog`
+   - **Title:** **Expression** → `concat('Attachment: ', items('Log_Each_Attachment')?['DisplayName'])`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **Action Value:** Type `File Added`
+   - **FieldName:** Type `Attachments`
+   - **NewValue:** **Dynamic content** → **DisplayName** (from current item)
+   - **Actor Claims:** **Dynamic content** → **Editor Claims** (from trigger)
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** **Expression** → `concat('New file attachment: ', items('Log_Each_Attachment')?['DisplayName'])`
 
 ---
 

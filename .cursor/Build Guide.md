@@ -144,7 +144,6 @@ Notes
 2. **Settings → Versioning settings** → enable versioning.
 3. Add these columns (types in parentheses):
    - Title (Single line)
-   - Request (Lookup → list: PrintRequests → field: ID)
    - RequestID (Number)
    - ReqKey (Single line)
    - Action (Choice) → Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System

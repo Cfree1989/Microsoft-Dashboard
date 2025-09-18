@@ -33,96 +33,171 @@ Configure these input parameters when creating the instant flow:
 
 ## Step-by-Step Implementation
 
-### Flow Creation Setup
+### Step 1: Flow Creation Setup
 
-1. **Create → Instant cloud flow**
-   - Name: `PR-Action: Log action`
-   - Trigger: **Power Apps**
-   - Skip the "Choose how to trigger this flow" step (Power Apps trigger will be added automatically)
+**UI steps:**
+1. Go to **Power Automate** → **Create** → **Instant cloud flow**
+2. Name: `PR-Action: Log action`
+3. Choose trigger: **Power Apps**
+4. Skip the "Choose how to trigger this flow" step (Power Apps trigger will be added automatically)
+5. Click **Create**
 
-### 2. **Add input parameters** from Power Apps trigger
+### Step 2: Add Input Parameters
 
-Click **Add an input** for each of the following parameters defined above in the Trigger Inputs section. Power Automate will create these automatically when you add them:
+**What this does:** Defines the data that Power Apps will send to the flow when triggered.
 
-- **RequestID** (Text) → "The ID of the request being modified"
-- **Action** (Text) → "The action being performed (e.g., Status Change)"
-- **FieldName** (Text) → "The field being changed (e.g., Status)"
-- **OldValue** (Text) → "Previous value of the field"
-- **NewValue** (Text) → "New value of the field"
-- **ActorEmail** (Text) → "Email of the staff member performing the action"
-- **ClientApp** (Text) → "Source application (Power Apps)"
-- **Notes** (Text) → "Additional context or notes"
+**UI steps:**
+1. In the **Power Apps** trigger card, click **Add an input**
+2. For each parameter below, select **Text** and fill in the details:
 
-### 3. **Get item** (SharePoint) - **Configure Retry Policy: Exponential, 4 retries**
-- **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-- **List Name:** `PrintRequests`
-- **Id:** `RequestID` (from Power Apps trigger input)
+**Parameter 1: RequestID**
+- **Input type:** Text
+- **Input name:** `RequestID`
+- **Please enter description:** `The ID of the request being modified`
+- Mark as **Required**
 
-*This retrieves the ReqKey and validates the item exists before logging.*
+**Parameter 2: Action**
+- **Input type:** Text
+- **Input name:** `Action`
+- **Please enter description:** `The action being performed (e.g., Status Change)`
+- Mark as **Required**
 
-### 4. **Condition: Validate Required Inputs**
-- **Choose a value:** 
-```
-@{and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_4'])), not(empty(triggerBody()['text_5'])))}
-```
-- **Condition:** is equal to
-- **Choose a value:** `true`
+**Parameter 3: FieldName**
+- **Input type:** Text
+- **Input name:** `FieldName`
+- **Please enter description:** `The field being changed (e.g., Status)`
+- Mark as **Required**
 
-*This ensures RequestID, Action, NewValue, and ActorEmail are provided.*
+**Parameter 4: OldValue**
+- **Input type:** Text
+- **Input name:** `OldValue`
+- **Please enter description:** `Previous value of the field`
+- Leave as **Optional**
 
-**Beginner UI steps — where to paste this in Power Automate:**
-1. Add a **Condition** action after the **Get item** step.
-2. Click the first left box labeled **Choose a value** to open the side panel.
-3. Switch to the **Expression** tab (fx) at the top of the panel.
-4. Paste the whole expression above and click **Update**.
-5. Set the middle dropdown to **is equal to**.
-6. In the right box, type `true` (without quotes).
-7. Click **Save** on the flow.
+**Parameter 5: NewValue**
+- **Input type:** Text
+- **Input name:** `NewValue`
+- **Please enter description:** `New value of the field`
+- Mark as **Required**
 
-If you cannot reach the Expression tab, add a **Compose** action named `Are Inputs Present` and paste the expression into **Inputs**. Then set the Condition to compare `Outputs` of `Are Inputs Present` **is equal to** `true`.
+**Parameter 6: ActorEmail**
+- **Input type:** Text
+- **Input name:** `ActorEmail`
+- **Please enter description:** `Email of the staff member performing the action`
+- Mark as **Required**
 
-### 5. **Yes Branch - Create item** in `AuditLog` - **Configure Retry Policy: Exponential, 4 retries**
-- **Site Address:** same
-- **List Name:** `AuditLog`
-- **Title:**
-```
-@{concat('Staff Action: ', triggerBody()['text_1'])}
-```
-- **RequestID:** `RequestID` (from Power Apps trigger input)
-- **ReqKey:** `ReqKey` (from Get item step)
-- **Action Value:** `Action` (from Power Apps trigger input)
-- **FieldName:** `FieldName` (from Power Apps trigger input)
-- **OldValue:** `OldValue` (from Power Apps trigger input)
-- **NewValue:** `NewValue` (from Power Apps trigger input)
-- **Actor Claims:** `ActorEmail` (from Power Apps trigger input - SharePoint resolves to person)
-- **ActorRole Value:** `Staff`
-- **ClientApp Value:** `ClientApp` (from Power Apps trigger input)
-- **ActionAt:**
-```
-@{utcNow()}
-```
-- **FlowRunId:**
-```
-@{workflow()['run']['name']}
-```
-- **Notes:** 
-```
-@{if(empty(triggerBody()['text_7']), concat('Action performed by staff via Power Apps: ', triggerBody()['text_1']), triggerBody()['text_7'])}
-```
+**Parameter 7: ClientApp**
+- **Input type:** Text
+- **Input name:** `ClientApp`
+- **Please enter description:** `Source application (Power Apps)`
+- Leave as **Optional** with default value
 
-### 6. **Respond to a PowerApp or flow** - Success Response
-- **Response:** 
+**Parameter 8: Notes**
+- **Input type:** Text
+- **Input name:** `Notes`
+- **Please enter description:** `Additional context or notes`
+- Leave as **Optional**
+
+### Step 3: Get Request Item
+
+**What this does:** Retrieves the ReqKey and validates the item exists before logging the action.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Get item** (SharePoint)
+3. Rename the action to: `Get Request Item`
+   - Click the **three dots (…)** → **Rename** → type `Get Request Item`
+4. **Configure retry policy** (see instructions at top)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **RequestID** (from Power Apps trigger)
+
+### Step 4: Input Validation
+
+**What this does:** Ensures all required parameters are provided before attempting to log the action.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Condition**
+3. Rename the condition to: `Validate Required Inputs`
+   - Click the **three dots (…)** → **Rename** → type `Validate Required Inputs`
+4. Set up condition:
+   - Left box: Click **Expression** tab (fx) and paste:
+   ```
+   and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_4'])), not(empty(triggerBody()['text_5'])))
+   ```
+   - Click **Update**
+   - Middle: **is equal to**
+   - Right box: `true`
+
+**Alternative if Expression tab not available:**
+1. First add a **Compose** action before the Condition
+2. Rename to: `Are Inputs Present`
+3. In **Inputs**, paste the expression above
+4. In the Condition, compare **Outputs** of `Are Inputs Present` **is equal to** `true`
+
+*This validation ensures RequestID, Action, NewValue, and ActorEmail are provided.*
+
+### Step 5: Log Action to Audit Trail
+
+#### Step 5a: Yes Branch - Create Audit Entry
+
+**What this does:** Creates a detailed audit log entry when all required inputs are present.
+
+**UI steps:**
+1. Click **+ Add an action** in the **Yes** branch
+2. Search for and select **Create item** (SharePoint)
+3. Rename the action to: `Create Audit Log Entry`
+   - Click the **three dots (…)** → **Rename** → type `Create Audit Log Entry`
+4. **Configure retry policy** (see instructions at top)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** **Expression** → `concat('Staff Action: ', triggerBody()['text_1'])`
+   - **RequestID:** **Dynamic content** → **RequestID** (from Power Apps trigger)
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from Get Request Item)
+   - **Action Value:** **Dynamic content** → **Action** (from Power Apps trigger)
+   - **FieldName:** **Dynamic content** → **FieldName** (from Power Apps trigger)
+   - **OldValue:** **Dynamic content** → **OldValue** (from Power Apps trigger)
+   - **NewValue:** **Dynamic content** → **NewValue** (from Power Apps trigger)
+   - **Actor Claims:** **Dynamic content** → **ActorEmail** (from Power Apps trigger - SharePoint will resolve to person)
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** **Dynamic content** → **ClientApp** (from Power Apps trigger)
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** **Expression** → `if(empty(triggerBody()['text_7']), concat('Action performed by staff via Power Apps: ', triggerBody()['text_1']), triggerBody()['text_7'])`
+
+#### Step 5b: Send Success Response
+
+**What this does:** Sends a structured response back to Power Apps indicating successful logging.
+
+**UI steps:**
+1. Click **+ Add an action** in the **Yes** branch
+2. Search for and select **Respond to a PowerApp or flow**
+3. Rename the action to: `Send Success Response`
+   - Click the **three dots (…)** → **Rename** → type `Send Success Response`
+4. In the **Response** field, click **Expression** tab (fx) and paste:
 ```json
 {
   "success": true,
   "message": "Action logged successfully",
-  "auditId": "@{outputs('Create_item')?['body/ID']}",
+  "auditId": "@{outputs('Create_Audit_Log_Entry')?['body/ID']}",
   "timestamp": "@{utcNow()}"
 }
 ```
+5. Click **Update**
 
-### 7. **No Branch - Respond to PowerApp** - Error Response
-- **Response:**
+#### Step 5c: No Branch - Send Error Response
+
+**What this does:** Sends an error response when required parameters are missing.
+
+**UI steps:**
+1. Click **+ Add an action** in the **No** branch
+2. Search for and select **Respond to a PowerApp or flow**
+3. Rename the action to: `Send Error Response`
+   - Click the **three dots (…)** → **Rename** → type `Send Error Response`
+4. In the **Response** field, click **Expression** tab (fx) and paste:
 ```json
 {
   "success": false,
@@ -130,21 +205,27 @@ If you cannot reach the Expression tab, add a **Compose** action named `Are Inpu
   "timestamp": "@{utcNow()}"
 }
 ```
+5. Click **Update**
 
 ---
 
 ## Power Apps Connection Setup
 
-### Adding the Flow to Your Power Apps
+### Step 6: Adding the Flow to Power Apps
+
+**What this does:** Connects the flow to your Power Apps application for use in button actions.
+
+**UI steps:**
 1. In Power Apps Studio, go to **Data** → **Add data**
 2. Search for "Power Automate" and select it
 3. Find your "PR-Action: Log action" flow and add it
 4. The flow will appear in your app's data sources as `'PR-Action: Log action'`
 
-### Flow Trigger Management
+**Connection Notes:**
 - The instant flow trigger automatically creates the required input parameters
 - Power Apps will show these parameters when you call the flow
 - Ensure all required parameters are mapped correctly in your Power Apps formulas
+- Test the connection by calling the flow from a button with sample data
 
 ---
 
