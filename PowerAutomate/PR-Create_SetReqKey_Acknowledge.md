@@ -127,7 +127,9 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **UI steps:**
 1. Click **+ New step**
 2. Search for and select **Get attachments** (SharePoint)
-3. Fill in:
+3. Rename the action to: `Get Attachments`
+   - Click the **three dots (…)** → **Rename** → type `Get Attachments`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** Click **Dynamic content** → select **ID** (from trigger)
@@ -137,7 +139,9 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **UI steps:**
 1. Click **+ New step**
 2. Search for and select **Condition**
-3. Set up condition:
+3. Rename the condition to: `Check for No Attachments`
+   - Click the **three dots (…)** → **Rename** → type `Check for No Attachments`
+4. Set up condition:
    - Left box: **Expression** → `equals(length(body('Get_attachments')?['value']), 0)`
    - Middle: **is equal to**
    - Right box: `true`
@@ -147,8 +151,10 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **Action 1: Update item to Rejected**
 1. Click **+ Add an action** in Yes branch
 2. Search for and select **Update item** (SharePoint)
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Reject Request - No Files`
+   - Click the **three dots (…)** → **Rename** → type `Reject Request - No Files`
+4. **Configure retry policy**
+5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** **Dynamic content** → **ID** (from trigger)
@@ -161,8 +167,10 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **Action 2: Log no attachments rejection**
 1. Click **+ Add an action** in Yes branch
 2. Search for and select **Create item** (SharePoint)
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Log No Files Rejection`
+   - Click the **three dots (…)** → **Rename** → type `Log No Files Rejection`
+4. **Configure retry policy**
+5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
    - **Title:** Type `Rejected: No files attached`
@@ -180,8 +188,10 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **Action 3: Send no files rejection email**
 1. Click **+ Add an action** in Yes branch
 2. Search for and select **Send an email from a shared mailbox (V2)**
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Send No Files Email`
+   - Click the **three dots (…)** → **Rename** → type `Send No Files Email`
+4. **Configure retry policy**
+5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **Student Email** (from trigger)
    - **Subject:** Type `Action needed: attach your 3D print file`
@@ -201,7 +211,9 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **Action 4: Terminate flow**
 1. Click **+ Add an action** in Yes branch
 2. Search for and select **Terminate**
-3. Fill in:
+3. Rename the action to: `Stop Flow - No Files`
+   - Click the **three dots (…)** → **Rename** → type `Stop Flow - No Files`
+4. Fill in:
    - **Status:** Select `Cancelled`
 
 ##### No Branch (Files Present) — Continue to File Validation:
@@ -222,7 +234,9 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **UI steps:**
 1. **Inside the loop**, click **+ Add an action**
 2. Search for and select **Condition**
-3. **Set up the condition:**
+3. Rename the condition to: `Validate Filename Format`
+   - Click the **three dots (…)** → **Rename** → type `Validate Filename Format`
+4. **Set up the condition:**
    - Click the left **Choose a value** box
    - Switch to **Expression** tab (fx)
    - Paste this expression (spaces in loop names become underscores):
@@ -257,8 +271,10 @@ and(
 
 **Action 1: Update item (SharePoint)**
 1. Search for and select **Update item** (SharePoint)
-2. **Configure retry policy** (see instructions at top)
-3. Fill in:
+2. Rename the action to: `Update Request - Valid File`
+   - Click the **three dots (…)** → **Rename** → type `Update Request - Valid File`
+3. **Configure retry policy** (see instructions at top)
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** **Dynamic content** → **ID** (from trigger)
@@ -274,8 +290,10 @@ and(
 **Action 2: Create item (AuditLog)**
 1. Click **+ Add an action** in True branch
 2. Search for and select **Create item** (SharePoint)
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Log Request Creation`
+   - Click the **three dots (…)** → **Rename** → type `Log Request Creation`
+4. **Configure retry policy**
+5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
    - **Title:** Type `Request Created`
@@ -295,19 +313,21 @@ and(
 **Action 3: Send confirmation email**
 1. Click **+ Add an action** in True branch
 2. Search for and select **Send an email from a shared mailbox (V2)**
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Send Confirmation Email`
+   - Click the **three dots (…)** → **Rename** → type `Send Confirmation Email`
+4. **Configure retry policy**
+5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **StudentEmail** (from Update item)
    - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
-   - **Body:** Paste this HTML:
+   - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
 ```html
 <p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> @{outputs('Generate_Standardized_Display_Name')}</p>
-<p><strong>Request ID:</strong> @{outputs('Generate ReqKey')}</p>
-<p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
-<p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
-<p><strong>Color:</strong> @{triggerOutputs()?['body/Color']}</p>
+<p><strong>Request:</strong> [Dynamic content: Outputs from Generate Standardized Display Name]</p>
+<p><strong>Request ID:</strong> [Dynamic content: Outputs from Generate ReqKey]</p>
+<p><strong>Method:</strong> [Dynamic content: Method from trigger]</p>
+<p><strong>Printer:</strong> [Dynamic content: PrinterSelection from trigger]</p>
+<p><strong>Color:</strong> [Dynamic content: Color from trigger]</p>
 <br>
 <p><strong>Next Steps:</strong></p>
 <ul>
@@ -316,22 +336,26 @@ and(
   <li>Estimated review time: 1-2 business days</li>
 </ul>
 <br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID from trigger]">View your request details</a></p>
 <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p><strong>File Requirements Reminder:</strong></p>
-<p>• Accepted formats: .stl, .obj, .3mf, .idea, .form<br>
-• Maximum file size: 150MB per file<br>
-• Files not meeting requirements will be rejected</p>
 <br>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
+**How to build this in Power Automate:**
+1. Type the HTML structure in the Body field
+2. Place cursor where you see [Dynamic content: ...] 
+3. Click **Dynamic content** and select the indicated field
+4. For trigger fields, look under "When an item is created"
+5. For outputs, look under the respective action names
+
 **Action 4: Log email sent**
 1. Click **+ Add an action** in True branch
 2. Search for and select **Create item** (SharePoint)
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Log Email Sent`
+   - Click the **three dots (…)** → **Rename** → type `Log Email Sent`
+4. **Configure retry policy**
+5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
    - **Title:** Type `Email Sent: Confirmation`
@@ -339,7 +363,7 @@ and(
    - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
    - **Action Value:** Type `Email Sent`
    - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Expression** → `outputs('Update item')?['body/StudentEmail']`
+   - **NewValue:** **Expression** → `toLower(triggerOutputs()?['body/Author/Email'])`
    - **Actor Claims:** Leave blank
    - **ActorRole Value:** Type `System`
    - **ClientApp Value:** Type `Power Automate`
@@ -357,8 +381,10 @@ and(
 
 **Action 1: Update item to Rejected**
 1. Search for and select **Update item** (SharePoint)
-2. **Configure retry policy**
-3. Fill in:
+2. Rename the action to: `Reject Request - Invalid Filename`
+   - Click the **three dots (…)** → **Rename** → type `Reject Request - Invalid Filename`
+3. **Configure retry policy**
+4. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `PrintRequests`
    - **Id:** **Dynamic content** → **ID** (from trigger)
@@ -371,8 +397,10 @@ and(
 **Action 2: Log rejection**
 1. Click **+ Add an action** in False branch
 2. Search for and select **Create item** (SharePoint)
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Log Invalid Filename Rejection`
+   - Click the **three dots (…)** → **Rename** → type `Log Invalid Filename Rejection`
+4. **Configure retry policy**
+5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
    - **Title:** Type `Rejected: Invalid filename`
@@ -390,8 +418,10 @@ and(
 **Action 3: Send rejection email**
 1. Click **+ Add an action** in False branch
 2. Search for and select **Send an email from a shared mailbox (V2)**
-3. **Configure retry policy**
-4. Fill in:
+3. Rename the action to: `Send Invalid Filename Email`
+   - Click the **three dots (…)** → **Rename** → type `Send Invalid Filename Email`
+4. **Configure retry policy**
+5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **Student Email** (from trigger) or **Expression** → `triggerOutputs()['body']['Author']['Email']`
    - **Subject:** Type `Action needed: rename your 3D print file`
@@ -407,7 +437,9 @@ and(
 **Action 4: Terminate flow**
 1. Click **+ Add an action** in False branch
 2. Search for and select **Terminate**
-3. Fill in:
+3. Rename the action to: `Stop Flow - Invalid Filename`
+   - Click the **three dots (…)** → **Rename** → type `Stop Flow - Invalid Filename`
+4. Fill in:
    - **Status:** Select `Cancelled`
    - This stops the flow so no confirmation email is sent
 
