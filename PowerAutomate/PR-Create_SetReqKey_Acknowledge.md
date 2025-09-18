@@ -299,7 +299,7 @@ and(
 4. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **StudentEmail** (from Update item)
-   - **Subject:** **Expression** → `We received your 3D Print request – @{outputs('Generate ReqKey')}`
+   - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
    - **Body:** Paste this HTML:
 ```html
 <p>We received your 3D Print request.</p>
