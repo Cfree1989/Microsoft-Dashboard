@@ -6,9 +6,9 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 
 ## What you will build
 
-- A SharePoint site with three lists: **PrintRequests** (17 fields total), **AuditLog**, and **Staff**.
+- A SharePoint site with three lists: **PrintRequests** (19 fields total), **AuditLog** (14 fields total), and **Staff** (3 fields total).
 - A **simplified student form** (9 fields) with smart printer selection based on build plate dimensions.
-- A **Power Apps staff console** focused on operational management (8 staff-only fields).
+- A **Power Apps staff console** focused on operational management (10 staff-only fields).
 - Three **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated rejection/completion emails, and log staff actions.
 - **Clean separation**: Students focus on project definition, staff control technical execution.
 
@@ -54,7 +54,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | Student | Person | Required |
 | StudentEmail | Single line of text | Auto-filled by the form/flow |
 | Course | Single line of text | Optional |
-| Department | Choice | Architecture; Engineering; Art & Design; Other |
+| Discipline | Choice | Architecture; Engineering; Art & Design; Other |
 | ProjectType | Choice | Class Project; Research; Personal; Other |
 | Color | Choice | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
 | Method | Choice | Filament; Resin |
@@ -75,6 +75,8 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Printing; Completed; Picked Up; Comment Added; Email Sent |
 | LastActionBy | Person | Who did it |
 | LastActionAt | Date and Time | Timestamp |
+| NeedsAttention | Yes/No | Flags items requiring staff review (Default: No) |
+| Expanded | Yes/No | Controls expanded view state in Dashboard (Default: No) |
 
 > **💰 Pricing Structure for EstimatedCost Calculation:**
 > - **Filament prints:** $0.10 per gram
@@ -105,7 +107,7 @@ Notes
 - "Add or remove fields" controls which columns a view shows; it does not change permissions.
 - Item‑level permissions still ensure students see only their own items.
 
-#### 2c. Add **Status** color “chips” (optional but nice)
+#### 2c. Add **Status** color "chips" (optional but nice)
 1. Open **All Items** view → hover **Status** column → **Column settings → Format this column → Advanced mode**.
 2. Paste the JSON below and click **Save**.
 
@@ -207,7 +209,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 - **Trigger:** SharePoint - When an item is created or modified
 - **Actions:** Get field changes → Log all field changes to AuditLog → Send status-based emails (rejection/completion) → Log email actions
 
-### Flow C — PR-Action: Log action (Instant, called from Power Apps)
+### Flow C — PR-Action_LogAction (Instant, called from Power Apps)
 **Purpose:** When staff press buttons in the Power Apps staff console (e.g., Approve, Reject), log that action with proper actor attribution and comprehensive audit details.
 
 📋 **Full implementation details:** See [`PowerAutomate/PR-Action_LogAction.md`](PowerAutomate/PR-Action_LogAction.md)
@@ -234,7 +236,7 @@ Update these URLs for your specific SharePoint site:
 
 ### A Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
-2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
+2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course, Discipline, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
 3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, LastAction, LastActionBy, LastActionAt, NeedsAttention, Expanded.
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
@@ -279,7 +281,7 @@ Notify("Request submitted. You'll receive an email confirmation shortly.", Notif
 ### B Staff Console (Canvas App — Tablet)
 1. Open **Power Apps** → **Create → Canvas app** (Tablet).
 2. **Data** → Add data: SharePoint → connect to your site → add `PrintRequests`, `AuditLog`, `Staff`.
-3. Add your **instant flow**: `PR-Action: Log action` (from the Data / Power Automate panel).
+3. Add your **instant flow**: `PR-Action_LogAction` (from the Data / Power Automate panel).
 4. **App.OnStart** (App object → Advanced → OnStart):
 ```powerfx
 Set(varMeEmail, Lower(User().Email));
@@ -322,7 +324,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now()
 });
 
-'PR-Action: Log action'.Run(
+'PR-Action_LogAction'.Run(
     Text(ThisItem.ID),
     "Status Change",
     "Status",
@@ -354,7 +356,7 @@ Patch(PrintRequests, ThisItem, {
     )
 });
 
-'PR-Action: Log action'.Run(
+'PR-Action_LogAction'.Run(
     Text(ThisItem.ID),
     "Status Change",
     "Status",
@@ -385,7 +387,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 ## Part 4 — Testing (End-to-End)
 
 1. As a **student** account: Submit a new request with an attachment.
-   - Fill out student fields: Title, Course, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes
+   - Fill out student fields: Title, Course, Discipline, ProjectType, Color, Method, PrinterSelection, DueDate, Notes
    - Test **Printer Selection filtering**: Select "Resin" method → only "Form 3" should appear in printer choices
    - Open the **My Requests** view link to confirm the new item appears for the student:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
@@ -420,7 +422,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 ## Common Issues & Fixes
 
 - **I pasted Power Fx into SharePoint and saw a JSON message.** Use the Power Apps **formula bar** for Power Fx; use **JSON** only in SharePoint column formatting.
-- **Person field won’t set in Flow.** Map the person field to **Author Claims** / **Editor Claims** or pass an **email** (the connector usually resolves it).
+- **Person field won't set in Flow.** Map the person field to **Author Claims** / **Editor Claims** or pass an **email** (the connector usually resolves it).
 - **Delegation warning in Power Apps.** The provided OR filter for `Status` is acceptable for MVP. If your list grows very large, ask for a delegation-optimized filter.
 - **Users can see other items.** Revisit **Item-level permissions** on `PrintRequests` (Advanced settings). Staff should be in **Owners**.
 
@@ -437,6 +439,6 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 
 ---
 
-## You’re Done!
+## You're Done!
 
-You now have a working MVP for Fabrication Lab 3D printing requests with audit trails and staff attribution, built entirely with Microsoft 365 tools. If you’d like, I can also provide an **importable Solution** (flows + app) tailored to your tenant/site URL to save more time.
+You now have a working MVP for Fabrication Lab 3D printing requests with audit trails and staff attribution, built entirely with Microsoft 365 tools. If you'd like, I can also provide an **importable Solution** (flows + app) tailored to your tenant/site URL to save more time.

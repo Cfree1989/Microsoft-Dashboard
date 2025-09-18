@@ -211,7 +211,7 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 **UI steps:**
 1. Click **+ New step**
 2. Search for and select **Apply to each**
-3. In **Select an output from previous steps:** Click **Dynamic content** → select **value** (from Get attachments)
+3. In **Select an output from previous steps:** Switch to **Expression** tab (fx) → type `body('Get_attachments')?['value']` → Click **Update**
 4. **Rename the loop:** Click the **three dots (…)** on the loop → **Rename** → type `File Validation Gate`
 5. **Set concurrency:** Click **three dots (…)** → **Settings** → turn on **Concurrency Control** → set **Degree of Parallelism** = **1** → **Done**
 
@@ -263,7 +263,7 @@ and(
    - **List Name:** `PrintRequests`
    - **Id:** **Dynamic content** → **ID** (from trigger)
    - **ReqKey:** **Dynamic content** → **Outputs** (from Generate ReqKey)
-   - **Title:** **Expression** → `outputs('Generate Standardized Display Name')`
+   - **Title:** **Expression** → `outputs('Generate_Standardized_Display_Name')`
    - **StudentEmail:** **Expression** → `toLower(triggerOutputs()?['body/Author/Email'])`
    - **Status:** Type `Uploaded`
    - **NeedsAttention:** Select `Yes`
@@ -284,7 +284,7 @@ and(
    - **Action Value:** Type `Created`
    - **FieldName:** Leave blank
    - **OldValue:** Leave blank
-   - **NewValue:** **Expression** → `outputs('Generate Standardized Display Name')`
+   - **NewValue:** **Expression** → `outputs('Generate_Standardized_Display_Name')`
    - **Actor Claims:** **Dynamic content** → **Student Claims** (from trigger)
    - **ActorRole Value:** Type `Student`
    - **ClientApp Value:** Type `SharePoint Form`
@@ -303,7 +303,7 @@ and(
    - **Body:** Paste this HTML:
 ```html
 <p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> @{outputs('Generate Standardized Display Name')}</p>
+<p><strong>Request:</strong> @{outputs('Generate_Standardized_Display_Name')}</p>
 <p><strong>Request ID:</strong> @{outputs('Generate ReqKey')}</p>
 <p><strong>Method:</strong> @{triggerOutputs()?['body/Method']}</p>
 <p><strong>Printer:</strong> @{triggerOutputs()?['body/PrinterSelection']}</p>
