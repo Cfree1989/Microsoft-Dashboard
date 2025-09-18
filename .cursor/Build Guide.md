@@ -9,7 +9,8 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 - A SharePoint site with three lists: **PrintRequests** (19 fields total), **AuditLog** (14 fields total), and **Staff** (3 fields total).
 - A **simplified student form** (9 fields) with smart printer selection based on build plate dimensions.
 - A **Power Apps staff console** focused on operational management (10 staff-only fields).
-- Three **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated rejection/completion emails, and log staff actions.
+- Four **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated emails (including estimates), log staff actions, and handle student estimate confirmations.
+- **Approval workflow**: Staff approve requests → students receive estimates → students confirm → printing begins.
 - **Clean separation**: Students focus on project definition, staff control technical execution.
 
 > **Scope & constraints (MVP):** Internal-only (LSU accounts), file management via SharePoint **attachments**, staff attribution on every action, and a complete **AuditLog**.
@@ -168,13 +169,13 @@ Notes
 
 ## Part 2 — Power Automate (Flows)
 
-You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensure you are in the same environment as your SharePoint site.
+You will make four flows. Open **Power Automate** (flow.microsoft.com) and ensure you are in the same environment as your SharePoint site.
 
 ### What type of flows are these? Where do I create them?
 - All flows here are **cloud flows** (not desktop flows).
 - Navigation: Power Automate → left nav **Create** → choose the flow type:
   - **Automated cloud flow** for Flow A and Flow B (they run automatically on SharePoint triggers)
-  - **Instant cloud flow** for Flow C (it is called from Power Apps)
+  - **Instant cloud flow** for Flow C (it is called from Power Apps) and Flow D (it is called from email links)
 
 ### Before you start (one-time setup)
 - Make sure you have these connections (Power Automate will prompt if missing):
@@ -217,6 +218,16 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 - **Type:** Instant cloud flow (called from Power Apps)
 - **Trigger:** Power Apps with 8 input parameters
 - **Actions:** Validate inputs → Get SharePoint item → Create AuditLog entry → Return success response
+
+### Flow D — PR-Confirm: Estimate Approval (Instant, called from email)
+**Purpose:** When students click the confirmation link in their estimate email, update the status from "Pending" to "Ready to Print" and log the confirmation action.
+
+📋 **Full implementation details:** See [`PowerAutomate/PR-Confirm_EstimateApproval.md`](PowerAutomate/PR-Confirm_EstimateApproval.md)
+
+**Quick Summary:**
+- **Type:** Instant cloud flow (HTTP trigger)
+- **Trigger:** Manual (HTTP Request) with RequestID parameter
+- **Actions:** Get PrintRequest → Validate status is "Pending" → Update to "Ready to Print" → Log confirmation → Return success/error page
 
 ### URL Reference Guide
 
@@ -317,7 +328,7 @@ Set(varActor,
 8. Example **Approve** button (OnSelect):
 ```powerfx
 Patch(PrintRequests, ThisItem, {
-    Status: "Ready to Print",
+    Status: "Pending",
     LastAction: "Approved",
     LastActionBy: varActor,
     LastActionAt: Now()
@@ -328,13 +339,13 @@ Patch(PrintRequests, ThisItem, {
     "Status Change",
     "Status",
     ThisItem.Status,
-    "Ready to Print",
+    "Pending",
     varMeEmail,
     "Power Apps",
-    "Approved in Staff Console"
+    "Approved - pending student confirmation of estimate"
 );
 
-Notify("Marked Ready to Print.", NotificationType.Success);
+Notify("Approved. Estimate email sent to student.", NotificationType.Success);
 ```
 9. Create additional action buttons for other status transitions:
    - **Reject Button**: Status → "Rejected"
@@ -391,21 +402,25 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    - Open the **My Requests** view link to confirm the new item appears for the student:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
    - Expect: **ReqKey** is set (e.g., `REQ-00001`), a **Created** entry in `AuditLog`, and a confirmation **email**.
-2. As **staff**: Open the **Staff Console**, select the new item, click **Approve**.
-   - Expect: `Status` changes to "Ready to Print", `LastAction/By/At` populated, and an **AuditLog** entry from Flow C.
-3. Edit a staff field like **Priority** or **EstimatedTime** in the SharePoint list (as staff).
+2. As **staff**: Fill in **EstimatedWeight**, **EstimatedTime**, and **EstimatedCost** for the request, then click **Approve**.
+   - Expect: `Status` changes to "Pending", `LastAction/By/At` populated, and an **AuditLog** entry from Flow C.
+   - Student should receive an **estimate email** with cost details and confirmation link (from Flow B).
+3. As the **student**: Check email for estimate notification and click **"✅ Yes, proceed with printing"** link.
+   - Expect: Browser opens with success page, `Status` changes to "Ready to Print", and **AuditLog** entry from Flow D.
+4. Edit a staff field like **Priority** or **EstimatedTime** in the SharePoint list (as staff).
    - Expect: **PR-Audit** flow logs a field change entry.
    - Open the **Staff – Queue** view link and verify the item shows while in active statuses:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/Staff%20%20Queue.aspx`
-4. **File Validation Testing**:
+5. **File Validation Testing**:
    - Submit a request with a `.pdf` or `.docx` file (invalid type)
    - As **staff**: Use the File Validation Reject button
    - Expect: Status changes to "Rejected", StaffNotes updated with violation reason, AuditLog entry created
    - Verify the helper text appears correctly on the student form
-5. **Automated Email Testing**:
+6. **Automated Email Testing**:
+   - **Estimate Email**: When staff approve a request (status → "Pending"), student should receive estimate email with cost details and confirmation link
    - **Rejection Email**: When staff reject a request, student should receive rejection email with reason to check staff notes
    - **Completion Email**: When staff mark a request as "Completed", student should receive pickup notification email
-   - Verify both emails are logged in AuditLog with "Email Sent" action and "System" actor
+   - Verify all emails are logged in AuditLog with "Email Sent" action and "System" actor
 
 ---
 
@@ -430,11 +445,11 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 ## Time Estimate (Beginner)
 
 - SharePoint lists & columns: **1.5–2 hours** *(simplified with fewer fields)*
-- Power Automate flows: **3–4 hours** *(fewer field validations needed)*  
+- Power Automate flows: **4–5 hours** *(four flows total, including estimate approval workflow)*  
 - Power Apps (form + staff app): **6–8 hours** *(cleaner interface, less complex logic)*
-- Testing & fixes: **2–3 hours** *(fewer edge cases with simplified structure)*
+- Testing & fixes: **3–4 hours** *(includes testing estimate approval workflow)*
 
-**Total: 12.5–17 hours** *(vs 17-26 hours with complex field structure)*
+**Total: 14.5–19 hours** *(includes new estimate approval workflow)*
 
 ---
 

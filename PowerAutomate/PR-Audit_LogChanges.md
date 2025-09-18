@@ -226,10 +226,88 @@
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
    - **Notes:** Type `Rejection notification sent to student`
 
-#### Step 4b: Completion Email Logic
+#### Step 4b: Pending (Estimate) Email Logic
 
 **UI steps (create parallel to the Rejection condition):**
 1. Click **+ Add an action** at the same level as the Rejection condition
+2. Search for and select **Condition**
+3. Rename the condition to: `Check Status Pending`
+   - Click the **three dots (…)** → **Rename** → type `Check Status Pending`
+4. Set up condition:
+   - Left box: **Dynamic content** → **Status** (from trigger)
+   - Middle: **is equal to**
+   - Right box: Type `Pending`
+
+##### Yes Branch - Send Estimate Email:
+
+**Action 1: Send estimate email**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Send an email from a shared mailbox (V2)**
+3. Rename the action to: `Send Estimate Email`
+   - Click the **three dots (…)** → **Rename** → type `Send Estimate Email`
+4. **Configure retry policy**
+5. Fill in:
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Subject:** **Expression** → `concat('Estimate ready for your 3D print – ', triggerOutputs()?['body/ReqKey'])`
+   - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
+```html
+<p>Good news! Your 3D print request has been reviewed and approved.</p>
+<p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
+<p><strong>Method:</strong> [Dynamic content: Method] ([Dynamic content: Color])</p>
+<p><strong>Printer:</strong> [Dynamic content: PrinterSelection]</p>
+<br>
+<p><strong>COST ESTIMATE:</strong></p>
+<ul>
+  <li><strong>Estimated Weight:</strong> [Dynamic content: EstimatedWeight]g</li>
+  <li><strong>Estimated Print Time:</strong> [Dynamic content: EstimatedTime] hours</li>
+  <li><strong>Estimated Cost:</strong> $[Dynamic content: EstimatedCost]</li>
+</ul>
+<br>
+<p><strong>Please confirm you want to proceed with this estimate:</strong></p>
+<p><a href="https://prod-12.westus.logic.azure.com:443/workflows/12345678901234567890/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE&RequestID=[Dynamic content: ID]" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
+<p><em>By clicking this link, you authorize us to begin printing your request.</em></p>
+<br>
+<p><strong>Cost Details:</strong></p>
+<ul>
+  <li>Filament prints: $0.10 per gram (minimum $3.00)</li>
+  <li>Resin prints: $0.20 per gram (minimum $3.00)</li>
+  <li>Final cost may vary slightly based on actual material usage</li>
+  <li>Payment due at pickup</li>
+</ul>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID]">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+
+**Action 2: Log estimate email sent**
+1. Click **+ Add an action** in Yes branch
+2. Search for and select **Create item** (SharePoint)
+3. Rename the action to: `Log Estimate Email Sent`
+   - Click the **three dots (…)** → **Rename** → type `Log Estimate Email Sent`
+4. **Configure retry policy**
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Estimate`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **Actor Claims:** Leave blank for system
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** Type `Estimate notification sent to student with confirmation link`
+
+#### Step 4c: Completion Email Logic
+
+**UI steps (create parallel to the Pending condition):**
+1. Click **+ Add an action** at the same level as the Pending condition
 2. Search for and select **Condition**
 3. Rename the condition to: `Check Status Completed`
    - Click the **three dots (…)** → **Rename** → type `Check Status Completed`
