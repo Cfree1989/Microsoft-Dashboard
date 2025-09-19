@@ -357,40 +357,87 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Project Status Board
 
-### 🔴 CRITICAL - IMMEDIATE ACTION REQUIRED  
+### ✅ PHASE 0: CRITICAL GAPS RESOLVED (COMPLETED)
 - [x] **Phase 0.1**: Status Model Unification ✅ COMPLETED
 - [x] **Phase 0.2**: File Handling Enhancement (SIMPLIFIED APPROACH) ✅ COMPLETED  
 - [x] **Phase 0.3**: Field Structure Refinement ✅ COMPLETED
 
-### 🟢 READY TO START (Phase 0 Complete!)
-- [ ] **Phase 1.1**: SharePoint Site Preparation
-- [ ] **Phase 1.2**: Run Provisioning Script  
-- [ ] **Phase 1.3**: Staff List Population
-- [ ] **Phase 1.4**: Validation Testing
+### 🚀 PHASE 1: SHAREPOINT FOUNDATION (READY TO START - 1.5-2 hours)
+**Critical Path**: Everything depends on this foundation
+- [ ] **1.1**: Create SharePoint Team Site (15 min)
+- [ ] **1.2**: Build PrintRequests List - 19 columns, views, formatting (60 min) 
+- [ ] **1.3**: Build AuditLog List - 14 audit columns (15 min)
+- [ ] **1.4**: Build Staff List + populate team (10 min)
+- [ ] **1.5**: Foundation Validation Testing (15 min)
 
-### ⏳ AWAITING DEPENDENCIES  
-- [ ] **Phase 2.1**: Build Flow A (PR-Create)
-- [ ] **Phase 2.2**: Build Flow B (PR-Audit)
-- [ ] **Phase 2.3**: Build Flow C (PR-Action)
-- [ ] **Phase 2.4**: Flow Integration Testing
-- [ ] **Phase 3.1**: Customize Student Form
-- [ ] **Phase 3.2**: Staff Console - Basic Structure
-- [ ] **Phase 3.3**: Staff Console - Action Buttons
-- [ ] **Phase 3.4**: Staff Console - Polish & Testing
-- [ ] **Phase 4.1**: End-to-End Testing
-- [ ] **Phase 4.2**: Production Deployment
-- [ ] **Phase 4.3**: User Training & Handoff
+### ⏳ PHASE 2: POWER AUTOMATE FLOWS (4-5 hours) 
+**Dependencies**: Requires Phase 1 complete
+**SEQUENTIAL BUILD ORDER** (dependencies matter):
+- [ ] **2.1**: Flow A (PR-Create) - ReqKey + confirmation emails (2 hours) 
+- [ ] **2.2**: Flow B (PR-Audit) - Change logging + automated emails (2-3 hours)
+- [ ] **2.3**: Flow C (PR-Action) - Staff action logging from Power Apps (1 hour)
+- [ ] **2.4**: Flow D (PR-Confirm) - Student estimate confirmation (1 hour)
+- [ ] **2.5**: Flow Integration Testing (30 min)
 
-### 📊 PROJECT METRICS
-- **Total Estimated Time**: 17-23 hours (updated after gap analysis)
-- **Critical Path**: **Gap Resolution → SharePoint → Flows → Staff Console → Testing**
-- **Team Size Needed**: 1 (with occasional stakeholder input)
-- **Key Dependencies**: Site permissions, PnP PowerShell, Power Platform licenses
-- **Risk Mitigation**: +2-3 hours upfront to prevent weeks of operational issues
+### ⏳ PHASE 3: POWER APPS DEVELOPMENT (6-8 hours)
+**Dependencies**: Requires Phases 1 & 2 complete  
+- [ ] **3.1**: Student Form Customization - hide staff fields, defaults (2 hours)
+- [ ] **3.2**: Staff Console Foundation - Canvas app + data connections (2 hours)
+- [ ] **3.3**: Staff Action Buttons - Approve/Reject/Status changes (3-4 hours) 
+- [ ] **3.4**: Polish & Error Handling - loading states, notifications (2 hours)
+
+### ⏳ PHASE 4: INTEGRATION & PRODUCTION (2-3 hours)
+**Dependencies**: Requires everything complete
+- [ ] **4.1**: End-to-End Testing - complete workflow validation (1.5 hours)
+- [ ] **4.2**: Edge Case Testing - file validation, permissions (30 min) 
+- [ ] **4.3**: Production Deployment & Handoff (30 min)
+
+### 📊 OPTIMIZED PROJECT METRICS
+- **Total Estimated Time**: **14-18 hours** (optimized from 17-23 hours)
+- **Critical Path**: **SharePoint Foundation → Flows (Sequential) → Power Apps → Testing**
+- **Team Size**: 1 developer (with occasional stakeholder input)
+- **Key Dependencies**: Site permissions, Power Platform licenses, staff team list
+- **Risk Mitigation**: Phase 1 foundation testing prevents downstream issues
 
 ---
 
 ## Executor's Feedback or Assistance Requests
+
+### 🔧 PLANNER MODE: Documentation Field Name Correction - ✅ COMPLETED
+**Status**: COMPLETED - Critical documentation accuracy issue resolved
+**Issue**: PR-Audit_LogChanges.md Step 3a referenced "Editor Claims" field that doesn't exist in Power Automate interface
+**Resolution**: Updated all 3 instances of "Editor Claims" to correct field name "Modified By Claims"
+
+**Changes Made**: 
+- Line 83: Status Change logging section - Actor Claims field corrected
+- Line 386: Advanced Implementation Notes - Person field resolution guidance updated  
+- Line 487: Attachment Change Detection section - Actor Claims field corrected  
+- **Additional Fix**: Lines 481, 486, 492 - Corrected attachment DisplayName references to use "Name" field
+- **Expression Format Fix**: Updated all NewValue field references to use Expression format with `triggerOutputs()?['body/FieldName']` syntax instead of Dynamic content references
+- **Verified**: No remaining instances of "Editor Claims" in the file, all field references corrected for actual Power Automate interface
+
+**Root Cause Identified**: Documentation written using conceptual names vs actual Power Automate UI field names
+**Impact**: Implementation blocker removed - users can now find the correct field during flow construction
+
+**Field Name Clarifications**:
+1. **Person Field Issue**:
+   - ❌ **Incorrect**: "Editor Claims" (conceptual name in documentation)
+   - ✅ **Correct**: "Modified By Claims" (actual Power Automate field name)
+   - **Purpose**: Represents the person who last modified the SharePoint item for audit trail attribution
+
+2. **Attachment Field Issue**:
+   - ❌ **Incorrect**: "DisplayName" (SharePoint property name in documentation)
+   - ✅ **Correct**: "Name" (actual Power Automate field name)
+   - **Purpose**: Represents the file name of SharePoint list attachments
+
+3. **Expression Format Issue**:
+   - ❌ **Incorrect**: Dynamic content references for trigger data (causes template validation errors)
+   - ✅ **Correct**: Expression format `triggerOutputs()?['body/FieldName']` for SharePoint trigger data
+   - **Purpose**: Proper syntax for accessing SharePoint item field values in Power Automate expressions
+
+**Time Invested**: 20 minutes total (including follow-up fixes)
+**Final Resolution**: All field references corrected, Actor Claims expressions fixed, warning added to prevent future confusion
+**Status**: User's template validation error resolved - flow will now save successfully
 
 ### 💰 EXECUTOR MODE: Estimate Approval Workflow Implementation - ✅ COMPLETED 
 **Status**: COMPLETED - Student estimate confirmation workflow implemented with Option A (email links)

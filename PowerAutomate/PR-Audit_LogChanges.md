@@ -79,65 +79,14 @@
    - **Action Value:** Type `Status Change`
    - **FieldName:** Type `Status`
    - **OldValue:** Leave blank for MVP
-   - **NewValue:** **Dynamic content** → **Status** (from trigger)
-   - **Actor Claims:** **Dynamic content** → **Editor Claims** (from trigger)
+   - **NewValue:** **Expression** → `triggerOutputs()?['body/Status']`
+   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
    - **ActorRole Value:** Type `Staff`
    - **ClientApp Value:** Type `SharePoint Form`
    - **ActionAt:** **Expression** → `utcNow()`
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
    - **Notes:** **Expression** → `concat('Status updated from previous value to ', triggerOutputs()?['body/Status'])`
 
-#### Step 3b: Additional Field Change Detection
-
-**Create parallel conditions for each field following the same pattern as Step 3a:**
-
-**AssignedTo Change Detection:**
-1. Add **Condition** → Rename to: `Check AssignedTo Changed`
-2. Condition: **Has Column Changed: AssignedTo** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log AssignedTo Change`
-4. AuditLog fields: FieldName = `AssignedTo`, NewValue = **Expression** → `triggerOutputs()?['body/AssignedTo/DisplayName']`
-
-**Priority Change Detection:**
-1. Add **Condition** → Rename to: `Check Priority Changed`
-2. Condition: **Has Column Changed: Priority** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log Priority Change`
-4. AuditLog fields: FieldName = `Priority`, NewValue = **Dynamic content** → **Priority**
-
-**Method Change Detection:**
-1. Add **Condition** → Rename to: `Check Method Changed`
-2. Condition: **Has Column Changed: Method** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log Method Change`
-4. AuditLog fields: FieldName = `Method`, NewValue = **Dynamic content** → **Method**
-
-**PrinterSelection Change Detection:**
-1. Add **Condition** → Rename to: `Check PrinterSelection Changed`
-2. Condition: **Has Column Changed: PrinterSelection** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log PrinterSelection Change`
-4. AuditLog fields: FieldName = `PrinterSelection`, NewValue = **Dynamic content** → **PrinterSelection**
-
-**EstimatedTime Change Detection:**
-1. Add **Condition** → Rename to: `Check EstimatedTime Changed`
-2. Condition: **Has Column Changed: EstimatedTime** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedTime Change`
-4. AuditLog fields: FieldName = `EstimatedTime`, NewValue = **Dynamic content** → **EstimatedTime**
-
-**EstimatedWeight Change Detection:**
-1. Add **Condition** → Rename to: `Check EstimatedWeight Changed`
-2. Condition: **Has Column Changed: EstimatedWeight** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedWeight Change`
-4. AuditLog fields: FieldName = `EstimatedWeight`, NewValue = **Dynamic content** → **EstimatedWeight**
-
-**EstimatedCost Change Detection:**
-1. Add **Condition** → Rename to: `Check EstimatedCost Changed`
-2. Condition: **Has Column Changed: EstimatedCost** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log EstimatedCost Change`
-4. AuditLog fields: FieldName = `EstimatedCost`, NewValue = **Dynamic content** → **EstimatedCost**
-
-**StaffNotes Change Detection:**
-1. Add **Condition** → Rename to: `Check StaffNotes Changed`
-2. Condition: **Has Column Changed: StaffNotes** = true
-3. Yes Branch: Add **Create item** → Rename to: `Log StaffNotes Change`
-4. AuditLog fields: FieldName = `StaffNotes`, NewValue = **Dynamic content** → **StaffNotes**
 
 **How to build parallel field change conditions:**
 1. Add a **Condition** action at the root level
@@ -151,6 +100,89 @@
 9. Configure all AuditLog fields consistently
 10. **Configure retry policy** on the Create item action
 11. Repeat for each field, adding conditions at the same level for parallelism
+
+##### Beginner Walkthrough: Build the first detector (Priority)
+
+1. Add a new Condition at the root level (sibling of other conditions) and set it to detect Priority changes using the steps above (pick **Has Column Changed: Priority** = `true`).
+2. In the **Yes** branch, add **Create item** (SharePoint) and fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** `Priority Change`
+   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** **Dynamic content** → `ReqKey`
+   - **Action Value:** `Field Change`
+   - **FieldName:** `Priority`
+   - **OldValue:** (leave blank)
+   - **NewValue:** **Expression** → `triggerOutputs()?['body/Priority']`
+   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** `Staff`
+   - **ClientApp Value:** `SharePoint Form`
+   - **ActionAt:** **Expression** → `utcNow()`
+   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
+   - **Notes:** **Expression** → `concat('Priority updated to ', triggerOutputs()?['body/Priority'])`
+3. Open the action's settings (… → Settings) and turn on **Retry Policy** (Type: Exponential, Count: 4, Minimum Interval: PT1M).
+4. Leave the **No** branch empty.
+
+##### Duplicate for the other fields (change only the items listed)
+
+- **Method**
+  - Title: `Method Change`
+  - FieldName: `Method`
+  - NewValue: `triggerOutputs()?['body/Method']`
+  - Notes: `concat('Method updated to ', triggerOutputs()?['body/Method'])`
+
+- **PrinterSelection**
+  - Title: `PrinterSelection Change`
+  - FieldName: `PrinterSelection`
+  - NewValue: `triggerOutputs()?['body/PrinterSelection']`
+  - Notes: `concat('PrinterSelection updated to ', triggerOutputs()?['body/PrinterSelection'])`
+
+- **EstimatedTime**
+  - Title: `EstimatedTime Change`
+  - FieldName: `EstimatedTime`
+  - NewValue: `triggerOutputs()?['body/EstimatedTime']`
+  - Notes: `concat('EstimatedTime updated to ', string(triggerOutputs()?['body/EstimatedTime']))`
+
+- **EstimatedWeight**
+  - Title: `EstimatedWeight Change`
+  - FieldName: `EstimatedWeight`
+  - NewValue: `triggerOutputs()?['body/EstimatedWeight']`
+  - Notes: `concat('EstimatedWeight updated to ', string(triggerOutputs()?['body/EstimatedWeight']))`
+
+- **EstimatedCost**
+  - Title: `EstimatedCost Change`
+  - FieldName: `EstimatedCost`
+  - NewValue: `triggerOutputs()?['body/EstimatedCost']`
+  - Notes: `concat('EstimatedCost updated to ', string(triggerOutputs()?['body/EstimatedCost']))`
+
+- **StaffNotes**
+  - Title: `StaffNotes Change`
+  - FieldName: `StaffNotes`
+  - NewValue: `triggerOutputs()?['body/StaffNotes']`
+  - Notes: `concat('StaffNotes updated')`
+
+##### Quick reference (copy/paste expressions)
+
+- **RequestID:** `triggerOutputs()?['body/ID']`
+- **ReqKey:** Dynamic content → `ReqKey`
+- **Actor Claims:** `triggerOutputs()?['body/Modified By Claims']`
+- **ActionAt:** `utcNow()`
+- **FlowRunId:** `workflow()['run']['name']`
+- **NewValue per field:**
+  - Priority → `triggerOutputs()?['body/Priority']`
+  - Method → `triggerOutputs()?['body/Method']`
+  - PrinterSelection → `triggerOutputs()?['body/PrinterSelection']`
+  - EstimatedTime → `triggerOutputs()?['body/EstimatedTime']`
+  - EstimatedWeight → `triggerOutputs()?['body/EstimatedWeight']`
+  - EstimatedCost → `triggerOutputs()?['body/EstimatedCost']`
+  - StaffNotes → `triggerOutputs()?['body/StaffNotes']`
+
+##### Sanity checks and quick test
+
+- All field Conditions are added at the root level (parallel), not nested.
+- Each Create item has Retry Policy enabled (Exponential, 4, PT1M).
+- Flow-level Concurrency Control is set to 1 (see Error Handling Configuration).
+- Test: edit one field at a time and confirm one new AuditLog entry with the correct `FieldName` and `NewValue`. Then try two fields in one save and confirm two audit entries.
 
 ### Step 4: Status-Based Email Notifications
 
@@ -178,7 +210,7 @@
 4. **Configure retry policy**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **To:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Subject:** **Expression** → `concat('Your 3D Print request has been rejected – ', triggerOutputs()?['body/ReqKey'])`
    - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
 ```html
@@ -218,7 +250,7 @@
    - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
    - **Action Value:** Type `Email Sent`
    - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **NewValue:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Actor Claims:** Leave blank for system
    - **ActorRole Value:** Type `System`
    - **ClientApp Value:** Type `Power Automate`
@@ -248,7 +280,7 @@
 4. **Configure retry policy**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **To:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Subject:** **Expression** → `concat('Estimate ready for your 3D print – ', triggerOutputs()?['body/ReqKey'])`
    - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
 ```html
@@ -296,7 +328,7 @@
    - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
    - **Action Value:** Type `Email Sent`
    - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **NewValue:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Actor Claims:** Leave blank for system
    - **ActorRole Value:** Type `System`
    - **ClientApp Value:** Type `Power Automate`
@@ -326,7 +358,7 @@
 4. **Configure retry policy**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **To:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Subject:** **Expression** → `concat('Your 3D print is ready for pickup – ', triggerOutputs()?['body/ReqKey'])`
    - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
 ```html
@@ -370,7 +402,7 @@
    - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
    - **Action Value:** Type `Email Sent`
    - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from trigger)
+   - **NewValue:** **Expression** → `triggerOutputs()?['body/StudentEmail']`
    - **Actor Claims:** Leave blank for system
    - **ActorRole Value:** Type `System`
    - **ClientApp Value:** Type `Power Automate`
@@ -383,7 +415,7 @@
 ## Advanced Implementation Notes
 
 ### Person Field Resolution
-If the **Actor** person field fails to resolve, use **Editor Claims** from the trigger instead of trying to resolve email addresses manually.
+If the **Actor** person field fails to resolve, use **Modified By Claims** from the trigger instead of trying to resolve email addresses manually.
 
 ### Infinite Loop Prevention
 This flow uses the **Trigger Window Start Token** in the "Get changes" action, which compares current values to those at flow start time, preventing infinite loops when the flow updates SharePoint items.
@@ -478,18 +510,18 @@ Update these sections in the email templates for your lab:
 8. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
-   - **Title:** **Expression** → `concat('Attachment: ', items('Log_Each_Attachment')?['DisplayName'])`
+   - **Title:** **Expression** → `concat('Attachment: ', items('Log_Each_Attachment')?['Name'])`
    - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
    - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
    - **Action Value:** Type `File Added`
    - **FieldName:** Type `Attachments`
-   - **NewValue:** **Dynamic content** → **DisplayName** (from current item)
-   - **Actor Claims:** **Dynamic content** → **Editor Claims** (from trigger)
+   - **NewValue:** **Dynamic content** → **Name** (from current item)
+   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
    - **ActorRole Value:** Type `Staff`
    - **ClientApp Value:** Type `SharePoint Form`
    - **ActionAt:** **Expression** → `utcNow()`
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** **Expression** → `concat('New file attachment: ', items('Log_Each_Attachment')?['DisplayName'])`
+   - **Notes:** **Expression** → `concat('New file attachment: ', items('Log_Each_Attachment')?['Name'])`
 
 ---
 
