@@ -131,11 +131,11 @@
   - NewValue: `triggerOutputs()?['body/Method']`
   - Notes: `concat('Method updated to ', triggerOutputs()?['body/Method'])`
 
-- **PrinterSelection**
-  - Title: `PrinterSelection Change`
-  - FieldName: `PrinterSelection`
-  - NewValue: `triggerOutputs()?['body/PrinterSelection']`
-  - Notes: `concat('PrinterSelection updated to ', triggerOutputs()?['body/PrinterSelection'])`
+- **Printer**
+  - Title: `Printer Change`
+  - FieldName: `Printer`
+  - NewValue: `triggerOutputs()?['body/Printer']`
+  - Notes: `concat('Printer updated to ', triggerOutputs()?['body/Printer'])`
 
 - **EstimatedTime**
   - Title: `EstimatedTime Change`
@@ -155,11 +155,11 @@
   - NewValue: `triggerOutputs()?['body/EstimatedCost']`
   - Notes: `concat('EstimatedCost updated to ', string(triggerOutputs()?['body/EstimatedCost']))`
 
-- **StaffNotes**
-  - Title: `StaffNotes Change`
-  - FieldName: `StaffNotes`
-  - NewValue: `triggerOutputs()?['body/StaffNotes']`
-  - Notes: `concat('StaffNotes updated')`
+- **Notes**
+  - Title: `Notes Change`
+  - FieldName: `Notes`
+  - NewValue: `triggerOutputs()?['body/Notes']`
+  - Notes: `concat('Notes updated')`
 
 ##### Quick reference (copy/paste expressions)
 
@@ -171,11 +171,11 @@
 - **NewValue per field:**
   - Priority → `triggerOutputs()?['body/Priority']`
   - Method → `triggerOutputs()?['body/Method']`
-  - PrinterSelection → `triggerOutputs()?['body/PrinterSelection']`
+  - Printer → `triggerOutputs()?['body/Printer']`
   - EstimatedTime → `triggerOutputs()?['body/EstimatedTime']`
   - EstimatedWeight → `triggerOutputs()?['body/EstimatedWeight']`
   - EstimatedCost → `triggerOutputs()?['body/EstimatedCost']`
-  - StaffNotes → `triggerOutputs()?['body/StaffNotes']`
+  - Notes → `triggerOutputs()?['body/Notes']`
 
 ##### Sanity checks and quick test
 
@@ -217,7 +217,7 @@
 <p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
 <p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
 <p><strong>Method:</strong> [Dynamic content: Method]</p>
-<p><strong>Printer Requested:</strong> [Dynamic content: PrinterSelection]</p>
+<p><strong>Printer Requested:</strong> [Dynamic content: Printer]</p>
 <br>
 <p><strong>Reason for Rejection:</strong></p>
 <p>Please check the staff notes in your request for specific details about why your request was rejected.</p>
@@ -287,7 +287,7 @@
 <p>Good news! Your 3D print request has been reviewed and approved.</p>
 <p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
 <p><strong>Method:</strong> [Dynamic content: Method] ([Dynamic content: Color])</p>
-<p><strong>Printer:</strong> [Dynamic content: PrinterSelection]</p>
+<p><strong>Printer:</strong> [Dynamic content: Printer]</p>
 <br>
 <p><strong>COST ESTIMATE:</strong></p>
 <ul>
@@ -365,7 +365,7 @@
 <p>Great news! Your 3D print is completed and ready for pickup.</p>
 <p><strong>Request:</strong> [Dynamic content: Title] ([Dynamic content: ReqKey])</p>
 <p><strong>Method:</strong> [Dynamic content: Method]</p>
-<p><strong>Printer Used:</strong> [Dynamic content: PrinterSelection]</p>
+<p><strong>Printer Used:</strong> [Dynamic content: Printer]</p>
 <p><strong>Color:</strong> [Dynamic content: Color]</p>
 <p><strong>Estimated Weight:</strong> [Dynamic content: EstimatedWeight]g (if available)</p>
 <p><strong>Print Time:</strong> [Dynamic content: EstimatedTime] hours (if available)</p>
