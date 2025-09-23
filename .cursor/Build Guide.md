@@ -248,7 +248,32 @@ Notes
 - "Add or remove fields" controls which columns a view shows; it does not change permissions.
 - Item‑level permissions still ensure students see only their own items.
 
-#### 2c. Add **Status** color "chips" (optional but nice)
+#### 2c. Add **RejectionReason** column for structured feedback
+
+Add this additional column to the `PrintRequests` list for structured rejection feedback:
+
+**Column Configuration:**
+- **Column Name:** `RejectionReason`
+- **Type:** Choice (single selection)
+- **Allow 'Fill-in' choices:** Yes (enable "Can add values manually")
+- **Predefined Choices:**
+  - `File format not supported (.stl, .obj, .3mf required)`
+  - `Design not printable (overhangs, thin walls, unsupported features)`
+  - `Excessive material usage (optimize design for cost efficiency)`
+  - `Incomplete request information (missing details or files)`
+  - `Size limitations (exceeds printer build volume)`
+  - `Material not available (requested filament/resin unavailable)`
+  - `Quality concerns (design likely to fail during printing)`
+  - `Other (see additional details)`
+
+**Implementation Notes:**
+- This field supports structured rejection reasons in automated emails
+- Staff can select from predefined reasons OR type custom reasons as needed
+- Power Automate flows automatically use this for email content (whether predefined or custom)
+- Students receive specific, actionable feedback instead of generic messages
+- **Benefits of Fill-in choices:** Combines consistency with flexibility for unique situations
+
+#### 2d. Add **Status** color "chips" (optional but nice)
 1. Open **All Items** view → hover **Status** column → **Column settings → Format this column → Advanced mode**.
 2. Paste the JSON below and click **Save**.
 

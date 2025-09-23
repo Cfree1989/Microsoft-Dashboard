@@ -161,21 +161,12 @@
   - NewValue: `triggerOutputs()?['body/Notes']`
   - Notes: `concat('Notes updated')`
 
-##### Quick reference (copy/paste expressions)
+- **RejectionReason**
+  - Title: `RejectionReason Change`
+  - FieldName: `RejectionReason`
+  - NewValue: `triggerOutputs()?['body/RejectionReason']`
+  - Notes: `concat('RejectionReason updated to ', triggerOutputs()?['body/RejectionReason'])`
 
-- **RequestID:** `triggerOutputs()?['body/ID']`
-- **ReqKey:** Dynamic content → `ReqKey`
-- **Actor Claims:** `triggerOutputs()?['body/Modified By Claims']`
-- **ActionAt:** `utcNow()`
-- **FlowRunId:** `workflow()['run']['name']`
-- **NewValue per field:**
-  - Priority → `triggerOutputs()?['body/Priority']`
-  - Method → `triggerOutputs()?['body/Method']`
-  - Printer → `triggerOutputs()?['body/Printer']`
-  - EstimatedTime → `triggerOutputs()?['body/EstimatedTime']`
-  - EstimatedWeight → `triggerOutputs()?['body/EstimatedWeight']`
-  - EstimatedCost → `triggerOutputs()?['body/EstimatedCost']`
-  - Notes → `triggerOutputs()?['body/Notes']`
 
 ##### Sanity checks and quick test
 
@@ -220,14 +211,15 @@
 <p><strong>Printer Requested:</strong> [Dynamic content: Printer]</p>
 <br>
 <p><strong>Reason for Rejection:</strong></p>
-<p>Please check the staff notes in your request for specific details about why your request was rejected.</p>
+<p>[Dynamic content: RejectionReason]</p>
+<p><strong>Additional Details:</strong> [Dynamic content: Notes]</p>
 <br>
 <p><strong>Next Steps:</strong></p>
 <ul>
-  <li>Review the feedback provided in staff notes</li>
+  <li>Review the specific rejection reason above</li>
   <li>Make necessary adjustments to your design or request</li>
   <li>Submit a new corrected request through the Fabrication Lab website</li>
-  <li>Contact our staff if you have questions about the feedback</li>
+  <li>Contact our staff if you have questions about this feedback</li>
 </ul>
 <br>
 <p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID]">View your request details</a></p>
@@ -559,6 +551,8 @@ Update these sections in the email templates for your lab:
 - [ ] No duplicate emails sent during multi-field updates
 - [ ] Retry policies trigger on simulated failures
 - [ ] Cost estimates display correctly in completion emails
+- [ ] **RejectionReason field** appears correctly in rejection emails (both predefined choices and custom fill-in values)
+- [ ] RejectionReason changes are logged to AuditLog when staff update rejection reasons
 - [ ] Attachment changes logged properly (if implemented)
 - [ ] Shared mailbox configuration working properly
 - [ ] Email links resolve to correct SharePoint URLs
