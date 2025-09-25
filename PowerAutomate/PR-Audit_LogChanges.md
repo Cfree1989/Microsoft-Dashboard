@@ -32,27 +32,27 @@
 **What this does:** Prevents Flow B from running when any System process (Flow A or Flow B itself) is updating the item, avoiding race conditions and circular loops.
 
 **UI steps (Recommended):**
-1. Click **+ New step** → **Condition** → rename to `Skip if Attachment Maintenance`.
-   - Left (Expression): `equals(triggerOutputs()?['body/LastAction/Value'], 'Attachment Count Updated')`
+1. Click **+ New step** → **Condition** → rename to `Skip if System Update`.
+   - Left (Expression): `equals(triggerOutputs()?['body/LastActionBy'], 'System')`
    - Middle: is equal to
    - Right: `true`
-   - **Note:** Skips the run when Step 6 writes back the maintenance value `Attachment Count Updated`, preventing self-triggering.
+   - **Note:** Skips processing when any system automation writes to the item.
 
 
 **Yes Branch:** Leave empty (skip all processing when any System process is running)
 
-**No Branch:** ALL remaining Flow B logic goes here (Steps 3-6 below) - processes user modifications only
+**No Branch:** ALL remaining Flow B logic goes here (Steps 3-5 below) - processes user modifications only
 
 ---
 
-### Step 2a: Configure Trigger Conditions (block System updates at source)
+### Step 2a: Configure Trigger Conditions (optional loop guard)
 
 **What this does:** Prevents the flow from even starting when the item update was made by the flow itself (or other system processes). This removes the circular loop warning and reduces no-op runs.
 
 **UI steps (on the trigger card "When an item is created or modified"):**
 1. Open the trigger → click the **three dots (… )** → **Settings**.
 2. Under **Trigger conditions** → click **Add** and paste this expression:
-   - `@not(equals(triggerBody()?['LastAction/Value'], 'Attachment Count Updated'))`
+   - `@not(equals(triggerBody()?['LastActionBy'], 'System'))`
 3. Under **Concurrency control**, turn it **On** and set **Limit = 1** (strict ordering of audit logs).
 4. Ensure **Split on** is **Off** (not used for this trigger).
 
@@ -72,10 +72,12 @@
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Id:** **Expression** → `triggerBody()?['ID']`
    - **Since:** **Dynamic content** → **Trigger Window Start Token** (from trigger)
 
 *This compares current values to those at flow start time, preventing infinite loops.*
+
+> Tip: If you see "id may not be null or empty" on this action, open the card and rebind **Site Address/List Name** and the **Id** expression above. After trigger edits, tokens can drop; this direct expression is the most stable.
 
 ### Step 4: Parallel Field Change Detection
 
@@ -161,14 +163,20 @@
 - **Method**
   - Title: `Method Change`
   - FieldName: `Method`
-  - NewValue: `triggerOutputs()?['body/Method']`
-  - Notes: `concat('Method updated to ', triggerOutputs()?['body/Method'])`
+  - NewValue: `triggerOutputs()?['body/Method']?['Value']`
+  - Notes: `concat('Method updated to ', triggerOutputs()?['body/Method']?['Value'])`
 
 - **Printer**
   - Title: `Printer Change`
   - FieldName: `Printer`
-  - NewValue: `triggerOutputs()?['body/Printer']`
-  - Notes: `concat('Printer updated to ', triggerOutputs()?['body/Printer'])`
+  - NewValue: `triggerOutputs()?['body/Printer']?['Value']`
+  - Notes: `concat('Printer updated to ', triggerOutputs()?['body/Printer']?['Value'])`
+
+- **Color**
+  - Title: `Color Change`
+  - FieldName: `Color`
+  - NewValue: `triggerOutputs()?['body/Color']?['Value']`
+  - Notes: `concat('Color updated to ', triggerOutputs()?['body/Color']?['Value'])`
 
 - **EstimatedTime**
   - Title: `EstimatedTime Change`
@@ -179,8 +187,8 @@
 - **EstimatedWeight**
   - Title: `EstimatedWeight Change`
   - FieldName: `EstimatedWeight`
-  - NewValue: `triggerOutputs()?['body/EstimatedWeight']`
-  - Notes: `concat('EstimatedWeight updated to ', string(triggerOutputs()?['body/EstimatedWeight']))`
+  - NewValue: `triggerOutputs()?['body/EstWeight']`
+  - Notes: `concat('EstimatedWeight updated to ', string(triggerOutputs()?['body/EstWeight']))`
 
 - **EstimatedCost**
   - Title: `EstimatedCost Change`
@@ -564,64 +572,7 @@ Update these sections in the email templates for your lab:
 - **Choose a value:** `Printing`
 - **Yes Branch:** Send "printing started" notification to keep students informed
 
-### Step 6: Attachments Change Detection (Optional Enhancement)
-
-**What this does:** Detects when attachments are added or removed and logs details.
-
-> Important: The SharePoint "Get changes for an item or a file (properties only)" action does not expose "Has Column Changed: Attachments". Use a simple and reliable count‑compare pattern with a helper column `AttachmentCount` (Number, default 0) on the `PrintRequests` list.
-
-#### Prerequisite
-- Add a `Number` column to `PrintRequests` named **AttachmentCount** (default 0). Hide it from student views.
-
-#### Step 6a: Detect Attachment Changes (Count‑Compare)
-
-**UI steps (INSIDE THE "NO" BRANCH of Step 2, parallel with other conditions):**
-1. Click **+ New step** → **Get attachments** (SharePoint) → rename to `Get Current Attachments`.
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
-   - **Note:** This returns an array of attachments in `body('Get_Current_Attachments')` (no `['value']`).
-2. Click **+ New step** → **Compose** → rename to `Current Attachment Count`.
-   - **Inputs (Expression):** `length(body('Get_Current_Attachments'))`
-   - **Note:** SharePoint trigger's `body/Attachments` is a boolean (has/hasn't attachments), not an array. Always count using the output of `Get Current Attachments`.
-3. Click **+ New step** → **Get item** (SharePoint) → rename to `Get Current Item`.
-   - Same Site/List; **Id:** **ID** (from trigger)
-4. Click **+ New step** → **Condition** → rename to `Check Attachments Changed`.
-   - Left (Expression): `not(equals(outputs('Current_Attachment_Count'), if(equals(outputs('Get_Current_Item')?['body/AttachmentCount'], null), 0, int(outputs('Get_Current_Item')?['body/AttachmentCount']))))`
-   - Middle: is equal to
-   - Right: `true`
-   - **Note:** The `if()` statement handles null AttachmentCount values before attempting int conversion
-
-#### Step 6b: Log Attachment Details (Yes branch of Check Attachments Changed)
-
-1. **Apply to each** → rename `Log Each Attachment`
-   - Select output (Expression): `body('Get_Current_Attachments')`
-   - **Note:** Loops the attachments returned by `Get Current Attachments`. No fallback needed; this returns an empty array when there are no attachments.
-2. Inside the loop, **Create item** (SharePoint) → rename `Log Attachment Change`
-   - **Site Address:** site URL
-   - **List Name:** `AuditLog`
-   - **Title:** Expression → `concat('Attachment: ', items('Log_Each_Attachment')?['Name'])`
-   - **RequestID:** Expression → `triggerOutputs()?['body/ID']`
-   - **ReqKey:** Dynamic content → `ReqKey` (from trigger)
-   - **Action Value:** `File Added`
-   - **FieldName:** `Attachments`
-   - **NewValue:** Expression → `items('Log_Each_Attachment')?['Name']`
-   - **Actor Claims:** Expression → `triggerOutputs()?['body/Modified By Claims']`
-   - **ActorRole Value:** `Staff`
-   - **ClientApp Value:** `SharePoint Form`
-   - **ActionAt:** Expression → `utcNow()`
-   - **FlowRunId:** Expression → `workflow()['run']['name']`
-   - **Notes:** Expression → `concat('New file attachment: ', items('Log_Each_Attachment')?['Name'])`
-3. After the loop, add **Update item** (SharePoint) → rename `Update Attachment Count`
-   - Same Site/List; **Id:** **ID** (from trigger)
-   - Set **AttachmentCount** = `outputs('Current_Attachment_Count')`
-   - **LastActionBy:** (optional) If this is a Text column, type `System`. If it's a Person column, leave blank or set to a valid account.
-   - **LastAction:** Type `Attachment Count Updated`
-   - **LastActionAt:** **Expression** → `utcNow()`
-   - **Note:** The Trigger Condition in Step 2a prevents this maintenance update from retriggering the flow.
-
-
-**Important:** All attachment detection logic (Steps 6a and 6b) is already placed inside the **No branch** of the "Skip if System Update" condition from Step 2, preventing race conditions and circular loops.
+// Attachments change detection removed for now (not required).
 
 ---
 
@@ -662,7 +613,6 @@ Update these sections in the email templates for your lab:
 - [ ] **Email content freshness test:** Make simultaneous updates to printer/method/estimates while changing status - emails should show latest values, not original trigger values
 - [ ] **RejectionReason field** appears correctly in rejection emails (both predefined choices and custom fill-in values)
 - [ ] RejectionReason changes are logged to AuditLog when staff update rejection reasons
-- [ ] Attachment changes logged properly (if implemented)
 - [ ] Shared mailbox configuration working properly
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
