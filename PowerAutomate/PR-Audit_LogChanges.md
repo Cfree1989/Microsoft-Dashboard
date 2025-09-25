@@ -48,8 +48,7 @@
    - **Left box:** Click **Expression** → Type `triggerOutputs()?['body/LastActionBy']`
    - **Middle dropdown:** Select **is equal to**
    - **Right box:** Type `System` (just the word, no quotes)
-   - **⚠️ CRITICAL:** Do NOT use `equals(triggerOutputs()..., 'System')` - this causes double equals error
-
+   
 **Yes Branch:** Leave completely empty (this skips processing when System updates)
 
 **No Branch:** **All remaining steps will go here** - this processes user modifications only
@@ -94,12 +93,14 @@
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
-   - **Since:** Click **Dynamic content** → Select **Trigger Window Start Token** (from trigger section)
-   - **Include Drafts:** Leave as **false**
+   - **Since:** Click **Expression** → Type `triggerOutputs()?['body/{TriggerWindowStartToken}']`
+   - **Include Minor Versions:** Set to **true** (catch all changes, major and minor versions)
 
 *This action compares current item values to those at flow start time, enabling field change detection.*
 
-**⚠️ Common Issue:** If you see "id may not be null or empty" error, re-bind Site Address/List Name and use the exact expression above.
+**⚠️ Common Issues:** 
+- If you see "id may not be null or empty" error, re-bind Site Address/List Name and use the exact expression above.
+- If you see "sinceInput not specified" error, the Since field didn't bind correctly. Use the **Expression** format above, not Dynamic content.
 
 **Test Step 4:** Save → Change any field → Should see no errors in flow run history
 
