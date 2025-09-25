@@ -31,18 +31,34 @@
 
 **What this does:** Prevents Flow B from running when any System process (Flow A or Flow B itself) is updating the item, avoiding race conditions and circular loops.
 
-**UI steps:**
-1. Click **+ New step** → **Condition** → rename to `Skip if System Update`.
-   - Left (Expression): `equals(triggerOutputs()?['body/LastActionBy'], 'System')`
+**UI steps (Recommended):**
+1. Click **+ New step** → **Condition** → rename to `Skip if Attachment Maintenance`.
+   - Left (Expression): `equals(triggerOutputs()?['body/LastAction/Value'], 'Attachment Count Updated')`
    - Middle: is equal to
    - Right: `true`
-   - **Note:** This prevents Flow B from running when any System process (Flow A or Flow B itself) is making updates
+   - **Note:** Skips the run when Step 6 writes back the maintenance value `Attachment Count Updated`, preventing self-triggering.
+
 
 **Yes Branch:** Leave empty (skip all processing when any System process is running)
 
 **No Branch:** ALL remaining Flow B logic goes here (Steps 3-6 below) - processes user modifications only
 
 ---
+
+### Step 2a: Configure Trigger Conditions (block System updates at source)
+
+**What this does:** Prevents the flow from even starting when the item update was made by the flow itself (or other system processes). This removes the circular loop warning and reduces no-op runs.
+
+**UI steps (on the trigger card "When an item is created or modified"):**
+1. Open the trigger → click the **three dots (… )** → **Settings**.
+2. Under **Trigger conditions** → click **Add** and paste this expression:
+   - `@not(equals(triggerBody()?['LastAction/Value'], 'Attachment Count Updated'))`
+3. Under **Concurrency control**, turn it **On** and set **Limit = 1** (strict ordering of audit logs).
+4. Ensure **Split on** is **Off** (not used for this trigger).
+
+**Notes:**
+- Use the column internal names in the expressions. If unsure, confirm in SharePoint List settings or by using "Peek code" on any action to see the property paths.
+- Keep Step 2's in-flow condition as a second safeguard even with trigger conditions.
 
 ### Step 3: Get Changes for Item
 
@@ -560,12 +576,17 @@ Update these sections in the email templates for your lab:
 #### Step 6a: Detect Attachment Changes (Count‑Compare)
 
 **UI steps (INSIDE THE "NO" BRANCH of Step 2, parallel with other conditions):**
-1. Click **+ New step** → **Compose** → rename to `Current Attachment Count`.
-   - **Inputs (Expression):** `if(equals(triggerOutputs()?['body/Attachments'], null), 0, length(triggerOutputs()?['body/Attachments']))`
-   - **Note:** Uses trigger data directly for more reliable attachment counting
-2. Click **+ New step** → **Get item** (SharePoint) → rename to `Get Current Item`.
+1. Click **+ New step** → **Get attachments** (SharePoint) → rename to `Get Current Attachments`.
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Note:** This returns an array of attachments in `body('Get_Current_Attachments')` (no `['value']`).
+2. Click **+ New step** → **Compose** → rename to `Current Attachment Count`.
+   - **Inputs (Expression):** `length(body('Get_Current_Attachments'))`
+   - **Note:** SharePoint trigger's `body/Attachments` is a boolean (has/hasn't attachments), not an array. Always count using the output of `Get Current Attachments`.
+3. Click **+ New step** → **Get item** (SharePoint) → rename to `Get Current Item`.
    - Same Site/List; **Id:** **ID** (from trigger)
-3. Click **+ New step** → **Condition** → rename to `Check Attachments Changed`.
+4. Click **+ New step** → **Condition** → rename to `Check Attachments Changed`.
    - Left (Expression): `not(equals(outputs('Current_Attachment_Count'), if(equals(outputs('Get_Current_Item')?['body/AttachmentCount'], null), 0, int(outputs('Get_Current_Item')?['body/AttachmentCount']))))`
    - Middle: is equal to
    - Right: `true`
@@ -574,8 +595,8 @@ Update these sections in the email templates for your lab:
 #### Step 6b: Log Attachment Details (Yes branch of Check Attachments Changed)
 
 1. **Apply to each** → rename `Log Each Attachment`
-   - Select output (Expression): `if(equals(triggerOutputs()?['body/Attachments'], null), json('[]'), triggerOutputs()?['body/Attachments'])`
-   - **Note:** Uses trigger data directly; `json('[]')` creates empty array fallback for null values
+   - Select output (Expression): `body('Get_Current_Attachments')`
+   - **Note:** Loops the attachments returned by `Get Current Attachments`. No fallback needed; this returns an empty array when there are no attachments.
 2. Inside the loop, **Create item** (SharePoint) → rename `Log Attachment Change`
    - **Site Address:** site URL
    - **List Name:** `AuditLog`
@@ -584,7 +605,7 @@ Update these sections in the email templates for your lab:
    - **ReqKey:** Dynamic content → `ReqKey` (from trigger)
    - **Action Value:** `File Added`
    - **FieldName:** `Attachments`
-   - **NewValue:** Dynamic content → `Name` (from current item)
+   - **NewValue:** Expression → `items('Log_Each_Attachment')?['Name']`
    - **Actor Claims:** Expression → `triggerOutputs()?['body/Modified By Claims']`
    - **ActorRole Value:** `Staff`
    - **ClientApp Value:** `SharePoint Form`
@@ -594,10 +615,11 @@ Update these sections in the email templates for your lab:
 3. After the loop, add **Update item** (SharePoint) → rename `Update Attachment Count`
    - Same Site/List; **Id:** **ID** (from trigger)
    - Set **AttachmentCount** = `outputs('Current_Attachment_Count')`
-   - **LastActionBy:** Type `System`
+   - **LastActionBy:** (optional) If this is a Text column, type `System`. If it's a Person column, leave blank or set to a valid account.
    - **LastAction:** Type `Attachment Count Updated`
    - **LastActionAt:** **Expression** → `utcNow()`
-   - **Note:** System fields prevent Flow B from processing its own updates (circular loop prevention)
+   - **Note:** The Trigger Condition in Step 2a prevents this maintenance update from retriggering the flow.
+
 
 **Important:** All attachment detection logic (Steps 6a and 6b) is already placed inside the **No branch** of the "Skip if System Update" condition from Step 2, preventing race conditions and circular loops.
 
