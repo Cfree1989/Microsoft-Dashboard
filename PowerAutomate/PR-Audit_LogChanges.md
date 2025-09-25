@@ -17,232 +17,295 @@
 
 ---
 
-## Step-by-Step Implementation
+## Clean Rebuild Plan - Step-by-Step Implementation
 
-### Flow Creation Setup
+**IMPORTANT:** Delete the existing broken Flow B completely before starting. This plan incorporates all lessons learned from debugging.
 
-1. **Create → Automated cloud flow**
-   - Name: `PR-Audit: Log changes + Email notifications`
-   - Trigger: **SharePoint – When an item is created or modified**
-   - **Site Address**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name**: `PrintRequests`
+### Step 1: Flow Creation Setup
 
-### Step 2: Prevent System Update Loops
-
-**What this does:** Prevents Flow B from running when any System process (Flow A or Flow B itself) is updating the item, avoiding race conditions and circular loops.
-
-**UI steps (Recommended):**
-1. Click **+ New step** → **Condition** → rename to `Skip if System Update`.
-   - Left (Expression): `equals(triggerOutputs()?['body/LastActionBy'], 'System')`
-   - Middle: is equal to
-   - Right: `true`
-   - **Note:** Skips processing when any system automation writes to the item.
-
-
-**Yes Branch:** Leave empty (skip all processing when any System process is running)
-
-**No Branch:** ALL remaining Flow B logic goes here (Steps 3-5 below) - processes user modifications only
-
----
-
-### Step 2a: Configure Trigger Conditions (optional loop guard)
-
-**What this does:** Prevents the flow from even starting when the item update was made by the flow itself (or other system processes). This removes the circular loop warning and reduces no-op runs.
-
-**UI steps (on the trigger card "When an item is created or modified"):**
-1. Open the trigger → click the **three dots (… )** → **Settings**.
-2. Under **Trigger conditions** → click **Add** and paste this expression:
-   - `@not(equals(triggerBody()?['LastActionBy'], 'System'))`
-3. Under **Concurrency control**, turn it **On** and set **Limit = 1** (strict ordering of audit logs).
-4. Ensure **Split on** is **Off** (not used for this trigger).
-
-**Notes:**
-- Use the column internal names in the expressions. If unsure, confirm in SharePoint List settings or by using "Peek code" on any action to see the property paths.
-- Keep Step 2's in-flow condition as a second safeguard even with trigger conditions.
-
-### Step 3: Get Changes for Item
-
-**What this does:** Retrieves what fields changed since the flow started, preventing infinite loops.
-
-**UI steps (INSIDE THE "NO" BRANCH of Step 2):**
-1. Click **+ New step**
-2. Search for and select **Get changes for an item or a file (properties only)** (SharePoint)
-3. Rename the action to: `Get Item Changes`
-   - Click the **three dots (…)** → **Rename** → type `Get Item Changes`
-4. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
-   - **Id:** **Expression** → `triggerBody()?['ID']`
-   - **Since:** **Dynamic content** → **Trigger Window Start Token** (from trigger)
-
-*This compares current values to those at flow start time, preventing infinite loops.*
-
-> Tip: If you see "id may not be null or empty" on this action, open the card and rebind **Site Address/List Name** and the **Id** expression above. After trigger edits, tokens can drop; this direct expression is the most stable.
-
-### Step 4: Parallel Field Change Detection
-
-**What this does:** Creates separate condition branches that run in parallel to detect changes to specific fields and log them appropriately.
-
-**Implementation approach:** Add multiple **Condition** actions at the same level (not nested) to create parallel branches.
-
-#### Step 4a: Status Change Detection
+**What this does:** Creates the foundation flow with correct trigger configuration.
 
 **UI steps:**
-1. Click **+ New step**
-2. Search for and select **Condition**
-3. Rename the condition to: `Check Status Changed`
-   - Click the **three dots (…)** → **Rename** → type `Check Status Changed`
-4. Set up condition:
-   - Left box: **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
-   - Middle: **is equal to**
-   - Right box: `true`
+1. **Power Automate** → **My flows** → **Find existing "PR-Audit"** → **Delete** (if exists)
+2. **Create** → **Automated cloud flow**
+3. **Name:** Type `PR-Audit: Log changes + Email notifications`
+4. **Choose trigger:** **SharePoint – When an item is created or modified**
+5. **Configure trigger:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+6. **Click Create**
 
-##### Yes Branch - Log Status Change:
+**Test Step 1:** Save and verify trigger shows no errors → Should see flow in "My flows"
 
-**Action 1: Log status change**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Status Change`
-   - Click the **three dots (…)** → **Rename** → type `Log Status Change`
-4. **Configure retry policy** (see instructions at top)
-5. Fill in:
+### Step 2: Add System Update Condition (CRITICAL - GET THIS RIGHT)
+
+**What this does:** Prevents Flow B from running when system processes update items, avoiding infinite loops. This was the main issue causing audit logs to not appear.
+
+**UI steps:**
+1. **+ New step** → **Condition**
+2. **Rename condition:** Click **three dots (…)** → **Rename** → Type `Skip if System Update`
+3. **Configure condition:**
+   - **Left box:** Click **Expression** → Type `triggerOutputs()?['body/LastActionBy']`
+   - **Middle dropdown:** Select **is equal to**
+   - **Right box:** Type `System` (just the word, no quotes)
+   - **⚠️ CRITICAL:** Do NOT use `equals(triggerOutputs()..., 'System')` - this causes double equals error
+
+**Yes Branch:** Leave completely empty (this skips processing when System updates)
+
+**No Branch:** **All remaining steps will go here** - this processes user modifications only
+
+**Test Step 2:** Save → Make any field change → Flow should run (we'll add debug logging next)
+
+### Step 3: Add Foundation Debug Logging
+
+**What this does:** Confirms the flow is running and processing correctly. This debug log will verify our System condition is working.
+
+**UI steps (INSIDE THE "NO" BRANCH of Step 2):**
+1. In the **No branch** of "Skip if System Update" → **+ Add an action**
+2. **Search:** Type `Create item` → Select **Create item (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Debug Foundation Started`
+4. **Fill in all fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `DEBUG: Flow B Processing Started`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Debug`
+   - **FieldName:** Type `FlowStarted`
+   - **NewValue:** Click **Expression** → Type `concat('Flow processing started at ', utcNow())`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate Debug`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('LastActionBy: ', triggerOutputs()?['body/LastActionBy'], ' | Processing user changes')`
+
+**Test Step 3:** Save → Change any field → Check AuditLog for "DEBUG: Flow B Processing Started" entry
+
+### Step 4: Add Get Item Changes
+
+**What this does:** Retrieves what fields changed since the flow started, essential for detecting which fields to log.
+
+**UI steps (INSIDE THE "NO" BRANCH, after the debug action):**
+1. In the **No branch** after "Debug Foundation Started" → **+ Add an action**
+2. **Search:** Type `Get changes` → Select **Get changes for an item or a file (properties only)** (SharePoint)
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get Item Changes`
+4. **Fill in all fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **Since:** Click **Dynamic content** → Select **Trigger Window Start Token** (from trigger section)
+   - **Include Drafts:** Leave as **false**
+
+*This action compares current item values to those at flow start time, enabling field change detection.*
+
+**⚠️ Common Issue:** If you see "id may not be null or empty" error, re-bind Site Address/List Name and use the exact expression above.
+
+**Test Step 4:** Save → Change any field → Should see no errors in flow run history
+
+### Step 5: Add First Field Change Detector (Printer)
+
+**What this does:** Tests field change detection with a single field (Printer) before adding all fields. This is the critical step that failed in the original flow.
+
+**UI steps (INSIDE THE "NO" BRANCH, after "Get Item Changes"):**
+1. After "Get Item Changes" → **+ Add an action**
+2. **Search:** Type `Condition` → Select **Condition**
+3. **Rename condition:** Click **three dots (…)** → **Rename** → Type `Check Printer Changed`
+4. **Configure condition:**
+   - **Left box:** Click **Dynamic content** → Under "Get Item Changes" section → Select **Has Column Changed: Printer**
+   - **Middle dropdown:** Select **is equal to**
+   - **Right box:** Type `true`
+
+**In the YES branch (when Printer changed):**
+5. **+ Add an action** → **Create item** (SharePoint)
+6. **Rename action:** Click **three dots (…)** → **Rename** → Type `Log Printer Change`
+7. **Fill in ALL fields (this is critical):**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Printer Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `Printer`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Printer']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Printer updated to ', triggerOutputs()?['body/Printer']?['Value'])`
+
+**In the NO branch:** Leave empty
+
+**Test Step 5:** Save → Change ONLY the Printer field → Check AuditLog for "Printer Change" entry with correct NewValue
+
+### Step 6: Add Remaining Field Change Detectors
+
+**What this does:** Once Printer detection works, adds all other field change detectors. Each runs in parallel for efficient processing.
+
+**⚠️ ONLY DO THIS STEP AFTER Step 5 is working perfectly.**
+
+**UI steps (Add each as PARALLEL conditions at same level as "Check Printer Changed"):**
+
+#### 6a: Add Status Change Detector (MOST IMPORTANT)
+
+1. **+ Add an action** at same level as "Check Printer Changed" → **Condition**
+2. **Rename:** Type `Check Status Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+4. **YES branch** → **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Type `Log Status Change`
+6. **Fill in (use expressions to avoid "For Each" loops):**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
    - **Title:** Type `Status Change`
-   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
-   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
    - **Action Value:** Type `Status Change`
    - **FieldName:** Type `Status`
-   - **OldValue:** Leave blank for MVP
-   - **NewValue:** **Expression** → `triggerOutputs()?['body/Status']`
-   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
    - **ActorRole Value:** Type `Staff`
    - **ClientApp Value:** Type `SharePoint Form`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** **Expression** → `concat('Status updated from previous value to ', triggerOutputs()?['body/Status'])`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Status updated to ', triggerOutputs()?['body/Status']?['Value'])`
 
+#### 6b: Add Remaining Field Detectors (Template)
 
-**How to build parallel field change conditions:**
-1. Add a **Condition** action at the root level
-2. Rename with descriptive name (e.g., "Check [FieldName] Changed")
-3. Click the left **Choose a value** box
-4. In the **Dynamic content** panel, under the **"Get Item Changes"** section, search for "Has Column Changed"
-5. Pick the specific field from that section (e.g., **Has Column Changed: Priority**)
-6. Set middle dropdown to **is equal to**
-7. In right box, type `true` (without quotes)
-8. In **Yes** branch, add **Create item** action with descriptive rename
-9. Configure all AuditLog fields consistently
-10. **Configure retry policy** on the Create item action
-11. Repeat for each field, adding conditions at the same level for parallelism
+**Use this exact template for each remaining field. Add each as a parallel condition:**
 
-##### Beginner Walkthrough: Build the first detector (Priority)
+**FOR CHOICE FIELDS (Method, Color, Priority):**
+- **Has Column Changed:** [FieldName] (from Get Item Changes)
+- **NewValue Expression:** `triggerOutputs()?['body/[FieldName]]?['Value']`
+- **Notes Expression:** `concat('[FieldName] updated to ', triggerOutputs()?['body/[FieldName]]?['Value'])`
 
-1. Add a new Condition at the root level (sibling of other conditions) and set it to detect Priority changes using the steps above (pick **Has Column Changed: Priority** = `true`).
-2. In the **Yes** branch, add **Create item** (SharePoint) and fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `AuditLog`
-   - **Title:** `Priority Change`
-   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
-   - **ReqKey:** **Dynamic content** → `ReqKey`
-   - **Action Value:** `Field Change`
-   - **FieldName:** `Priority`
-   - **OldValue:** (leave blank)
-   - **NewValue:** **Expression** → `triggerOutputs()?['body/Priority']`
-   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
-   - **ActorRole Value:** `Staff`
-   - **ClientApp Value:** `SharePoint Form`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** **Expression** → `concat('Priority updated to ', triggerOutputs()?['body/Priority'])`
-3. Open the action's settings (… → Settings) and turn on **Retry Policy** (Type: Exponential, Count: 4, Minimum Interval: PT1M).
-4. Leave the **No** branch empty.
+**FOR NUMBER FIELDS (EstHours, EstWeight, EstimatedCost):**
+- **Has Column Changed:** [InternalFieldName] (from Get Item Changes)
+- **NewValue Expression:** `triggerOutputs()?['body/[InternalFieldName]]`
+- **Notes Expression:** `concat('[FieldName] updated to ', string(triggerOutputs()?['body/[InternalFieldName]]))`
 
-##### Duplicate for the other fields (change only the items listed)
+**FOR TEXT FIELDS (Notes):**
+- **Has Column Changed:** Notes (from Get Item Changes)
+- **NewValue Expression:** `triggerOutputs()?['body/Notes']`
+- **Notes Expression:** `'Notes field updated'`
 
-- **Method**
-  - Title: `Method Change`
-  - FieldName: `Method`
-  - NewValue: `triggerOutputs()?['body/Method']?['Value']`
-  - Notes: `concat('Method updated to ', triggerOutputs()?['body/Method']?['Value'])`
+**Field Mapping Reference:**
+- Method: `Method` → `triggerOutputs()?['body/Method']?['Value']`
+- Color: `Color` → `triggerOutputs()?['body/Color']?['Value']`
+- Priority: `Priority` → `triggerOutputs()?['body/Priority']?['Value']`
+- EstHours: `EstHours` → `triggerOutputs()?['body/EstHours']`
+- EstWeight: `EstWeight` → `triggerOutputs()?['body/EstWeight']`
+- EstimatedCost: `EstimatedCost` → `triggerOutputs()?['body/EstimatedCost']`
+- Notes: `Notes` → `triggerOutputs()?['body/Notes']`
 
-- **Printer**
-  - Title: `Printer Change`
-  - FieldName: `Printer`
-  - NewValue: `triggerOutputs()?['body/Printer']?['Value']`
-  - Notes: `concat('Printer updated to ', triggerOutputs()?['body/Printer']?['Value'])`
+**Test Step 6:** Change each field individually → Verify audit entries created with correct FieldName and NewValue
 
-- **Color**
-  - Title: `Color Change`
-  - FieldName: `Color`
-  - NewValue: `triggerOutputs()?['body/Color']?['Value']`
-  - Notes: `concat('Color updated to ', triggerOutputs()?['body/Color']?['Value'])`
+### Step 7: Add Status-Based Email Notifications (OPTIONAL)
 
-- **EstimatedTime**
-  - Title: `EstimatedTime Change`
-  - FieldName: `EstimatedTime`
-  - NewValue: `triggerOutputs()?['body/EstimatedTime']`
-  - Notes: `concat('EstimatedTime updated to ', string(triggerOutputs()?['body/EstimatedTime']))`
+**What this does:** Sends automated emails when status changes to specific values (Rejected, Pending, Completed).
 
-- **EstimatedWeight**
-  - Title: `EstimatedWeight Change`
-  - FieldName: `EstimatedWeight`
-  - NewValue: `triggerOutputs()?['body/EstWeight']`
-  - Notes: `concat('EstimatedWeight updated to ', string(triggerOutputs()?['body/EstWeight']))`
+**⚠️ ONLY DO THIS STEP AFTER all field detectors are working perfectly.**
 
-- **EstimatedCost**
-  - Title: `EstimatedCost Change`
-  - FieldName: `EstimatedCost`
-  - NewValue: `triggerOutputs()?['body/EstimatedCost']`
-  - Notes: `concat('EstimatedCost updated to ', string(triggerOutputs()?['body/EstimatedCost']))`
+**UI steps (INSIDE the "Check Status Changed" YES branch):**
 
-- **Notes**
-  - Title: `Notes Change`
-  - FieldName: `Notes`
-  - NewValue: `triggerOutputs()?['body/Notes']`
-  - Notes: `concat('Notes updated')`
+#### 7a: Add Rejection Email Logic
 
-- **RejectionReason**
-  - Title: `RejectionReason Change`
-  - FieldName: `RejectionReason`
-  - NewValue: `triggerOutputs()?['body/RejectionReason']`
-  - Notes: `concat('RejectionReason updated to ', triggerOutputs()?['body/RejectionReason'])`
+1. **In "Log Status Change" action (from Step 6a)** → Click **three dots (…)** → **Settings** → **Configure retry policy**
+   - **Type:** Exponential
+   - **Count:** 4  
+   - **Minimum Interval:** PT1M
 
+2. **After "Log Status Change"** → **+ Add an action** → **Condition**
+3. **Rename:** Type `Check Status Rejected`
+4. **Configure condition:**
+   - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+   - **Middle:** **is equal to**
+   - **Right:** Type `Rejected`
 
-##### Sanity checks and quick test
-
-- All field Conditions are added at the root level (parallel), not nested.
-- Each Create item has Retry Policy enabled (Exponential, 4, PT1M).
-- Flow-level Concurrency Control is set to 1 (see Error Handling Configuration).
-- Test: edit one field at a time and confirm one new AuditLog entry with the correct `FieldName` and `NewValue`. Then try two fields in one save and confirm two audit entries.
-
-### Step 5: Status-Based Email Notifications
-
-**What this does:** Inside the "Check Status Changed" Yes branch, add nested conditions to send emails when status changes to specific values.
-
-#### Step 5a: Rejection Email Logic
-
-**UI steps (inside the Status Change Yes branch):**
-1. Click **+ Add an action** in the Status Change Yes branch
-2. Search for and select **Condition**
-3. Rename the condition to: `Check Status Rejected`
-   - Click the **three dots (…)** → **Rename** → type `Check Status Rejected`
-4. Set up condition:
-   - Left box: **Dynamic content** → **Status Value** (from trigger)
-   - Middle: **is equal to**
-   - Right box: Type `Rejected`
-
-##### Yes Branch - Send Rejection Email:
-
-**Action 1: Get current item data**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Get item** (SharePoint)
-3. Rename the action to: `Get Current Rejected Data`
-   - Click the **three dots (…)** → **Rename** → type `Get Current Rejected Data`
-4. Fill in:
+**In YES branch (Status = Rejected):**
+5. **+ Add an action** → **Get item** (SharePoint) → **Rename:** `Get Current Rejected Data`
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
+   - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+
+6. **+ Add an action** → **Send an email from a shared mailbox (V2)** → **Rename:** `Send Rejection Email`
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
+   - **Subject:** Click **Expression** → Type `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
+   - **Body:** Click **Code View (`</>`)** → Paste rejection email HTML template (from existing documentation)
+
+7. **+ Add an action** → **Create item** (SharePoint) → **Rename:** `Log Rejection Email Sent`
+   - Use same fields as other audit logs with Action Value = `Email Sent`
+
+**Test Step 7a:** Change status to "Rejected" → Verify rejection email sent and logged
+
+#### 7b: Add Pending and Completed Email Logic (Optional)
+
+**Follow the same pattern as rejection emails for:**
+- **Pending status** → Send estimate confirmation email
+- **Completed status** → Send pickup notification email
+
+**Use the existing email templates from the documentation sections below.**
+
+### Step 8: Clean Up and Final Testing
+
+**What this does:** Removes debug logging and optimizes the flow for production use.
+
+**UI steps:**
+1. **Remove debug actions:**
+   - Delete "Debug Foundation Started" action (from Step 3)
+   - Keep all field change detectors and email logic
+
+2. **Add retry policies to all Create item actions:**
+   - Click **three dots (…)** → **Settings** → **Configure retry policy**
+   - **Type:** Exponential, **Count:** 4, **Minimum Interval:** PT1M
+
+3. **Configure trigger concurrency:**
+   - Click on trigger → **three dots (…)** → **Settings**
+   - **Concurrency control:** On, **Limit:** 1
+
+**Final Testing Checklist:**
+- [ ] Single field changes create correct audit entries
+- [ ] Multiple field changes create multiple audit entries
+- [ ] Status change to "Rejected" sends email (if implemented)
+- [ ] No "For Each" loops appear in flow
+- [ ] All expressions use correct syntax
+- [ ] Flow runs without errors
+
+**🎉 SUCCESS:** You now have a working Flow B with proper field change detection and audit logging!
+
+---
+
+## Key Improvements in This Clean Build
+
+✅ **Correct System Condition** - Fixed double equals trap that blocked all processing  
+✅ **Complete Audit Fields** - All Create item actions include RequestID, ReqKey, NewValue, Actor Claims  
+✅ **Expression-Only Approach** - Avoids "For Each" loops that caused original flow issues  
+✅ **Incremental Testing** - Test after each step to catch issues early  
+✅ **Detailed Field Mapping** - Clear reference for Choice vs Number vs Text field expressions  
+✅ **Systematic Troubleshooting** - Built-in debug steps and clear error patterns  
+
+## Next Steps After Rebuild
+
+1. **Start with Step 1** - Delete the broken flow and create fresh
+2. **Follow each step exactly** - Don't skip testing between steps
+3. **Stop at Step 6** for core functionality (field change detection)
+4. **Add Step 7 only if emails needed** - Optional email notifications
+5. **Complete Step 8** for production optimization
+
+This systematic approach will give you a **reliable Flow B in 30-45 minutes** with proper testing at each stage.
+
+---
+
+## Reference Material (Keep for Implementation)
+
+### Email Templates and Advanced Features
+
+*The sections below contain detailed email templates, troubleshooting guides, and advanced implementation notes. Use these as reference when implementing Step 7 (emails) and beyond.*
 
 **Action 2: Send rejection email**
 1. Click **+ Add an action** in Yes branch
@@ -616,3 +679,129 @@ Update these sections in the email templates for your lab:
 - [ ] Shared mailbox configuration working properly
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
+
+---
+
+## Troubleshooting Guide
+
+### Common Issues and Fixes
+
+#### Issue 1: Flow B Triggering But No Audit Logs Created
+
+**Symptoms:**
+- Flow B appears in run history (green checkmarks)
+- No field change entries in AuditLog (no "Priority Change", "Status Change" etc.)
+- Debug logs show flow is triggering
+
+**Root Causes:**
+1. **System Update Condition Bug** (Most Common)
+   - **Problem:** Condition has double equals: `equals(triggerOutputs()..., 'System') = 'True'`
+   - **Fix:** Change to simple comparison: `triggerOutputs()?['body/LastActionBy']` equals `System`
+
+2. **Get Item Changes Failing**
+   - **Problem:** ID parameter not binding correctly after trigger changes
+   - **Fix:** Re-bind Site Address/List Name, use expression `triggerBody()?['ID']` for ID
+
+3. **Missing Critical Audit Fields**
+   - **Problem:** Field change logs missing RequestID, ReqKey, NewValue, Actor Claims
+   - **Fix:** Ensure all Create item actions include these expressions:
+     ```
+     RequestID: triggerOutputs()?['body/ID']
+     ReqKey: triggerOutputs()?['body/ReqKey']
+     NewValue: triggerOutputs()?['body/[FieldName]']
+     Actor Claims: triggerOutputs()?['body/Modified By Claims']
+     ```
+
+#### Issue 2: "For Each" Loops Appearing Unexpectedly
+
+**Symptoms:**
+- Power Automate wraps actions in "Apply to each" loops automatically
+- Debug actions or field references cause unwanted iterations
+
+**Root Causes:**
+- Using Dynamic Content with array data
+- SharePoint Choice fields can trigger this behavior
+
+**Fix:**
+- Always use **Expressions** instead of Dynamic Content for single values
+- For Choice fields, use `triggerOutputs()?['body/FieldName']?['Value']` format
+- For debug logging, use simple expressions like `string(outputs('ActionName'))`
+
+#### Issue 3: Field Change Detection Not Working
+
+**Symptoms:**
+- Conditions always evaluate to false
+- "Has Column Changed" values are null or empty
+
+**Root Causes:**
+1. **Wrong field internal names** in conditions
+2. **Get Item Changes action failing** silently
+3. **Trigger Window Start Token missing** or corrupted
+
+**Debugging Steps:**
+1. Add debug logging (see Step 3a) to check `outputs('Get_Item_Changes')?['body/ColumnHasChanged/FieldName']`
+2. Verify field internal names in SharePoint List Settings → Columns
+3. Check that Trigger Window Start Token is bound correctly in Get Item Changes
+
+#### Issue 4: Attachment Count Not Updating
+
+**Symptoms:**
+- Attachments added/removed but AttachmentCount field doesn't change
+- No "Attachment:" entries in AuditLog
+
+**Root Causes:**
+- AttachmentCount column missing from PrintRequests list
+- Attachment detection logic not implemented (Step 6)
+- Null handling issues with trigger attachment data
+
+**Fix:**
+1. **Add AttachmentCount column:** SharePoint → PrintRequests → Create Column → Number (default: 0)
+2. **Implement Step 6** attachment detection logic (see documentation)
+3. **Use null-safe expressions:** `if(equals(triggerOutputs()?['body/Attachments'], null), 0, length(triggerOutputs()?['body/Attachments']))`
+
+#### Issue 5: Email Template Errors
+
+**Symptoms:**
+- Emails not sending or contain blank fields
+- Template validation errors in flow
+
+**Root Causes:**
+- Using Dynamic Content instead of Expressions in email body
+- Action name mismatches in expressions (e.g., `Get_Current_Rejected_Data` vs actual name)
+
+**Fix:**
+1. **Use Code View (`</>`)** for email body, not rich text editor
+2. **Verify action names** in expressions match exactly (spaces become underscores)
+3. **Use expressions** like `outputs('Get_Current_Rejected_Data')?['body/FieldName']`
+
+### Debug Mode Setup
+
+**Step 1: Add Flow Trigger Debug**
+```
+Action: Create item (AuditLog)
+Title: DEBUG: Flow B Triggered
+NewValue: concat('Flow B started by ', triggerOutputs()?['body/Modified By Claims'])
+Notes: concat('LastActionBy: ', triggerOutputs()?['body/LastActionBy'], ' | Status: ', triggerOutputs()?['body/Status'])
+```
+
+**Step 2: Add Field Change Debug**
+```
+Action: Create item (AuditLog)
+Title: DEBUG: Field Change Check
+NewValue: outputs('Get_Item_Changes')?['body/ColumnHasChanged/Printer']
+Notes: concat('Printer HasChanged: ', string(outputs('Get_Item_Changes')?['body/ColumnHasChanged/Printer']))
+```
+
+**Step 3: Test Systematically**
+1. Save flow with debug actions
+2. Change one field at a time
+3. Check AuditLog for debug entries
+4. Remove debug actions once working
+
+### Performance Optimization
+
+**After troubleshooting is complete:**
+- Remove all debug logging actions
+- Ensure Concurrency Control = 1 on trigger
+- Configure Retry Policies on all Create item actions
+- Test with multiple simultaneous field changes
