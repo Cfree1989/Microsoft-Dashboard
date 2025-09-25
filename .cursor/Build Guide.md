@@ -218,6 +218,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | LastActionAt | Date and Time | Timestamp |
 | NeedsAttention | Yes/No | Flags items requiring staff review (Default: No) |
 | Expanded | Yes/No | Controls expanded view state in Dashboard (Default: No) |
+| AttachmentCount | Number | Default 0; hidden from students. Used by Flow B Step 5 to detect attachment adds/removes. |
 
 > **💰 Pricing Structure for EstimatedCost Calculation:**
 > - **Filament prints:** $0.10 per gram
@@ -544,6 +545,120 @@ Patch(PrintRequests, ThisItem, {
 
 Notify("Request rejected due to file policy violation. Student will be notified.", NotificationType.Warning);
 ```
+
+11. Attachments — Add/Remove Files Modal (Actor Required)
+   - Purpose: Let staff add or remove SharePoint attachments from the job card without leaving the app, and require attribution for who performed the action. No drag‑and‑drop.
+   
+   a) Variables (App.OnStart, add to existing block)
+   ```powerfx
+   Set(varShowAddFileModal, false);
+   Set(varSelectedItem, Blank());
+   Set(varSelectedActor, Blank());
+   Set(varAttachmentChangeType, Blank());    // "Added" or "Removed" (optional)
+   Set(varAttachmentChangedName, Blank());   // filename (optional)
+   ```
+
+   b) Show attachments on the job card (read‑only)
+   - Insert a Display Form: Name = `frmAttachmentsView`, DataSource = `PrintRequests`, Item = `ThisItem` (place inside the gallery template), and include only the Attachments data card.
+   - Collapsed card: show a small label near the paperclip icon, e.g. `"Files: " & CountRows(AttachmentsView_Attachments.Attachments)` where `AttachmentsView_Attachments` is the Attachments control inside `frmAttachmentsView`.
+   - Expanded card: increase the form height so the full list of filenames is visible. Clicking a filename will open/download it via SharePoint.
+
+   c) Open the Add/Remove modal from the job card
+   - Add a button labeled `Add/Remove Files` in both collapsed and expanded layouts.
+   - Button.OnSelect:
+   ```powerfx
+   Set(varSelectedItem, ThisItem);
+   Set(varShowAddFileModal, true);
+   ResetForm(frmAttachmentsEdit);
+   Set(varSelectedActor, Blank());
+   Set(varAttachmentChangeType, Blank());
+   Set(varAttachmentChangedName, Blank());
+   ```
+
+   d) Modal container
+   - Add a full‑screen overlay container. Set `Visible = varShowAddFileModal`.
+   - Inside, add a centered white rectangle for the modal content.
+
+   e) Required actor (person) selector
+   - Add a ComboBox named `ddAttachmentActor` with `Items = colStaff` and default to the signed‑in user:
+   ```powerfx
+   ddAttachmentActor.DefaultSelectedItems = Filter(colStaff, Lower(Member.Email) = varMeEmail)
+   ```
+   - OnChange:
+   ```powerfx
+   Set(varSelectedActor,
+       {
+         '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+         Claims: "i:0#.f|membership|" & ddAttachmentActor.Selected.Member.Email,
+         DisplayName: ddAttachmentActor.Selected.Member.DisplayName,
+         Email: ddAttachmentActor.Selected.Member.Email
+       }
+   )
+   ```
+
+   f) Edit Form for attachments (add and remove)
+   - Insert an Edit Form: Name = `frmAttachmentsEdit`, DataSource = `PrintRequests`, Item = `varSelectedItem`.
+   - Include ONLY the Attachments data card. This control supports selecting multiple files and deleting existing files.
+   - Optional signals (inside the Attachments control):
+   ```powerfx
+   // DataCardValue_Attachments.OnAddFile
+   Set(varAttachmentChangeType, "Added");
+   // DataCardValue_Attachments.OnRemoveFile
+   Set(varAttachmentChangeType, "Removed");
+   ```
+
+   g) Modal actions
+   - Save button.DisplayMode:
+   ```powerfx
+   If(IsBlank(varSelectedActor), DisplayMode.Disabled, DisplayMode.Edit)
+   ```
+   - Save button.OnSelect:
+   ```powerfx
+   If(IsBlank(varSelectedActor),
+       Notify("Select your name to continue", NotificationType.Error),
+       SubmitForm(frmAttachmentsEdit)
+   )
+   ```
+   - Cancel button.OnSelect:
+   ```powerfx
+   Set(varShowAddFileModal, false);
+   Set(varSelectedItem, Blank());
+   Set(varSelectedActor, Blank())
+   ```
+
+   h) `frmAttachmentsEdit.OnSuccess` (audit fields and optional flow call)
+   ```powerfx
+   Patch(
+       PrintRequests,
+       frmAttachmentsEdit.LastSubmit,
+       {
+           LastAction: If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
+           LastActionBy: varSelectedActor,
+           LastActionAt: Now()
+       }
+   );
+
+   // Optional: explicit audit entry via Flow C
+   IfError(
+       'PR-Action_LogAction'.Run(
+           Text(frmAttachmentsEdit.LastSubmit.ID),
+           If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
+           "Attachments",
+           "",
+           "",
+           varMeEmail,
+           "Power Apps",
+           Coalesce(varAttachmentChangedName, "")
+       ),
+       Notify("Could not log attachment action.", NotificationType.Error)
+   );
+
+   Set(varShowAddFileModal, false);
+   ```
+
+   Notes
+   - No drag‑and‑drop in Canvas; use the Attachments control’s picker UI.
+   - Your existing PR‑Audit flow will log file additions automatically; removals can be inferred in history.
 
 > **Staff File Management Workflow**: 
 > 1. **Filename Policy** (enforced by Flow A): Attachments must be named `FirstLast_Method_Color.ext` with extensions in `.stl, .obj, .3mf, .idea, .form` (≤150MB each). Invalid submissions are auto‑rejected.

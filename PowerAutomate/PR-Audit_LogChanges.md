@@ -27,11 +27,28 @@
    - **Site Address**: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name**: `PrintRequests`
 
-### Step 2: Get Changes for Item
+### Step 2: Prevent System Update Loops
+
+**What this does:** Prevents Flow B from running when any System process (Flow A or Flow B itself) is updating the item, avoiding race conditions and circular loops.
+
+**UI steps:**
+1. Click **+ New step** → **Condition** → rename to `Skip if System Update`.
+   - Left (Expression): `equals(triggerOutputs()?['body/LastActionBy'], 'System')`
+   - Middle: is equal to
+   - Right: `true`
+   - **Note:** This prevents Flow B from running when any System process (Flow A or Flow B itself) is making updates
+
+**Yes Branch:** Leave empty (skip all processing when any System process is running)
+
+**No Branch:** ALL remaining Flow B logic goes here (Steps 3-6 below) - processes user modifications only
+
+---
+
+### Step 3: Get Changes for Item
 
 **What this does:** Retrieves what fields changed since the flow started, preventing infinite loops.
 
-**UI steps:**
+**UI steps (INSIDE THE "NO" BRANCH of Step 2):**
 1. Click **+ New step**
 2. Search for and select **Get changes for an item or a file (properties only)** (SharePoint)
 3. Rename the action to: `Get Item Changes`
@@ -44,13 +61,13 @@
 
 *This compares current values to those at flow start time, preventing infinite loops.*
 
-### Step 3: Parallel Field Change Detection
+### Step 4: Parallel Field Change Detection
 
 **What this does:** Creates separate condition branches that run in parallel to detect changes to specific fields and log them appropriately.
 
 **Implementation approach:** Add multiple **Condition** actions at the same level (not nested) to create parallel branches.
 
-#### Step 3a: Status Change Detection
+#### Step 4a: Status Change Detection
 
 **UI steps:**
 1. Click **+ New step**
@@ -175,11 +192,11 @@
 - Flow-level Concurrency Control is set to 1 (see Error Handling Configuration).
 - Test: edit one field at a time and confirm one new AuditLog entry with the correct `FieldName` and `NewValue`. Then try two fields in one save and confirm two audit entries.
 
-### Step 4: Status-Based Email Notifications
+### Step 5: Status-Based Email Notifications
 
 **What this does:** Inside the "Check Status Changed" Yes branch, add nested conditions to send emails when status changes to specific values.
 
-#### Step 4a: Rejection Email Logic
+#### Step 5a: Rejection Email Logic
 
 **UI steps (inside the Status Change Yes branch):**
 1. Click **+ Add an action** in the Status Change Yes branch
@@ -268,7 +285,7 @@ If Power Automate automatically adds a "For each" loop when you select a Choice 
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
    - **Notes:** Type `Rejection notification sent to student`
 
-#### Step 4b: Pending (Estimate) Email Logic
+#### Step 5b: Pending (Estimate) Email Logic
 
 **UI steps (create parallel to the Rejection condition):**
 1. Click **+ Add an action** at the same level as the Rejection condition
@@ -360,7 +377,7 @@ Follow the same troubleshooting steps as the Rejection Email. Use expressions in
    - **FlowRunId:** **Expression** → `workflow()['run']['name']`
    - **Notes:** Type `Estimate notification sent to student with confirmation link`
 
-#### Step 4c: Completion Email Logic
+#### Step 5c: Completion Email Logic
 
 **UI steps (create parallel to the Pending condition):**
 1. Click **+ Add an action** at the same level as the Pending condition
@@ -531,53 +548,58 @@ Update these sections in the email templates for your lab:
 - **Choose a value:** `Printing`
 - **Yes Branch:** Send "printing started" notification to keep students informed
 
-### Step 5: Attachments Change Detection (Optional Enhancement)
+### Step 6: Attachments Change Detection (Optional Enhancement)
 
-**What this does:** Logs when files are added or removed from requests.
+**What this does:** Detects when attachments are added or removed and logs details.
 
-#### Step 5a: Detect Attachment Changes
+> Important: The SharePoint "Get changes for an item or a file (properties only)" action does not expose "Has Column Changed: Attachments". Use a simple and reliable count‑compare pattern with a helper column `AttachmentCount` (Number, default 0) on the `PrintRequests` list.
 
-**UI steps:**
-1. Add **Condition** at root level
-2. Rename to: `Check Attachments Changed`
-3. Condition: **Has Column Changed: Attachments** = true
+#### Prerequisite
+- Add a `Number` column to `PrintRequests` named **AttachmentCount** (default 0). Hide it from student views.
 
-#### Step 5b: Log Attachment Details
+#### Step 6a: Detect Attachment Changes (Count‑Compare)
 
-**Yes Branch actions:**
+**UI steps (INSIDE THE "NO" BRANCH of Step 2, parallel with other conditions):**
+1. Click **+ New step** → **Compose** → rename to `Current Attachment Count`.
+   - **Inputs (Expression):** `if(equals(triggerOutputs()?['body/Attachments'], null), 0, length(triggerOutputs()?['body/Attachments']))`
+   - **Note:** Uses trigger data directly for more reliable attachment counting
+2. Click **+ New step** → **Get item** (SharePoint) → rename to `Get Current Item`.
+   - Same Site/List; **Id:** **ID** (from trigger)
+3. Click **+ New step** → **Condition** → rename to `Check Attachments Changed`.
+   - Left (Expression): `not(equals(outputs('Current_Attachment_Count'), if(equals(outputs('Get_Current_Item')?['body/AttachmentCount'], null), 0, int(outputs('Get_Current_Item')?['body/AttachmentCount']))))`
+   - Middle: is equal to
+   - Right: `true`
+   - **Note:** The `if()` statement handles null AttachmentCount values before attempting int conversion
 
-**Action 1: Get current attachments**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Get attachments** (SharePoint)
-3. Rename to: `Get Current Attachments`
-4. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
+#### Step 6b: Log Attachment Details (Yes branch of Check Attachments Changed)
 
-**Action 2: Log each attachment**
-1. Click **+ Add an action**
-2. Search for and select **Apply to each**
-3. Rename to: `Log Each Attachment`
-4. Select output: **Dynamic content** → **value** (from Get Current Attachments)
-5. Inside the loop, add **Create item** (SharePoint)
-6. Rename to: `Log Attachment Change`
-7. **Configure retry policy**
-8. Fill in:
-   - **Site Address:** Same as above
+1. **Apply to each** → rename `Log Each Attachment`
+   - Select output (Expression): `if(equals(triggerOutputs()?['body/Attachments'], null), json('[]'), triggerOutputs()?['body/Attachments'])`
+   - **Note:** Uses trigger data directly; `json('[]')` creates empty array fallback for null values
+2. Inside the loop, **Create item** (SharePoint) → rename `Log Attachment Change`
+   - **Site Address:** site URL
    - **List Name:** `AuditLog`
-   - **Title:** **Expression** → `concat('Attachment: ', items('Log_Each_Attachment')?['Name'])`
-   - **RequestID:** **Expression** → `triggerOutputs()?['body/ID']`
-   - **ReqKey:** **Dynamic content** → **ReqKey** (from trigger)
-   - **Action Value:** Type `File Added`
-   - **FieldName:** Type `Attachments`
-   - **NewValue:** **Dynamic content** → **Name** (from current item)
-   - **Actor Claims:** **Expression** → `triggerOutputs()?['body/Modified By Claims']`
-   - **ActorRole Value:** Type `Staff`
-   - **ClientApp Value:** Type `SharePoint Form`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** **Expression** → `concat('New file attachment: ', items('Log_Each_Attachment')?['Name'])`
+   - **Title:** Expression → `concat('Attachment: ', items('Log_Each_Attachment')?['Name'])`
+   - **RequestID:** Expression → `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Dynamic content → `ReqKey` (from trigger)
+   - **Action Value:** `File Added`
+   - **FieldName:** `Attachments`
+   - **NewValue:** Dynamic content → `Name` (from current item)
+   - **Actor Claims:** Expression → `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** `Staff`
+   - **ClientApp Value:** `SharePoint Form`
+   - **ActionAt:** Expression → `utcNow()`
+   - **FlowRunId:** Expression → `workflow()['run']['name']`
+   - **Notes:** Expression → `concat('New file attachment: ', items('Log_Each_Attachment')?['Name'])`
+3. After the loop, add **Update item** (SharePoint) → rename `Update Attachment Count`
+   - Same Site/List; **Id:** **ID** (from trigger)
+   - Set **AttachmentCount** = `outputs('Current_Attachment_Count')`
+   - **LastActionBy:** Type `System`
+   - **LastAction:** Type `Attachment Count Updated`
+   - **LastActionAt:** **Expression** → `utcNow()`
+   - **Note:** System fields prevent Flow B from processing its own updates (circular loop prevention)
+
+**Important:** All attachment detection logic (Steps 6a and 6b) is already placed inside the **No branch** of the "Skip if System Update" condition from Step 2, preventing race conditions and circular loops.
 
 ---
 

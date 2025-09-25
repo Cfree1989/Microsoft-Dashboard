@@ -92,6 +92,117 @@ Items = SortByColumns(
 TemplateSize = If(ThisItem.Expanded || varExpandAll, 400, 180)
 ```
 
+### Attachments Modal — Add/Remove Files with Actor (No Drag-and-Drop)
+
+1. Variables (App.OnStart)
+```powerfx
+Set(varShowAddFileModal, false);
+Set(varSelectedItem, Blank());
+Set(varSelectedActor, Blank());
+Set(varAttachmentChangeType, Blank());
+Set(varAttachmentChangedName, Blank());
+```
+
+2. Read-only attachments on each job card
+- Insert a Display Form `frmAttachmentsView` inside the gallery template
+  - DataSource: `PrintRequests`
+  - Item: `ThisItem`
+  - Include only the Attachments data card
+- Collapsed card: show `"Files: " & CountRows(AttachmentsView_Attachments.Attachments)`
+- Expanded card: increase height to show full list; filenames open in SharePoint
+
+3. Add/Remove Files button (in card)
+```powerfx
+// Button.OnSelect
+Set(varSelectedItem, ThisItem);
+Set(varShowAddFileModal, true);
+ResetForm(frmAttachmentsEdit);
+Set(varSelectedActor, Blank());
+Set(varAttachmentChangeType, Blank());
+Set(varAttachmentChangedName, Blank());
+```
+
+4. Modal container
+- Full-screen overlay Container: `Visible = varShowAddFileModal`
+- Centered white Rectangle for modal content
+
+5. Required actor selector
+```powerfx
+// ComboBox ddAttachmentActor
+Items = colStaff
+DefaultSelectedItems = Filter(colStaff, Lower(Member.Email) = varMeEmail)
+OnChange = Set(
+    varSelectedActor,
+    {
+      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+      Claims: "i:0#.f|membership|" & ddAttachmentActor.Selected.Member.Email,
+      DisplayName: ddAttachmentActor.Selected.Member.DisplayName,
+      Email: ddAttachmentActor.Selected.Member.Email
+    }
+)
+```
+
+6. Edit Form for attachments
+- Insert Edit Form `frmAttachmentsEdit`
+  - DataSource: `PrintRequests`
+  - Item: `varSelectedItem`
+  - Include only the Attachments data card (supports add and delete)
+```powerfx
+// Inside Attachments control (optional signals)
+// OnAddFile
+Set(varAttachmentChangeType, "Added");
+// OnRemoveFile
+Set(varAttachmentChangeType, "Removed");
+```
+
+7. Modal actions
+```powerfx
+// Save button
+DisplayMode = If(IsBlank(varSelectedActor), DisplayMode.Disabled, DisplayMode.Edit)
+OnSelect = If(
+    IsBlank(varSelectedActor),
+    Notify("Select your name to continue", NotificationType.Error),
+    SubmitForm(frmAttachmentsEdit)
+)
+
+// Cancel button
+OnSelect = Set(varShowAddFileModal, false); Set(varSelectedItem, Blank()); Set(varSelectedActor, Blank())
+```
+
+8. frmAttachmentsEdit.OnSuccess
+```powerfx
+Patch(
+    PrintRequests,
+    frmAttachmentsEdit.LastSubmit,
+    {
+        LastAction: If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
+        LastActionBy: varSelectedActor,
+        LastActionAt: Now()
+    }
+);
+
+// Optional: explicit audit entry via Flow C
+IfError(
+    'PR-Action_LogAction'.Run(
+        Text(frmAttachmentsEdit.LastSubmit.ID),
+        If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
+        "Attachments",
+        "",
+        "",
+        varMeEmail,
+        "Power Apps",
+        Coalesce(varAttachmentChangedName, "")
+    ),
+    Notify("Could not log attachment action.", NotificationType.Error)
+);
+
+Set(varShowAddFileModal, false);
+```
+
+Notes
+- No drag-and-drop in Canvas; use the Attachments control file picker.
+- Existing PR-Audit flow logs file additions; removals can be inferred historically.
+
 ### Job Card Design (Gallery Template)
 ```powerfx
 // Card Container (Rectangle) - Updated with Glow Effect

@@ -94,6 +94,77 @@ We need to enforce a filename policy for student-submitted SharePoint list attac
 
 - Avoid in-place rename of list attachments; prefer policy + validation to maintain link stability.
 
+## Feature Plan: Job Card Attachments (Dashboard "Add File" Button)
+
+### Background and Motivation
+- Staff want to add files to a request directly from the dashboard job card, without navigating to SharePoint.
+- Each `PrintRequests` item can hold multiple attachments; we need a simple in-app upload path with attribution (who added the file), and a clear list of files on the card.
+
+### UX Plan
+- **Collapsed job card**
+  - **Attachments chip**: shows count (e.g., “3 files”).
+  - **Add File button**: opens an in-app modal to attach files.
+  - Optional: show the most recent 1–2 filenames.
+- **Expanded job card**
+  - **Attachments list**: shows all files by name (most-recent first); clicking opens the file in SharePoint.
+  - **Add File button**: same as collapsed view.
+- **Add File modal** (overlay)
+  - **Required person selector**: “Who is adding this file?” (ComboBox bound to `Staff` list).
+  - **Upload area**: attachment picker (one or multiple files in a single submit).
+  - **Actions**: Save (uploads and logs), Cancel.
+
+### Technical Approach
+- **Data**: Use SharePoint list attachments on the `PrintRequests` item (no new libraries needed).
+- **Display attachments**:
+  - Use a small Display Form (`frmAttachmentsView`) bound to the selected request and include only the Attachments data card; place it in both collapsed (limited height) and expanded (full list) layouts.
+- **Upload/remove attachments (modal, no drag-and-drop)**
+  - Add an Edit Form (`frmAttachmentsEdit`) bound to `PrintRequests`, `Item = varSelectedRequest`, include only the Attachments data card.
+  - Button `Add/Remove Files` → `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, Blank()); Set(varAttachmentChangeType, Blank()); Set(varAttachmentChangedName, Blank())`.
+  - Modal shows: required person picker, the Attachments card (supports add and delete), and Save/Cancel.
+  - Modal Save → `If(IsBlank(varSelectedActor), Notify("Select your name", NotificationType.Error), SubmitForm(frmAttachmentsEdit))`.
+  - `OnSuccess` of `frmAttachmentsEdit` → Patch audit fields and close modal:
+    - `Patch(PrintRequests, frmAttachmentsEdit.LastSubmit, { LastAction: If(varAttachmentChangeType="Removed","File Removed","File Added"), LastActionBy: varSelectedActor, LastActionAt: Now() })`
+    - Optionally call Flow C (`PR-Action_LogAction`) with `Action = If(varAttachmentChangeType="Removed","File Removed","File Added")`, `Notes = Coalesce(varAttachmentChangedName, "")`.
+  - Note: Canvas Attachments card supports selecting multiple files and deleting existing ones; no drag-and-drop.
+
+### Attribution & Audit
+- **Attribution**: Require selection of the actor (person picker) in the modal; store in `LastActionBy`. SharePoint will also set `Modified By` to the signed-in user.
+- **Audit**: Existing `PR-Audit_LogChanges` Flow Step 5 (“Attachments Change Detection”) will log "File Added" entries automatically for each uploaded file.
+- **Optional explicit log**: Also invoke `PR-Action_LogAction` from Power Apps to write a single, human-readable action entry ("File Added") with the selected actor and context notes.
+
+### Success Criteria
+- From the job card, staff can add one or multiple files without leaving the app.
+- Attachments list is visible on the job card (count in collapsed view; full list in expanded view).
+- Actor is captured (required) and appears as `LastActionBy`; `LastAction` updates to "File Added"; `PR-Audit` logs show file names.
+- Errors show user-friendly notifications; UI disables while uploading.
+
+### Open Decisions
+- **File constraints**: Enforce client-side limits (types/size) or rely on policy only for MVP.
+- **Deletion**: Expose a remove action in expanded view (staff-only) or keep read-only list in MVP.
+
+### Task Breakdown (Planner → Executor)
+1. Add attachments Display Form to job card (collapsed count + expanded list).
+2. Add `Add File` button and modal state (`varShowAddFileModal`).
+3. Build `frmAttachmentsEdit` with only the Attachments data card.
+4. Add required person picker bound to `Staff` (`varSelectedActor`), with validation.
+5. Wire Save: `SubmitForm(frmAttachmentsEdit)` → `OnSuccess` Patch `LastAction/By/At`; optional call to `PR-Action_LogAction`.
+6. Add loading/disabled states and error notifications; refresh item post-upload.
+7. Manual test matrix: single/multi-file, attribution required, audit entries recorded, collapsed/expanded views render correctly.
+8. Documentation: Update `PowerApps/StaffConsole-AppSpec.md` and `PowerAutomate/PR-Audit_LogChanges.md` to reflect the new UI path.
+
+### Risks & Mitigations
+- DnD not native in Canvas → Mitigate with Option B (launch SP form) for immediate DnD; revisit PCF later.
+- Shared devices → Require explicit actor selection; compare to `User().Email` and optionally warn on mismatch.
+- Large files → Provide guidance to use document library if needed; rely on tenant limits.
+
+### Quick Reference (formulas)
+- Add File button:
+  - `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, Blank())`
+- Modal Save button:
+  - `If(IsBlank(varSelectedActor), Notify("Select your name", NotificationType.Error), SubmitForm(frmAttachmentsEdit))`
+- `OnSuccess` (frmAttachmentsEdit):
+  - `Patch(PrintRequests, frmAttachmentsEdit.LastSubmit, { LastAction: "File Added", LastActionBy: varSelectedActor, LastActionAt: Now() }); Set(varShowAddFileModal, false)`
+
 # Microsoft Dashboard - 3D Print Queue System
 *Planning & Implementation Tracker*
 
@@ -403,6 +474,47 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Executor's Feedback or Assistance Requests
 
+### 🔧 EXECUTOR MODE: Flow B Attachment Count Fix - ✅ COMPLETED
+**Status**: COMPLETED - Successfully resolved cascading null handling issues in attachment detection
+**Issue**: Multiple template errors due to null values in attachment counting logic when testing items without attachments
+**Root Cause**: SharePoint items without AttachmentCount field populated causing null reference errors in length() and int() functions
+**Solution Applied**: 
+1. ❌ `coalesce()` approach - Power Automate rejected expression syntax
+2. ✅ Fixed `Current_Attachment_Count`: `if(equals(outputs('Get_Current_Attachments')?['body/value'], null), 0, length(outputs('Get_Current_Attachments')?['body/value']))`
+3. ✅ Fixed `Check_Attachments_Changed`: `not(equals(outputs('Current_Attachment_Count'), if(equals(outputs('Get_Current_Item')?['body/AttachmentCount'], null), 0, int(outputs('Get_Current_Item')?['body/AttachmentCount']))))`
+**Key Learning**: Power Automate expressions need explicit null checks with `if(equals(value, null), fallback, function(value))` pattern before type conversion functions like `int()` and `length()`
+**Result**: Flow B now runs successfully on items with/without attachments and with/without populated AttachmentCount field
+**Time Invested**: 25 minutes
+**Documentation Updated**: PR-Audit_LogChanges.md expressions corrected; Lessons section enhanced with null handling pattern
+
+### 🔧 EXECUTOR MODE: Flow B Attachment Count Logic Analysis - ✅ COMPLETED  
+**Status**: COMPLETED - Flow logic working correctly, identified real issue
+**Issue**: User expected count 1→2 but got 1→0 when "adding" attachment
+**Analysis Results**: Examined trigger raw outputs - `"{HasAttachments}": false` confirms item has 0 attachments
+**Root Cause Identified**: Attachment upload process failing, not flow logic issue
+- Previous state: 1 attachment (AttachmentCount = 1)  
+- Current state: 0 attachments (HasAttachments = false)
+- Flow correctly updated AttachmentCount from 1 to 0
+**Key Insight**: Flow B attachment detection working perfectly - real issue is attachment not being saved to SharePoint
+**Recommendation**: Debug attachment upload process (SharePoint form, Power Apps, or manual upload)
+**Time Invested**: 30 minutes total
+**Result**: Flow B attachment counting logic verified as accurate and reliable
+
+### 🔧 EXECUTOR MODE: Flow A/B Race Condition Fix - ✅ COMPLETED
+**Status**: COMPLETED - Fixed timing conflict and corrected confusing documentation
+**Issue**: AttachmentCount defaults to 1 but Flow B sets it to 0 when Flow A updates trigger Flow B during item creation
+**Root Cause**: Flow A updates item → triggers Flow B → Flow B runs before attachments are fully available → counts 0 attachments
+**Solution Applied**: Added condition-based exclusion as Step 2 (right after trigger) that wraps ALL Flow B logic
+**Documentation Fixed**: Completely reorganized PR-Audit_LogChanges.md with proper step numbering:
+- Step 2: Race condition prevention (wraps everything)
+- Step 3: Get Changes for Item  
+- Step 4: Field Change Detection
+- Step 5: Status Email Notifications
+- Step 6: Attachment Detection
+**Key Pattern**: `equals(LastActionBy, 'System')` prevents Flow B during any System updates (Flow A or Flow B itself)
+**Time Invested**: 15 minutes total
+**Result**: Clear, logical documentation structure with race condition prevention properly positioned
+
 ### 🔧 PLANNER MODE: Documentation Field Name Correction - ✅ COMPLETED
 **Status**: COMPLETED - Critical documentation accuracy issue resolved
 **Issue**: PR-Audit_LogChanges.md Step 3a referenced "Editor Claims" field that doesn't exist in Power Automate interface
@@ -670,6 +782,11 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Flow Testing**: Always test with real user accounts, not admin accounts for permission validation
 - **Column Names**: Use consistent internal names in provisioning script to avoid Power Apps mapping issues
 - **File Validation**: Use helper text + staff rejection workflow rather than client-side validation for security
+- **Power Automate Null Handling**: Always use `if(equals(value, null), fallback, function(value))` pattern before type conversion functions like `int()` or `length()`; `coalesce()` doesn't work reliably in Power Automate expressions
+- **Apply to Each Null Arrays**: Use `if(equals(arrayValue, null), json('[]'), arrayValue)` pattern in Apply to each inputs; Apply to each actions cannot iterate over null values and require valid arrays; use `json('[]')` not `createArray()` for empty arrays
+- **Flow Debugging Strategy**: When flows show unexpected counts/values, always examine trigger raw outputs first; `"{HasAttachments}": false` indicates real SharePoint state, not flow logic errors
+- **Flow Race Condition Prevention**: When Flow A (Create) triggers Flow B (Audit), use condition `equals(LastActionBy, 'System')` to skip Flow B during any System updates; place this as the first condition after trigger wrapping ALL other logic
+- **Flow Documentation Organization**: Always place race condition prevention as Step 2 (immediately after trigger), with all remaining logic in the "No" branch; avoid scattering related conditions across different steps
 
 ### Implementation Strategy  
 - **Start with SharePoint foundation** - everything depends on proper list structure
