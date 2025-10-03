@@ -32,6 +32,8 @@
 
 **⚠️ Parameter Order Matters:** Power Automate assigns internal names (`text`, `text_1`, `text_2`, etc.) based on the order you add them. Add them in the exact order below to match the expressions in later steps.
 
+**⚠️ UI Note:** Power Automate's current interface uses "Make the field Optional" checkbox. When UNCHECKED (default), the field is REQUIRED. When CHECKED, the field is OPTIONAL.
+
 **UI steps:**
 1. In the **Power Apps** trigger card → Click **Add an input**
 2. For each parameter below, select **Text** type and fill in exactly as shown:
@@ -82,7 +84,7 @@
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `ClientApp`
 - **Please enter description:** Type `Source application (default: Power Apps)`
-- **Leave "Required" unchecked**
+- **CHECK "Make the field Optional"** (this makes it optional)
 - **Internal reference:** `triggerBody()['text_6']`
 
 #### Parameter 8: Notes
@@ -116,7 +118,10 @@
 5. **Fill in all fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Id:** Click **Dynamic content** → Select **RequestID** (from Power Apps trigger)
+   - **Id:** 
+     - **Click **Expression** tab (fx) → Paste `triggerBody()['text']` → Click **OK**
+     
+**⚠️ Note:** If Dynamic content doesn't show your parameters, save the flow first. Alternatively, use the expression method (Option A) which always works.
 
 **Test Step 3:** Save → Manually test flow with valid RequestID → Should retrieve item without errors
 
@@ -183,7 +188,7 @@
    - **FieldName:** Click **Dynamic content** → Select **FieldName** (from Power Apps trigger)
    - **OldValue:** Click **Dynamic content** → Select **OldValue** (from Power Apps trigger)
    - **NewValue:** Click **Dynamic content** → Select **NewValue** (from Power Apps trigger)
-   - **Actor:** Click **Dynamic content** → Select **ActorEmail** (from Power Apps trigger)
+   - **Actor Claims:** Click **Dynamic content** → Select **ActorEmail** (from Power Apps trigger)
    - **ActorRole Value:** Type `Staff`
    - **ClientApp Value:** Click **Dynamic content** → Select **ClientApp** (from Power Apps trigger)
    - **ActionAt:** Click **Expression** → Type `utcNow()`
@@ -202,11 +207,11 @@
 
 **UI steps (INSIDE THE "YES" BRANCH, after "Create Audit Log Entry"):**
 1. In the **Yes branch** after "Create Audit Log Entry" → Click **+ Add an action**
-2. **Search:** Type `Respond to a PowerApp` → Select **Respond to a PowerApp or flow**
+2. **Search:** Type `Respond to a PowerApp` → Select **Respond to a Power App or flow**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Send Success Response`
 4. Click **Add an output** → Select **Text**
 5. **Title:** Type `Response`
-6. **Enter a value to respond:** Click **Expression** tab (fx) → Paste:
+6. **Enter a value to respond:** **Paste directly into the text field** (DO NOT use Expression tab):
 ```json
 {
   "success": true,
@@ -215,7 +220,11 @@
   "timestamp": "@{utcNow()}"
 }
 ```
-7. Click **Update**
+
+**⚠️ Important:** 
+- Paste as plain text directly into the field, not in the Expression editor
+- The `@{...}` parts will automatically be recognized as dynamic expressions
+- Ensure the action name `Create_Audit_Log_Entry` matches your actual action name (spaces become underscores)
 
 **⚠️ Note:** Power Apps will receive this JSON and can parse it with `varFlowResult.success`, `varFlowResult.auditId`, etc.
 
@@ -229,11 +238,11 @@
 
 **UI steps (INSIDE THE "NO" BRANCH of Step 4):**
 1. In the **No branch** → Click **+ Add an action**
-2. **Search:** Type `Respond to a PowerApp` → Select **Respond to a PowerApp or flow**
+2. **Search:** Type `Respond to a PowerApp` → Select **Respond to a Power App or flow**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Send Error Response`
 4. Click **Add an output** → Select **Text**
 5. **Title:** Type `Response`
-6. **Enter a value to respond:** Click **Expression** tab (fx) → Paste:
+6. **Enter a value to respond:** **Paste directly into the text field** (DO NOT use Expression tab):
 ```json
 {
   "success": false,
@@ -241,7 +250,8 @@
   "timestamp": "@{utcNow()}"
 }
 ```
-7. Click **Update**
+
+**⚠️ Important:** Paste as plain text directly into the field. The `@{utcNow()}` will automatically be recognized as a dynamic expression.
 
 **Test Step 7:** Save → Call flow with missing ActorEmail → Power Apps should receive error response
 
@@ -538,17 +548,17 @@ If(varFlowResult.success,
 
 ---
 
-### Issue 3: Actor Field Not Resolving
+### Issue 3: Actor Claims Field Not Resolving
 
 **Symptoms:**
-- Actor field shows as text in AuditLog, not as Person field
+- Actor Claims field shows as text in AuditLog, not as Person field
 - Can't see user's display name in audit entries
 - Email appears instead of user name
 
 **Fix:**
 1. Ensure ActorEmail parameter contains valid email: `User().Email`
 2. Check user exists in SharePoint site's people picker
-3. Verify **Actor** field type in AuditLog is **Person or Group** (not Single line of text)
+3. Verify **Actor Claims** field type in AuditLog is **Person or Group** (not Single line of text)
 4. SharePoint auto-resolves emails to Person fields (may take 1-2 minutes)
 5. Verify the email address is formatted correctly (lowercase, valid domain)
 
@@ -575,7 +585,7 @@ If(varFlowResult.success,
 - Type errors when referencing response properties
 
 **Fix:**
-1. Verify "Respond to PowerApp or flow" action includes JSON in "Enter a value to respond"
+1. Verify "Respond to a Power App or flow" action includes JSON in "Enter a value to respond"
 2. Check JSON syntax is valid (no missing commas, quotes)
 3. Ensure action names in expressions match exactly: `Create_Audit_Log_Entry` vs `Create Audit Log Entry`
 4. Test response structure: `Notify(JSON(varFlowResult, JSONFormat.IndentFour))`
