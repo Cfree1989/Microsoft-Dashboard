@@ -88,6 +88,39 @@ We need to enforce a filename policy for student-submitted SharePoint list attac
 
 ## Executor's Feedback or Assistance Requests
 
+### 🔧 EXECUTOR MODE: RejectionReason Multi-Choice Field Fix - ✅ COMPLETED
+**Status**: COMPLETED - Fixed complex object array formatting in rejection emails
+**Issue**: Testing rejection email automation produced three iterations of issues:
+1. Initial error: `'The template language expression 'outputs('Get_Current_Rejected_Data')?['body/RejectionReason']?['Value']' cannot be evaluated because property 'Value' cannot be selected. Array elements can only be selected using an integer index.'`
+2. After first fix: Email showed raw JSON objects: `{"@odata.type":"#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference","Id":1,"Value":"Design not printable..."}`
+3. After second fix: Email showed key-value objects: `{"Design not printable...":""}`
+**Root Cause**: `RejectionReason` is a multi-choice SharePoint field that returns an **array of complex objects** (each with `@odata.type`, `Id`, and `Value` properties), not simple strings
+**Solution Applied**: 
+- Added **Action 4: Format Rejection Reasons** - Select action with **text mode Map field**:
+  - From: `outputs('Get_Current_Rejected_Data')?['body/RejectionReason']`
+  - Map: Click "Switch to text mode" button → Type `@item()?['Value']`
+- Added **Action 5: Compose Formatted Reasons Text** - Compose action that joins values: `join(body('Format_Rejection_Reasons'), '; ')`
+- Updated email body to reference formatted output: `@{outputs('Compose_Formatted_Reasons_Text')}`
+- Result: Multiple selections display as "Reason 1; Reason 2; Reason 3" instead of JSON objects
+**Documentation Updated**: PR-Audit_LogChanges.md - Added two new data operations actions before Send Rejection Email; updated email body template; renumbered subsequent actions; documented "Switch to text mode" requirement for Map field
+**Key Learning**: SharePoint multi-choice fields return arrays of complex objects with `Id` and `Value` properties; cannot use simple `join()` directly; must use Select action with **text mode Map field** (not visual mode) to extract `Value` properties first, then join the resulting array; visual mode creates unwanted key-value pairs
+**Time Invested**: 25 minutes total (5 min initial fix + 10 min revised fix + 10 min text mode troubleshooting)
+**Testing Result**: ✅ Rejection emails now display clean readable text like "Design not printable (overhangs, thin walls, unsupported features); File size too large"
+
+### 🗂️ CURATOR MODE: PR-Audit Documentation Reorganization - ✅ COMPLETED
+**Status**: COMPLETED - File successfully reorganized with zero scrolling needed
+**Issue Resolved**: PR-Audit_LogChanges.md now has complete instructions at every step with no forward/backward references
+**Changes Made**:
+- **Step 6b**: Expanded from abbreviated "copy from above" to 8 complete field detectors with ALL fields explicitly listed
+- **Step 7**: Expanded from "see templates below" to 3 complete email workflows (Rejection, Pending, Completion) with inline HTML templates and complete audit log field mappings
+- **Reference Material**: Deleted 240 lines of redundant duplicate content
+**Results**:
+- File reduced from 1,290 to ~1,050 lines
+- Zero forward/backward references remain
+- Every Create item action shows all 15 fields explicitly
+- HTML templates inline right where you paste them
+**Time Invested**: 45 minutes total with user approvals at each section
+
 - None yet. If multiple attachments per item must all be valid before confirming, we may add an aggregate validity flag (Initialize variable before loop, set false on any invalid, check after loop).
 
 ## Lessons
@@ -474,6 +507,31 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 ## Executor's Feedback or Assistance Requests
 
+### 🔧 EXECUTOR MODE: Flow B Number Field Internal Name Fix - ✅ COMPLETED & TESTED
+**Status**: COMPLETED & TESTED - Fixed empty NewValue in audit logs for EstimatedWeight and EstimatedTime changes; all field detectors now working
+**Issue**: When testing Flow B, changing EstimatedWeight from 200 to 100 created audit logs but NewValue column was empty, Notes showed "EstimatedWeight updated to empty"
+**Initial Hypothesis (WRONG)**: Number fields returning null when empty; needed null-safe handling
+**BFROS Analysis Path**: 
+1. ❌ Null/empty values - Added null checks, still empty
+2. ❌ Missing OldValue implementation - Documented as intentional
+3. ❌ Expression syntax - Verified correct Power Automate syntax
+4. ✅ **ACTUAL ROOT CAUSE: SharePoint internal field name mismatch**
+**Real Root Cause**: SharePoint display name "EstimatedWeight" ≠ internal name "EstWeight"; using `triggerOutputs()?['body/EstimatedWeight']` returned null because field doesn't exist in trigger outputs; correct internal names verified: EstimatedWeight→`EstWeight`, EstimatedTime→`EstHours`, EstimatedCost→`EstimatedCost`
+**Solution Applied**: 
+- Updated expression to use correct internal field name: `triggerOutputs()?['body/EstWeight']`
+- Added warning in documentation about verifying internal field names via SharePoint List Settings → Column URL
+- Added null-safe handling as secondary protection: `if(equals(triggerOutputs()?['body/EstWeight'], null), '', string(triggerOutputs()?['body/EstWeight']))`
+**Debug Method Used**: Added debug Create item action to check raw trigger inputs, revealed `"item/Notes": "EstimatedWeight updated to empty"` proving trigger didn't contain EstimatedWeight field
+**Key Learning**: ALWAYS verify SharePoint internal field names in List Settings before building Power Automate expressions; display names frequently differ from internal names (e.g., EstimatedWeight → EstWeight); check column URL Field parameter to find true internal name
+**Documentation Updated**: 
+- PR-Audit_LogChanges.md - Updated EstimatedWeight expression to use `EstWeight` internal name (line 222)
+- PR-Audit_LogChanges.md - Added warning about internal field names for EstimatedTime/EstimatedCost (lines 185-188)
+- scratchpad.md Lessons - Added "SharePoint Internal Field Names" critical lesson
+**Time Invested**: 35 minutes total (including false starts with null handling, debugging accidental markdown paste)
+**Context7 Used**: ✅ Referenced Microsoft Power Automate official documentation for trigger outputs and SharePoint field name conventions
+**Testing Results**: All field changes now creating audit logs with correct NewValue populated; OldValue intentionally blank per design
+**Final Status**: Flow B fully operational with correct internal field names for EstWeight, EstHours, EstimatedCost
+
 ### 🔧 EXECUTOR MODE: Flow B Attachment Count Fix - ✅ COMPLETED
 **Status**: COMPLETED - Successfully resolved cascading null handling issues in attachment detection
 **Issue**: Multiple template errors due to null values in attachment counting logic when testing items without attachments
@@ -787,6 +845,9 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Flow Debugging Strategy**: When flows show unexpected counts/values, always examine trigger raw outputs first; `"{HasAttachments}": false` indicates real SharePoint state, not flow logic errors
 - **Flow Race Condition Prevention**: When Flow A (Create) triggers Flow B (Audit), use condition `equals(LastActionBy, 'System')` to skip Flow B during any System updates; place this as the first condition after trigger wrapping ALL other logic
 - **Flow Documentation Organization**: Always place race condition prevention as Step 2 (immediately after trigger), with all remaining logic in the "No" branch; avoid scattering related conditions across different steps
+- **Number Field Audit Logging**: SharePoint number fields can be null/empty and must use null-safe expressions: `if(equals(triggerOutputs()?['body/FieldName'], null), '', string(triggerOutputs()?['body/FieldName']))` for NewValue and `if(equals(value, null), 'empty', string(value))` for display in Notes; without null checks, empty number fields result in blank audit log values
+- **SharePoint Internal Field Names**: CRITICAL - Always verify internal field names in SharePoint List Settings → Column → check URL Field parameter; display names often differ from internal names (e.g., "EstimatedWeight" display = "EstWeight" internal); using wrong name in `triggerOutputs()?['body/FieldName']` results in null values and empty audit logs; verify each field's internal name before building flow expressions
+- **SharePoint Multi-Choice Field Access**: Multi-choice fields (checkboxes allowing multiple selections) return arrays of complex objects with `@odata.type`, `Id`, and `Value` properties; cannot use simple `join()` directly on the array (produces JSON object output); must use **Select** action first to extract Value properties: (1) Select action: From = `outputs('Get_Item')?['body/FieldName']`, Map = Click "Switch to text mode" button → Type `@item()?['Value']`, (2) Compose action: `join(body('Select_Action_Name'), '; ')`, (3) Reference in email/log: `outputs('Compose_Action_Name')`; CRITICAL: Must use text mode for Map field - visual mode creates unwanted key-value pairs that produce `{"value":""}` objects instead of clean strings
 
 ### Implementation Strategy  
 - **Start with SharePoint foundation** - everything depends on proper list structure
@@ -796,6 +857,13 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - **Simplify file handling** - For MVP, local download/work/status updates beats complex file versioning systems
 - **Lightbulb toggle pattern** - Use Icon.Lightbulb/LightbulbSolid with color animation for clear on/off states; Timer control needed for glow effects  
 - **Staff attribution modal pattern** - Always include mandatory staff dropdown using `colStaff` collection; validate selection before enabling action buttons; use proper SharePoint Person field formatting in Patch operations
+
+### Documentation Best Practices
+- **Eliminate forward/backward references** - Never say "see below", "copy from above", or "fill in like other sections" - include complete instructions at each step even if redundant
+- **Inline templates** - Put HTML templates, code snippets, and examples directly in the step where they're used, not in separate reference sections
+- **Complete field mappings** - For repetitive tasks (like Create item actions), explicitly list ALL fields every time rather than saying "same as before"
+- **Sequential organization** - Users should be able to follow documentation top-to-bottom without scrolling to find referenced content
+- **Delete redundant sections** - After consolidating content into main steps, remove duplicate reference sections to reduce file size and confusion
 
 ---
 

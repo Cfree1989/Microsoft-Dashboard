@@ -81,6 +81,28 @@
 
 **Test Step 3:** Save → Change any field → Check AuditLog for "DEBUG: Flow B Processing Started" entry
 
+### Step 3a: CRITICAL - Verify SharePoint Internal Field Names (NEW)
+
+**What this does:** Prevents the #1 most common Flow B bug - using wrong field names in expressions.
+
+**⚠️ WHY THIS MATTERS:** SharePoint display names often differ from internal names (e.g., "EstimatedWeight" display = "EstWeight" internal). Using wrong names = null values = empty audit logs!
+
+**Quick Verification Method:**
+1. Go to SharePoint → PrintRequests → Settings → **List settings**
+2. Under "Columns", click each field you're tracking (Status, Priority, Method, Color, Printer, EstimatedTime, EstimatedWeight, EstimatedCost, Notes)
+3. Look at the URL: `Field=XXXXX`
+4. **Document the internal names** - you'll need them for expressions
+
+**PowerShell Method (Fastest):**
+```powershell
+pwsh ./SharePoint/Get-InternalFieldNames.ps1
+```
+This creates `PrintRequests_FieldNames.csv` with ALL field mappings.
+
+**Use the checklist:** See `PowerAutomate/Field-Name-Verification-Checklist.md` for systematic verification.
+
+**Test Step 3a:** Document all internal field names before proceeding to Step 4
+
 ### Step 4: Add Get Item Changes
 
 **What this does:** Retrieves what fields changed since the flow started, essential for detecting which fields to log.
@@ -175,35 +197,281 @@
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Click **Expression** → Type `concat('Status updated to ', triggerOutputs()?['body/Status']?['Value'])`
 
-#### 6b: Add Remaining Field Detectors (Template)
+#### 6b: Add Remaining Field Detectors
 
-**Use this exact template for each remaining field. Add each as a parallel condition:**
+**What this does:** Adds parallel field change detectors for Status, Method, Color, Priority, EstimatedTime, EstimatedWeight, EstimatedCost, and Notes. Each field gets its own condition and logging action.
 
-**FOR CHOICE FIELDS (Method, Color, Priority):**
-- **Has Column Changed:** [FieldName] (from Get Item Changes)
-- **NewValue Expression:** `triggerOutputs()?['body/[FieldName]]?['Value']`
-- **Notes Expression:** `concat('[FieldName] updated to ', triggerOutputs()?['body/[FieldName]]?['Value'])`
+**⚠️ CRITICAL: SharePoint Internal Field Names**
+Some display names differ from internal field names. Always use internal names in expressions:
+- **EstimatedWeight** display → `EstWeight` internal
+- **EstimatedTime** display → `EstHours` internal  
+- **EstimatedCost** → `EstimatedCost` (matches)
 
-**FOR NUMBER FIELDS (EstHours, EstWeight, EstimatedCost):**
-- **Has Column Changed:** [InternalFieldName] (from Get Item Changes)
-- **NewValue Expression:** `triggerOutputs()?['body/[InternalFieldName]]`
-- **Notes Expression:** `concat('[FieldName] updated to ', string(triggerOutputs()?['body/[InternalFieldName]]))`
+---
 
-**FOR TEXT FIELDS (Notes):**
-- **Has Column Changed:** Notes (from Get Item Changes)
-- **NewValue Expression:** `triggerOutputs()?['body/Notes']`
-- **Notes Expression:** `'Notes field updated'`
+### Field Detector 1: Status (Most Important)
 
-**Field Mapping Reference:**
-- Method: `Method` → `triggerOutputs()?['body/Method']?['Value']`
-- Color: `Color` → `triggerOutputs()?['body/Color']?['Value']`
-- Priority: `Priority` → `triggerOutputs()?['body/Priority']?['Value']`
-- EstHours: `EstHours` → `triggerOutputs()?['body/EstHours']`
-- EstWeight: `EstWeight` → `triggerOutputs()?['body/EstWeight']`
-- EstimatedCost: `EstimatedCost` → `triggerOutputs()?['body/EstimatedCost']`
-- Notes: `Notes` → `triggerOutputs()?['body/Notes']`
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Status Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
 
-**Test Step 6:** Change each field individually → Verify audit entries created with correct FieldName and NewValue
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Status Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Status Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Status Change`
+   - **FieldName:** Type `Status`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Status updated to ', triggerOutputs()?['body/Status']?['Value'])`
+
+---
+
+### Field Detector 2: Method
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Method Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Method** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Method Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Method Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `Method`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Method']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Method updated to ', triggerOutputs()?['body/Method']?['Value'])`
+
+---
+
+### Field Detector 3: Color
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Color Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Color** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Color Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Color Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `Color`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Color']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Color updated to ', triggerOutputs()?['body/Color']?['Value'])`
+
+---
+
+### Field Detector 4: Priority
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Priority Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Priority** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Priority Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Priority Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `Priority`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Priority']?['Value']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('Priority updated to ', triggerOutputs()?['body/Priority']?['Value'])`
+
+---
+
+### Field Detector 5: EstimatedTime (⚠️ Internal Name: `EstHours`)
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedTime Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedTime** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log EstimatedTime Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `EstimatedTime Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `EstimatedTime`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `if(equals(triggerOutputs()?['body/EstHours'], null), '', string(triggerOutputs()?['body/EstHours']))`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('EstimatedTime updated to ', if(equals(triggerOutputs()?['body/EstHours'], null), 'empty', string(triggerOutputs()?['body/EstHours'])))`
+
+**⚠️ Note:** Number fields require null-safe handling with `if(equals(..., null), '', string(...))` to prevent empty audit logs.
+
+---
+
+### Field Detector 6: EstimatedWeight (⚠️ Internal Name: `EstWeight`)
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedWeight Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedWeight** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log EstimatedWeight Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `EstimatedWeight Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `EstimatedWeight`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `if(equals(triggerOutputs()?['body/EstWeight'], null), '', string(triggerOutputs()?['body/EstWeight']))`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('EstimatedWeight updated to ', if(equals(triggerOutputs()?['body/EstWeight'], null), 'empty', string(triggerOutputs()?['body/EstWeight'])))`
+
+**⚠️ Note:** Number fields require null-safe handling with `if(equals(..., null), '', string(...))` to prevent empty audit logs.
+
+---
+
+### Field Detector 7: EstimatedCost
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedCost Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedCost** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log EstimatedCost Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `EstimatedCost Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `EstimatedCost`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `if(equals(triggerOutputs()?['body/EstimatedCost'], null), '', string(triggerOutputs()?['body/EstimatedCost']))`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `concat('EstimatedCost updated to ', if(equals(triggerOutputs()?['body/EstimatedCost'], null), 'empty', string(triggerOutputs()?['body/EstimatedCost'])))`
+
+**⚠️ Note:** Currency fields can be null and require null-safe handling with `if(equals(..., null), '', string(...))` to prevent empty audit logs.
+
+---
+
+### Field Detector 8: Notes
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Notes Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: Notes** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+4. **+ Add an action** → **Create item** (SharePoint)
+5. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Notes Change`
+6. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Notes Change`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Field Change`
+   - **FieldName:** Type `Notes`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Notes']`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
+   - **ActorRole Value:** Type `Staff`
+   - **ClientApp Value:** Type `SharePoint Form`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type `'Notes field updated'`
+
+---
+
+**Test Step 6:** Change each field individually → Verify audit entries created with correct FieldName and NewValue populated
 
 ### Step 7: Add Status-Based Email Notifications (OPTIONAL)
 
@@ -213,44 +481,274 @@
 
 **UI steps (INSIDE the "Check Status Changed" YES branch):**
 
+---
+
 #### 7a: Add Rejection Email Logic
 
-1. **In "Log Status Change" action (from Step 6a)** → Click **three dots (…)** → **Settings** → **Configure retry policy**
-   - **Type:** Exponential
-   - **Count:** 4  
-   - **Minimum Interval:** PT1M
+**Action 1: Configure Retry Policy on Status Log**
+1. **Find "Log Status Change" action** (from Step 6b, Field Detector 1) → Click **three dots (…)** → **Settings**
+2. **Retry Policy:** Turn to **On**
+   - **Type:** Select **Exponential**
+   - **Count:** Type **4**
+   - **Minimum Interval:** Type **PT1M**
+3. **Click Done**
 
-2. **After "Log Status Change"** → **+ Add an action** → **Condition**
-3. **Rename:** Type `Check Status Rejected`
-4. **Configure condition:**
+**Action 2: Add Rejection Condition**
+1. **After "Log Status Change"** → **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Status Rejected`
+3. **Configure condition:**
    - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
    - **Middle:** **is equal to**
    - **Right:** Type `Rejected`
 
 **In YES branch (Status = Rejected):**
-5. **+ Add an action** → **Get item** (SharePoint) → **Rename:** `Get Current Rejected Data`
+
+**Action 3: Get Fresh Item Data**
+1. **+ Add an action** → **Get item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Get Current Rejected Data`
+3. **Fill in:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
 
-6. **+ Add an action** → **Send an email from a shared mailbox (V2)** → **Rename:** `Send Rejection Email`
-   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+**Action 4: Format Rejection Reasons**
+1. **+ Add an action** → **Select** (Data Operations)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Format Rejection Reasons`
+3. **Fill in:**
+   - **From:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/RejectionReason']`
+   - **Map:** Click the **"Switch to text mode"** button (upper right of the Map field), then:
+     - In the text box that appears, type: `@item()?['Value']`
+4. **What this does:** Extracts just the readable text (`Value` property) from each selected rejection reason, removing the complex JSON object structure
+5. **⚠️ Important:** Use text mode for the Map field. The default visual mode creates key-value pairs that produce unwanted JSON objects in your email. Text mode with `@item()?['Value']` creates a clean string array.
+
+**Action 5: Compose Formatted Reasons Text**
+1. **+ Add an action** → **Compose** (Data Operations)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Compose Formatted Reasons Text`
+3. **Inputs:** Click **Expression** → Type `join(body('Format_Rejection_Reasons'), '; ')`
+4. **What this does:** Joins all rejection reasons with semicolons into readable text like "Reason 1; Reason 2; Reason 3"
+
+**Action 6: Send Rejection Email**
+1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Rejection Email`
+3. **Configure retry policy** (same as Action 1: Exponential, Count 4, PT1M)
+4. **Fill in:**
+   - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View (`</>`)** → Paste rejection email HTML template (from existing documentation)
+   - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
 
-7. **+ Add an action** → **Create item** (SharePoint) → **Rename:** `Log Rejection Email Sent`
-   - Use same fields as other audit logs with Action Value = `Email Sent`
+```html
+<p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
+<p><strong>Request:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})</p>
+<p><strong>Method:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}</p>
+<p><strong>Printer Requested:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}</p>
+<br>
+<p><strong>Reason for Rejection:</strong></p>
+<p>@{outputs('Compose_Formatted_Reasons_Text')}</p>
+<p><strong>Additional Details:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Notes']}</p>
+<br>
+<p><strong>Next Steps:</strong></p>
+<ul>
+  <li>Review the specific rejection reason above</li>
+  <li>Make necessary adjustments to your design or request</li>
+  <li>Submit a new corrected request through the Fabrication Lab website</li>
+  <li>Contact our staff if you have questions about this feedback</li>
+</ul>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
 
-**Test Step 7a:** Change status to "Rejected" → Verify rejection email sent and logged
+**⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
 
-#### 7b: Add Pending and Completed Email Logic (Optional)
+**Action 7: Log Rejection Email Sent**
+1. **+ Add an action** → **Create item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Rejection Email Sent`
+3. **Configure retry policy** (same as Action 1)
+4. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Rejection`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/ReqKey']`
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
+   - **Actor Claims:** Leave blank (system action)
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Type `Rejection notification sent to student`
 
-**Follow the same pattern as rejection emails for:**
-- **Pending status** → Send estimate confirmation email
-- **Completed status** → Send pickup notification email
+**Test Step 7a:** Change status to "Rejected" → Verify rejection email sent and logged in AuditLog
 
-**Use the existing email templates from the documentation sections below.**
+---
+
+#### 7b: Add Pending (Estimate) Email Logic
+
+**What this does:** When status changes to "Pending", sends cost estimate email to student with confirmation link.
+
+**Action 1: Add Pending Condition**
+1. **At the same level as "Check Status Rejected"** → **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Status Pending`
+3. **Configure condition:**
+   - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+   - **Middle:** **is equal to**
+   - **Right:** Type `Pending`
+
+**In YES branch (Status = Pending):**
+
+**Action 2: Get Fresh Item Data**
+1. **+ Add an action** → **Get item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Get Current Pending Data`
+3. **Fill in:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+
+**Action 3: Send Estimate Email**
+1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Estimate Email`
+3. **Configure retry policy** (Exponential, Count 4, PT1M)
+4. **Fill in:**
+   - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
+   - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
+   - **Subject:** Click **Expression** → Type `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
+   - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
+
+```html
+<p>Good news! Your 3D print request has been reviewed and approved.</p>
+<p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/Title']} (@{outputs('Get_Current_Pending_Data')?['body/ReqKey']})</p>
+<p><strong>Method:</strong> @{outputs('Get_Current_Pending_Data')?['body/Method']?['Value']} (@{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']})</p>
+<p><strong>Printer:</strong> @{outputs('Get_Current_Pending_Data')?['body/Printer']?['Value']}</p>
+<br>
+<p><strong>COST ESTIMATE:</strong></p>
+<ul>
+  <li><strong>Estimated Weight:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstimatedWeight']}g</li>
+  <li><strong>Estimated Print Time:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstimatedTime']} hours</li>
+  <li><strong>Estimated Cost:</strong> $@{outputs('Get_Current_Pending_Data')?['body/EstimatedCost']}</li>
+</ul>
+<br>
+<p><strong>Please confirm you want to proceed with this estimate:</strong></p>
+<p><a href="[YOUR_FLOW_URL_HERE]&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
+<p><em>By clicking this link, you authorize us to begin printing your request.</em></p>
+<br>
+<p><strong>Cost Details:</strong></p>
+<ul>
+  <li>Filament prints: $0.10 per gram (minimum $3.00)</li>
+  <li>Resin prints: $0.20 per gram (minimum $3.00)</li>
+  <li>Final cost may vary slightly based on actual material usage</li>
+  <li>Payment due at pickup</li>
+</ul>
+<br>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<br>
+<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+
+**⚠️ IMPORTANT:** Replace `[YOUR_FLOW_URL_HERE]` with the actual HTTP POST URL from your PR-Confirm flow. Get this URL by: (1) Create the PR-Confirm flow following PR-Confirm_EstimateApproval.md, (2) Open the flow in Power Automate, (3) Click on the "When an HTTP request is received" trigger, (4) Copy the "HTTP POST URL" that appears after saving the flow. Keep the `&RequestID=@{triggerOutputs()?['body/ID']}` parameter at the end.
+
+**Action 4: Log Estimate Email Sent**
+1. **+ Add an action** → **Create item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Estimate Email Sent`
+3. **Configure retry policy** (Exponential, Count 4, PT1M)
+4. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Estimate`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/ReqKey']`
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
+   - **Actor Claims:** Leave blank (system action)
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Type `Estimate notification sent to student with confirmation link`
+
+**Test Step 7b:** Change status to "Pending" → Verify estimate email sent with cost details and logged
+
+---
+
+#### 7c: Add Completed (Pickup) Email Logic
+
+**What this does:** When status changes to "Completed", sends pickup notification email to student.
+
+**Action 1: Add Completed Condition**
+1. **At the same level as "Check Status Pending"** → **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Status Completed`
+3. **Configure condition:**
+   - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+   - **Middle:** **is equal to**
+   - **Right:** Type `Completed`
+
+**In YES branch (Status = Completed):**
+
+**Action 2: Get Fresh Item Data**
+1. **+ Add an action** → **Get item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Get Current Completed Data`
+3. **Fill in:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+
+**Action 3: Send Completion Email**
+1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Completion Email`
+3. **Configure retry policy** (Exponential, Count 4, PT1M)
+4. **Fill in:**
+   - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
+   - **To:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
+   - **Subject:** Click **Expression** → Type `concat('Your 3D print is ready for pickup – ', outputs('Get_Current_Completed_Data')?['body/ReqKey'])`
+   - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
+
+```html
+<p class="editor-paragraph">Your print is ready for pick up in the Fabrication Lab in room 145 Atkinson.
+
+TigerCASH is the only form of payment in the lab.
+
+
+Lab Hours:
+
+M-F 8:30 – 4:30</p>
+
+<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}" class="editor-link">View your request details</a></p>
+<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" class="editor-link">View all your requests</a>
+
+</p>
+<p class="editor-paragraph"><i><em class="editor-text-italic">This is an automated message from the LSU Digital Fabrication Lab.</em></i></p>
+```
+
+**Action 4: Log Completion Email Sent**
+1. **+ Add an action** → **Create item** (SharePoint)
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Completion Email Sent`
+3. **Configure retry policy** (Exponential, Count 4, PT1M)
+4. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Email Sent: Completion`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/ReqKey']`
+   - **Action Value:** Type `Email Sent`
+   - **FieldName:** Type `StudentEmail`
+   - **OldValue:** Leave blank
+   - **NewValue:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
+   - **Actor Claims:** Leave blank (system action)
+   - **ActorRole Value:** Type `System`
+   - **ClientApp Value:** Type `Power Automate`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Type `Completion notification sent to student`
+
+**Test Step 7c:** Change status to "Completed" → Verify pickup email sent and logged
 
 ### Step 8: Clean Up and Final Testing
 
@@ -299,246 +797,6 @@
 5. **Complete Step 8** for production optimization
 
 This systematic approach will give you a **reliable Flow B in 30-45 minutes** with proper testing at each stage.
-
----
-
-## Reference Material (Keep for Implementation)
-
-### Email Templates and Advanced Features
-
-*The sections below contain detailed email templates, troubleshooting guides, and advanced implementation notes. Use these as reference when implementing Step 7 (emails) and beyond.*
-
-**Action 2: Send rejection email**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Send an email from a shared mailbox (V2)**
-3. Rename the action to: `Send Rejection Email`
-   - Click the **three dots (…)** → **Rename** → type `Send Rejection Email`
-4. **Configure retry policy**
-5. Fill in, using expressions from the **"Get Current Rejected Data"** action for all fields related to the request:
-   - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Expression** → `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
-   - **Subject:** **Expression** → `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
-   - **Body:** Use expressions from **"Get Current Rejected Data"** (see HTML below) so no loop is added.
-
-**Troubleshooting the "For each" Loop:**
-If Power Automate automatically adds a "For each" loop when you select a Choice field (like RejectionReason), you must use an expression instead.
-1. Delete the "For each" loop and the email action inside it.
-2. Re-add the "Send email" action.
-3. For the body, click the `</>` Code View button and paste the HTML below.
-4. **Crucially**, ensure the action name in the expressions (e.g., `Get_Current_Rejected_Data`) exactly matches the name of your "Get item" action (with spaces replaced by underscores). Use the "Peek code" trick on a Compose action to find the exact name if you are unsure.
-
-```html
-<p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
-<p><strong>Request:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})</p>
-<p><strong>Method:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}</p>
-<p><strong>Printer Requested:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}</p>
-<br>
-<p><strong>Reason for Rejection:</strong></p>
-<p>@{outputs('Get_Current_Rejected_Data')?['body/RejectionReason']?['Value']}</p>
-<p><strong>Additional Details:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Notes']}</p>
-<br>
-<p><strong>Next Steps:</strong></p>
-<ul>
-  <li>Review the specific rejection reason above</li>
-  <li>Make necessary adjustments to your design or request</li>
-  <li>Submit a new corrected request through the Fabrication Lab website</li>
-  <li>Contact our staff if you have questions about this feedback</li>
-</ul>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-```
-
-**Action 3: Log rejection email sent**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Rejection Email Sent`
-   - Click the **three dots (…)** → **Rename** → type `Log Rejection Email Sent`
-4. **Configure retry policy**
-5. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `AuditLog`
-   - **Title:** Type `Email Sent: Rejection`
-   - **RequestID:** **Dynamic content** → **ID** (from the trigger, "When an item is created or modified")
-   - **ReqKey:** **Dynamic content** → **ReqKey** (from "Get Current Rejected Data")
-   - **Action Value:** Type `Email Sent`
-   - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from "Get Current Rejected Data")
-   - **Actor Claims:** Leave blank for system
-   - **ActorRole Value:** Type `System`
-   - **ClientApp Value:** Type `Power Automate`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** Type `Rejection notification sent to student`
-
-#### Step 5b: Pending (Estimate) Email Logic
-
-**UI steps (create parallel to the Rejection condition):**
-1. Click **+ Add an action** at the same level as the Rejection condition
-2. Search for and select **Condition**
-3. Rename the condition to: `Check Status Pending`
-   - Click the **three dots (…)** → **Rename** → type `Check Status Pending`
-4. Set up condition:
-   - Left box: **Dynamic content** → **Status Value** (from trigger)
-   - Middle: **is equal to**
-   - Right box: Type `Pending`
-
-##### Yes Branch - Send Estimate Email:
-
-**Action 1: Get current item data**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Get item** (SharePoint)
-3. Rename the action to: `Get Current Pending Data`
-   - Click the **three dots (…)** → **Rename** → type `Get Current Pending Data`
-4. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
-
-**Action 2: Send estimate email**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Send an email from a shared mailbox (V2)**
-3. Rename the action to: `Send Estimate Email`
-   - Click the **three dots (…)** → **Rename** → type `Send Estimate Email`
-4. **Configure retry policy**
-5. Fill in, using expressions from the **"Get Current Pending Data"** action:
-   - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Expression** → `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
-   - **Subject:** **Expression** → `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
-   - **Body:** Use expressions from **"Get Current Pending Data"** (see HTML below).
-
-**Troubleshooting the "For each" Loop:**
-Follow the same troubleshooting steps as the Rejection Email. Use expressions in the Code View (`</>`) of the email body, making sure to replace `Get_Current_Pending_Data` with the exact name of your "Get item" action for this branch.
-
-```html
-<p>Good news! Your 3D print request has been reviewed and approved.</p>
-<p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/Title']} (@{outputs('Get_Current_Pending_Data')?['body/ReqKey']})</p>
-<p><strong>Method:</strong> @{outputs('Get_Current_Pending_Data')?['body/Method/Value']} (@{outputs('Get_Current_Pending_Data')?['body/Color/Value']})</p>
-<p><strong>Printer:</strong> @{outputs('Get_Current_Pending_Data')?['body/Printer/Value']}</p>
-<br>
-<p><strong>COST ESTIMATE:</strong></p>
-<ul>
-  <li><strong>Estimated Weight:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstWeight']}g</li>
-  <li><strong>Estimated Print Time:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstHours']} hours</li>
-  <li><strong>Estimated Cost:</strong> $@{outputs('Get_Current_Pending_Data')?['body/EstimatedCost']}</li>
-</ul>
-<br>
-<p><strong>Please confirm you want to proceed with this estimate:</strong></p>
-<p><a href="https://prod-12.westus.logic.azure.com:443/workflows/12345678901234567890/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
-<p><em>By clicking this link, you authorize us to begin printing your request.</em></p>
-<br>
-<p><strong>Cost Details:</strong></p>
-<ul>
-  <li>Filament prints: $0.10 per gram (minimum $3.00)</li>
-  <li>Resin prints: $0.20 per gram (minimum $3.00)</li>
-  <li>Final cost may vary slightly based on actual material usage</li>
-  <li>Payment due at pickup</li>
-</ul>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
-```
-
-**Action 3: Log estimate email sent**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Estimate Email Sent`
-   - Click the **three dots (…)** → **Rename** → type `Log Estimate Email Sent`
-4. **Configure retry policy**
-5. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `AuditLog`
-   - **Title:** Type `Email Sent: Estimate`
-   - **RequestID:** **Dynamic content** → **ID** (from the trigger, "When an item is created or modified")
-   - **ReqKey:** **Dynamic content** → **ReqKey** (from "Get Current Pending Data")
-   - **Action Value:** Type `Email Sent`
-   - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from "Get Current Pending Data")
-   - **Actor Claims:** Leave blank for system
-   - **ActorRole Value:** Type `System`
-   - **ClientApp Value:** Type `Power Automate`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** Type `Estimate notification sent to student with confirmation link`
-
-#### Step 5c: Completion Email Logic
-
-**UI steps (create parallel to the Pending condition):**
-1. Click **+ Add an action** at the same level as the Pending condition
-2. Search for and select **Condition**
-3. Rename the condition to: `Check Status Completed`
-   - Click the **three dots (…)** → **Rename** → type `Check Status Completed`
-4. Set up condition:
-   - Left box: **Dynamic content** → **Status Value** (from trigger)
-   - Middle: **is equal to**
-   - Right box: Type `Completed`
-
-##### Yes Branch - Send Completion Email:
-
-**Action 1: Get current item data**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Get item** (SharePoint)
-3. Rename the action to: `Get Current Completed Data`
-   - Click the **three dots (…)** → **Rename** → type `Get Current Completed Data`
-4. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
-   - **Id:** **Dynamic content** → **ID** (from trigger)
-
-**Action 2: Send completion email**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Send an email from a shared mailbox (V2)**
-3. Rename the action to: `Send Completion Email`
-   - Click the **three dots (…)** → **Rename** → type `Send Completion Email`
-4. **Configure retry policy**
-5. Fill in, using expressions from the **"Get Current Completed Data"** action:
-   - **Shared Mailbox:** `coad-fablab@lsu.edu`
-   - **To:** **Expression** → `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
-   - **Subject:** **Expression** → `concat('Your 3D print is ready for pickup – ', outputs('Get_Current_Completed_Data')?['body/ReqKey'])`
-   - **Body:** Use expressions from **"Get Current Completed Data"** (see HTML below):
-
-```html
-<p class="editor-paragraph">Your print is ready for pick up in the Fabrication Lab in room 145 Atkinson.
-
-TigerCASH is the only form of payment in the lab.
-
-
-Lab Hours:
-
-M-F 8:30 – 4:30</p>
-
-<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}" class="editor-link">View your request details</a></p>
-<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" class="editor-link">View all your requests</a>
-
-</p>
-<p class="editor-paragraph"><i><em class="editor-text-italic">This is an automated message from the LSU Digital Fabrication Lab.</em></i></p>
-```
-
-**Action 3: Log completion email sent**
-1. Click **+ Add an action** in Yes branch
-2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Completion Email Sent`
-   - Click the **three dots (…)** → **Rename** → type `Log Completion Email Sent`
-4. **Configure retry policy**
-5. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `AuditLog`
-   - **Title:** Type `Email Sent: Completion`
-   - **RequestID:** **Dynamic content** → **ID** (from the trigger, "When an item is created or modified")
-   - **ReqKey:** **Dynamic content** → **ReqKey** (from "Get Current Completed Data")
-   - **Action Value:** Type `Email Sent`
-   - **FieldName:** Type `StudentEmail`
-   - **NewValue:** **Dynamic content** → **StudentEmail** (from "Get Current Completed Data")
-   - **Actor Claims:** Leave blank for system
-   - **ActorRole Value:** Type `System`
-   - **ClientApp Value:** Type `Power Automate`
-   - **ActionAt:** **Expression** → `utcNow()`
-   - **FlowRunId:** **Expression** → `workflow()['run']['name']`
-   - **Notes:** Type `Completion notification sent to student`
 
 ---
 
@@ -592,11 +850,11 @@ To customize the email templates:
 
 ### Shared Mailbox Setup
 **Preferred Email Action:** "Send an email from a shared mailbox (V2)"
-- **Shared mailbox**: `coad-Fabrication Lab@lsu.edu`
+- **Shared mailbox**: `coad-fablab@lsu.edu`
 - Requires that the flow owner has "Send As" permissions on the shared mailbox
 
 **Alternative (if shared mailbox unavailable):** "Send an email (V2)"
-- Set Advanced option "From (Send as)" = `coad-Fabrication Lab@lsu.edu`
+- Set Advanced option "From (Send as)" = `coad-fablab@lsu.edu`
 - Requires "Send As" permission configured in Exchange Admin
 
 **How to configure retry policy on any action:**
@@ -701,7 +959,7 @@ Update these sections in the email templates for your lab:
 
 2. **Get Item Changes Failing**
    - **Problem:** ID parameter not binding correctly after trigger changes
-   - **Fix:** Re-bind Site Address/List Name, use expression `triggerBody()?['ID']` for ID
+   - **Fix:** Re-bind Site Address/List Name, use expression `triggerOutputs()?['body/ID']` for ID
 
 3. **Missing Critical Audit Fields**
    - **Problem:** Field change logs missing RequestID, ReqKey, NewValue, Actor Claims
