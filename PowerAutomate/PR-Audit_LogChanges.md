@@ -621,32 +621,20 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
 
 ```html
-<p>Good news! Your 3D print request has been reviewed and approved.</p>
-<p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/Title']} (@{outputs('Get_Current_Pending_Data')?['body/ReqKey']})</p>
-<p><strong>Method:</strong> @{outputs('Get_Current_Pending_Data')?['body/Method']?['Value']} (@{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']})</p>
-<p><strong>Printer:</strong> @{outputs('Get_Current_Pending_Data')?['body/Printer']?['Value']}</p>
+<p>Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},</p>
 <br>
-<p><strong>COST ESTIMATE:</strong></p>
-<ul>
-  <li><strong>Estimated Weight:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstimatedWeight']}g</li>
-  <li><strong>Estimated Print Time:</strong> @{outputs('Get_Current_Pending_Data')?['body/EstimatedTime']} hours</li>
-  <li><strong>Estimated Cost:</strong> $@{outputs('Get_Current_Pending_Data')?['body/EstimatedCost']}</li>
-</ul>
+<p>Before we start your print, please confirm via email that the below information looks correct.</p>
+<p><strong>Again, we will not run your print without your confirmation.</strong></p>
 <br>
-<p><strong>Please confirm you want to proceed with this estimate:</strong></p>
-<p><a href="[YOUR_FLOW_URL_HERE]&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
-<p><em>By clicking this link, you authorize us to begin printing your request.</em></p>
+<p><strong>The total approximate cost is:</strong> $@{if(empty(outputs('Get_Current_Pending_Data')?['body/EstimatedCost']), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
+<p><strong>Color/Material:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']} @{outputs('Get_Current_Pending_Data')?['body/Method']?['Value']}</p>
+<p><strong>Print Time:</strong> @{if(empty(outputs('Get_Current_Pending_Data')?['body/EstHours']), 'TBD', concat(outputs('Get_Current_Pending_Data')?['body/EstHours'], ' hours'))}</p>
+<p><strong>Start Time:</strong> TBD (will be scheduled after confirmation)</p>
 <br>
-<p><strong>Cost Details:</strong></p>
-<ul>
-  <li>Filament prints: $0.10 per gram (minimum $3.00)</li>
-  <li>Resin prints: $0.20 per gram (minimum $3.00)</li>
-  <li>Final cost may vary slightly based on actual material usage</li>
-  <li>Payment due at pickup</li>
-</ul>
+<p><strong>To confirm this estimate, click the button below:</strong></p>
+<p><a href="[YOUR_FLOW_URL_HERE]&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a></p>
 <br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
+<p>Thank you.</p>
 <br>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
