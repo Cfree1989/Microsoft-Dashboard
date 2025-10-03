@@ -555,9 +555,6 @@ Some display names differ from internal field names. Always use internal names i
   <li>Contact our staff if you have questions about this feedback</li>
 </ul>
 <br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
@@ -626,10 +623,9 @@ Some display names differ from internal field names. Always use internal names i
 <p>Before we start your print, please confirm via email that the below information looks correct.</p>
 <p><strong>Again, we will not run your print without your confirmation.</strong></p>
 <br>
-<p><strong>The total approximate cost is:</strong> $@{if(empty(outputs('Get_Current_Pending_Data')?['body/EstimatedCost']), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
-<p><strong>Color/Material:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']} @{outputs('Get_Current_Pending_Data')?['body/Method']?['Value']}</p>
-<p><strong>Print Time:</strong> @{if(empty(outputs('Get_Current_Pending_Data')?['body/EstHours']), 'TBD', concat(outputs('Get_Current_Pending_Data')?['body/EstHours'], ' hours'))}</p>
-<p><strong>Start Time:</strong> TBD (will be scheduled after confirmation)</p>
+<p><strong>The total approximate cost is:</strong> $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
+<p><strong>Color:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}</p>
+<p><strong>Print Time:</strong> @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}</p>
 <br>
 <p><strong>To confirm this estimate, click the button below:</strong></p>
 <p><a href="[YOUR_FLOW_URL_HERE]&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a></p>
@@ -708,10 +704,6 @@ Lab Hours:
 
 M-F 8:30 – 4:30</p>
 
-<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}" class="editor-link">View your request details</a></p>
-<p class="editor-paragraph"><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" class="editor-link">View all your requests</a>
-
-</p>
 <p class="editor-paragraph"><i><em class="editor-text-italic">This is an automated message from the LSU Digital Fabrication Lab.</em></i></p>
 ```
 

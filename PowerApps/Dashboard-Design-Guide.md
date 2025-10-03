@@ -250,7 +250,7 @@ Label.Color = RGBA(100, 100, 100, 1)
 
 // Printer Selection
 Icon.Icon = Icon.Print
-Label.Text = ThisItem.PrinterSelection
+Label.Text = ThisItem.Printer
 Label.Color = RGBA(70, 70, 70, 1)
 
 // Color Indicator (Circle)

@@ -440,7 +440,7 @@ Add these actions in order (moved out of the loop so they run once):
 <p><strong>Request:</strong> [Dynamic content: Outputs from Generate Standardized Display Name]</p>
 <p><strong>Request ID:</strong> [Dynamic content: Outputs from Generate ReqKey]</p>
 <p><strong>Method:</strong> [Dynamic content: Method from trigger]</p>
-<p><strong>Printer:</strong> [Dynamic content: PrinterSelection from trigger]</p>
+<p><strong>Printer:</strong> [Dynamic content: Printer from trigger]</p>
 <p><strong>Color:</strong> [Dynamic content: Color from trigger]</p>
 <br>
 <p><strong>Next Steps:</strong></p>

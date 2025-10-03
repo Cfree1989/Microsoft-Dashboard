@@ -412,7 +412,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - ProjectType (Choice) - Class Project; Research; Personal; Other
 - Color (Choice) - Material color preference
 - Method (Choice) - Filament; Resin
-- PrinterSelection (Choice) - Equipment and size constraints
+- Printer (Choice) - Equipment and size constraints
 - DueDate (Date) - Timeline planning
 - Notes (Multiple lines text) - Additional instructions
 
@@ -443,7 +443,7 @@ We received your 3D Print request.
 Request: [Title]
 Request ID: [ReqKey]
 Method: [Method]
-Printer: [PrinterSelection]
+Printer: [Printer]
 
 [View Request Link] | [View All Requests Link]
 

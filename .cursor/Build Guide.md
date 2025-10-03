@@ -195,11 +195,11 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | Student | Person | Required |
 | StudentEmail | Single line of text | Auto-filled by the form/flow |
 | Course Number | Number | Optional class number (e.g., 1001, 2050) |
-| Department | Choice | Architecture; Engineering; Art & Design; Business; Liberal Arts; Sciences; Other |
+| Discipline | Choice | Architecture; Engineering; Art & Design; Business; Liberal Arts; Sciences; Other |
 | ProjectType | Choice | Class Project; Research; Personal; Other |
 | Color | Choice | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
 | Method | Choice | Filament; Resin |
-| PrinterSelection | Choice | Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in) |
+| Printer | Choice | Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in) |
 | DueDate | Date | Optional |
 | Notes | Multiple lines of text | Plain text |
 
@@ -412,7 +412,7 @@ Update these URLs for your specific SharePoint site:
 
 ### A Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
-2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course Number, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes, **Attachments**.
+2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course Number, Discipline, ProjectType, Color, Method, Printer, DueDate, Notes, **Attachments**.
 3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, LastAction, LastActionBy, LastActionAt, NeedsAttention, Expanded.
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
@@ -677,7 +677,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 ## Part 4 — Testing (End-to-End)
 
 1. As a **student** account: Submit a new request with an attachment.
-   - Fill out student fields: Title, Course Number, Department, ProjectType, Color, Method, PrinterSelection, DueDate, Notes
+   - Fill out student fields: Title, Course Number, Discipline, ProjectType, Color, Method, Printer, DueDate, Notes
    - Test **Printer Selection filtering**: Select "Resin" method → only "Form 3" should appear in printer choices
    - Open the **My Requests** view link to confirm the new item appears for the student:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`

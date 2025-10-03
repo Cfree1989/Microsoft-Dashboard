@@ -751,12 +751,12 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 | ReqKey | Single line of text | Auto-filled by flow (REQ-00042) | Unique tracking identifier |
 | Student | Person | Required, auto-filled | Requester identification |
 | StudentEmail | Single line of text | Auto-filled from account | Contact information |
-| Course | Single line of text | Optional | Academic context |
-| Department | Choice | Architecture; Engineering; Art & Design; Other | Organizational routing |
+| Course Number | Number | Optional | Academic context |
+| Discipline | Choice | Architecture; Engineering; Art & Design; Other | Organizational routing |
 | ProjectType | Choice | Class Project; Research; Personal; Other | Priority/billing context |
 | Color | Choice | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other | Aesthetic preference |
 | Method | Choice | Filament; Resin | Print technology selection |
-| Printer Selection | Choice | See printer specs below | Equipment + size constraints |
+| Printer | Choice | See printer specs below | Equipment + size constraints |
 | DueDate | Date | Optional | Timeline planning |
 | Notes | Multiple lines of text | Plain text | Additional instructions |
 

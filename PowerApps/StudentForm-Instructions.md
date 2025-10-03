@@ -31,7 +31,7 @@ Set **Visible = false** for: `Status`, `Priority`, `AssignedTo`, `StaffNotes`, `
 
 ## Printer Selection Logic
 
-Add conditional visibility for **PrinterSelection** choices based on **Method**:
+Add conditional visibility for **Printer** choices based on **Method**:
 
 ```powerfx
 // For Printer Selection card, modify the Choices property:
