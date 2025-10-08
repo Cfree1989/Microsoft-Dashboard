@@ -30,15 +30,17 @@
 **What this does:** Sets up the trigger to accept a RequestID parameter from the confirmation link URL and generates the schema for validation.
 
 **UI steps:**
-1. In the **When an HTTP request is received** trigger card
-2. Click **Use sample payload to generate schema**
-3. **Paste this sample JSON:**
+1. Click on the **When an HTTP request is received** trigger card to expand it
+2. Ensure you're on the **Parameters** tab
+3. **Who can trigger the flow?** Should be set to **Any user in my tenant** (default)
+4. Under **Request Body JSON Schema**, click the **Use sample payload to generate schema** link
+5. In the dialog that opens, **paste this sample JSON:**
 ```json
 {
   "RequestID": "123"
 }
 ```
-4. Click **Done**
+6. Click **Done**
 
 **Auto-generated Request Body JSON Schema:**
 ```json
@@ -53,11 +55,13 @@
 ```
 
 **⚠️ Important Notes:**
+- The **HTTP URL** field shows "URL will be generated after save" until you save the flow
 - After saving, the trigger will generate an **HTTP POST URL** that you'll use in email templates
 - The RequestID parameter will be passed as a query string parameter in the URL
 - The trigger URL includes a signature for security
+- **"Any user in my tenant"** means any LSU user can trigger this flow via the link (appropriate for student confirmations)
 
-**Test Step 2:** Save → Schema should appear in trigger configuration
+**Test Step 2:** Save → Schema should appear in "Request Body JSON Schema" field and HTTP URL should be generated
 
 ---
 
@@ -652,16 +656,23 @@
 
 **What this does:** Retrieves the HTTP endpoint URL that you'll embed in estimate emails for students to click.
 
+**✅ COMPLETED:** Your HTTP POST URL has been retrieved and documented.
+
 **UI steps:**
 1. **Save** the flow
 2. Click on the **When an HTTP request is received** trigger card
 3. **Copy the HTTP POST URL** (appears after saving)
-4. The URL will look like:
+
+**Your HTTP POST URL:**
 ```
-https://prod-12.westus.logic.azure.com:443/workflows/12345678901234567890/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE
+https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1
 ```
 
-**⚠️ Important:** This is a permanent URL that won't change unless you recreate the flow.
+**⚠️ Important Notes:**
+- This is a permanent URL that won't change unless you recreate the flow
+- This URL is in the **new Power Platform format** (not the legacy `logic.azure.com` format)
+- **Migration-compliant:** Will continue working after November 2025 deadline
+- If you recreate the flow, you'll get a new URL and need to update the PR-Audit email template
 
 ---
 
@@ -669,24 +680,22 @@ https://prod-12.westus.logic.azure.com:443/workflows/12345678901234567890/trigge
 
 **What this does:** Adds the confirmation link to the estimate email template so students can click it.
 
+**✅ COMPLETED:** The URL has been added to the PR-Audit flow documentation.
+
 **Instructions:**
 1. Open your **PR-Audit: Log changes + Email notifications** flow
 2. Find the **Send Estimate Email** action (in the "Check Status Pending" branch)
-3. **Update the confirmation button HTML:**
+3. **Copy and paste the confirmation button HTML from the PR-Audit_LogChanges.md file (line 631)**
 
-**Replace this placeholder:**
+**Your actual flow URL (already configured in documentation):**
 ```html
-<a href="[YOUR_FLOW_URL_HERE]&RequestID=@{triggerOutputs()?['body/ID']}" ...>
-```
-
-**With your actual flow URL:**
-```html
-<a href="https://prod-12.westus.logic.azure.com:443/workflows/YOUR_WORKFLOW_ID/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR_SIGNATURE&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a>
+<a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a>
 ```
 
 **⚠️ Critical Details:**
-- Keep the `&RequestID=@{triggerOutputs()?['body/ID']}` at the end
+- The `&RequestID=@{triggerOutputs()?['body/ID']}` at the end is REQUIRED
 - The expression will automatically insert the correct ID when emails are sent
+- This URL is already in the new Power Platform format (migration-compliant)
 - Test the link after updating to ensure it works
 
 ---
