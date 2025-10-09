@@ -649,15 +649,17 @@
 2. Click on the **When an HTTP request is received** trigger card
 3. **Copy the HTTP POST URL** (appears after saving)
 
-**Your HTTP POST URL:**
+**Your HTTP URL (updated for GET requests):**
 ```
 https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1
 ```
 
 **⚠️ Important Notes:**
+- This URL now accepts **GET requests** (works with email links)
 - This is a permanent URL that won't change unless you recreate the flow
 - This URL is in the **new Power Platform format** (not the legacy `logic.azure.com` format)
 - **Migration-compliant:** Will continue working after November 2025 deadline
+- To use in emails, append: `&RequestID=@{triggerOutputs()?['body/ID']}`
 - If you recreate the flow, you'll get a new URL and need to update the PR-Audit email template
 
 ---
@@ -673,15 +675,16 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 2. Find the **Send Estimate Email** action (in the "Check Status Pending" branch)
 3. **Copy and paste the confirmation button HTML from the PR-Audit_LogChanges.md file (line 631)**
 
-**Your actual flow URL (already configured in documentation):**
+**Your actual confirmation button HTML (COPY THIS EXACTLY):**
 ```html
-<a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a>
+<a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a>
 ```
 
 **⚠️ Critical Details:**
 - The `&RequestID=@{triggerOutputs()?['body/ID']}` at the end is REQUIRED
 - The expression will automatically insert the correct ID when emails are sent
-- This URL is already in the new Power Platform format (migration-compliant)
+- This URL now accepts **GET requests** (fixed for email links)
+- This URL is in the new Power Platform format (migration-compliant)
 - Test the link after updating to ensure it works
 
 ---

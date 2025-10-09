@@ -628,16 +628,16 @@ Some display names differ from internal field names. Always use internal names i
 <p><strong>Print Time:</strong> @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}</p>
 <br>
 <p><strong>To confirm this estimate, click the button below:</strong></p>
-<p><a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Confirm and Proceed</a></p>
+<p><a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
 <br>
 <p>Thank you.</p>
 <br>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-**✅ URL CONFIGURED:** The confirmation link is set to your PR-Confirm flow HTTP trigger URL. The `&RequestID=@{triggerOutputs()?['body/ID']}` parameter at the end ensures each email contains the correct request ID for that specific print request.
+**✅ URL CONFIGURED:** The confirmation link is set to your PR-Confirm flow HTTP trigger URL (configured for GET requests to work with email links). The `&RequestID=@{triggerOutputs()?['body/ID']}` parameter at the end ensures each email contains the correct request ID for that specific print request.
 
-**⚠️ If you recreate the PR-Confirm flow:** You'll need to get the new HTTP POST URL by: (1) Open the PR-Confirm flow in Power Automate, (2) Click on the "When an HTTP request is received" trigger, (3) Copy the new "HTTP POST URL", (4) Update this link with the new URL while keeping the `&RequestID=@{triggerOutputs()?['body/ID']}` parameter at the end.
+**⚠️ If you recreate the PR-Confirm flow:** You'll need to get the new HTTP URL by: (1) Open the PR-Confirm flow in Power Automate, (2) Click on the "When an HTTP request is received" trigger, (3) Copy the new "HTTP URL", (4) Update this link with the new URL while keeping the `&RequestID=@{triggerOutputs()?['body/ID']}` parameter at the end. **IMPORTANT:** Ensure the trigger accepts GET requests (not just POST).
 
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
