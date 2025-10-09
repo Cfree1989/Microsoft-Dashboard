@@ -286,7 +286,13 @@ Add this additional column to the `PrintRequests` list for structured rejection 
     "padding": "4px 8px",
     "border-radius": "16px",
     "font-weight": 600,
-    "color": "#ffffff",
+    "color": {
+      "operator": "?",
+      "operands": [
+        { "operator": "==", "operands": [ "@currentField", "Pending" ] }, "#000000",
+        "#ffffff"
+      ]
+    },
     "background-color": {
       "operator": "?",
       "operands": [
@@ -305,6 +311,10 @@ Add this additional column to the `PrintRequests` list for structured rejection 
   "txtContent": "@currentField"
 }
 ```
+
+**⚠️ Color Accessibility:**
+- **Pending** uses dark text (#000000) on yellow background (#FFB900) for readability
+- All other statuses use white text (#ffffff) on dark backgrounds for high contrast
 
 ### 3. Create the list: `AuditLog`
 1. **New → List** → name: `AuditLog`.

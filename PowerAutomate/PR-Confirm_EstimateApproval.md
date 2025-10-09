@@ -33,35 +33,21 @@
 1. Click on the **When an HTTP request is received** trigger card to expand it
 2. Ensure you're on the **Parameters** tab
 3. **Who can trigger the flow?** Should be set to **Any user in my tenant** (default)
-4. Under **Request Body JSON Schema**, click the **Use sample payload to generate schema** link
-5. In the dialog that opens, **paste this sample JSON:**
-```json
-{
-  "RequestID": "123"
-}
-```
-6. Click **Done**
-
-**Auto-generated Request Body JSON Schema:**
-```json
-{
-    "type": "object",
-    "properties": {
-        "RequestID": {
-            "type": "string"
-        }
-    }
-}
-```
+4. **CRITICAL: HTTP Method Configuration**
+   - If you see a **Method** dropdown, select **GET** (email links always use GET requests)
+   - Modern triggers accept both GET and POST by default
+   - **Do NOT** configure a Request Body JSON Schema - we're using query parameters instead
+5. The trigger is now ready - no schema needed for GET requests with query parameters
 
 **⚠️ Important Notes:**
 - The **HTTP URL** field shows "URL will be generated after save" until you save the flow
-- After saving, the trigger will generate an **HTTP POST URL** that you'll use in email templates
-- The RequestID parameter will be passed as a query string parameter in the URL
+- After saving, the trigger will generate an **HTTP URL** that accepts GET requests (works with email links)
+- The RequestID parameter will be passed as a query string parameter in the URL (e.g., `?RequestID=123`)
 - The trigger URL includes a signature for security
 - **"Any user in my tenant"** means any LSU user can trigger this flow via the link (appropriate for student confirmations)
+- **GET vs POST**: Email links always send GET requests, so this trigger MUST accept GET method
 
-**Test Step 2:** Save → Schema should appear in "Request Body JSON Schema" field and HTTP URL should be generated
+**Test Step 2:** Save → HTTP URL should be generated in the trigger (copy this for email templates)
 
 ---
 
@@ -149,7 +135,7 @@
 **Yes Branch:** Status is Pending → Process confirmation
 **No Branch:** Status is not Pending → Return error response
 
-**Test Step 5:** Save → Change request status to "In Review" → Click link → Should follow No branch
+**Test Step 5:** Save → Change request status to "Uploaded" (or any status other than "Pending") → Click link → Should follow No branch and show error page
 
 ---
 
@@ -806,14 +792,37 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ## Troubleshooting Guide
 
-### Issue 1: "Flow not found" Error
+### Issue 1: "TriggerRequestMethodNotValid" or Invalid HTTP Method Error
+
+**Symptoms:**
+- Clicking email link shows error: `"The HTTP method for this request is not valid: expected 'POST' and actual 'GET'"`
+- Browser shows JSON error message about method mismatch
+- Error code: `TriggerRequestMethodNotValid`
+
+**Fix:**
+1. Open your flow in Power Automate → Edit
+2. Click on the **"When an HTTP request is received"** trigger
+3. Look for a **Method** dropdown or setting
+4. Change it from POST to **GET** (or enable both GET and POST)
+5. If no Method selector exists, the trigger may have been created with an old template:
+   - Delete the trigger and add it again from scratch
+   - Leave the Request Body JSON Schema blank (not needed for GET)
+   - Save to generate a new URL
+   - Update email templates with the new URL
+6. **Save** the flow and test the link again
+
+**Root Cause:** Email links always send GET requests, but the flow was configured to only accept POST requests.
+
+---
+
+### Issue 2: "Flow not found" Error
 
 **Symptoms:**
 - Clicking email link shows "Flow not found" or 404 error
 - Browser shows Azure Logic Apps error page
 
 **Fix:**
-1. Verify the HTTP POST URL is copied correctly from the trigger
+1. Verify the HTTP URL is copied correctly from the trigger
 2. Ensure the flow is **turned on** in Power Automate
 3. Check that the flow wasn't deleted or recreated (URL changes on recreation)
 4. Verify you saved the flow after configuring the HTTP trigger
@@ -821,7 +830,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 2: "RequestID missing" Error Page
+### Issue 3: "RequestID missing" Error Page
 
 **Symptoms:**
 - Email link shows "Invalid Confirmation Link" error
@@ -835,7 +844,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 3: Confirmation Not Working (Invalid Status Error)
+### Issue 4: Confirmation Not Working (Invalid Status Error)
 
 **Symptoms:**
 - Click link but get "Unable to Process Confirmation" error
@@ -850,7 +859,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 4: Permission Errors
+### Issue 5: Permission Errors
 
 **Symptoms:**
 - Flow run shows "Access denied" or permission errors
@@ -865,7 +874,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 5: Email Link Broken or Truncated
+### Issue 6: Email Link Broken or Truncated
 
 **Symptoms:**
 - Link in email is cut off
@@ -881,7 +890,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 6: Success Page Shows But Status Doesn't Update
+### Issue 7: Success Page Shows But Status Doesn't Update
 
 **Symptoms:**
 - Success page appears correctly
@@ -898,7 +907,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 7: HTML Page Not Rendering Correctly
+### Issue 8: HTML Page Not Rendering Correctly
 
 **Symptoms:**
 - Success/error page shows raw HTML code instead of formatted page
@@ -914,7 +923,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 8: Flow Times Out
+### Issue 9: Flow Times Out
 
 **Symptoms:**
 - Long wait after clicking link
@@ -930,7 +939,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 ---
 
-### Issue 9: Expressions Not Evaluating
+### Issue 10: Expressions Not Evaluating
 
 **Symptoms:**
 - Literal text like `@{triggerOutputs()...}` appears in output
