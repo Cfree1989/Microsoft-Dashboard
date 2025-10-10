@@ -537,25 +537,28 @@ Some display names differ from internal field names. Always use internal names i
    - **Subject:** Click **Expression** → Type `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
 
-```html
-<p>Unfortunately, your 3D Print request has been rejected by our staff.</p>
-<p><strong>Request:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})</p>
-<p><strong>Method:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}</p>
-<p><strong>Printer Requested:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}</p>
-<br>
-<p><strong>Reason for Rejection:</strong></p>
-<p>@{outputs('Compose_Formatted_Reasons_Text')}</p>
-<p><strong>Additional Details:</strong> @{outputs('Get_Current_Rejected_Data')?['body/Notes']}</p>
-<br>
-<p><strong>Next Steps:</strong></p>
-<ul>
-  <li>Review the specific rejection reason above</li>
-  <li>Make necessary adjustments to your design or request</li>
-  <li>Submit a new corrected request through the Fabrication Lab website</li>
-  <li>Contact our staff if you have questions about this feedback</li>
-</ul>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+Unfortunately, your 3D Print request has been rejected by our staff.
+
+REQUEST DETAILS:
+- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})
+- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}
+- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}
+
+REASON FOR REJECTION:
+@{outputs('Compose_Formatted_Reasons_Text')}
+
+ADDITIONAL DETAILS:
+@{outputs('Get_Current_Rejected_Data')?['body/Notes']}
+
+NEXT STEPS:
+• Review the specific rejection reason above
+• Make necessary adjustments to your design or request
+• Submit a new corrected request through the Fabrication Lab website
+• Contact our staff if you have questions about this feedback
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
@@ -617,36 +620,41 @@ Some display names differ from internal field names. Always use internal names i
    - **Subject:** Click **Expression** → Type `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
    - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
 
-```html
-<p>Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},</p>
-<p>&nbsp;</p>
-<p>Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.</p>
-<p><strong>We will not run your print without your confirmation.</strong></p>
-<p>&nbsp;</p>
-<p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}</p>
-<p><strong>Estimated Cost:</strong> $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
-<p><strong>Color:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}</p>
-<p><strong>Print Time:</strong> @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}</p>
-<p>&nbsp;</p>
-<p><strong>To confirm this estimate:</strong></p>
-<p>1. Click the button below to view your request</p>
-<p>2. Find the "StudentConfirmed" field</p>
-<p>3. Change it from "No" to "Yes"</p>
-<p>4. Click "Save" at the top</p>
-<p>&nbsp;</p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View and Confirm My Request</a></p>
-<p>&nbsp;</p>
-<p><strong>Tip:</strong> The link will open your requests in SharePoint. Your request should be at the top of the list.</p>
-<p>&nbsp;</p>
-<p>If you have any questions or concerns about the estimate, please contact us before confirming.</p>
-<p>&nbsp;</p>
-<p>Thank you,</p>
-<p><strong>LSU Digital Fabrication Lab</strong></p>
-<p><strong>Lab Hours:</strong> Monday-Friday 8:30 AM - 4:30 PM</p>
-<p><strong>Email:</strong> coad-fablab@lsu.edu</p>
-<p><strong>Location:</strong> Room 145 Atkinson Hall</p>
-<p>&nbsp;</p>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+```
+Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},
+
+Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.
+
+⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.
+
+ESTIMATE DETAILS:
+- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}
+- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}
+- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}
+- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}
+
+TO CONFIRM THIS ESTIMATE:
+1. Click the link below to view your request
+2. Find the "StudentConfirmed" field
+3. Change it from "No" to "Yes"
+4. Click "Save" at the top
+
+View and Confirm Your Request:
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+
+TIP: The link will open your requests in SharePoint. Your request should be at the top of the list.
+
+If you have any questions or concerns about the estimate, please contact us before confirming.
+
+Thank you,
+LSU Digital Fabrication Lab
+
+Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+Email: coad-fablab@lsu.edu
+Location: Room 145 Atkinson Hall
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
 **✅ URL CONFIGURED:** The confirmation link now directs students to the "My Requests" SharePoint view where they can toggle the StudentConfirmed field to confirm their estimate. This approach:
@@ -723,17 +731,23 @@ Some display names differ from internal field names. Always use internal names i
    - **Subject:** Click **Expression** → Type `concat('Your 3D print is ready for pickup – ', outputs('Get_Current_Completed_Data')?['body/ReqKey'])`
    - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
 
-```html
-<p class="editor-paragraph">Your print is ready for pick up in the Fabrication Lab in room 145 Atkinson.
+```
+Your print is ready for pick up in the Fabrication Lab!
 
-TigerCASH is the only form of payment in the lab.
+PICKUP INFORMATION:
+📍 Location: Room 145 Atkinson Hall
+💳 Payment: TigerCASH only
+🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 
+WHAT TO BRING:
+• Your student ID
+• TigerCASH for payment
 
-Lab Hours:
+Thank you,
+LSU Digital Fabrication Lab
 
-M-F 8:30 – 4:30</p>
-
-<p class="editor-paragraph"><i><em class="editor-text-italic">This is an automated message from the LSU Digital Fabrication Lab.</em></i></p>
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
 **Action 4: Log Completion Email Sent**

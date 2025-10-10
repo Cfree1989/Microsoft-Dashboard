@@ -107,45 +107,42 @@ Instead of creating a separate HTTP-triggered flow, we'll:
 5. Click on the action to expand it
 6. Update the **Body** field with the new HTML below:
 
-**New Email Body HTML:**
-```html
-<p>Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},</p>
-<br>
-<p>Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.</p>
-<p><strong>⚠️ We will not run your print without your confirmation.</strong></p>
-<br>
-<div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; border-left: 4px solid #0078d4;">
-    <p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}</p>
-    <p><strong>Estimated Cost:</strong> $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
-    <p><strong>Color:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}</p>
-    <p><strong>Print Time:</strong> @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}</p>
-</div>
-<br>
-<p><strong>📋 To confirm this estimate:</strong></p>
-<ol>
-    <li>Click the button below to view your request</li>
-    <li>Find the <strong>"StudentConfirmed"</strong> field</li>
-    <li>Change it from <strong>"No"</strong> to <strong>"Yes"</strong></li>
-    <li>Click <strong>"Save"</strong> at the top</li>
-</ol>
-<br>
-<p style="text-align: center;">
-    <a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" style="background-color: #28a745; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">📝 View & Confirm My Request</a>
-</p>
-<br>
-<p style="background-color: #fff3cd; padding: 10px; border-radius: 5px;"><strong>💡 Tip:</strong> The link will open your requests in SharePoint. Your request should be at the top of the list.</p>
-<br>
-<p>If you have any questions or concerns about the estimate, please contact us before confirming.</p>
-<br>
-<p>Thank you,<br>
-<strong>LSU Digital Fabrication Lab</strong></p>
-<p style="font-size: 12px; color: #666;">
-    <strong>Lab Hours:</strong> Monday-Friday 8:30 AM - 4:30 PM<br>
-    <strong>Email:</strong> coad-fablab@lsu.edu<br>
-    <strong>Location:</strong> Room 145 Atkinson Hall
-</p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+**New Email Body (Plain Text):**
+```
+Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},
+
+Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.
+
+⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.
+
+ESTIMATE DETAILS:
+- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}
+- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}
+- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}
+- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}
+
+TO CONFIRM THIS ESTIMATE:
+1. Click the link below to view your request
+2. Find the "StudentConfirmed" field
+3. Change it from "No" to "Yes"
+4. Click "Save" at the top
+
+View and Confirm Your Request:
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+
+TIP: The link will open your requests in SharePoint. Your request should be at the top of the list.
+
+If you have any questions or concerns about the estimate, please contact us before confirming.
+
+Thank you,
+LSU Digital Fabrication Lab
+
+Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+Email: coad-fablab@lsu.edu
+Location: Room 145 Atkinson Hall
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
 **✅ Test Step 3:** Save the flow → Test by changing a request to "Pending" → Check email for new format
@@ -248,45 +245,38 @@ Instead of creating a separate HTTP-triggered flow, we'll:
    ```
    - **Body:** Paste HTML below:
 
-```html
-<p>Hi @{triggerOutputs()?['body/Student']?['DisplayName']},</p>
-<br>
-<p>✅ <strong>Your estimate has been confirmed successfully!</strong></p>
-<br>
-<div style="background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 4px solid #28a745;">
-    <p><strong>Request:</strong> @{triggerOutputs()?['body/ReqKey']}</p>
-    <p><strong>Status:</strong> Ready to Print</p>
-    <p><strong>Confirmed:</strong> @{formatDateTime(utcNow(), 'MMM dd, yyyy h:mm tt')}</p>
-</div>
-<br>
-<p><strong>📋 What happens next:</strong></p>
-<ul>
-    <li>Your request is now in our print queue</li>
-    <li>We'll begin preparing and printing your job</li>
-    <li>You'll receive another email when it's completed and ready for pickup</li>
-    <li>Payment will be due at pickup (TigerCASH only)</li>
-</ul>
-<br>
-<p><strong>💡 Important reminders:</strong></p>
-<ul>
-    <li>Print times are estimates and may vary</li>
-    <li>Final cost may differ slightly based on actual material used</li>
-    <li>Bring your student ID for pickup</li>
-</ul>
-<br>
-<p style="text-align: center;">
-    <a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" style="background-color: #0078d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">📄 View My Requests</a>
-</p>
-<br>
-<p>If you have any questions, feel free to contact us!</p>
-<br>
-<p>Thank you,<br>
-<strong>LSU Digital Fabrication Lab</strong></p>
-<p style="font-size: 12px; color: #666;">
-    <strong>Lab Hours:</strong> Monday-Friday 8:30 AM - 4:30 PM<br>
-    <strong>Email:</strong> coad-fablab@lsu.edu<br>
-    <strong>Location:</strong> Room 145 Atkinson Hall
-</p>
+```
+Hi @{triggerOutputs()?['body/Student']?['DisplayName']},
+
+✅ YOUR ESTIMATE HAS BEEN CONFIRMED SUCCESSFULLY!
+
+CONFIRMATION DETAILS:
+- Request: @{triggerOutputs()?['body/ReqKey']}
+- Status: Ready to Print
+- Confirmed: @{formatDateTime(utcNow(), 'MMM dd, yyyy h:mm tt')}
+
+WHAT HAPPENS NEXT:
+• Your request is now in our print queue
+• We'll begin preparing and printing your job
+• You'll receive another email when it's completed and ready for pickup
+• Payment will be due at pickup (TigerCASH only)
+
+IMPORTANT REMINDERS:
+• Print times are estimates and may vary
+• Final cost may differ slightly based on actual material used
+• Bring your student ID for pickup
+
+View My Requests:
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+
+If you have any questions, feel free to contact us!
+
+Thank you,
+LSU Digital Fabrication Lab
+
+Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+Email: coad-fablab@lsu.edu
+Location: Room 145 Atkinson Hall
 ```
 
 **✅ Test Step 5:** Confirm a test request → Check student's email for confirmation receipt

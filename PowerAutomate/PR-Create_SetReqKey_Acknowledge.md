@@ -434,26 +434,30 @@ Add these actions in order (moved out of the loop so they run once):
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **StudentEmail** (from Update item)
    - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
-   - **Body:** Use **Dynamic content** and **Expressions** to build this HTML:
-```html
-<p>We received your 3D Print request.</p>
-<p><strong>Request:</strong> [Dynamic content: Outputs from Generate Standardized Display Name]</p>
-<p><strong>Request ID:</strong> [Dynamic content: Outputs from Generate ReqKey]</p>
-<p><strong>Method:</strong> [Dynamic content: Method from trigger]</p>
-<p><strong>Printer:</strong> [Dynamic content: Printer from trigger]</p>
-<p><strong>Color:</strong> [Dynamic content: Color from trigger]</p>
-<br>
-<p><strong>Next Steps:</strong></p>
-<ul>
-  <li>Our team will review your request for technical feasibility</li>
-  <li>You'll receive updates as your request progresses through our queue</li>
-  <li>Estimated review time: 1-2 business days</li>
-  </ul>
-<br>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID from trigger]">View your request details</a></p>
-<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a></p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+   - **Body:** Use **Dynamic content** and **Expressions** to build this plain text email:
+```
+We received your 3D Print request.
+
+REQUEST DETAILS:
+- Request: [Dynamic content: Outputs from Generate Standardized Display Name]
+- Request ID: [Dynamic content: Outputs from Generate ReqKey]
+- Method: [Dynamic content: Method from trigger]
+- Printer: [Dynamic content: Printer from trigger]
+- Color: [Dynamic content: Color from trigger]
+
+NEXT STEPS:
+• Our team will review your request for technical feasibility
+• You'll receive updates as your request progresses through our queue
+• Estimated review time: 1-2 business days
+
+View your request details:
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID from trigger]
+
+View all your requests:
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
 **How to build this in Power Automate:**
