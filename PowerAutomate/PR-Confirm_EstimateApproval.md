@@ -247,7 +247,7 @@
 4. **Fill in all fields:**
    - **Status Code:** Type `200`
    - **Headers:** Leave blank
-   - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
+   - **Body:** Click directly in the Body field → Paste the HTML below (no code view needed - paste directly):
 
 ```html
 <!DOCTYPE html>
@@ -517,7 +517,7 @@
 4. **Fill in all fields:**
    - **Status Code:** Type `400`
    - **Headers:** Leave blank
-   - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
+   - **Body:** Click directly in the Body field → Paste the HTML below (no code view needed - paste directly):
 
 ```html
 <!DOCTYPE html>
@@ -677,12 +677,13 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 
 **Your actual confirmation button HTML (COPY THIS EXACTLY):**
 ```html
-<a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{triggerOutputs()?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a>
+<a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{outputs('Get_Current_Pending_Data')?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a>
 ```
 
 **⚠️ Critical Details:**
-- The `&RequestID=@{triggerOutputs()?['body/ID']}` at the end is REQUIRED
+- The `&RequestID=@{outputs('Get_Current_Pending_Data')?['body/ID']}` at the end is REQUIRED
 - The expression will automatically insert the correct ID when emails are sent
+- Uses `Get_Current_Pending_Data` for consistency with other email fields
 - This URL now accepts **GET requests** (fixed for email links)
 - This URL is in the new Power Platform format (migration-compliant)
 - Test the link after updating to ensure it works
@@ -953,7 +954,7 @@ https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.c
 1. Verify expressions are in correct format: `@{expression}`
 2. Check action names in expressions match exactly (spaces = underscores)
 3. Ensure expressions are in HTML body, not inside HTML attributes without proper encoding
-4. Use Code View (`</>`) when pasting HTML with expressions
+4. Paste HTML directly into the Body field (Power Automate will process expressions automatically)
 5. Test expressions in a Compose action first to verify syntax
 
 ---
