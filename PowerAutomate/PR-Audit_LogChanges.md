@@ -619,25 +619,52 @@ Some display names differ from internal field names. Always use internal names i
 
 ```html
 <p>Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},</p>
-<br>
-<p>Before we start your print, please confirm via email that the below information looks correct.</p>
-<p><strong>Again, we will not run your print without your confirmation.</strong></p>
-<br>
-<p><strong>The total approximate cost is:</strong> $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
+<p>&nbsp;</p>
+<p>Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.</p>
+<p><strong>We will not run your print without your confirmation.</strong></p>
+<p>&nbsp;</p>
+<p><strong>Request:</strong> @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}</p>
+<p><strong>Estimated Cost:</strong> $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}</p>
 <p><strong>Color:</strong> @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}</p>
 <p><strong>Print Time:</strong> @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}</p>
-<br>
-<p><strong>To confirm this estimate, click the button below:</strong></p>
-<p><a href="https://default2d4dad3f50ae47d983a09ae2b1f466.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/53d9ccc4cb0b4790a3ae32d80490151b/triggers/manual/paths/invoke?api-version=1&RequestID=@{outputs('Get_Current_Pending_Data')?['body/ID']}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">✅ Yes, proceed with printing</a></p>
-<br>
-<p>Thank you.</p>
-<br>
+<p>&nbsp;</p>
+<p><strong>To confirm this estimate:</strong></p>
+<p>1. Click the button below to view your request</p>
+<p>2. Find the "StudentConfirmed" field</p>
+<p>3. Change it from "No" to "Yes"</p>
+<p>4. Click "Save" at the top</p>
+<p>&nbsp;</p>
+<p><a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View and Confirm My Request</a></p>
+<p>&nbsp;</p>
+<p><strong>Tip:</strong> The link will open your requests in SharePoint. Your request should be at the top of the list.</p>
+<p>&nbsp;</p>
+<p>If you have any questions or concerns about the estimate, please contact us before confirming.</p>
+<p>&nbsp;</p>
+<p>Thank you,</p>
+<p><strong>LSU Digital Fabrication Lab</strong></p>
+<p><strong>Lab Hours:</strong> Monday-Friday 8:30 AM - 4:30 PM</p>
+<p><strong>Email:</strong> coad-fablab@lsu.edu</p>
+<p><strong>Location:</strong> Room 145 Atkinson Hall</p>
+<p>&nbsp;</p>
 <p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
 ```
 
-**✅ URL CONFIGURED:** The confirmation link is set to your PR-Confirm flow HTTP trigger URL (configured for GET requests to work with email links). The `&RequestID=@{outputs('Get_Current_Pending_Data')?['body/ID']}` parameter at the end ensures each email contains the correct request ID for that specific print request.
+**✅ URL CONFIGURED:** The confirmation link now directs students to the "My Requests" SharePoint view where they can toggle the StudentConfirmed field to confirm their estimate. This approach:
+- Uses SharePoint's built-in authentication (no HTTP trigger issues)
+- Students only see their own requests (automatic security)
+- No separate PR-Confirm flow needed (PR-Audit handles confirmation detection)
+- More reliable and simpler than HTTP trigger approach
 
-**⚠️ If you recreate the PR-Confirm flow:** You'll need to get the new HTTP URL by: (1) Open the PR-Confirm flow in Power Automate, (2) Click on the "When an HTTP request is received" trigger, (3) Copy the new "HTTP URL", (4) Update this link with the new URL while keeping the `&RequestID=@{outputs('Get_Current_Pending_Data')?['body/ID']}` parameter at the end. **IMPORTANT:** Ensure the trigger accepts GET requests (not just POST).
+**📋 How it works:**
+1. Student clicks link → Opens "My Requests" view in SharePoint
+2. Student finds their request (should be at top with Status = "Pending")
+3. Student changes StudentConfirmed from "No" to "Yes" → Clicks Save
+4. PR-Audit flow detects the change → Updates Status to "Ready to Print" → Logs confirmation
+
+**⚠️ Prerequisites:** Before using this email, ensure you've completed the setup in `PR-Confirm_EstimateApproval-SharePoint.md`:
+- Added StudentConfirmed field to PrintRequests list
+- Verified "My Requests" view security settings
+- Added confirmation detection logic to PR-Audit flow (see Step 4 of SharePoint implementation guide)
 
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
