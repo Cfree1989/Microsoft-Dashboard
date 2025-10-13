@@ -8,18 +8,256 @@
 
 ## Table of Contents
 
-1. [Test Scope Overview](#test-scope-overview)
-2. [Prerequisites](#prerequisites)
-3. [Test Data Requirements](#test-data-requirements)
-4. [Testing Approach](#testing-approach)
-5. [Flow A Tests (PR-Create)](#flow-a-tests-pr-create)
-6. [Flow B Tests (PR-Audit)](#flow-b-tests-pr-audit)
-7. [Flow C Tests (PR-Action)](#flow-c-tests-pr-action)
-8. [Integration Tests](#integration-tests)
-9. [Error Scenarios](#error-scenarios)
-10. [Regression Test Suite](#regression-test-suite)
-11. [Test Result Template](#test-result-template)
-12. [Troubleshooting Guide](#troubleshooting-guide)
+1. [⚡ Quick Start Testing](#quick-start-testing) **(Start Here! - 30 minutes)**
+2. [Test Scope Overview](#test-scope-overview)
+3. [Prerequisites](#prerequisites)
+4. [Test Data Requirements](#test-data-requirements)
+5. [Testing Approach](#testing-approach)
+6. [Flow A Tests (PR-Create)](#flow-a-tests-pr-create)
+7. [Flow B Tests (PR-Audit)](#flow-b-tests-pr-audit)
+8. [Flow C Tests (PR-Action)](#flow-c-tests-pr-action)
+9. [Integration Tests](#integration-tests)
+10. [Error Scenarios](#error-scenarios)
+11. [Regression Test Suite](#regression-test-suite)
+12. [Test Result Template](#test-result-template)
+13. [Troubleshooting Guide](#troubleshooting-guide)
+
+---
+
+## ⚡ Quick Start Testing
+
+**⏱️ Time Required:** 30 minutes  
+**🎯 Purpose:** Verify critical functionality is working before diving into comprehensive testing
+
+### Who Should Use This Section?
+
+✅ **First-time testers** - Get started quickly  
+✅ **Post-deployment validation** - Confirm system is working  
+✅ **After flow changes** - Quick smoke test  
+✅ **Time-constrained testing** - Essential checks only
+
+**For comprehensive testing**, see the full test suites starting at [Flow A Tests](#flow-a-tests-pr-create).
+
+---
+
+### Essential Test Suite (8 Critical Tests)
+
+These 8 tests cover the most important functionality across all 3 flows.
+
+---
+
+#### ✅ QUICK-01: Create Valid Request (Flow A)
+
+**What this tests:** End-to-end request creation with valid file
+
+**Quick Steps:**
+1. Go to PrintRequests → Click **New**
+2. Fill in:
+   - Title: "Quick Test 1"
+   - Student: Your name
+   - Method: Filament
+   - Printer: Prusa MK4S
+   - Color: Blue
+3. Attach file: **JaneDoe_Filament_Blue.stl** (must follow FirstLast_Method_Color format)
+4. Click **Save**
+5. Wait 30 seconds → Refresh
+
+**Pass Criteria:**
+- [ ] ReqKey generated (format: REQ-00001)
+- [ ] Title updated to include standardized name
+- [ ] Status = Uploaded
+- [ ] Confirmation email received
+- [ ] Two audit entries created (Request Created + Email Sent)
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-02: Invalid Filename Rejection (Flow A)
+
+**What this tests:** Filename validation logic
+
+**Quick Steps:**
+1. Create new request
+2. Attach file: **model.stl** (invalid - missing name segments)
+3. Save
+
+**Pass Criteria:**
+- [ ] Status changed to: Rejected
+- [ ] Rejection email received explaining naming format
+- [ ] No confirmation email sent
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-03: System Update Condition (Flow B)
+
+**What this tests:** Critical infinite loop prevention
+
+**Quick Steps:**
+1. Look at the request from QUICK-01
+2. Check AuditLog for that ReqKey
+3. Count entries created by Flow A
+
+**Pass Criteria:**
+- [ ] Only 2 audit entries from Flow A (Request Created + Email Sent)
+- [ ] No field change entries from Flow B (Status, ReqKey, Title changes)
+- [ ] Flow B run history shows it triggered but **skipped processing** (LastActionBy = System)
+
+**⚠️ Critical:** If Flow B created field change entries, infinite loop prevention is broken!
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-04: Status Change Detection (Flow B)
+
+**What this tests:** Field change logging
+
+**Quick Steps:**
+1. Open request from QUICK-01
+2. Change Status from "Uploaded" to "Pending"
+3. Set LastActionBy to your name (staff)
+4. Save → Wait 30 seconds
+5. Check AuditLog
+
+**Pass Criteria:**
+- [ ] New audit entry: "Status Change"
+- [ ] FieldName = Status
+- [ ] NewValue = Pending
+- [ ] ActorRole = Staff
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-05: Rejection Email Automation (Flow B)
+
+**What this tests:** Automated email on status change
+
+**Quick Steps:**
+1. Change request Status to "Rejected"
+2. Select RejectionReason: "Design not printable"
+3. Save
+4. Check student email inbox
+
+**Pass Criteria:**
+- [ ] Rejection email received
+- [ ] Subject contains ReqKey
+- [ ] Body shows rejection reason (readable text, not JSON)
+- [ ] Audit entry created: "Email Sent: Rejection"
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-06: Student Estimate Confirmation (Flow B)
+
+**What this tests:** Estimate approval workflow
+
+**Quick Steps:**
+1. Create request with Status = Uploaded
+2. Change Status to "Pending" (as staff)
+3. Save → Check email
+4. As student: Change StudentConfirmed from "No" to "Yes"
+5. Save → Wait 30 seconds
+
+**Pass Criteria:**
+- [ ] Estimate email received when Status → Pending
+- [ ] Status auto-updated to "Ready to Print" when StudentConfirmed = Yes
+- [ ] LastAction = "Student Confirmed Estimate"
+- [ ] No infinite loop (status doesn't keep changing)
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-07: Power Apps Flow Connection (Flow C)
+
+**What this tests:** Flow C appears and connects in Power Apps
+
+**Quick Steps:**
+1. Open Power Apps Studio
+2. Go to **Data** → **Power Automate**
+3. Look for "Flow C (PR-Action)" or "PR-Action: Log action"
+
+**Pass Criteria:**
+- [ ] Flow appears in data sources
+- [ ] Can see `.Run()` method when typing flow name in formula bar
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### ✅ QUICK-08: Staff Action Logging (Flow C)
+
+**What this tests:** Flow C creates audit entries from Power Apps
+
+**Quick Steps:**
+1. From Power Apps, call Flow C (or manually test in Power Automate)
+2. Parameters:
+   - RequestID: "1"
+   - Action: "Test Action"
+   - FieldName: "Status"
+   - NewValue: "Test"
+   - ActorEmail: your email
+3. Check AuditLog
+
+**Pass Criteria:**
+- [ ] Audit entry created: "Staff Action: Test Action"
+- [ ] ReqKey retrieved from PrintRequests
+- [ ] Actor Claims resolved to person field
+- [ ] Success response returned
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Quick Test Results Summary
+
+**Total Tests:** 8  
+**Time Spent:** _____ minutes
+
+**Results:**
+```
+PASSED: _____ / 8
+FAILED: _____ / 8
+```
+
+**All tests passed?**
+- ✅ **YES** → System is working! Use this as your ongoing regression suite.
+- ❌ **NO** → See [Troubleshooting Guide](#troubleshooting-guide) or run detailed tests for the failing flow.
+
+---
+
+### What's Not Covered in Quick Start?
+
+The quick tests validate core functionality but skip:
+
+- ❌ Edge cases (special characters, concurrent requests, long text)
+- ❌ Multiple field changes simultaneously
+- ❌ Email content validation (just checks delivery)
+- ❌ Error handling (SharePoint failures, invalid data)
+- ❌ Number field null handling
+- ❌ Multi-choice field formatting
+- ❌ Race condition testing
+
+**For production deployment**, run the full test suite (sections 5-10 below).
+
+---
+
+### When to Run Full Tests
+
+Run comprehensive testing (sections 5-10) when:
+
+- 🔧 **Initial deployment** - Before going live
+- 🛠️ **Major flow changes** - Modified logic or expressions
+- 🐛 **After fixing bugs** - Validate fix didn't break other features
+- 📋 **Compliance audit** - Need complete test evidence
+- ⚠️ **Quick tests failed** - Need detailed diagnostics
+
+**Time for full testing:** 2.5-3 hours
 
 ---
 
