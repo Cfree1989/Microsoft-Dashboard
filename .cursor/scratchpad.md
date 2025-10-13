@@ -920,7 +920,254 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 - AssignedTo: `AssignedTo`, LastActionBy: `LastActionBy`
 - Staff list Member field: `Member`
 
-### Flow Names (Planned)
-- `PR-Create_SetReqKey_Acknowledge`
-- `PR-Audit_LogChanges` 
-- `PR-Action_LogAction`
+### Flow Names
+**Standardized naming convention adopted:**
+- **Flow A (PR-Create)** - Full name: `PR-Create: Set ReqKey + Acknowledge`
+- **Flow B (PR-Audit)** - Full name: `PR-Audit: Log changes + Email notifications`
+- **Flow C (PR-Action)** - Full name: `PR-Action: Log action`
+
+**Documentation files:**
+- `PowerAutomate/PR-Create_SetReqKey_Acknowledge.md`
+- `PowerAutomate/PR-Audit_LogChanges_EmailNotifications.md`
+- `PowerAutomate/PR-Action_LogAction.md`
+
+---
+
+## PLANNER MODE: Power Automate Test Document Plan
+
+### Background
+User has completed building 3 Power Automate flows and needs a comprehensive test document:
+- **Flow A (PR-Create)**: Request creation, ReqKey generation, filename validation, confirmation emails
+- **Flow B (PR-Audit)**: Field change logging, automated status emails, student estimate confirmations  
+- **Flow C (PR-Action)**: Staff action logging from Power Apps
+
+### Test Document Structure (Planned)
+
+#### 1. Document Organization
+- **Test Scope Overview** - What's being tested and why
+- **Prerequisites** - Required setup before testing
+- **Test Data Requirements** - Sample data needed for testing
+- **Individual Flow Tests** - Unit tests for each flow
+- **Integration Tests** - Cross-flow interaction testing
+- **Edge Cases & Error Scenarios** - Negative testing
+- **Regression Test Suite** - Quick validation after changes
+- **Test Result Template** - Standardized pass/fail tracking
+
+#### 2. Flow A (PR-Create) Test Scenarios
+**Unit Tests:**
+- ReqKey generation (sequential numbering: REQ-00001, REQ-00002)
+- Standardized display name generation (character cleaning: spaces, hyphens, apostrophes)
+- Filename validation (valid formats: FirstLast_Method_Color.ext)
+- Filename validation (invalid formats: missing segments, wrong extensions)
+- No attachments rejection workflow
+- Valid file confirmation email content
+- Invalid file rejection email content
+- AuditLog entry creation for valid submissions
+- AuditLog entry creation for rejections
+
+**Edge Cases:**
+- Student names with special characters (O'Connor, Mary-Jane, José María)
+- Multiple attachments (some valid, some invalid)
+- Case sensitivity in file extensions (.STL vs .stl)
+- Empty filename segments (JohnDoe__Blue.stl)
+- Extra underscores in filenames
+
+#### 3. Flow B (PR-Audit) Test Scenarios
+**Unit Tests:**
+- System update condition (skip when LastActionBy = System)
+- Field change detection for each tracked field:
+  - Status, Method, Color, Priority, Printer
+  - EstimatedTime, EstimatedWeight, EstimatedCost, Notes
+- Internal field name handling (EstWeight vs EstimatedWeight)
+- Null-safe number field logging
+- Multi-choice field formatting (RejectionReason with Select action)
+- Automated email on Status = "Rejected"
+- Automated email on Status = "Pending" (with cost estimates)
+- Automated email on Status = "Completed" (pickup notification)
+- StudentConfirmed detection and Status update
+- Email audit logging (system attribution)
+
+**Edge Cases:**
+- Multiple fields changed simultaneously
+- Null/empty number fields (EstimatedCost = blank)
+- Race condition with Flow A (attachment count timing)
+- Circular loop prevention (StudentConfirmed update)
+- Status change with missing estimate fields
+
+#### 4. Flow C (PR-Action) Test Scenarios
+**Unit Tests:**
+- Input validation (required vs optional parameters)
+- ReqKey retrieval from PrintRequests
+- AuditLog entry creation with all fields
+- JSON success response format
+- JSON error response format
+- Actor email resolution to Person field
+- FlowRunId and timestamp population
+
+**Edge Cases:**
+- Missing required parameters (RequestID, Action, NewValue, ActorEmail)
+- Invalid RequestID (non-existent item)
+- Blank OldValue parameter (optional)
+- Long Notes text (>255 characters)
+- Special characters in field values
+
+#### 5. Integration Tests
+**Flow A → Flow B:**
+- Create request → Verify Flow A completes → Verify Flow B skips (LastActionBy = System)
+- Valid filename → Verify no duplicate audit entries
+- Invalid filename → Verify rejection doesn't trigger Flow B field logging
+
+**Flow C → Flow B:**
+- Staff updates Status via Power Apps → Flow C logs action → Flow B detects Status change → Both create audit entries
+- Verify no duplicate Status change logs
+- Verify correct actor attribution (staff vs system)
+
+**Flow B Email Triggers:**
+- Status change to Pending → Verify estimate email sent → Student confirms → Verify Flow B updates Status
+- Status change to Rejected → Verify rejection email → Verify no estimate email
+- Status change to Completed → Verify pickup email → Verify Flow B doesn't re-send on subsequent updates
+
+#### 6. Error Scenarios
+**SharePoint Failures:**
+- SharePoint list temporarily unavailable
+- Permission denied errors
+- Item deleted during flow execution
+- Concurrent modification conflicts
+
+**Email Failures:**
+- Invalid student email address
+- Shared mailbox permission issues
+- Email throttling (multiple sends)
+
+**Data Validation:**
+- Person field resolution failures
+- Choice field value not in allowed list
+- Number field with non-numeric input
+
+#### 7. Regression Test Suite (Quick Validation)
+**Critical Path Tests (15 minutes):**
+1. Submit valid request → Verify ReqKey, confirmation email, audit log
+2. Change Status to Rejected → Verify rejection email sent
+3. Update single field (Priority) → Verify field change logged
+4. Call Flow C from Power Apps → Verify audit entry created
+5. Student confirms estimate → Verify Status updates to Ready to Print
+
+#### 8. Test Data Requirements
+**Student Accounts:**
+- Standard name: Jane Doe (janedoe@lsu.edu)
+- Special characters: Mary O'Connor (moconnor@lsu.edu)
+- Middle name: John Q. Public (jqpublic@lsu.edu)
+
+**File Attachments:**
+- Valid: JaneDoe_Filament_Blue.stl
+- Invalid: model.stl (missing segments)
+- Invalid: JaneDoe_Filament_.stl (empty color segment)
+- Invalid: JaneDoe_Filament_Blue.exe (wrong extension)
+- Mixed: 2 valid + 1 invalid
+
+**SharePoint Test Items:**
+- Clean slate: New request with minimal data
+- Complete: Request with all fields populated
+- Edge case: Request with null EstimatedCost/EstimatedWeight
+
+#### 9. Test Result Template
+**For each test:**
+- Test ID
+- Test Description
+- Prerequisites
+- Test Steps
+- Expected Result
+- Actual Result
+- Status (Pass/Fail/Blocked)
+- Notes/Screenshots
+- Tested By
+- Date
+
+### Deliverable Structure
+**File: `PowerAutomate/Testing-Guide.md`**
+- Organized by flow (A, B, C)
+- Progressive testing approach (unit → integration → edge cases)
+- Copy-paste test steps with checkboxes
+- Clear pass/fail criteria for each scenario
+- Troubleshooting tips for common failures
+- Reference links to flow documentation
+
+### Success Criteria for Test Document
+✅ Non-technical staff can execute tests without assistance  
+✅ All critical workflows covered  
+✅ Edge cases identified from scratchpad lessons  
+✅ Pass/fail criteria are unambiguous  
+✅ Test execution time estimates provided  
+✅ Results tracking template included
+
+### Key Lessons to Incorporate
+From scratchpad analysis:
+- SharePoint internal field names (EstWeight vs EstimatedWeight)
+- Race condition prevention (Flow A/B timing)
+- Multi-choice field formatting (text mode Map requirement)
+- Null handling for number fields
+- System update condition importance
+- Attachment validation logic
+
+### ✅ COMPLETED - Test Document Created
+
+**Deliverable:** `PowerAutomate/Testing-Guide.md` (1,900+ lines)
+
+### ✅ COMPLETED - Flow Naming Convention Standardization
+
+**Action:** Updated all documentation to use standardized flow naming convention  
+**Changes Made:**
+- **Flow documentation headers updated** (PR-Create, PR-Audit, PR-Action) to show "Flow A/B/C" with full name as subtitle
+- **Flow creation steps updated** to show both naming options
+- **Power Apps integration examples updated** with note about flow name variations
+- **Dashboard Design Guide updated** with naming note at top
+- **Scratchpad updated** with standardized naming reference
+
+**New Convention:**
+- **Flow A (PR-Create)** - Short, clear reference in conversation
+- **Flow B (PR-Audit)** - Easy to remember (A, B, C pattern)
+- **Flow C (PR-Action)** - Matches testing guide structure
+
+**Full Names (for Power Automate):**
+- `PR-Create: Set ReqKey + Acknowledge`
+- `PR-Audit: Log changes + Email notifications`
+- `PR-Action: Log action`
+
+**Files Updated:**
+1. `PowerAutomate/PR-Create_SetReqKey_Acknowledge.md`
+2. `PowerAutomate/PR-Audit_LogChanges_EmailNotifications.md`
+3. `PowerAutomate/PR-Action_LogAction.md`
+4. `PowerApps/Dashboard-Design-Guide.md`
+5. `.cursor/scratchpad.md`
+
+**Deliverable:** `PowerAutomate/Testing-Guide.md` (1,900+ lines)
+
+**What Was Built:**
+- 41 unit tests across all 3 flows
+- 15 edge case tests
+- 4 integration tests
+- 9 error scenario tests
+- 5-test regression suite
+- Complete troubleshooting guide with fixes
+- Test result tracking template
+- Microsoft best practices integrated (Context7)
+
+**Key Features:**
+✅ Copy-paste test steps with checkboxes  
+✅ Clear pass/fail criteria for each test  
+✅ Time estimates (15 min - 3 hours)  
+✅ Lessons incorporated from scratchpad  
+✅ Non-technical staff friendly  
+✅ SharePoint URL quick reference  
+✅ Flow documentation cross-references  
+
+**Total Test Coverage:** 69 distinct test scenarios
+
+**Testing Time Estimates:**
+- Flow A: 30 minutes (14 tests)
+- Flow B: 45 minutes (15 tests)
+- Flow C: 20 minutes (12 tests)
+- Integration: 30 minutes (4 tests)
+- Error Scenarios: 30 minutes (9 tests)
+- Regression: 15 minutes (5 tests)
+- **Total: 2.5-3 hours complete testing**

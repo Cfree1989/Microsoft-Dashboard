@@ -1,5 +1,6 @@
-# Flow C — PR-Action: Log action (called from Power Apps)
+# Flow C (PR-Action)
 
+**Full Name:** PR-Action: Log action (called from Power Apps)  
 **Type:** Instant cloud flow (triggered from Power Apps)
 
 **Purpose:** When staff press buttons in the Power Apps staff console (e.g., Approve, Reject), log that action with proper actor attribution and comprehensive audit details.
@@ -17,7 +18,7 @@
 **UI steps:**
 1. Go to **Power Automate** → **My flows**
 2. **Create** → **Instant cloud flow**
-3. **Name:** Type `PR-Action: Log action`
+3. **Name:** Type `Flow C (PR-Action)` or `PR-Action: Log action`
 4. **Choose trigger:** Select **Power Apps**
 5. **Skip** the "Choose how to trigger this flow" step (Power Apps trigger is added automatically)
 6. **Click Create**
@@ -286,11 +287,11 @@
 1. Open your **Power Apps** in **Power Apps Studio**
 2. Left sidebar → **Data** → **Add data**
 3. Search for **Power Automate** → Select it
-4. Find **PR-Action: Log action** in the list → Click to add
-5. The flow appears in your app's formulas as `'PR-Action: Log action'`
+4. Find **Flow C (PR-Action)** or **PR-Action: Log action** in the list → Click to add
+5. The flow appears in your app's formulas as `'Flow C (PR-Action)'` or `'PR-Action: Log action'`
 
 **Verify Connection:**
-- In Power Apps formula bar, type `'PR-Action: Log action'.` (with the period)
+- In Power Apps formula bar, type the flow name with a period (e.g., `'Flow C (PR-Action)'.`)
 - You should see `.Run()` appear in IntelliSense
 - The `.Run()` function will show 8 parameters matching Step 2
 
@@ -304,11 +305,13 @@
 
 **Power Apps code (OnSelect property of Approve button):**
 
+**Note:** Replace `'Flow C (PR-Action)'` with your actual flow name in Power Apps (it might be `'PR-Action: Log action'` if you used the old naming).
+
 ```powerfx
 // Store flow result
 Set(varFlowResult,
     IfError(
-        'PR-Action: Log action'.Run(
+        'Flow C (PR-Action)'.Run(
             Text(ThisItem.ID),                           // RequestID
             "Approved",                                  // Action
             "Status",                                    // FieldName  

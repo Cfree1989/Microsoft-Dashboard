@@ -1,5 +1,6 @@
-# Flow A — PR-Create: Set ReqKey + Acknowledge
+# Flow A (PR-Create)
 
+**Full Name:** PR-Create: Set ReqKey + Acknowledge  
 **Trigger:** SharePoint — When an item is **created** (List: `PrintRequests`)
 
 **Purpose:** When a new request is created, assign a **ReqKey**, compute a standardized display name string (used for Title/email/validation; no file rename), log a **Created** event, and email the student with confirmation.
@@ -50,7 +51,7 @@ This flow runs automatically when someone submits a new 3D print request. Here's
 
 **UI steps:**
 1. Go to **Power Automate** → **Create** → **Automated cloud flow**
-2. Name: `PR-Create: Set ReqKey + Acknowledge`
+2. Name: `Flow A (PR-Create)` or `PR-Create: Set ReqKey + Acknowledge`
 3. Choose trigger: **SharePoint – When an item is created**
 4. Fill in:
    - **Site address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`

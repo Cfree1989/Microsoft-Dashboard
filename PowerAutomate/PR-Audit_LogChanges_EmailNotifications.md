@@ -1,8 +1,42 @@
-# Flow B — PR-Audit: Log changes + Email notifications
+# Flow B (PR-Audit)
 
+**Full Name:** PR-Audit: Log changes + Email notifications  
 **Trigger:** SharePoint — When an item is **created or modified** (List: `PrintRequests`)
 
-**Purpose:** Whenever a request is modified, record which fields changed in `AuditLog` and send automated emails for key status changes.
+**Purpose:** Whenever a request is modified, record which fields changed in `AuditLog`, send automated emails for key status changes, and detect student estimate confirmations.
+
+---
+
+## Prerequisites
+
+### SharePoint Field: StudentConfirmed (Required for Estimate Approval Workflow)
+
+**What this does:** Enables students to confirm cost estimates before printing begins, preventing surprise costs.
+
+**Setup steps:**
+1. Go to **SharePoint** → Your site → **PrintRequests** list
+2. Click **Add column** → Select **Yes/No**
+3. **Name:** `StudentConfirmed`
+4. **Description:** `Student has confirmed the estimate and approved proceeding with print`
+5. **Default value:** **No**
+6. Click **Save**
+
+**Verify:** Refresh list view → New "StudentConfirmed" column should appear with all items defaulted to "No"
+
+### "My Requests" View Security
+
+**What this does:** Ensures students can only see/edit their own requests for secure estimate confirmation.
+
+**Setup steps:**
+1. **PrintRequests list** → **⚙ Settings** → **List settings**
+2. Under **General Settings** → **Advanced settings**
+3. **Item-level Permissions:**
+   - **Read access:** Select **Read items that were created by the user**
+   - **Create and Edit access:** Select **Create items and edit items that were created by the user**
+4. Click **OK**
+5. Return to list → Create/verify **"My Requests" view** with filter: `Student = [Me]`
+
+**Verify:** Test as student user → Should only see own requests in "My Requests" view
 
 ---
 
@@ -28,7 +62,7 @@
 **UI steps:**
 1. **Power Automate** → **My flows** → **Find existing "PR-Audit"** → **Delete** (if exists)
 2. **Create** → **Automated cloud flow**
-3. **Name:** Type `PR-Audit: Log changes + Email notifications`
+3. **Name:** Type `Flow B (PR-Audit)` or `PR-Audit: Log changes + Email notifications`
 4. **Choose trigger:** **SharePoint – When an item is created or modified**
 5. **Configure trigger:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
@@ -471,7 +505,134 @@ Some display names differ from internal field names. Always use internal names i
 
 ---
 
-**Test Step 6:** Change each field individually → Verify audit entries created with correct FieldName and NewValue populated
+### Field Detector 9: StudentConfirmed (Estimate Approval)
+
+**What this does:** Detects when students confirm their cost estimates and automatically updates status to "Ready to Print", preventing surprise costs.
+
+**UI steps (at same level as "Check Printer Changed"):**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check StudentConfirmed Changed`
+3. **Configure condition:**
+   - **Left:** **Dynamic content** → **Has Column Changed: StudentConfirmed** (from Get Item Changes)
+   - **Middle:** **is equal to**
+   - **Right:** Type `true`
+
+**In YES branch:**
+
+**Action 1: Validate Confirmation Conditions**
+1. **+ Add an action** → **Condition**
+2. **Rename:** Type `Validate StudentConfirmed is Yes AND Status is Pending`
+3. **Configure compound condition** (click "Add" → "Add row"):
+   - **Row 1:**
+     - **Left:** Click **Expression** → Type `triggerOutputs()?['body/StudentConfirmed']`
+     - **Middle:** **is equal to**
+     - **Right:** Type `true`
+   - **AND** (not OR!)
+   - **Row 2:**
+     - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
+     - **Middle:** **is equal to**
+     - **Right:** Type `Pending`
+
+**⚠️ CRITICAL:** The compound condition prevents infinite loops. The flow only updates when Status = "Pending", so subsequent triggers will fail the condition and skip processing.
+
+**In YES branch (Confirmed = Yes AND Status = Pending):**
+
+**Action 2: Update Status to Ready to Print**
+1. **+ Add an action** → **Update item** (SharePoint)
+2. **Rename:** Type `Update to Ready to Print`
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings**
+   - **Retry Policy:** **On**
+   - **Type:** **Exponential**
+   - **Count:** **4**
+   - **Minimum Interval:** **PT30S**
+4. **Fill in fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **Status Value:** Type `Ready to Print`
+   - **LastAction:** Type `Student Confirmed Estimate`
+   - **LastActionBy Claims:** Click **Expression** → Type `triggerOutputs()?['body/Student']?['Claims']`
+   - **LastActionAt:** Click **Expression** → Type `utcNow()`
+
+**Action 3: Log Confirmation in AuditLog**
+1. **+ Add an action** → **Create item** (SharePoint)
+2. **Rename:** Type `Log Student Confirmation`
+3. **Configure retry policy** (same as Action 2)
+4. **Fill in ALL fields:**
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `AuditLog`
+   - **Title:** Type `Student Confirmed Estimate via SharePoint`
+   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
+   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
+   - **Action Value:** Type `Estimate Confirmed`
+   - **FieldName:** Type `StudentConfirmed`
+   - **OldValue:** Type `No`
+   - **NewValue:** Type `Yes`
+   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Student']?['Claims']`
+   - **ActorRole Value:** Type `Student`
+   - **ClientApp Value:** Type `SharePoint`
+   - **ActionAt:** Click **Expression** → Type `utcNow()`
+   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
+   - **Notes:** Click **Expression** → Type:
+   ```
+   concat('Student confirmed estimate via SharePoint for request ', triggerOutputs()?['body/ReqKey'], '. Status changed from Pending to Ready to Print.')
+   ```
+
+**Action 4: Send Confirmation Receipt to Student (Optional)**
+1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
+2. **Rename:** Type `Send Confirmation Receipt to Student`
+3. **Configure retry policy** (Exponential, Count 4, PT1M)
+4. **Fill in:**
+   - **Shared Mailbox:** `coad-fablab@lsu.edu`
+   - **To:** Click **Expression** → Type `triggerOutputs()?['body/StudentEmail']`
+   - **Subject:** Click **Expression** → Type:
+   ```
+   concat('Estimate confirmed – ', triggerOutputs()?['body/ReqKey'], ' – Ready to print')
+   ```
+   - **Body:** Paste plain text below:
+   ```
+   Hi @{triggerOutputs()?['body/Student']?['DisplayName']},
+
+   ✅ YOUR ESTIMATE HAS BEEN CONFIRMED SUCCESSFULLY!
+
+   CONFIRMATION DETAILS:
+   - Request: @{triggerOutputs()?['body/ReqKey']}
+   - Status: Ready to Print
+   - Confirmed: @{formatDateTime(utcNow(), 'MMM dd, yyyy h:mm tt')}
+
+   WHAT HAPPENS NEXT:
+   • Your request is now in our print queue
+   • We'll begin preparing and printing your job
+   • You'll receive another email when it's completed and ready for pickup
+   • Payment will be due at pickup (TigerCASH only)
+
+   IMPORTANT REMINDERS:
+   • Print times are estimates and may vary
+   • Final cost may differ slightly based on actual material used
+   • Bring your student ID for pickup
+
+   View My Requests:
+   https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+
+   If you have any questions, feel free to contact us!
+
+   Thank you,
+   LSU Digital Fabrication Lab
+
+   Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+   Email: coad-fablab@lsu.edu
+   Location: Room 145 Atkinson Hall
+   ```
+
+**⚠️ Loop Warning:** Power Automate will show a circular loop warning because this action updates an item that triggers the flow. This is safe because:
+- The compound condition only processes when Status = "Pending"
+- After update, Status = "Ready to Print", so the condition fails on subsequent triggers
+- Loop is prevented by the Status check
+
+---
+
+**Test Step 6:** Change each field individually → Verify audit entries created with correct FieldName and NewValue populated → Test StudentConfirmed: Change to "Yes" with Status = "Pending" → Verify Status updates to "Ready to Print" and audit log created
 
 ### Step 7: Add Status-Based Email Notifications (OPTIONAL)
 
@@ -947,20 +1108,42 @@ Update these sections in the email templates for your lab:
 
 ## Testing Checklist
 
+### Field Change Detection
 - [ ] Field changes create appropriate AuditLog entries
-- [ ] Status change to "Rejected" sends rejection email + audit log
-- [ ] Status change to "Completed" sends completion email + audit log  
 - [ ] All changed fields logged with correct FieldName and NewValue
+- [ ] Method, Color, Priority, Printer, EstimatedTime, EstimatedWeight, EstimatedCost, Notes changes all detected
+
+### Student Confirmation Testing
+- [ ] StudentConfirmed field exists in SharePoint with default "No"
+- [ ] "My Requests" view security configured (students see only own requests)
+- [ ] Status change to "Pending" sends estimate email to student
+- [ ] Estimate email contains SharePoint link to "My Requests" view
+- [ ] Student can toggle StudentConfirmed from "No" to "Yes"
+- [ ] StudentConfirmed = "Yes" + Status = "Pending" → Status updates to "Ready to Print"
+- [ ] Confirmation creates audit log entry with Student actor
+- [ ] Optional confirmation receipt email sent to student
+- [ ] Loop prevention working: Second confirmation attempt (Status already "Ready to Print") does nothing
+- [ ] Staff cannot see other students' requests in "My Requests" view
+
+### Email Notifications
+- [ ] Status change to "Rejected" sends rejection email + audit log
+- [ ] Status change to "Pending" sends estimate email + audit log
+- [ ] Status change to "Completed" sends pickup email + audit log
 - [ ] Email audit entries include proper System actor and timestamps
 - [ ] No duplicate emails sent during multi-field updates
-- [ ] Retry policies trigger on simulated failures
-- [ ] Cost estimates display correctly in completion emails
+- [ ] Cost estimates display correctly in emails
 - [ ] **Email content freshness test:** Make simultaneous updates to printer/method/estimates while changing status - emails should show latest values, not original trigger values
 - [ ] **RejectionReason field** appears correctly in rejection emails (both predefined choices and custom fill-in values)
 - [ ] RejectionReason changes are logged to AuditLog when staff update rejection reasons
 - [ ] Shared mailbox configuration working properly
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
+
+### Error Handling
+- [ ] Retry policies trigger on simulated failures
+- [ ] Flow handles null values gracefully (EstimatedWeight, EstimatedCost, etc.)
+- [ ] System update condition prevents infinite loops
+- [ ] StudentConfirmed compound condition prevents circular triggers
 
 ---
 

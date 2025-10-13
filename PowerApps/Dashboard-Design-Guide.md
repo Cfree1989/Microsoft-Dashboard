@@ -4,6 +4,8 @@
 ## Dashboard Overview
 This guide shows how to recreate the dashboard shown in Dashboard.png using Power Apps Canvas app.
 
+**Flow Naming Note:** Throughout this guide, flow references use the old naming convention (e.g., `'PR-Action: Log action'`). If you renamed your flows to use the standardized naming convention (e.g., `'Flow C (PR-Action)'`), replace the flow names in the formulas with your actual flow names as they appear in Power Apps.
+
 ---
 
 ## 1. Top Navigation Bar
@@ -201,7 +203,7 @@ Set(varShowAddFileModal, false);
 
 Notes
 - No drag-and-drop in Canvas; use the Attachments control file picker.
-- Existing PR-Audit flow logs file additions; removals can be inferred historically.
+- Existing Flow B (PR-Audit: Log changes + Email notifications) logs file additions; removals can be inferred historically.
 
 ### Job Card Design (Gallery Template)
 ```powerfx
@@ -855,7 +857,7 @@ Button.OnSelect =
 - **Pricing:** Filament $0.10/gram, Resin $0.20/gram, $3.00 minimum charge
 
 **Email Integration:**
-- Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
+- Approval emails automatically sent via Flow B (PR-Audit: Log changes + Email notifications) when status = "Ready to Print"
 - Includes estimated weight, time, cost, and any additional comments
 
 ---
@@ -1347,8 +1349,8 @@ This creates an exact replica of the dashboard shown in Dashboard.png with enhan
 - **Lab Pricing:** Filament $0.10/gram, Resin $0.20/gram, $3.00 minimum charge
 
 **Automated Email Integration:**
-- Rejection emails automatically sent via Flow B (PR-Audit) when status = "Rejected"
-- Approval emails automatically sent via Flow B (PR-Audit) when status = "Ready to Print"
+- Rejection emails automatically sent via Flow B (PR-Audit: Log changes + Email notifications) when status = "Rejected"
+- Approval emails automatically sent via Flow B (PR-Audit: Log changes + Email notifications) when status = "Ready to Print"
 - Includes detailed rejection reasons, approval estimates, costs, and staff attribution
 
 **Total build time: 12-14 hours** for a complete implementation with rejection, approval, and archive modals.
