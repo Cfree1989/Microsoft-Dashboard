@@ -6,11 +6,11 @@ This hands-on guide will help you build a complete MVP system for managing 3D pr
 
 ## What you will build
 
-- A SharePoint site with three lists: **PrintRequests** (19 fields total), **AuditLog** (14 fields total), and **Staff** (3 fields total).
-- A **simplified student form** (9 fields) with smart printer selection based on build plate dimensions.
+- A SharePoint site with three lists: **PrintRequests** (22 fields total), **AuditLog** (14 fields total), and **Staff** (3 fields total).
+- A **simplified student form** (12 student-facing fields) with smart printer selection based on build plate dimensions.
 - A **Power Apps staff console** focused on operational management (10 staff-only fields).
-- Four **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated emails (including estimates), log staff actions, and handle student estimate confirmations.
-- **Approval workflow**: Staff approve requests → students receive estimates → students confirm → printing begins.
+- Three **Power Automate** flows to: assign request keys + send confirmation emails, log changes + send automated emails (including estimates), and log staff actions. Student estimate confirmations are handled by Flow B via SharePoint field toggle (more secure than a separate HTTP trigger flow).
+- **Approval workflow**: Staff approve requests → students receive estimates → students confirm via StudentConfirmed field → printing begins.
 - **Clean separation**: Students focus on project definition, staff control technical execution.
 
 > **Scope & constraints (MVP):** Internal-only (LSU accounts), file management via SharePoint **attachments**, staff attribution on every action, and a complete **AuditLog**.
@@ -42,7 +42,7 @@ Building this system in the wrong order can lead to frustrating rework, broken d
 2. **Build PrintRequests List** (60 min)
    - **Dependencies**: Site created
    - **Why critical**: All flows and Power Apps connect to this list
-   - **Success criteria**: 19 columns added, item-level permissions working, views created
+   - **Success criteria**: 22 columns added, item-level permissions working, views created
 
 3. **Build AuditLog List** (15 min) 
    - **Dependencies**: Site created
@@ -81,13 +81,7 @@ Building this system in the wrong order can lead to frustrating rework, broken d
    - **Dependencies**: Needs AuditLog structure and ReqKey field working
    - **Success criteria**: Manual test succeeds, proper audit logging
 
-4. **Flow D: PR-Confirm** (1 hour) 
-   - **Purpose**: Student estimate confirmation via email links
-   - **Why fourth**: Completes the approval workflow chain started by Flow B
-   - **Dependencies**: Needs estimate emails from Flow B working
-   - **Success criteria**: HTTP trigger processes confirmations correctly
-
-5. **Flow Integration Testing** (30 min)
+4. **Flow Integration Testing** (30 min)
    - **Why essential**: Ensures all flows work together without conflicts
    - **Success criteria**: No duplicate audit entries, complete workflow functions
 
@@ -345,13 +339,13 @@ Add this additional column to the `PrintRequests` list for structured rejection 
 
 ## Part 2 — Power Automate (Flows)
 
-You will make four flows. Open **Power Automate** (flow.microsoft.com) and ensure you are in the same environment as your SharePoint site.
+You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensure you are in the same environment as your SharePoint site.
 
 ### What type of flows are these? Where do I create them?
 - All flows here are **cloud flows** (not desktop flows).
 - Navigation: Power Automate → left nav **Create** → choose the flow type:
   - **Automated cloud flow** for Flow A and Flow B (they run automatically on SharePoint triggers)
-  - **Instant cloud flow** for Flow C (it is called from Power Apps) and Flow D (it is called from email links)
+  - **Instant cloud flow** for Flow C (it is called from Power Apps)
 
 ### Before you start (one-time setup)
 - Make sure you have these connections (Power Automate will prompt if missing):
@@ -395,15 +389,28 @@ You will make four flows. Open **Power Automate** (flow.microsoft.com) and ensur
 - **Trigger:** Power Apps with 8 input parameters
 - **Actions:** Validate inputs → Get SharePoint item → Create AuditLog entry → Return success response
 
-### Flow D — PR-Confirm: Estimate Approval (Instant, called from email)
-**Purpose:** When students click the confirmation link in their estimate email, update the status from "Pending" to "Ready to Print" and log the confirmation action.
+---
 
-📋 **Full implementation details:** See [`PowerAutomate/PR-Confirm_EstimateApproval.md`](PowerAutomate/PR-Confirm_EstimateApproval.md)
+### ~~Flow D — PR-Confirm~~ (Deprecated)
 
-**Quick Summary:**
-- **Type:** Instant cloud flow (HTTP trigger)
-- **Trigger:** Manual (HTTP Request) with RequestID parameter
-- **Actions:** Get PrintRequest → Validate status is "Pending" → Update to "Ready to Print" → Log confirmation → Return success/error page
+**Status:** NOT IMPLEMENTED - Replaced by StudentConfirmed field approach
+
+**Original Purpose:** HTTP trigger flow for processing estimate confirmation links from emails
+
+**Why Deprecated:**
+- **Security Risk:** HTTP endpoints harder to secure than SharePoint native permissions
+- **Complexity:** Separate flow not needed when Flow B can detect field changes
+- **User Experience:** Students more familiar with SharePoint forms than HTTP links
+- **Maintenance:** Reducing from 4 flows to 3 flows simplifies system
+
+**Replacement Approach:**
+- Flow B detects when StudentConfirmed field changes from "No" to "Yes"
+- When Status = "Pending" AND StudentConfirmed = "Yes", Flow B automatically updates Status to "Ready to Print"
+- More secure: Uses SharePoint item-level permissions (students only see their requests)
+- Simpler: Reuses existing Flow B infrastructure
+- Better audit: Student action logged directly in SharePoint
+
+**Implementation:** See Flow B Prerequisites section for StudentConfirmed field setup
 
 ### URL Reference Guide
 
@@ -423,7 +430,7 @@ Update these URLs for your specific SharePoint site:
 ### A Student Submission Form (Customize SharePoint Form)
 1. Go to the `PrintRequests` list → **Integrate → Power Apps → Customize forms**.
 2. Ensure these **student-facing data cards** are present: Title, Student, StudentEmail, Course Number, Discipline, ProjectType, Color, Method, Printer, DueDate, Notes, **Attachments**.
-3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, LastAction, LastActionBy, LastActionAt, NeedsAttention, Expanded.
+3. **Hide staff-only** cards (select each card → set **Visible** = `false`): Status, Priority, AssignedTo, StaffNotes, EstimatedTime, EstimatedWeight, EstimatedCost, RejectionReason, StudentConfirmed, LastAction, LastActionBy, LastActionAt, NeedsAttention, Expanded, AttachmentCount.
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```

@@ -1,16 +1,16 @@
 # Product Requirement Document
 # Fabrication Lab 3D Print Request Management System
 
-**Version:** 1.0  
-**Date:** January 2024  
+**Version:** 2.0  
+**Date:** October 2025  
 **Document Owner:** Product Manager  
-**Status:** Draft  
+**Status:** Updated to Reflect Implementation  
 
 ---
 
 ## 1. Executive Summary
 
-The FababricationLab 3D Print Request Management System is a comprehensive web-based workflow management platform designed to streamline 3D print request processing at LSU's Digital Fabrication Lab. Built entirely on Microsoft 365 technologies (SharePoint, Power Automate, Power Apps), the system provides secure student submission capabilities, efficient staff queue management, and complete audit compliance.
+The Fabrication Lab 3D Print Request Management System is a comprehensive web-based workflow management platform designed to streamline 3D print request processing at LSU's Digital Fabrication Lab. Built entirely on Microsoft 365 technologies (SharePoint, Power Automate, Power Apps), the system provides secure student submission capabilities, efficient staff queue management, and complete audit compliance.
 
 **Key Goals:**
 - Replace manual 3D print request tracking with automated digital workflow
@@ -115,6 +115,16 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 | Staff Training Time | <2 hours to proficiency | Training logs |
 | System Uptime | 99.9% availability | Microsoft 365 SLA |
 
+### Financial Metrics
+| Metric | Target | Measurement Method |
+|--------|--------|--------------------|
+| Cost Recovery Rate | 100% material costs | Revenue vs material expenses |
+| Average Print Cost | $8-15 range | Mean of EstimatedCost field |
+| Minimum Charge Usage | <30% of prints | Count of $3.00 prints / total |
+| Estimate Accuracy | ±10% of actual | Compare EstimatedCost vs final charge |
+
+**Pricing Model:** See Appendix D for detailed pricing structure and cost calculation formulas.
+
 ---
 
 ## 7. Feature Requirements
@@ -124,7 +134,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 #### PrintRequests List (P0 - Critical)
 - **Description:** Central repository for all 3D print requests
 - **Acceptance Criteria:**
-  - 17 total fields (9 student-facing, 8 staff-only)
+  - 22 total fields (12 student-facing, 10 staff-only)
   - Item-level security ensuring students see only their requests
   - Attachment support for 3D model files
   - Version history enabled for change tracking
@@ -152,7 +162,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Description:** Streamlined interface for project specification
 - **User Benefit:** Easy submission without technical complexity
 - **Acceptance Criteria:**
-  - 9 student-facing fields focused on project definition
+  - 12 student-facing fields focused on project definition
   - Auto-populated user information (Student, StudentEmail)
   - Default status assignment ("Uploaded")
   - File attachment capability with validation guidance
@@ -168,13 +178,36 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
   - All FDM printers available for filament method
 
 #### File Validation Framework (P0 - Critical)
-- **Description:** Clear requirements and validation for 3D model files
-- **User Benefit:** Prevents invalid file submissions, reduces processing delays
+- **Description:** Automated validation for 3D model files with instant feedback
+- **User Benefit:** Immediate correction guidance, faster processing, reduced staff workload
 - **Acceptance Criteria:**
-  - Accepted formats: .stl, .obj, .3mf only
+  
+  **Filename Policy (Automated Enforcement):**
+  - Required format: `FirstLast_Method_Color.ext`
+  - Example: `JaneDoe_Filament_Blue.stl`
+  - Character cleaning: Spaces, hyphens, apostrophes, periods, commas removed from display names
+  - Validation: All three segments must be non-empty
+  
+  **Accepted File Types:**
+  - 3D model files: .stl, .obj, .3mf (mesh formats)
+  - Slicer project files: .idea (PrusaSlicer), .form (Formlabs)
+  - Case-insensitive extension matching
+  
+  **File Requirements:**
   - Maximum file size: 150MB per file
-  - Helper text visible on form with requirements
-  - Staff rejection workflow for non-compliant files
+  - At least one file must be attached
+  - Multiple files allowed (all must pass validation)
+  
+  **Validation Workflow:**
+  - Instant validation on submission (Flow A)
+  - Auto-rejection with specific error email if validation fails
+  - Helper text visible on form with requirements and examples
+  - Invalid submissions do not enter staff queue
+  
+  **Error Notifications:**
+  - No files attached: "Action needed: attach your 3D print file" email
+  - Invalid filename: "Action needed: rename your 3D print file" email
+  - Emails include: Required format, examples, resubmission instructions
 
 ### 7.3 Staff Management Features
 
@@ -227,12 +260,34 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
   - Handles bulk changes and attachment modifications
   - Creates separate entries for different change types
 
+#### Student Estimate Confirmation (P0 - Critical)
+- **Description:** Automated workflow requiring student approval before printing
+- **User Benefit:** Prevents surprise costs, ensures informed consent
+- **Acceptance Criteria:**
+  - Status change to "Pending" triggers estimate email
+  - Email contains cost, time, color, and confirmation instructions
+  - Student confirms via StudentConfirmed field toggle in "My Requests" view
+  - Confirmation auto-updates Status to "Ready to Print"
+  - Circular loop prevention (only processes when Status = Pending)
+  - Complete audit trail with student attribution
+
+#### Auto-Rejection for Invalid Submissions (P0 - Critical)
+- **Description:** Automated filtering of non-compliant file submissions
+- **User Benefit:** Instant feedback loop, consistent policy enforcement
+- **Acceptance Criteria:**
+  - No manual staff intervention required for validation
+  - Students receive immediate actionable feedback
+  - Invalid submissions logged to AuditLog with "Rejected" action
+  - Rejection emails include specific guidance for correction
+  - System prevents invalid files from entering work queue
+
 #### Automated Email Notifications (P0 - Critical)
 - **Description:** Timely student communication for key status changes
 - **User Benefit:** Proactive communication without staff manual effort
 - **Acceptance Criteria:**
   - Confirmation email on successful submission with ReqKey
-  - Rejection notification with reason to check staff notes
+  - Estimate email when status changes to "Pending" with cost details
+  - Rejection notification with structured rejection reasons
   - Completion notification with pickup instructions and lab hours
   - All emails logged to AuditLog with System attribution
 
@@ -272,7 +327,8 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - Item-level security preventing cross-student data access
 - Complete audit logging for compliance requirements
 - No external system dependencies or data transfers
-- File type restrictions enforced (.stl, .obj, .3mf only)
+- File type restrictions enforced (.stl, .obj, .3mf, .idea, .form only)
+- Automated filename validation prevents malicious or malformed files
 
 ### Reliability Requirements
 - 99.9% uptime leveraging Microsoft 365 SLA
@@ -390,8 +446,8 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - File storage requirements will remain within SharePoint attachment limits
 
 ### Decision Points Requiring Stakeholder Input
-- **Lab Hours Information:** Specific operating hours for inclusion in pickup notifications
-- **Payment Process:** Integration with existing payment systems or manual process continuation
+- ~~**Lab Hours Information:** Specific operating hours for inclusion in pickup notifications~~ **RESOLVED:** Monday-Friday 8:30 AM - 4:30 PM, Room 145 Atkinson Hall
+- ~~**Payment Process:** Integration with existing payment systems or manual process continuation~~ **RESOLVED:** TigerCASH only at pickup
 - **Staff Role Hierarchy:** Detailed role definitions beyond Manager/Technician/Student Worker
 - **File Retention Policy:** Long-term storage requirements for completed requests and audit logs
 
@@ -402,87 +458,399 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 ### Appendix A: Data Model
 
 #### PrintRequests List Schema
-**Student-Facing Fields (9):**
-- Title (Single line text) - Request title
-- ReqKey (Single line text) - Auto-generated unique ID
-- Student (Person) - Requester identification
-- StudentEmail (Single line text) - Contact information
-- Course (Single line text) - Academic context
-- Discipline (Choice) - Architecture; Engineering; Art & Design; Other
-- ProjectType (Choice) - Class Project; Research; Personal; Other
-- Color (Choice) - Material color preference
-- Method (Choice) - Filament; Resin
-- Printer (Choice) - Equipment and size constraints
-- DueDate (Date) - Timeline planning
-- Notes (Multiple lines text) - Additional instructions
 
-**Staff-Only Fields (9):**
-- Status (Choice) - 8-state workflow progression
-- Priority (Choice) - Queue management
-- AssignedTo (Person) - Optional field for manual assignment if needed (not used in automated workflows)
-- EstimatedTime (Number) - Time estimation
-- EstimatedWeight (Number) - Material costing
-- EstimatedCost (Currency) - Calculated cost estimation
-- StaffNotes (Multiple lines text) - Internal communication
-- LastAction (Choice) - Action categorization
-- LastActionBy (Person) - Accountability tracking
-- LastActionAt (Date/Time) - Audit timestamp
+**Total Fields:** 22 (12 student-facing + 10 staff-only)
+
+**Student-Facing Fields (12):**
+- **Title** (Single line text) - Request title
+- **ReqKey** (Single line text) - Auto-generated unique ID (format: REQ-00042)
+- **Student** (Person) - Requester identification
+- **StudentEmail** (Single line text) - Contact information
+- **Course Number** (Number) - Optional class number (e.g., 1001, 2050)
+- **Discipline** (Choice) - Architecture; Engineering; Art & Design; Business; Liberal Arts; Sciences; Other
+- **ProjectType** (Choice) - Class Project; Research; Personal; Other
+- **Color** (Choice) - Any; Black; White; Gray; Red; Green; Blue; Yellow; Other
+- **Method** (Choice) - Filament; Resin
+- **Printer** (Choice) - Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in)
+- **DueDate** (Date) - Timeline planning
+- **Notes** (Multiple lines text) - Additional instructions
+
+**Staff-Only Fields (10):**
+- **Status** (Choice) - Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived
+- **Priority** (Choice) - Low; Normal; High; Rush
+- **AssignedTo** (Person) - Optional field for manual assignment if needed (not used in automated workflows)
+- **EstimatedTime** (Number, Display: EstHours) - Time estimation in hours
+- **EstimatedWeight** (Number, Display: EstWeight) - Material weight in grams
+- **EstimatedCost** (Currency) - Calculated cost estimation (see Appendix D for formula)
+- **StaffNotes** (Multiple lines text) - Internal communication
+- **RejectionReason** (Choice with fill-in) - File format not supported; Design not printable; Excessive material usage; Incomplete request information; Size limitations; Material not available; Quality concerns; Other
+- **StudentConfirmed** (Yes/No, Default: No) - Student approval of cost estimate
+- **NeedsAttention** (Yes/No, Default: No) - Flags items requiring staff review
+- **Expanded** (Yes/No, Default: No) - Power Apps UI state for collapsed/expanded view
+- **AttachmentCount** (Number, Default: 0) - Tracks attachment changes for audit (hidden from students)
+- **LastAction** (Choice) - Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System
+- **LastActionBy** (Single line text) - High-level action attribution (stores "System" or staff name)
+- **LastActionAt** (Date and Time) - Audit timestamp
+
+**Note on Field Types:**
+- **EstimatedTime** internal name is `EstHours` in SharePoint
+- **EstimatedWeight** internal name is `EstWeight` in SharePoint
+- **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
+- For detailed audit attribution with person fields, see AuditLog.Actor
+
+#### AuditLog List Schema
+
+**Total Fields:** 14
+
+**Purpose:** Complete tracking system for all actions, changes, and system events with full attribution and temporal ordering.
+
+**Core Tracking Fields:**
+- **Title** (Single line text) - Human-readable action summary
+- **RequestID** (Number) - Links to PrintRequests.ID
+- **ReqKey** (Single line text) - Request identifier (REQ-00001)
+- **Action** (Choice) - Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System
+- **ActionAt** (Date and Time) - When action occurred (UTC)
+
+**Change Tracking Fields:**
+- **FieldName** (Single line text) - Which field changed (e.g., "Status", "Priority")
+- **OldValue** (Multiple lines text) - Previous value before change
+- **NewValue** (Multiple lines text) - New value after change
+
+**Attribution Fields:**
+- **Actor** (Person) - Who performed the action (resolved to person field with full metadata)
+- **ActorRole** (Choice) - Student; Staff; System
+- **ClientApp** (Choice) - SharePoint Form; Power Apps; Power Automate
+
+**Debugging Fields:**
+- **Notes** (Multiple lines text) - Additional context or error messages
+- **FlowRunId** (Single line text) - Power Automate run ID for tracing
+
+**Usage Examples:**
+
+*Field Change Entry:*
+```
+Title: "Priority Change"
+RequestID: 42
+ReqKey: "REQ-00042"
+Action: "Updated"
+FieldName: "Priority"
+OldValue: "Normal"
+NewValue: "High"
+Actor: [Staff Member Person Field]
+ActorRole: "Staff"
+ClientApp: "SharePoint Form"
+ActionAt: "2025-10-14 10:30:00"
+```
+
+*Email Sent Entry:*
+```
+Title: "Email Sent: Confirmation"
+RequestID: 42
+ReqKey: "REQ-00042"
+Action: "Email Sent"
+FieldName: "StudentEmail"
+NewValue: "student@lsu.edu"
+Actor: [NULL]
+ActorRole: "System"
+ClientApp: "Power Automate"
+ActionAt: "2025-10-14 10:30:15"
+FlowRunId: "08586653536760461208"
+```
+
+**Security:** All staff can read all entries (no item-level permissions). Students cannot access AuditLog list.
+
+#### Staff List Schema
+
+**Total Fields:** 3
+
+**Purpose:** Team member management and role assignment for access control.
+
+**Fields:**
+- **Member** (Person, Required) - Staff member's LSU account
+- **Role** (Choice) - Manager; Technician; Student Worker
+- **Active** (Yes/No, Default: Yes) - Employment status
+
+**Usage:** Power Apps staff console checks this list to determine if user has staff access.
+
+#### Attribution Field Strategy
+
+The system uses two complementary approaches for tracking who performed actions:
+
+**1. LastActionBy (Text field in PrintRequests)**
+- **Use Case:** Workflow logic and infinite loop prevention
+- **Stores:** Simple text strings ("System", staff name)
+- **Benefits:** Can store "System" literal, simple conditional checks in Flow B
+- **Limitation:** No person field benefits (profiles, filtering)
+
+**2. Actor (Person field in AuditLog)**
+- **Use Case:** Compliance auditing and detailed attribution
+- **Stores:** Full SharePoint person objects with metadata
+- **Benefits:** Clickable profiles, rich user data, people picker filtering
+- **Limitation:** Cannot store "System" as literal string
+
+**Why Both?**
+- PrintRequests.LastActionBy: Operational (prevent infinite loops in Flow B)
+- AuditLog.Actor: Compliance (detailed audit trail with full user information)
+- Together: Best of both worlds
 
 ### Appendix B: Status Workflow
 
-**Primary Flow:** Uploaded → Pending → Ready to Print → Printing → Completed → Paid & Picked Up → Archived  
+**Enhanced Primary Flow with Student Estimate Approval:**
+
+Uploaded → Pending → **[STUDENT CONFIRMS]** → Ready to Print → Printing → Completed → Paid & Picked Up → Archived
+
+**Status Details:**
+- **Uploaded:** New submission, awaiting initial staff review
+- **Pending:** Staff approved with estimates, **awaiting student confirmation** (StudentConfirmed = No)
+- **Ready to Print:** Student confirmed estimate (StudentConfirmed = Yes), queued for printing
+- **Printing:** Actively printing on equipment
+- **Completed:** Print finished, ready for student pickup
+- **Paid & Picked Up:** Student collected print and paid via TigerCASH
+- **Archived:** Request closed for historical record
+
 **Rejection Flow:** Uploaded → Rejected → Archived
+
+**Student Confirmation Process:**
+1. Staff review request and set estimates (EstimatedCost, EstimatedTime, EstimatedWeight)
+2. Staff change Status to "Pending"
+3. Flow B automatically sends estimate email to student
+4. Student opens "My Requests" view in SharePoint
+5. Student toggles StudentConfirmed from "No" to "Yes"
+6. Flow B detects change and automatically updates Status to "Ready to Print"
+7. Staff proceed with printing
+
+**Circular Loop Prevention:** Flow B only processes StudentConfirmed changes when Status = "Pending". After update to "Ready to Print", subsequent toggles are ignored.
 
 ### Appendix C: Email Templates
 
-**Submission Confirmation Template:**
+#### 1. Submission Confirmation Template
+
+**Trigger:** Flow A - When new request created with valid filename
+
 ```
 Subject: We received your 3D Print request – [ReqKey]
 
 We received your 3D Print request.
-Request: [Title]
-Request ID: [ReqKey]
-Method: [Method]
-Printer: [Printer]
 
-[View Request Link] | [View All Requests Link]
+REQUEST DETAILS:
+- Request: [Standardized Display Name]
+- Request ID: [ReqKey]
+- Method: [Method]
+- Printer: [Printer]
+- Color: [Color]
 
-Our team will review your request and contact you with any questions.
+NEXT STEPS:
+• Our team will review your request for technical feasibility
+• You'll receive updates as your request progresses through our queue
+• Estimated review time: 1-2 business days
+
+View your request details:
+[Direct Link: /Lists/PrintRequests/DispForm.aspx?ID=[ID]]
+
+View all your requests:
+[My Requests View: /Lists/PrintRequests/My%20Requests.aspx]
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
-**Rejection Notification Template:**
+#### 2. Estimate Ready Template
+
+**Trigger:** Flow B - When Status changes to "Pending"
+
+```
+Subject: Estimate ready for your 3D print – [ReqKey]
+
+Hi [Student Display Name],
+
+Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.
+
+⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.
+
+ESTIMATE DETAILS:
+- Request: [ReqKey]
+- Estimated Cost: $[EstimatedCost or "TBD"]
+- Color: [Color]
+- Print Time: [EstHours hours or "TBD"]
+
+TO CONFIRM THIS ESTIMATE:
+1. Click the link below to view your request
+2. Find the "StudentConfirmed" field
+3. Change it from "No" to "Yes"
+4. Click "Save" at the top
+
+View and Confirm Your Request:
+[My Requests View: /Lists/PrintRequests/My%20Requests.aspx]
+
+TIP: The link will open your requests in SharePoint. Your request should be at the top of the list.
+
+If you have any questions or concerns about the estimate, please contact us before confirming.
+
+Thank you,
+LSU Digital Fabrication Lab
+
+Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+Email: coad-fablab@lsu.edu
+Location: Room 145 Atkinson Hall
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
+```
+
+#### 3. Rejection Notification Template
+
+**Trigger:** Flow B - When Status changes to "Rejected"
+
 ```
 Subject: Your 3D Print request has been rejected – [ReqKey]
 
 Unfortunately, your 3D Print request has been rejected by our staff.
-Request: [Title] ([ReqKey])
-Reason: Please check the staff notes in your request for specific details.
 
-[View Request Link]
+REQUEST DETAILS:
+- Request: [Title] ([ReqKey])
+- Method: [Method]
+- Printer Requested: [Printer]
 
-You may submit a new corrected request at any time.
+REASON FOR REJECTION:
+[RejectionReason - Structured choices or custom text]
+
+ADDITIONAL DETAILS:
+[Notes field content]
+
+NEXT STEPS:
+• Review the specific rejection reason above
+• Make necessary adjustments to your design or request
+• Submit a new corrected request through the Fabrication Lab website
+• Contact our staff if you have questions about this feedback
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
-**Completion Notification Template:**
+#### 4. Completion Notification Template
+
+**Trigger:** Flow B - When Status changes to "Completed"
+
 ```
 Subject: Your 3D print is ready for pickup – [ReqKey]
 
-Great news! Your 3D print is completed and ready for pickup.
-Request: [Title] ([ReqKey])
+Your print is ready for pick up in the Fabrication Lab!
 
-Next Steps:
-• Visit the Digital Fabrication Lab to pay and collect your print
-• Payment calculated based on actual material used
-• Bring student ID for verification
-• Lab hours: [Hours Information]
+PICKUP INFORMATION:
+📍 Location: Room 145 Atkinson Hall
+💳 Payment: TigerCASH only
+🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 
-[View Request Link]
+WHAT TO BRING:
+• Your student ID
+• TigerCASH for payment
+
+Thank you,
+LSU Digital Fabrication Lab
+
+---
+This is an automated message from the LSU Digital Fabrication Lab.
 ```
+
+**Note:** All emails are sent from the shared mailbox `coad-fablab@lsu.edu` and automatically logged to AuditLog with System attribution.
+
+### Appendix D: Pricing Model
+
+#### Material Pricing Structure
+
+The Fabrication Lab uses a weight-based pricing model to recover material costs and cover operational expenses.
+
+**Pricing Rates:**
+
+| Material | Rate per Gram | Typical Small Print (50g) | Typical Large Print (200g) |
+|----------|---------------|---------------------------|----------------------------|
+| Filament (PLA/PETG/ABS) | $0.10/g | $5.00 | $20.00 |
+| Resin (Standard) | $0.20/g | $10.00 | $40.00 |
+
+#### Minimum Charge
+
+**All prints: $3.00 minimum**
+
+Covers:
+- Machine setup and calibration time
+- Failed print risk and troubleshooting
+- Material waste (support structures, first layer adhesion tests)
+- Facility and equipment maintenance costs
+
+#### Cost Calculation Formula
+
+```
+EstimatedCost = Max($3.00, EstimatedWeight × Material_Rate)
+
+Where:
+- EstimatedWeight: grams of material (from slicer software)
+- Material_Rate: $0.10/g (Filament) or $0.20/g (Resin)
+- $3.00: Minimum charge applied if calculated cost is lower
+```
+
+#### Calculation Examples
+
+**Example 1: Small Filament Keychain**
+- Weight: 15 grams
+- Method: Filament
+- Calculated: 15g × $0.10/g = $1.50
+- **Final Cost: $3.00** (minimum applied)
+
+**Example 2: Medium Filament Part**
+- Weight: 75 grams
+- Method: Filament
+- Calculated: 75g × $0.10/g = $7.50
+- **Final Cost: $7.50**
+
+**Example 3: Small Resin Miniature**
+- Weight: 20 grams
+- Method: Resin
+- Calculated: 20g × $0.20/g = $4.00
+- **Final Cost: $4.00**
+
+**Example 4: Large Resin Model**
+- Weight: 100 grams
+- Method: Resin
+- Calculated: 100g × $0.20/g = $20.00
+- **Final Cost: $20.00**
+
+#### Estimation Process
+
+1. **Staff Review:** Staff examines 3D model file
+2. **Slicer Analysis:** Staff imports file into PrusaSlicer or PreForm
+3. **Weight Calculation:** Slicer calculates material usage (grams)
+4. **Staff Input:** Staff enters EstimatedWeight in PrintRequests
+5. **Auto-Calculation:** System applies formula to calculate EstimatedCost
+6. **Student Notification:** Estimate email sent with cost (Status: Pending)
+7. **Student Confirmation:** Student reviews and confirms via StudentConfirmed field
+8. **Printing:** Only proceeds after student approval (Status: Ready to Print)
+
+#### Payment Collection
+
+**Method:** TigerCASH only  
+**Location:** Room 145 Atkinson Hall  
+**When:** At pickup (Status: Completed)  
+**Requirements:** Student ID for verification
+
+**Payment Workflow:**
+1. Student receives pickup notification email
+2. Student visits Fabrication Lab with ID and TigerCASH
+3. Staff verifies print quality
+4. Student pays with TigerCASH card
+5. Staff marks Status: Paid & Picked Up
+
+#### Notes on Pricing
+
+- **Estimates are estimates:** Final cost may differ slightly based on actual material used
+- **Time not a factor:** EstimatedTime field is for scheduling only, not pricing
+- **No refunds:** Once printing begins (Status: Printing), cost is committed
+- **Bulk discounts:** Not currently offered (future consideration)
+- **Special materials:** Pricing subject to change for specialty filaments/resins
 
 ---
 
 **Document Control:**
 - Created: January 2024
-- Last Modified: January 2024
-- Next Review: March 2024
+- Last Modified: October 2025
+- Next Review: December 2025
 - Approvers: Fabrication Lab Manager, IT Governance, Student Services

@@ -60,8 +60,41 @@ For each data card, set **Visible** property to `false`
 - `LastActionBy` - Auto-populated by flows
 - `LastActionAt` - Auto-populated timestamp
 - `NeedsAttention` - Staff attention flag
-- `StudentConfirmed` - Estimate confirmation flag
+- `StudentConfirmed` - Estimate confirmation flag (SPECIAL: Hide on NEW submissions, but students need to see/edit this field in "My Requests" view to confirm estimates. Set Visible property to: `SharePointForm1.Mode <> FormMode.New`)
 - `RejectionReason` - Staff rejection reasons (multi-select)
+
+**⚠️ StudentConfirmed Special Handling:**
+This field has dual visibility requirements:
+- **New submissions:** Hidden (students don't confirm during initial submission)
+- **My Requests view (edit mode):** Visible (students toggle this to confirm cost estimates)
+- **Implementation:** Set Visible property to `SharePointForm1.Mode <> FormMode.New` instead of `false`
+
+## Filename Policy (CRITICAL - Show to Students)
+
+Add prominent helper text near the file attachment control to explain the required filename format:
+
+**Helper Text to Display:**
+```
+⚠️ IMPORTANT: File Naming Requirement
+
+Your files MUST be named in this format:
+FirstLast_Method_Color
+
+Examples:
+✅ JaneDoe_Filament_Blue.stl
+✅ MikeSmith_Resin_Clear.3mf
+✅ SarahOConnor_Filament_Red.obj
+
+The system will automatically detect your file extension.
+Files not following this format will be rejected automatically.
+```
+
+**Implementation:** Add this as a Label control above the Attachments card with:
+- Background: Light yellow (#FFF4CE)
+- Font: Bold, size 12
+- Border: 2px solid orange (#FFB900)
+
+**Why:** Flow A automatically rejects files that don't follow this naming convention. Students need to know this BEFORE submitting.
 
 ## Printer Selection Logic
 
@@ -72,14 +105,14 @@ Add conditional visibility for **Printer** choices based on **Method**:
 If(
     DataCardValue_Method.Selected.Value = "Resin",
     ["Form 3 (5.7×5.7×7.3in)"],
-    ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×13.4in)"]
+    ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"]
 )
 ```
 
 ## File Requirements Helper Text
 
 Add helper text for file attachments:
-"Upload .STL, .OBJ, or .3MF files only. Maximum 150MB per file. Ensure your model fits within the selected printer's build plate dimensions."
+"Upload .STL, .OBJ, .3MF, .IDEA, or .FORM files only. Maximum 150MB per file. Files must be named: FirstLast_Method_Color (example: JaneDoe_Filament_Blue.stl). Files not following this naming format will be automatically rejected."
 
 ## Client-Side File Validation
 
@@ -93,9 +126,11 @@ ForAll(
         !( 
             EndsWith(Lower(DisplayName), ".stl") || 
             EndsWith(Lower(DisplayName), ".obj") || 
-            EndsWith(Lower(DisplayName), ".3mf")
+            EndsWith(Lower(DisplayName), ".3mf") ||
+            EndsWith(Lower(DisplayName), ".idea") ||
+            EndsWith(Lower(DisplayName), ".form")
         ),
-        Notify("Error: " & DisplayName & " - Only .STL, .OBJ, and .3MF files are allowed.", NotificationType.Error);
+        Notify("Error: " & DisplayName & " - Only .STL, .OBJ, .3MF, .IDEA, and .FORM files are allowed.", NotificationType.Error);
         // Note: Reset(Attachments1) will clear all attachments - consider alternative UX
         ,
         
@@ -114,7 +149,7 @@ ForAll(
 // Replace default OnSelect with validation logic
 If(
     IsEmpty(Attachments1.Attachments),
-    Notify("Please attach at least one 3D model file (.stl, .obj, or .3mf)", NotificationType.Error),
+    Notify("Please attach at least one 3D model file (.stl, .obj, .3mf, .idea, or .form)", NotificationType.Error),
     
     // Check if all attached files are valid
     If(
@@ -124,12 +159,14 @@ If(
                 !(
                     EndsWith(Lower(DisplayName), ".stl") || 
                     EndsWith(Lower(DisplayName), ".obj") || 
-                    EndsWith(Lower(DisplayName), ".3mf")
+                    EndsWith(Lower(DisplayName), ".3mf") ||
+                    EndsWith(Lower(DisplayName), ".idea") ||
+                    EndsWith(Lower(DisplayName), ".form")
                 ) ||
                 Size > 157286400
             )
         ) > 0,
-        Notify("Please remove invalid files and try again. Only .STL/.OBJ/.3MF files under 150MB are allowed.", NotificationType.Error),
+        Notify("Please remove invalid files and try again. Only .STL/.OBJ/.3MF/.IDEA/.FORM files under 150MB are allowed.", NotificationType.Error),
         
         // If all validations pass, submit the form
         SubmitForm(SharePointForm1);
@@ -150,7 +187,9 @@ Label.Text = If(
                 Attachments1.Attachments,
                 EndsWith(Lower(DisplayName), ".stl") || 
                 EndsWith(Lower(DisplayName), ".obj") || 
-                EndsWith(Lower(DisplayName), ".3mf")
+                EndsWith(Lower(DisplayName), ".3mf") ||
+                EndsWith(Lower(DisplayName), ".idea") ||
+                EndsWith(Lower(DisplayName), ".form")
             )
         ) = CountRows(Attachments1.Attachments),
         "✅ All files valid",
@@ -164,7 +203,9 @@ Label.Color = If(
         CountRows(Filter(Attachments1.Attachments, 
             EndsWith(Lower(DisplayName), ".stl") || 
             EndsWith(Lower(DisplayName), ".obj") || 
-            EndsWith(Lower(DisplayName), ".3mf")
+            EndsWith(Lower(DisplayName), ".3mf") ||
+            EndsWith(Lower(DisplayName), ".idea") ||
+            EndsWith(Lower(DisplayName), ".form")
         )) = CountRows(Attachments1.Attachments),
         RGBA(0, 128, 0, 1),   // Green for valid
         RGBA(255, 0, 0, 1)    // Red for invalid
@@ -214,6 +255,30 @@ Notify("Request submitted. You'll receive an email confirmation shortly.", Notif
 2. Attach: `model.stl` (invalid name)
 3. Try to submit
 4. Should see error message about file naming
+
+---
+
+## Filename Validation Examples
+
+**Valid Filenames:**
+- ✅ `JaneDoe_Filament_Blue.stl`
+- ✅ `MikeSmith_Resin_Clear.3mf`
+- ✅ `SarahOConnor_Filament_Red.obj`
+- ✅ `PatrickOBrien_Filament_Black.idea` (PrusaSlicer project)
+- ✅ `MaryJane_Resin_Clear.form` (Formlabs project)
+
+**Invalid Filenames (will be auto-rejected):**
+- ❌ `model.stl` (missing student name, method, color)
+- ❌ `JaneDoe.stl` (missing method and color)
+- ❌ `JaneDoe_Blue.stl` (missing method)
+- ❌ `Jane Doe_Filament_Blue.stl` (spaces in name - use JaneDoe)
+- ❌ `project.pdf` (invalid file type)
+
+**Character Cleaning (automatic):**
+Student names are automatically cleaned:
+- Spaces removed: "Jane Doe" → "JaneDoe"
+- Hyphens removed: "Mary-Jane" → "MaryJane"
+- Apostrophes removed: "O'Connor" → "OConnor"
 
 ---
 
