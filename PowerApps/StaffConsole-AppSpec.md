@@ -11,22 +11,23 @@
 2. [Creating the Canvas App](#step-1-creating-the-canvas-app)
 3. [Adding Data Connections](#step-2-adding-data-connections)
 4. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
-5. [Building the Top Navigation Bar](#step-4-building-the-top-navigation-bar)
-6. [Creating Status Tabs](#step-5-creating-status-tabs)
-7. [Building the Job Cards Gallery](#step-6-building-the-job-cards-gallery)
-8. [Creating the Job Card Template](#step-7-creating-the-job-card-template)
-9. [Adding Expandable Details](#step-8-adding-expandable-details)
-10. [Implementing Action Buttons](#step-9-implementing-action-buttons)
-11. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
-12. [Building the Approval Modal](#step-11-building-the-approval-modal)
-13. [Building the Archive Modal](#step-12-building-the-archive-modal)
-14. [Adding Search and Filters](#step-13-adding-search-and-filters)
-15. [Adding the Lightbulb Attention System](#step-14-adding-the-lightbulb-attention-system)
-16. [Adding the Attachments Modal](#step-15-adding-the-attachments-modal)
-17. [Publishing the App](#step-16-publishing-the-app)
-18. [Testing the App](#step-17-testing-the-app)
-19. [Troubleshooting](#troubleshooting)
-20. [Quick Reference Card](#quick-reference-card)
+5. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
+6. [Building the Top Navigation Bar](#step-4-building-the-top-navigation-bar)
+7. [Creating Status Tabs](#step-5-creating-status-tabs)
+8. [Building the Job Cards Gallery](#step-6-building-the-job-cards-gallery)
+9. [Creating the Job Card Template](#step-7-creating-the-job-card-template)
+10. [Adding Expandable Details](#step-8-adding-expandable-details)
+11. [Implementing Action Buttons](#step-9-implementing-action-buttons)
+12. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
+13. [Building the Approval Modal](#step-11-building-the-approval-modal)
+14. [Building the Archive Modal](#step-12-building-the-archive-modal)
+15. [Adding Search and Filters](#step-13-adding-search-and-filters)
+16. [Adding the Lightbulb Attention System](#step-14-adding-the-lightbulb-attention-system)
+17. [Adding the Attachments Modal](#step-15-adding-the-attachments-modal)
+18. [Publishing the App](#step-16-publishing-the-app)
+19. [Testing the App](#step-17-testing-the-app)
+20. [Troubleshooting](#troubleshooting)
+21. [Quick Reference Card](#quick-reference-card)
 
 ---
 
@@ -222,20 +223,60 @@ Set(varAttachmentChangedName, Blank());
 
 ---
 
+## Understanding Where Things Go (READ THIS!)
+
+Before you start building the UI, understand the difference between **App** and **Screen1**:
+
+```
+▼ App                    ← App-wide formulas ONLY (OnStart, etc.)
+▼ Screen1                ← ALL visual elements go here
+    Rectangle1           ← Header bar
+    Label1               ← App title
+    Button1              ← Navigation button
+    galStatusTabs        ← Status tabs gallery
+    galJobCards          ← Main job cards gallery
+    recRejectOverlay     ← Modal overlay
+    recRejectModal       ← Modal content
+    ... more controls
+```
+
+**Key Rules:**
+
+| Rule | Explanation |
+|------|-------------|
+| **App = formulas only** | Only put formulas like `OnStart` here. Never visual elements. |
+| **Screen1 = all visuals** | All rectangles, labels, buttons, galleries go here. |
+| **Elements are siblings** | They sit side-by-side in Tree view, NOT nested inside each other. |
+| **Galleries are special** | If you select a gallery and then Insert, the new control goes INSIDE that gallery's template. |
+
+> 💡 **How to know what's selected:** Look at the Tree view on the left. The highlighted item is what's currently selected. When you click **+ Insert**, the new control goes into whatever is selected.
+
+---
+
 # STEP 4: Building the Top Navigation Bar
 
 **What you're doing:** Creating a professional navigation bar at the top of the screen with page buttons.
 
+> ⚠️ **IMPORTANT: App vs Screen1**
+> 
+> | Object | What Goes There | How to Select It |
+> |--------|-----------------|------------------|
+> | **App** | App-wide formulas (`OnStart`) | Click "App" at the very top of Tree view |
+> | **Screen1** | All visual elements (rectangles, labels, buttons, galleries) | Click "Screen1" in Tree view |
+> 
+> **All visual elements go directly on Screen1** — they don't need to be nested inside containers. They sit as siblings (side by side in the Tree view).
+
 ### Instructions
 
-1. Click **+ Insert** in the toolbar (or press **Alt+I**).
-2. Search for **Rectangle** and click to add it.
-3. Position and size the rectangle:
+1. **In the Tree view, click on `Screen1`** to select it (NOT App).
+2. Click **+ Insert** in the toolbar (or press **Alt+I**).
+3. Search for **Rectangle** and click to add it.
+4. Position and size the rectangle:
    - **X:** `0`
    - **Y:** `0`
    - **Width:** `1366` (full width)
    - **Height:** `60`
-4. Set the **Fill** property:
+5. Set the **Fill** property:
 
 ```powerfx
 RGBA(45, 45, 48, 1)
@@ -245,8 +286,8 @@ RGBA(45, 45, 48, 1)
 
 ### Adding the App Title
 
-5. Click **+ Insert** → **Text label**.
-6. Set these properties:
+6. Click **+ Insert** → **Text label**.
+7. Set these properties:
    - **Text:** `"🖨️ 3D Printing Dashboard"`
    - **X:** `20`
    - **Y:** `15`
@@ -258,15 +299,15 @@ RGBA(45, 45, 48, 1)
 
 ### Adding Navigation Buttons
 
-7. Click **+ Insert** → **Button**.
-8. Set these properties for the **Dashboard** button:
+8. Click **+ Insert** → **Button**.
+9. Set these properties for the **Dashboard** button:
    - **Text:** `"Dashboard"`
    - **X:** `300`
    - **Y:** `12`
    - **Width:** `120`
    - **Height:** `36`
 
-9. Set the **Fill** property (makes it highlight when selected):
+10. Set the **Fill** property (makes it highlight when selected):
 
 **⬇️ FORMULA: Paste into Button Fill**
 
@@ -274,19 +315,19 @@ RGBA(45, 45, 48, 1)
 If(varCurrentPage = "Dashboard", RGBA(70, 130, 220, 1), RGBA(60, 60, 65, 1))
 ```
 
-10. Set the **Color** property:
+11. Set the **Color** property:
 
 ```powerfx
 Color.White
 ```
 
-11. Set the **OnSelect** property:
+12. Set the **OnSelect** property:
 
 ```powerfx
 Set(varCurrentPage, "Dashboard")
 ```
 
-12. Repeat steps 7-11 to create **Admin** and **Analytics** buttons:
+13. Repeat steps 8-12 to create **Admin** and **Analytics** buttons:
 
 | Button | X | OnSelect |
 |--------|---|----------|
@@ -295,8 +336,8 @@ Set(varCurrentPage, "Dashboard")
 
 ### Adding User Info Display
 
-13. Click **+ Insert** → **Text label**.
-14. Set these properties:
+14. Click **+ Insert** → **Text label**.
+15. Set these properties:
    - **Text:** `varMeName`
    - **X:** `1150`
    - **Y:** `18`
