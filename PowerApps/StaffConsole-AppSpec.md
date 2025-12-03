@@ -227,27 +227,161 @@ Set(varAttachmentChangedName, Blank());
 
 Before you start building the UI, understand the difference between **App** and **Screen1**:
 
+### Naming Convention
+
+We use **prefixes** to identify control types at a glance:
+
+| Prefix | Control Type | Example |
+|--------|-------------|---------|
+| `scr` | Screen | `scrDashboard` |
+| `rec` | Rectangle | `recHeader` |
+| `lbl` | Label | `lblAppTitle` |
+| `btn` | Button | `btnApprove` |
+| `gal` | Gallery | `galJobCards` |
+| `txt` | Text Input | `txtSearch` |
+| `dd` | Dropdown/ComboBox | `ddStaff` |
+| `chk` | Checkbox | `chkNeedsAttention` |
+| `ico` | Icon | `icoExpand` |
+| `con` | Container | `conExpandedDetails` |
+| `frm` | Form | `frmAttachments` |
+| `tmr` | Timer | `tmrGlow` |
+
+### Complete Tree View — All Controls
+
+Here's the **complete list** of every control you'll create, with proper names:
+
 ```
-▼ App                    ← App-wide formulas ONLY (OnStart, etc.)
-▼ Screen1                ← ALL visual elements go here
-    Rectangle1           ← Header bar
-    Label1               ← App title
-    Button1              ← Navigation button
-    galStatusTabs        ← Status tabs gallery
-    galJobCards          ← Main job cards gallery
-    recRejectOverlay     ← Modal overlay
-    recRejectModal       ← Modal content
-    ... more controls
+▼ App                              ← OnStart formula only
+▼ scrDashboard                     ← Main screen (rename Screen1 to this)
+│
+├── HEADER BAR ─────────────────────────────────────────
+│   recHeader                      ← Dark gray header background
+│   lblAppTitle                    ← "🖨️ 3D Printing Dashboard"
+│   btnNavDashboard                ← Dashboard nav button
+│   btnNavAdmin                    ← Admin nav button  
+│   btnNavAnalytics                ← Analytics nav button
+│   lblUserName                    ← Shows logged-in user name
+│
+├── STATUS TABS ────────────────────────────────────────
+│   ▼ galStatusTabs                ← Horizontal gallery of status tabs
+│       btnStatusTab               ← Button inside gallery template
+│
+├── SEARCH & FILTERS ───────────────────────────────────
+│   txtSearch                      ← Search input box
+│   chkNeedsAttention              ← "Needs Attention Only" checkbox
+│   btnExpandAll                   ← Expand/Collapse all button
+│   btnClearFilters                ← Clear filters button
+│
+├── JOB CARDS GALLERY ──────────────────────────────────
+│   ▼ galJobCards                  ← Main vertical gallery
+│       recCardBackground          ← Card background rectangle
+│       lblStudentName             ← Student display name
+│       lblSubmittedTime           ← "Submitted 2h ago"
+│       lblReqKey                  ← "REQ-00001 — Project Title"
+│       lblStudentEmail            ← Student email
+│       icoPrinter                 ← Printer icon
+│       lblPrinter                 ← Printer name
+│       lblMethod                  ← "Filament" or "Resin" badge
+│       recColorCircle             ← Color indicator circle
+│       lblColor                   ← Color name
+│       icoExpandCollapse          ← Chevron up/down icon
+│       icoLightbulb               ← Attention lightbulb
+│       │
+│       ├── ACTION BUTTONS (inside gallery)
+│       │   btnApprove             ← "✓ Approve" button
+│       │   btnReject              ← "✗ Reject" button
+│       │   btnArchive             ← "📦 Archive" button
+│       │   btnStartPrint          ← "🖨️ Start Print" button
+│       │   btnComplete            ← "✓ Complete" button
+│       │   btnPickedUp            ← "💰 Picked Up" button
+│       │   btnFiles               ← "📎 Files" button
+│       │
+│       └── EXPANDED DETAILS (inside gallery)
+│           conExpandedDetails     ← Container for expanded content
+│           lblStaffNotesHeader    ← "Staff Notes" label
+│           txtStaffNotes          ← Staff notes text input
+│           btnSaveNotes           ← "💾 Save Notes" button
+│           lblJobId               ← Job ID display
+│           lblCreated             ← Created date
+│           lblDueDate             ← Due date
+│           lblDiscipline          ← Discipline
+│           lblProjectType         ← Project type
+│           lblCourse              ← Course number
+│
+├── REJECTION MODAL ────────────────────────────────────
+│   recRejectOverlay               ← Dark semi-transparent overlay
+│   recRejectModal                 ← White modal box
+│   lblRejectTitle                 ← "Reject Request - REQ-00001"
+│   lblRejectStudent               ← Student info display
+│   lblRejectStaffLabel            ← "Performing Action As:"
+│   ddRejectStaff                  ← Staff dropdown
+│   lblRejectReasonsLabel          ← "Rejection Reasons:"
+│   chkIncomplete                  ← "Incomplete project description"
+│   chkSafety                      ← "Safety concerns with design"
+│   chkDetail                      ← "Insufficient detail/resolution"
+│   chkCopyright                   ← "Copyright/IP concerns"
+│   chkComplexity                  ← "Too complex for equipment"
+│   lblRejectCommentsLabel         ← "Additional Comments:"
+│   txtRejectComments              ← Comments text input
+│   btnRejectCancel                ← "Cancel" button
+│   btnRejectConfirm               ← "✗ Confirm Rejection" button
+│
+├── APPROVAL MODAL ─────────────────────────────────────
+│   recApprovalOverlay             ← Dark semi-transparent overlay
+│   recApprovalModal               ← White modal box
+│   lblApprovalTitle               ← "Approve Request - REQ-00001"
+│   lblApprovalStudent             ← Student info display
+│   lblApprovalStaffLabel          ← "Performing Action As:"
+│   ddApprovalStaff                ← Staff dropdown
+│   lblWeightLabel                 ← "Estimated Weight (grams):"
+│   txtEstimatedWeight             ← Weight input
+│   lblWeightError                 ← Weight validation error
+│   lblTimeLabel                   ← "Estimated Print Time (hours):"
+│   txtEstimatedTime               ← Time input (optional)
+│   lblCostLabel                   ← "Estimated Cost:"
+│   lblCalculatedCost              ← "$12.50" calculated display
+│   lblApprovalCommentsLabel       ← "Comments:"
+│   txtApprovalComments            ← Comments text input
+│   btnApprovalCancel              ← "Cancel" button
+│   btnApprovalConfirm             ← "✓ Confirm Approval" button
+│
+├── ARCHIVE MODAL ──────────────────────────────────────
+│   recArchiveOverlay              ← Dark semi-transparent overlay
+│   recArchiveModal                ← White modal box
+│   lblArchiveTitle                ← "Archive Request - REQ-00001"
+│   lblArchiveWarning              ← Warning message
+│   lblArchiveStaffLabel           ← "Performing Action As:"
+│   ddArchiveStaff                 ← Staff dropdown
+│   lblArchiveReasonLabel          ← "Reason (optional):"
+│   txtArchiveReason               ← Reason text input
+│   btnArchiveCancel               ← "Cancel" button
+│   btnArchiveConfirm              ← "📦 Confirm Archive" button
+│
+├── ATTACHMENTS MODAL ──────────────────────────────────
+│   recFileOverlay                 ← Dark semi-transparent overlay
+│   recFileModal                   ← White modal box
+│   lblFileTitle                   ← "Manage Attachments"
+│   lblFileStaffLabel              ← "Performing Action As:"
+│   ddFileActor                    ← Staff dropdown
+│   frmAttachmentsEdit             ← Edit form for attachments
+│   btnFileSave                    ← "Save Changes" button
+│   btnFileCancel                  ← "Cancel" button
+│
+└── UTILITIES ──────────────────────────────────────────
+    tmrGlow                        ← Timer for attention animation
 ```
 
-**Key Rules:**
+### Key Rules
 
 | Rule | Explanation |
 |------|-------------|
 | **App = formulas only** | Only put formulas like `OnStart` here. Never visual elements. |
-| **Screen1 = all visuals** | All rectangles, labels, buttons, galleries go here. |
+| **scrDashboard = all visuals** | All rectangles, labels, buttons, galleries go here. |
 | **Elements are siblings** | They sit side-by-side in Tree view, NOT nested inside each other. |
 | **Galleries are special** | If you select a gallery and then Insert, the new control goes INSIDE that gallery's template. |
+| **Rename immediately** | After adding a control, rename it right away (click name in Tree view). |
+
+> 💡 **How to rename:** In the Tree view, double-click the control name (or click once and press F2) to edit it.
 
 > 💡 **How to know what's selected:** Look at the Tree view on the left. The highlighted item is what's currently selected. When you click **+ Insert**, the new control goes into whatever is selected.
 
@@ -257,50 +391,59 @@ Before you start building the UI, understand the difference between **App** and 
 
 **What you're doing:** Creating a professional navigation bar at the top of the screen with page buttons.
 
-> ⚠️ **IMPORTANT: App vs Screen1**
-> 
-> | Object | What Goes There | How to Select It |
-> |--------|-----------------|------------------|
-> | **App** | App-wide formulas (`OnStart`) | Click "App" at the very top of Tree view |
-> | **Screen1** | All visual elements (rectangles, labels, buttons, galleries) | Click "Screen1" in Tree view |
-> 
-> **All visual elements go directly on Screen1** — they don't need to be nested inside containers. They sit as siblings (side by side in the Tree view).
+**Controls you'll create:**
+- `recHeader` — Header background
+- `lblAppTitle` — App title label
+- `btnNavDashboard`, `btnNavAdmin`, `btnNavAnalytics` — Navigation buttons
+- `lblUserName` — User display
 
-### Instructions
+### First: Rename the Screen
 
-1. **In the Tree view, click on `Screen1`** to select it (NOT App).
-2. Click **+ Insert** in the toolbar (or press **Alt+I**).
-3. Search for **Rectangle** and click to add it.
-4. Position and size the rectangle:
-   - **X:** `0`
-   - **Y:** `0`
-   - **Width:** `1366` (full width)
-   - **Height:** `60`
-5. Set the **Fill** property:
+1. **In the Tree view, double-click on `Screen1`** to rename it.
+2. Type `scrDashboard` and press **Enter**.
 
-```powerfx
-RGBA(45, 45, 48, 1)
-```
+> 💡 **Why rename?** Using consistent names makes your formulas easier to read and debug.
+
+### Creating the Header Bar (recHeader)
+
+3. With `scrDashboard` selected, click **+ Insert** → **Rectangle**.
+4. **Rename it:** Double-click `Rectangle1` in Tree view → type `recHeader` → press Enter.
+5. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `60` |
+| Fill | `RGBA(45, 45, 48, 1)` |
 
 > This creates a dark gray header bar.
 
-### Adding the App Title
+### Adding the App Title (lblAppTitle)
 
 6. Click **+ Insert** → **Text label**.
-7. Set these properties:
-   - **Text:** `"🖨️ 3D Printing Dashboard"`
-   - **X:** `20`
-   - **Y:** `15`
-   - **Width:** `300`
-   - **Height:** `30`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Size:** `18`
-   - **Color:** `Color.White`
+7. **Rename it:** `lblAppTitle`
+8. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"🖨️ 3D Printing Dashboard"` |
+| X | `20` |
+| Y | `15` |
+| Width | `300` |
+| Height | `30` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `18` |
+| Color | `Color.White` |
 
 ### Adding Navigation Buttons
 
-8. Click **+ Insert** → **Button**.
-9. Set these properties for the **Dashboard** button:
+#### btnNavDashboard
+
+9. Click **+ Insert** → **Button**.
+10. **Rename it:** `btnNavDashboard`
+11. Set these properties:
    - **Text:** `"Dashboard"`
    - **X:** `300`
    - **Y:** `12`
@@ -334,10 +477,11 @@ Set(varCurrentPage, "Dashboard")
 | Admin | `430` | `Notify("Admin features coming soon!", NotificationType.Information)` |
 | Analytics | `560` | `Notify("Analytics features coming soon!", NotificationType.Information)` |
 
-### Adding User Info Display
+### Adding User Info Display (lblUserName)
 
-14. Click **+ Insert** → **Text label**.
-15. Set these properties:
+18. Click **+ Insert** → **Text label**.
+19. **Rename it:** `lblUserName`
+20. Set these properties:
    - **Text:** `varMeName`
    - **X:** `1150`
    - **Y:** `18`
@@ -346,6 +490,21 @@ Set(varCurrentPage, "Dashboard")
    - **Align:** `Align.Right`
    - **Color:** `RGBA(200, 200, 200, 1)`
    - **Size:** `12`
+
+### ✅ Step 4 Checklist
+
+After completing this step, your Tree view should look like:
+
+```
+▼ App
+▼ scrDashboard
+    recHeader
+    lblAppTitle
+    btnNavDashboard
+    btnNavAdmin
+    btnNavAnalytics
+    lblUserName
+```
 
 ---
 
@@ -383,11 +542,12 @@ Table(
 5. Set **TemplateSize:** `160`
 6. Set **TemplatePadding:** `5`
 
-### Adding the Tab Button Inside the Gallery
+### Adding the Tab Button Inside the Gallery (btnStatusTab)
 
 7. With `galStatusTabs` selected, click **+ Insert** → **Button**.
-8. The button appears inside the gallery template.
-9. Set the button's **Text** property:
+8. **Rename it:** `btnStatusTab`
+9. The button appears inside the gallery template.
+10. Set the button's **Text** property:
 
 **⬇️ FORMULA: Paste into Button Text (shows status + count)**
 
@@ -417,8 +577,19 @@ If(
 Set(varSelectedStatus, ThisItem.Status)
 ```
 
-13. Set **Width:** `150`, **Height:** `40`
-14. Set **BorderRadius:** `20` (rounded pill shape)
+14. Set **Width:** `150`, **Height:** `40`
+15. Set **BorderRadius:** `20` (rounded pill shape)
+
+### ✅ Step 5 Checklist
+
+Your Tree view should now include:
+
+```
+▼ scrDashboard
+    ... (header controls)
+    ▼ galStatusTabs
+        btnStatusTab
+```
 
 ---
 
@@ -766,11 +937,11 @@ First, let's ensure varActor is set up. We'll create it on the screen's OnVisibl
 
 ```powerfx
 Set(varActor,
-    {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-        Claims: "i:0#.f|membership|" & varMeEmail,
-        DisplayName: varMeName,
-        Email: varMeEmail
+{
+  '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+  Claims: "i:0#.f|membership|" & varMeEmail,
+  DisplayName: varMeName,
+  Email: varMeEmail
     }
 )
 ```
@@ -881,21 +1052,21 @@ Notify("Print started!", NotificationType.Success)
 11. Set **OnSelect:**
 
 ```powerfx
-Patch(PrintRequests, ThisItem, {
+    Patch(PrintRequests, ThisItem, {
     Status: "Completed",
     LastAction: "Completed",
-    LastActionBy: varActor,
-    LastActionAt: Now()
-});
+        LastActionBy: varActor,
+        LastActionAt: Now()
+    });
 
 'Flow C (PR-Action)'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    ThisItem.Status,
+        Text(ThisItem.ID),
+        "Status Change",
+        "Status",
+        ThisItem.Status,
     "Completed",
-    varMeEmail,
-    "Power Apps",
+        varMeEmail,
+        "Power Apps",
     "Print completed - ready for pickup"
 );
 
