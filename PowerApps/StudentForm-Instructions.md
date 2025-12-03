@@ -5,18 +5,61 @@
 
 ---
 
-## Quick Start
+## Table of Contents
 
-1. Open SharePoint → `PrintRequests` list
-2. **Integrate** → **Power Apps** → **Customize forms**
-3. Follow steps below to configure form
-4. **File** → **Publish to SharePoint**
-5. Test submission as student user
+1. [Opening the Form Editor](#step-1-opening-the-form-editor)
+2. [Setting Default Values](#step-2-setting-default-values)
+3. [Hiding Staff-Only Fields](#step-3-hiding-staff-only-fields)
+4. [Adding File Naming Instructions](#step-4-adding-file-naming-instructions)
+5. [Publishing the Form](#step-5-publishing-the-form)
+6. [Setting the Form as Default](#step-6-setting-the-form-as-default)
+7. [Testing the Form](#step-7-testing-the-form)
+8. [Troubleshooting](#troubleshooting)
+9. [Reference: File Naming Examples](#reference-file-naming-examples)
 
 ---
 
-## Set Defaults
-- **Student** (DefaultSelectedItems):
+# STEP 1: Opening the Form Editor
+
+**What you're doing:** Opening the Power Apps form editor so you can customize your SharePoint form.
+
+### Instructions
+
+1. Go to your SharePoint site.
+2. Open the **PrintRequests** list.
+3. In the toolbar, click **Integrate** → **Power Apps** → **Customize forms**.
+4. A new browser tab opens with the **Power Apps form editor**.
+
+> 💡 **Tip:** Leave this tab open while you work through all the steps below.
+
+---
+
+# STEP 2: Setting Default Values
+
+**What you're doing:** Making certain fields fill in automatically (like the student's name and email) so users don't have to type them every time.
+
+> ⚠️ **CRITICAL:** When setting properties in Power Apps, you must select the **control inside the card** (like `DataCardValue3`), NOT the card itself (like `Student_DataCard1`). The card is just a container—the control inside is what actually displays and stores data.
+
+---
+
+## 2A. Auto-Fill the "Student" Field
+
+**Goal:** When a student opens the form, their name appears automatically.
+
+### Instructions
+
+1. In the **Tree View** panel (left side), find `Student_DataCard1`.
+2. Click the small arrow (▶) next to it to **expand** the card.
+3. Inside, click on the control named `DataCardValue3` (or similar—it's the ComboBox).
+4. On the right side, click the **Advanced** tab.
+
+### Set DefaultSelectedItems
+
+5. Find the property called **DefaultSelectedItems**.
+6. Delete whatever is there and paste this formula:
+
+**⬇️ FORMULA: Paste into DefaultSelectedItems**
+
 ```powerfx
 If(
     SharePointForm1.Mode = FormMode.New,
@@ -27,289 +70,433 @@ If(
             Email: Lower(User().Email)
         }
     ],
-    Parent.Default
+    Table(Parent.Default)
 )
 ```
-- **StudentEmail** (Default):
+
+7. Press **Enter** to confirm.
+
+### Set DisplayFields (Important!)
+
+8. Still on the same ComboBox, find the property called **DisplayFields**.
+9. Change it to:
+
+**⬇️ VALUE: Paste into DisplayFields**
+
 ```powerfx
-If(SharePointForm1.Mode = FormMode.New, Lower(User().Email), Parent.Default)
+["DisplayName"]
 ```
-- **Status** (Default):
+
+10. Press **Enter** to confirm.
+
+> ⚠️ **Why DisplayFields matters:** Without this, the field will show a weird code like `i:0#.f|membership|email@lsu.edu` instead of the person's name.
+
+---
+
+## 2B. Auto-Fill the "StudentEmail" Field
+
+**Goal:** Automatically fill in the student's email address.
+
+### Instructions
+
+1. In the **Tree View**, expand `StudentEmail_DataCard1`.
+2. Click on the input control inside (e.g., `DataCardValue4`).
+3. On the right, click the **Advanced** tab.
+4. Find the property called **Default**.
+5. Delete whatever is there and paste this formula:
+
+**⬇️ FORMULA: Paste into Default**
+
 ```powerfx
-If(SharePointForm1.Mode = FormMode.New, "Uploaded", Parent.Default)
+Lower(User().Email)
 ```
 
-## Hide Staff-only cards
+6. Press **Enter** to confirm.
 
-**Method 1: Remove cards (Recommended)**
-1. In Power Apps form designer → Select form
-2. **Properties** pane → **Edit fields**
-3. For each field below, hover → click **...** → **Remove**
+> 💡 **Note:** We use a simple formula here. When editing existing records, SharePoint automatically loads the saved value, so we don't need `Parent.Default`.
 
-**Method 2: Set Visible = false**
-For each data card, set **Visible** property to `false`
+---
 
-**Fields to hide:**
-- `Status` - Auto-set by flow
-- `Priority` - Staff manages queue priority
-- `EstHours` (EstimatedTime) - Staff estimates print time
-- `EstWeight` (EstimatedWeight) - Staff estimates material
-- `EstimatedCost` - Staff calculates cost
-- `StaffNotes` - Internal staff communication
-- `LastAction` - Auto-populated by flows
-- `LastActionBy` - Auto-populated by flows
-- `LastActionAt` - Auto-populated timestamp
-- `NeedsAttention` - Staff attention flag
-- `StudentConfirmed` - Estimate confirmation flag (SPECIAL: Hide on NEW submissions, but students need to see/edit this field in "My Requests" view to confirm estimates. Set Visible property to: `SharePointForm1.Mode <> FormMode.New`)
-- `RejectionReason` - Staff rejection reasons (multi-select)
+## 2C. Auto-Set the "Status" Field (CRITICAL)
 
-**⚠️ StudentConfirmed Special Handling:**
-This field has dual visibility requirements:
-- **New submissions:** Hidden (students don't confirm during initial submission)
-- **My Requests view (edit mode):** Visible (students toggle this to confirm cost estimates)
-- **Implementation:** Set Visible property to `SharePointForm1.Mode <> FormMode.New` instead of `false`
+**Goal:** When a new request is created, set the Status to "Uploaded" automatically.
 
-## Filename Policy (CRITICAL - Show to Students)
+> ⚠️ **IMPORTANT:** The Status field is **required** by SharePoint. Do NOT remove it from the form—you must keep it but hide it (see Step 3).
 
-Add prominent helper text near the file attachment control to explain the required filename format:
+### Instructions
 
-**Helper Text to Display:**
+1. In the **Tree View**, expand `Status_DataCard1`.
+2. Click on the ComboBox control inside (e.g., `DataCardValue5`).
+3. On the right, click the **Advanced** tab.
+4. Find the property called **DefaultSelectedItems**.
+5. Delete whatever is there and paste this formula:
+
+**⬇️ FORMULA: Paste into DefaultSelectedItems**
+
+```powerfx
+[{Value: "Uploaded"}]
 ```
-⚠️ IMPORTANT: File Naming Requirement
 
-Your files MUST be named in this format:
-FirstLast_Method_Color
+6. Press **Enter** to confirm.
+
+> ⚠️ **Note:** Status is a Choice/ComboBox field, so we use `DefaultSelectedItems` with `[{Value: "..."}]` format, not just a plain string.
+
+---
+
+# STEP 3: Hiding Staff-Only Fields
+
+**What you're doing:** Hiding fields that students should NOT see (these are for staff only).
+
+> ⚠️ **IMPORTANT:** Some fields (like Status) are **required** by SharePoint. You must **HIDE** these fields (set Visible = false), NOT remove them. Removing required fields will cause "Field is required" errors.
+
+---
+
+## Fields to HIDE (Set Visible = false)
+
+These fields should stay in the form but be invisible to students:
+
+| Field Name         | Why Hide It?                        | Method |
+|--------------------|-------------------------------------|--------|
+| **Status**         | Required by SharePoint, auto-set    | HIDE   |
+| **ReqKey**         | Auto-generated by flow              | HIDE or REMOVE |
+
+### How to Hide a Field
+
+1. In the Tree View, click on the **DataCard** (e.g., `Status_DataCard1`).
+2. On the right, click the **Advanced** tab.
+3. Find the property called **Visible**.
+4. Change it to `false`.
+
+---
+
+## Fields to REMOVE
+
+These fields can be completely removed (they're not required):
+
+| Field Name         | Why Remove It?                      |
+|--------------------|-------------------------------------|
+| Priority           | Staff manages queue priority        |
+| EstimatedTime      | Staff estimates print time          |
+| EstimatedWeight    | Staff estimates material            |
+| EstimatedCost      | Staff calculates cost               |
+| StaffNotes         | Internal staff communication        |
+| LastAction         | Auto-populated by flows             |
+| LastActionBy       | Auto-populated by flows             |
+| LastActionAt       | Auto-populated timestamp            |
+| NeedsAttention     | Staff attention flag                |
+| RejectionReason    | Staff rejection reasons             |
+| StudentConfirmed   | Handled separately (see below)      |
+
+### How to Remove a Field
+
+1. Click on **SharePointForm1** in the Tree View.
+2. In the right-side **Properties** pane, click **Edit fields**.
+3. A list of all fields appears.
+4. Hover over the field name → click the three dots (**...**) → **Remove**.
+
+---
+
+## Special Case: StudentConfirmed Field
+
+This field should be hidden on NEW submissions, but visible when students edit their requests later (to confirm cost estimates).
+
+### Instructions
+
+1. Add the StudentConfirmed field if not present (Edit fields → Add field).
+2. In the Tree View, click on `StudentConfirmed_DataCard1`.
+3. On the right, click the **Advanced** tab.
+4. Find the property called **Visible**.
+5. Paste this formula:
+
+**⬇️ FORMULA: Paste into Visible**
+
+```powerfx
+SharePointForm1.Mode <> FormMode.New
+```
+
+6. Press **Enter** to confirm.
+
+---
+
+## Final Field Checklist
+
+After completing this step, students should see these fields:
+
+| Field | Visible to Students? |
+|-------|---------------------|
+| Title | ✅ Yes |
+| Student | ✅ Yes (auto-filled) |
+| StudentEmail | ✅ Yes (auto-filled) |
+| Course Number | ✅ Yes |
+| Discipline | ✅ Yes |
+| ProjectType | ✅ Yes |
+| Method | ✅ Yes |
+| Color | ✅ Yes |
+| Printer | ✅ Yes |
+| DueDate | ✅ Yes |
+| Notes | ✅ Yes |
+| Attachments | ✅ Yes |
+| Status | ❌ Hidden (but present) |
+| ReqKey | ❌ Hidden or removed |
+| All staff fields | ❌ Removed |
+
+---
+
+# STEP 4: Adding File Naming Instructions
+
+**What you're doing:** Adding a warning label so students know how to name their files correctly.
+
+### Instructions
+
+1. In the toolbar at the top, click **+ Insert**.
+2. In the search box, type **Label**.
+3. Click **Label** to add it to the form.
+4. Drag the label to appear **above** or **inside** the Attachments section.
+5. With the label selected, look at the **formula bar** at the top (it should say "Text").
+6. Delete whatever is there and paste this:
+
+**⬇️ TEXT: Paste into the Label's Text property**
+
+```powerfx
+"IMPORTANT: File Naming Requirement
+
+Your files MUST be named: FirstLast_Method_Color
 
 Examples:
-✅ JaneDoe_Filament_Blue.stl
-✅ MikeSmith_Resin_Clear.3mf
-✅ SarahOConnor_Filament_Red.obj
+- JaneDoe_Filament_Blue.stl
+- MikeSmith_Resin_Clear.3mf
 
-The system will automatically detect your file extension.
-Files not following this format will be rejected automatically.
+Files not following this format will be rejected."
 ```
 
-**Implementation:** Add this as a Label control above the Attachments card with:
-- Background: Light yellow (#FFF4CE)
-- Font: Bold, size 12
-- Border: 2px solid orange (#FFB900)
+> ⚠️ **CRITICAL:** The text must be wrapped in **double quotes**! If you paste text without quotes, Power Apps thinks it's a formula and will show errors.
 
-**Why:** Flow A automatically rejects files that don't follow this naming convention. Students need to know this BEFORE submitting.
+> ⚠️ **Emojis:** Avoid using emojis (like ⚠️ or ✅) in the label text—they can cause "Unexpected character" errors.
 
-## Printer Selection Logic
+7. Press **Enter** to confirm.
 
-Add conditional visibility for **Printer** choices based on **Method**:
+### Optional: Style the Label
 
-```powerfx
-// For Printer Selection card, modify the Choices property:
-If(
-    DataCardValue_Method.Selected.Value = "Resin",
-    ["Form 3 (5.7×5.7×7.3in)"],
-    ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"]
-)
-```
+With the label selected, set these properties in the Advanced tab:
 
-## File Requirements Helper Text
-
-Add helper text for file attachments:
-"Upload .STL, .OBJ, .3MF, .IDEA, or .FORM files only. Maximum 150MB per file. Files must be named: FirstLast_Method_Color (example: JaneDoe_Filament_Blue.stl). Files not following this naming format will be automatically rejected."
-
-## Client-Side File Validation
-
-### Attachment Control Validation
-```powerfx
-// Add to Attachments card OnChange property
-ForAll(
-    Attachments1.Attachments,
-    If(
-        // Check file extension
-        !( 
-            EndsWith(Lower(DisplayName), ".stl") || 
-            EndsWith(Lower(DisplayName), ".obj") || 
-            EndsWith(Lower(DisplayName), ".3mf") ||
-            EndsWith(Lower(DisplayName), ".idea") ||
-            EndsWith(Lower(DisplayName), ".form")
-        ),
-        Notify("Error: " & DisplayName & " - Only .STL, .OBJ, .3MF, .IDEA, and .FORM files are allowed.", NotificationType.Error);
-        // Note: Reset(Attachments1) will clear all attachments - consider alternative UX
-        ,
-        
-        // Check file size (150MB = 157,286,400 bytes)
-        If(
-            Size > 157286400,
-            Notify("Error: " & DisplayName & " - File size must be 150MB or less.", NotificationType.Error)
-            // Note: Individual file removal from SharePoint attachments is limited
-        )
-    )
-)
-```
-
-### Enhanced Submit Button Validation
-```powerfx
-// Replace default OnSelect with validation logic
-If(
-    IsEmpty(Attachments1.Attachments),
-    Notify("Please attach at least one 3D model file (.stl, .obj, .3mf, .idea, or .form)", NotificationType.Error),
-    
-    // Check if all attached files are valid
-    If(
-        CountRows(
-            Filter(
-                Attachments1.Attachments,
-                !(
-                    EndsWith(Lower(DisplayName), ".stl") || 
-                    EndsWith(Lower(DisplayName), ".obj") || 
-                    EndsWith(Lower(DisplayName), ".3mf") ||
-                    EndsWith(Lower(DisplayName), ".idea") ||
-                    EndsWith(Lower(DisplayName), ".form")
-                ) ||
-                Size > 157286400
-            )
-        ) > 0,
-        Notify("Please remove invalid files and try again. Only .STL/.OBJ/.3MF/.IDEA/.FORM files under 150MB are allowed.", NotificationType.Error),
-        
-        // If all validations pass, submit the form
-        SubmitForm(SharePointForm1);
-        Notify("Request submitted successfully! You'll receive an email confirmation shortly.", NotificationType.Success)
-    )
-)
-```
-
-### File Validation Status Indicator
-```powerfx
-// Add a label to show validation status (Optional)
-Label.Text = If(
-    IsEmpty(Attachments1.Attachments),
-    "⚠️ No files attached",
-    If(
-        CountRows(
-            Filter(
-                Attachments1.Attachments,
-                EndsWith(Lower(DisplayName), ".stl") || 
-                EndsWith(Lower(DisplayName), ".obj") || 
-                EndsWith(Lower(DisplayName), ".3mf") ||
-                EndsWith(Lower(DisplayName), ".idea") ||
-                EndsWith(Lower(DisplayName), ".form")
-            )
-        ) = CountRows(Attachments1.Attachments),
-        "✅ All files valid",
-        "❌ Some files invalid - remove before submitting"
-    )
-)
-Label.Color = If(
-    IsEmpty(Attachments1.Attachments), 
-    RGBA(255, 165, 0, 1),  // Orange for warning
-    If(
-        CountRows(Filter(Attachments1.Attachments, 
-            EndsWith(Lower(DisplayName), ".stl") || 
-            EndsWith(Lower(DisplayName), ".obj") || 
-            EndsWith(Lower(DisplayName), ".3mf") ||
-            EndsWith(Lower(DisplayName), ".idea") ||
-            EndsWith(Lower(DisplayName), ".form")
-        )) = CountRows(Attachments1.Attachments),
-        RGBA(0, 128, 0, 1),   // Green for valid
-        RGBA(255, 0, 0, 1)    // Red for invalid
-    )
-)
-```
-
-**Note**: SharePoint attachment controls have limitations on individual file removal. Consider using a Canvas app with Add Media control for more advanced file management if needed.
-
-## OnSuccess
-```powerfx
-Notify("Request submitted. You'll receive an email confirmation shortly.", NotificationType.Success);
-```
+| Property | Value |
+|----------|-------|
+| Fill | `RGBA(255, 244, 206, 1)` (light yellow) |
+| Color | `RGBA(0, 0, 0, 1)` (black) |
+| FontWeight | `FontWeight.Bold` |
+| Size | `12` |
 
 ---
 
-## Publish Form
+## Note: File Validation Limitation
 
-1. **File** → **Save**
-2. **File** → **Publish to SharePoint**
-3. Back in SharePoint list → **Settings** → **Form settings**
-4. Set form as **Default** (if not already)
+> ⚠️ **SharePoint attachment controls do NOT support OnChange validation.** You cannot add client-side file validation in a customized SharePoint form. The Power Automate flow (Flow A) will handle file validation on the server side after submission.
 
 ---
 
-## Test Form (Required)
+# STEP 5: Publishing the Form
 
-**As Student User:**
-1. Go to PrintRequests list → Click **New**
-2. Verify auto-populated fields:
-   - [ ] Student name appears
-   - [ ] StudentEmail filled with your email
-3. Fill required fields:
-   - Method: Filament
-   - Printer: Prusa MK4S
-   - Color: Blue
-4. Attach valid file: `YourName_Filament_Blue.stl`
-5. Click **Save**
-6. Verify:
-   - [ ] Success notification appears
-   - [ ] Item appears in list with Status = "Uploaded"
-   - [ ] ReqKey generated (REQ-00001)
-   - [ ] Confirmation email received
+**What you're doing:** Saving your changes and making them live for all users.
 
-**Test Invalid File:**
-1. Create new request
-2. Attach: `model.stl` (invalid name)
-3. Try to submit
-4. Should see error message about file naming
+### Instructions
+
+1. Click **File** in the top-left corner.
+2. Click **Save**.
+3. Wait for the save to complete.
+4. Click **Publish to SharePoint**.
+5. Wait for the publish to complete.
+6. Close the Power Apps tab (or click **← Back to SharePoint**).
 
 ---
 
-## Filename Validation Examples
+# STEP 6: Setting the Form as Default
 
-**Valid Filenames:**
-- ✅ `JaneDoe_Filament_Blue.stl`
-- ✅ `MikeSmith_Resin_Clear.3mf`
-- ✅ `SarahOConnor_Filament_Red.obj`
-- ✅ `PatrickOBrien_Filament_Black.idea` (PrusaSlicer project)
-- ✅ `MaryJane_Resin_Clear.form` (Formlabs project)
+**What you're doing:** Making sure SharePoint uses your custom form instead of the default form.
 
-**Invalid Filenames (will be auto-rejected):**
-- ❌ `model.stl` (missing student name, method, color)
-- ❌ `JaneDoe.stl` (missing method and color)
-- ❌ `JaneDoe_Blue.stl` (missing method)
-- ❌ `Jane Doe_Filament_Blue.stl` (spaces in name - use JaneDoe)
-- ❌ `project.pdf` (invalid file type)
+### Instructions
 
-**Character Cleaning (automatic):**
-Student names are automatically cleaned:
-- Spaces removed: "Jane Doe" → "JaneDoe"
-- Hyphens removed: "Mary-Jane" → "MaryJane"
-- Apostrophes removed: "O'Connor" → "OConnor"
+1. Go to your SharePoint list (PrintRequests).
+2. Click the **Settings** gear icon (⚙️) in the top right.
+3. Click **List settings**.
+4. Click **Form settings**.
+5. Select **Use a custom form created in PowerApps**.
+6. Click **OK**.
+
+> ⚠️ **WARNING:** If you accidentally select "Use the default SharePoint form," your custom form will be replaced with the plain SharePoint form. You can always switch back by selecting the PowerApps option again.
 
 ---
 
-## Troubleshooting
+# STEP 7: Testing the Form
 
-**Student field not auto-populating:**
-- Check DefaultSelectedItems expression syntax
-- Verify User() function returns data in Power Apps
+**What you're doing:** Making sure everything works correctly before going live.
 
-**Hidden fields still showing:**
-- Refresh Power Apps designer
-- Verify Visible = false on each card
-- Or remove cards via Edit fields pane
+### Instructions
 
-**File validation not working:**
-- Check Attachments card OnChange expression
-- Verify EndsWith() syntax correct
-- Test with different file types
+1. Go to the **PrintRequests** list in SharePoint.
+2. Click **+ Add new item** (or **New**).
+3. Your custom Power Apps form should appear.
+
+### Verification Checklist
+
+Check that:
+
+- [ ] Your name appears in the **Student** field automatically (shows your name, not a weird code)
+- [ ] Your email appears in the **StudentEmail** field automatically
+- [ ] The **Status** field is NOT visible
+- [ ] Staff-only fields (Priority, StaffNotes, etc.) are NOT visible
+- [ ] The file naming warning label is visible
+- [ ] You can type in the **Course Number** field
+- [ ] All dropdown fields (Method, Color, Printer, etc.) work
+
+### Test Submission
+
+1. Fill in the required fields:
+   - **Title:** Test Print
+   - **Method:** Filament
+   - **Printer:** Prusa MK4S
+   - **Color:** Blue
+2. Attach a test file (any .stl file).
+3. Click **Save**.
+4. Verify:
+   - [ ] No "Field is required" errors
+   - [ ] A success message appears (or the form closes)
+   - [ ] The item appears in the list with Status = "Uploaded"
 
 ---
 
-## Next Steps
+# Troubleshooting
 
-After form is working:
-1. ✅ Test with Flow A (PR-Create)
-2. ✅ Verify ReqKey generation
-3. ✅ Confirm email delivery
+## Problem: "Field 'Status' is required" error
+
+**Cause:** You removed the Status field instead of hiding it.
+
+**Solution:**
+1. Go back to Power Apps (Integrate → Power Apps → Customize forms)
+2. Click SharePointForm1 → Properties → Edit fields
+3. Click **+ Add field** → add **Status**
+4. Set Status_DataCard1's **Visible** property to `false`
+5. Set the ComboBox inside's **DefaultSelectedItems** to `[{Value: "Uploaded"}]`
+6. Save and Publish
+
+---
+
+## Problem: Student field shows weird code like "i:0#.f|membership|..."
+
+**Cause:** The DisplayFields property isn't set correctly.
+
+**Solution:**
+1. Click on the ComboBox inside Student_DataCard1
+2. In Advanced, set **DisplayFields** to `["DisplayName"]`
+3. Save and Publish
+
+---
+
+## Problem: "Type mismatch" error on DefaultSelectedItems
+
+**Cause:** Both sides of the If statement must return the same type.
+
+**Solution:**
+- Use `Table(Parent.Default)` instead of just `Parent.Default`
+- For Choice fields, use `[{Value: "..."}]` format
+
+---
+
+## Problem: Can't type in a text field (like Course Number)
+
+**Cause:** The field's DisplayMode is set to View.
+
+**Solution:**
+1. Click on the input control inside the card
+2. In Advanced, find **DisplayMode**
+3. Set it to `DisplayMode.Edit`
+
+---
+
+## Problem: Form shows as default SharePoint form, not custom form
+
+**Cause:** The form settings aren't set to use Power Apps.
+
+**Solution:**
+1. Go to SharePoint → List settings → Form settings
+2. Select **Use a custom form created in PowerApps**
+3. Click OK
+
+---
+
+## Problem: DataSource shows garbage text
+
+**Cause:** You accidentally typed in the DataSource property.
+
+**Solution:**
+1. Click on SharePointForm1
+2. In the formula bar, make sure DataSource is exactly: `[@PrintRequests]`
+3. Delete any extra characters
+
+---
+
+## Problem: Label shows errors about "Unexpected character"
+
+**Cause:** Text wasn't wrapped in quotes, or contains special characters/emojis.
+
+**Solution:**
+1. Wrap all text in double quotes: `"Your text here"`
+2. Remove emojis from the text
+3. Use plain characters only
+
+---
+
+# Reference: File Naming Examples
+
+## ✅ Valid Filenames
+
+| Filename                          | Why It's Valid                     |
+|-----------------------------------|------------------------------------|
+| `JaneDoe_Filament_Blue.stl`       | Correct format                     |
+| `MikeSmith_Resin_Clear.3mf`       | Correct format                     |
+| `SarahOConnor_Filament_Red.obj`   | Correct format                     |
+| `PatrickOBrien_Filament_Black.idea` | PrusaSlicer project file         |
+| `MaryJane_Resin_Clear.form`       | Formlabs project file              |
+
+## ❌ Invalid Filenames
+
+| Filename                          | Why It's Invalid                   |
+|-----------------------------------|------------------------------------|
+| `model.stl`                       | Missing student name, method, color |
+| `JaneDoe.stl`                     | Missing method and color           |
+| `JaneDoe_Blue.stl`                | Missing method                     |
+| `Jane Doe_Filament_Blue.stl`      | Spaces in name (use JaneDoe)       |
+| `project.pdf`                     | Invalid file type                  |
+
+---
+
+# Quick Reference Card
+
+| Task                        | Where to Set It                          | Property Name           | Value |
+|-----------------------------|------------------------------------------|-------------------------|-------|
+| Auto-fill Student name      | ComboBox inside Student_DataCard1        | DefaultSelectedItems    | See formula above |
+| Show student name correctly | ComboBox inside Student_DataCard1        | DisplayFields           | `["DisplayName"]` |
+| Auto-fill StudentEmail      | Input inside StudentEmail_DataCard1      | Default                 | `Lower(User().Email)` |
+| Auto-set Status             | ComboBox inside Status_DataCard1         | DefaultSelectedItems    | `[{Value: "Uploaded"}]` |
+| Hide a field                | The DataCard (e.g., Status_DataCard1)    | Visible                 | `false` |
+
+---
+
+# Next Steps
+
+After your form is working:
+
+1. ✅ Verify the Power Automate flows are connected
+2. ✅ Test ReqKey generation (should auto-create REQ-00001, etc.)
+3. ✅ Confirm email delivery works
 4. 🎯 Move to Staff Dashboard (Phase 3.2)
 
 ---
 
-**Microsoft Best Practice:** Always test forms in Preview mode (F5) before publishing. Verify all default values, validation logic, and hidden fields work as expected.
+**💡 Pro Tips:**
 
-> **Performance Tip:** Cache `User().Email` and `User().FullName` in variables (Screen.OnVisible or App.OnStart) instead of calling `User()` repeatedly in formulas.
+- Always test in **Preview mode** (press F5 in Power Apps) before publishing.
+- After making changes, always **Save** and **Publish to SharePoint**.
+- If something breaks, you can always re-open the form editor and fix it.
+- **Don't modify the DataSource property** — if you accidentally type there, it will break the form.
+
+> **Official Microsoft Docs:** [Customize SharePoint forms with Power Apps](https://learn.microsoft.com/en-us/powerapps/maker/canvas-apps/sharepoint-form-integration)
