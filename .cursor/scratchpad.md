@@ -152,7 +152,7 @@ We need to enforce a filename policy for student-submitted SharePoint list attac
   - Use a small Display Form (`frmAttachmentsView`) bound to the selected request and include only the Attachments data card; place it in both collapsed (limited height) and expanded (full list) layouts.
 - **Upload/remove attachments (modal, no drag-and-drop)**
   - Add an Edit Form (`frmAttachmentsEdit`) bound to `PrintRequests`, `Item = varSelectedRequest`, include only the Attachments data card.
-  - Button `Add/Remove Files` → `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, Blank()); Set(varAttachmentChangeType, Blank()); Set(varAttachmentChangedName, Blank())`.
+  - Button `Add/Remove Files` → `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, LookUp(Staff, false)); Set(varAttachmentChangeType, Blank()); Set(varAttachmentChangedName, Blank())`.
   - Modal shows: required person picker, the Attachments card (supports add and delete), and Save/Cancel.
   - Modal Save → `If(IsBlank(varSelectedActor), Notify("Select your name", NotificationType.Error), SubmitForm(frmAttachmentsEdit))`.
   - `OnSuccess` of `frmAttachmentsEdit` → Patch audit fields and close modal:
@@ -192,7 +192,7 @@ We need to enforce a filename policy for student-submitted SharePoint list attac
 
 ### Quick Reference (formulas)
 - Add File button:
-  - `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, Blank())`
+  - `Set(varShowAddFileModal, true); ResetForm(frmAttachmentsEdit); Set(varSelectedActor, LookUp(Staff, false))`
 - Modal Save button:
   - `If(IsBlank(varSelectedActor), Notify("Select your name", NotificationType.Error), SubmitForm(frmAttachmentsEdit))`
 - `OnSuccess` (frmAttachmentsEdit):

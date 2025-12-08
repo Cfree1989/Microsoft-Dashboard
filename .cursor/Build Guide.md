@@ -569,8 +569,8 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    a) Variables (App.OnStart, add to existing block)
    ```powerfx
    Set(varShowAddFileModal, false);
-   Set(varSelectedItem, Blank());
-   Set(varSelectedActor, Blank());
+   Set(varSelectedItem, LookUp(PrintRequests, false));
+   Set(varSelectedActor, LookUp(Staff, false));
    Set(varAttachmentChangeType, Blank());    // "Added" or "Removed" (optional)
    Set(varAttachmentChangedName, Blank());   // filename (optional)
    ```
@@ -587,7 +587,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    Set(varSelectedItem, ThisItem);
    Set(varShowAddFileModal, true);
    ResetForm(frmAttachmentsEdit);
-   Set(varSelectedActor, Blank());
+   Set(varSelectedActor, LookUp(Staff, false));
    Set(varAttachmentChangeType, Blank());
    Set(varAttachmentChangedName, Blank());
    ```
@@ -639,8 +639,8 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    - Cancel button.OnSelect:
    ```powerfx
    Set(varShowAddFileModal, false);
-   Set(varSelectedItem, Blank());
-   Set(varSelectedActor, Blank())
+   Set(varSelectedItem, LookUp(PrintRequests, false));
+   Set(varSelectedActor, LookUp(Staff, false))
    ```
 
    h) `frmAttachmentsEdit.OnSuccess` (audit fields and optional flow call)

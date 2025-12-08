@@ -99,8 +99,8 @@ TemplateSize = If(ThisItem.Expanded || varExpandAll, 400, 180)
 1. Variables (App.OnStart)
 ```powerfx
 Set(varShowAddFileModal, false);
-Set(varSelectedItem, Blank());
-Set(varSelectedActor, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedActor, LookUp(Staff, false));
 Set(varAttachmentChangeType, Blank());
 Set(varAttachmentChangedName, Blank());
 ```
@@ -119,7 +119,7 @@ Set(varAttachmentChangedName, Blank());
 Set(varSelectedItem, ThisItem);
 Set(varShowAddFileModal, true);
 ResetForm(frmAttachmentsEdit);
-Set(varSelectedActor, Blank());
+Set(varSelectedActor, LookUp(Staff, false));
 Set(varAttachmentChangeType, Blank());
 Set(varAttachmentChangedName, Blank());
 ```
@@ -168,7 +168,7 @@ OnSelect = If(
 )
 
 // Cancel button
-OnSelect = Set(varShowAddFileModal, false); Set(varSelectedItem, Blank()); Set(varSelectedActor, Blank())
+OnSelect = Set(varShowAddFileModal, false); Set(varSelectedItem, LookUp(PrintRequests, false)); Set(varSelectedActor, LookUp(Staff, false))
 ```
 
 8. frmAttachmentsEdit.OnSuccess
@@ -485,7 +485,7 @@ Button.Width = 120
 Button.Height = 40
 Button.OnSelect = 
     Set(varShowRejectModal, 0); 
-    Set(varSelectedItem, Blank()); 
+    Set(varSelectedItem, LookUp(PrintRequests, false)); 
     Reset(txtCustomReason);
     Reset(ddStaffSelection)
 
@@ -546,7 +546,7 @@ Button.OnSelect =
     
     // Clear modal and reset form
     Set(varShowRejectModal, 0); 
-    Set(varSelectedItem, Blank());
+    Set(varSelectedItem, LookUp(PrintRequests, false));
     Reset(txtCustomReason); 
     Reset(ddStaffSelection);
     UpdateContext({
@@ -753,7 +753,7 @@ Button.Width = 120
 Button.Height = 40
 Button.OnSelect = 
     Set(varShowApprovalModal, 0); 
-    Set(varSelectedItem, Blank()); 
+    Set(varSelectedItem, LookUp(PrintRequests, false)); 
     Reset(txtEstimatedWeight);
     Reset(txtEstimatedTime);
     Reset(txtApprovalComments);
@@ -837,7 +837,7 @@ Button.OnSelect =
     
     // Clear modal and reset form
     Set(varShowApprovalModal, 0); 
-    Set(varSelectedItem, Blank());
+    Set(varSelectedItem, LookUp(PrintRequests, false));
     Reset(txtEstimatedWeight); 
     Reset(txtEstimatedTime);
     Reset(txtApprovalComments);
@@ -973,7 +973,7 @@ Button.Width = 120
 Button.Height = 40
 Button.OnSelect = 
     Set(varShowArchiveModal, 0); 
-    Set(varSelectedItem, Blank()); 
+    Set(varSelectedItem, LookUp(PrintRequests, false)); 
     Reset(txtArchiveReason);
     Reset(ddArchiveStaffSelection)
 
@@ -1027,7 +1027,7 @@ Button.OnSelect =
     
     // Clear modal and reset form
     Set(varShowArchiveModal, 0); 
-    Set(varSelectedItem, Blank());
+    Set(varSelectedItem, LookUp(PrintRequests, false));
     Reset(txtArchiveReason);
     Reset(ddArchiveStaffSelection)
 ```

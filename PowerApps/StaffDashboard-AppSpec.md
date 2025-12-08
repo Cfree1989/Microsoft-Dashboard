@@ -1154,14 +1154,17 @@ Still inside the `galJobCards` gallery template:
 4. Set **OnSelect:**
 
 ```powerfx
-If(
-    ThisItem.ID in colExpanded.ID,
-    RemoveIf(colExpanded, ID = ThisItem.ID),
-    Collect(colExpanded, {ID: ThisItem.ID})
+With(
+    {isCurrentlyExpanded: ThisItem.ID in colExpanded.ID},
+    If(
+        isCurrentlyExpanded,
+        RemoveIf(colExpanded, ID = ThisItem.ID),
+        Collect(colExpanded, {ID: ThisItem.ID})
+    )
 )
 ```
 
-> 💡 This toggles the card's expanded state using a local collection (no SharePoint updates needed for UI state).
+> 💡 This toggles the card's expanded state using a local collection (no SharePoint updates needed for UI state). The `With()` function captures the current state before modifying the collection, ensuring correct toggle behavior.
 
 ---
 
@@ -1511,7 +1514,7 @@ Position them vertically starting at `recRejectModal.Y + 170` with 30px spacing.
 
 ```powerfx
 Set(varShowRejectModal, 0);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkIncomplete);
@@ -1589,7 +1592,7 @@ IfError(
 
 // Close modal and reset
 Set(varShowRejectModal, 0);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkIncomplete);
@@ -1779,7 +1782,7 @@ IfError(
 
 // Close and reset
 Set(varShowApprovalModal, 0);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtEstimatedWeight);
 Reset(txtEstimatedTime);
 Reset(txtApprovalComments);
@@ -1851,7 +1854,7 @@ IfError(
 );
 
 Set(varShowArchiveModal, 0);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtArchiveReason);
 Reset(ddArchiveStaff)
 ```
@@ -1996,7 +1999,7 @@ This uses a Display Form (read-only) and Edit Form (for modifications).
 
 ```powerfx
 Set(varShowAddFileModal, false);
-Set(varSelectedActor, Blank());
+Set(varSelectedActor, LookUp(Staff, false));
 ```
 
 ### Add Files Button (In Job Card)
@@ -2008,7 +2011,7 @@ Set(varSelectedActor, Blank());
 ```powerfx
 Set(varSelectedItem, ThisItem);
 Set(varShowAddFileModal, true);
-Set(varSelectedActor, Blank())
+Set(varSelectedActor, LookUp(Staff, false))
 ```
 
 ### Modal Overlay
@@ -2083,7 +2086,7 @@ Notify("Attachments updated", NotificationType.Success)
 ### Cancel Button
 
 12. Add button:
-   - **OnSelect:** `Set(varShowAddFileModal, false); Set(varSelectedItem, Blank())`
+   - **OnSelect:** `Set(varShowAddFileModal, false); Set(varSelectedItem, LookUp(PrintRequests, false))`
 
 ---
 
@@ -2275,7 +2278,7 @@ Set(varMessageText, "");
 
 ```powerfx
 Set(varShowMessageModal, false);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
 Reset(ddMessageStaff)
@@ -2351,7 +2354,7 @@ Patch(
 
 // Close modal and notify
 Set(varShowMessageModal, false);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
 Reset(ddMessageStaff);
