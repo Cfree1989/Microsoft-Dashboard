@@ -1,7 +1,9 @@
 # Staff Console — Canvas App (Tablet)
 
-**⏱️ Time Required:** 6-8 hours (can be done in multiple sessions)  
+**⏱️ Time Required:** 8-12 hours (can be done in multiple sessions)  
 **🎯 Goal:** Staff can view, manage, and process all 3D print requests through an intuitive dashboard
+
+> 📚 **This is the comprehensive guide** — includes step-by-step build instructions, code references, and quick-copy snippets.
 
 ---
 
@@ -29,6 +31,7 @@
 20. [Testing the App](#step-18-testing-the-app)
 21. [Troubleshooting](#troubleshooting)
 22. [Quick Reference Card](#quick-reference-card)
+23. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
 
 ---
 
@@ -2016,6 +2019,23 @@ If(
 )
 ```
 
+### Optional: Sound Notifications
+
+For audible alerts when new jobs arrive or actions are needed:
+
+```powerfx
+// Add to App.OnStart
+Set(varPlayNotificationSound, false);
+
+// Trigger sound on new job or status change (in relevant OnSelect or Timer)
+If(varPlayNotificationSound,
+    PlaySound(SoundType.Notification);
+    Set(varPlayNotificationSound, false)
+)
+```
+
+> 💡 **Note:** Sound notifications can be triggered via a Timer that periodically checks for new items, or through Power Automate push notifications.
+
 ---
 
 # STEP 15: Adding the Attachments Modal
@@ -2095,24 +2115,56 @@ Set(varSelectedActor,
    - **DisplayMode:** `If(IsBlank(varSelectedActor), DisplayMode.Disabled, DisplayMode.Edit)`
    - **OnSelect:** `SubmitForm(frmAttachmentsEdit)`
 
+### Tracking File Changes (Optional Enhancement)
+
+Inside the Attachments data card, you can optionally track what type of change occurred:
+
+```powerfx
+// Inside Attachments control - OnAddFile event
+Set(varAttachmentChangeType, "Added")
+
+// Inside Attachments control - OnRemoveFile event  
+Set(varAttachmentChangeType, "Removed")
+```
+
 ### Form OnSuccess
 
 11. Set `frmAttachmentsEdit.OnSuccess`:
 
 ```powerfx
+// Update the record with action tracking
 Patch(
     PrintRequests,
     frmAttachmentsEdit.LastSubmit,
     {
-        LastAction: "File Added",
+        LastAction: If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
         LastActionBy: varSelectedActor,
         LastActionAt: Now()
     }
 );
 
+// Optional: Log to AuditLog via Flow C for detailed tracking
+IfError(
+    'Flow C (PR-Action)'.Run(
+        Text(frmAttachmentsEdit.LastSubmit.ID),
+        If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
+        "Attachments",
+        "",
+        "",
+        varMeEmail,
+        "Power Apps",
+        Coalesce(varAttachmentChangedName, "")
+    ),
+    Notify("Could not log attachment action.", NotificationType.Error)
+);
+
 Set(varShowAddFileModal, false);
+Set(varAttachmentChangeType, "");
+Set(varAttachmentChangedName, "");
 Notify("Attachments updated", NotificationType.Success)
 ```
+
+> 💡 **Note:** The existing Flow B (PR-Audit) automatically logs file additions when they're detected. The explicit Flow C call above is optional but provides more granular control over audit entries.
 
 ### Cancel Button
 
@@ -2682,6 +2734,180 @@ Max(3.00, weight * If(method = "Resin", 0.20, 0.10))
 ```
 
 > ⚠️ **Replace flow name:** If your flow has a different name (like `PR-Action_LogAction` or `PR-Action: Log action`), use that name instead in all formulas.
+
+---
+
+# Code Reference (Copy-Paste Snippets)
+
+This section provides condensed code snippets for quick reference when building or modifying the app.
+
+## Status Tab Gallery Items
+
+```powerfx
+Table(
+    {Status: "Uploaded", Color: RGBA(70, 130, 220, 1)},
+    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
+    {Status: "Ready to Print", Color: RGBA(16, 124, 16, 1)},
+    {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
+    {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
+    {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
+    {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
+)
+```
+
+## Job Cards Gallery Filter
+
+```powerfx
+SortByColumns(
+    Filter(
+        PrintRequests,
+        Status.Value = varSelectedStatus,
+        If(IsBlank(varSearchText), true, 
+            varSearchText in Student.DisplayName || 
+            varSearchText in StudentEmail || 
+            varSearchText in ReqKey
+        ),
+        If(varNeedsAttention, NeedsAttention = true, true)
+    ),
+    "Modified",
+    SortOrder.Descending
+)
+```
+
+## Glow Effect (Card Background)
+
+```powerfx
+// Rectangle.Fill for attention glow
+If(
+    ThisItem.NeedsAttention,
+    If(Mod(tmrGlow.Value, 1500) < 750, 
+        RGBA(255, 215, 0, 0.08),
+        RGBA(255, 215, 0, 0.03)
+    ),
+    Color.White
+)
+
+// Rectangle.BorderColor for attention glow
+If(
+    ThisItem.NeedsAttention,
+    If(Mod(tmrGlow.Value, 1500) < 750, 
+        RGBA(255, 215, 0, 1),
+        RGBA(255, 215, 0, 0.6)
+    ),
+    RGBA(220, 220, 220, 1)
+)
+```
+
+## Color Switch Statement
+
+```powerfx
+Switch(
+    ThisItem.Color.Value,
+    "Black", RGBA(50, 50, 50, 1),
+    "White", RGBA(180, 180, 180, 1),
+    "Gray", RGBA(128, 128, 128, 1),
+    "Red", RGBA(200, 50, 50, 1),
+    "Green", RGBA(50, 150, 50, 1),
+    "Blue", RGBA(50, 100, 200, 1),
+    "Yellow", RGBA(218, 165, 32, 1),
+    "Dark Yellow", RGBA(184, 134, 11, 1),
+    "Any", RGBA(150, 150, 150, 1),
+    RGBA(100, 100, 100, 1)
+)
+```
+
+## Relative Time Display
+
+```powerfx
+"Submitted " & 
+If(DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 0,
+    Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & "d ", "") &
+If(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24) > 0,
+    Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24)) & "h ", "") &
+Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
+```
+
+## Cost Calculation
+
+```powerfx
+// Auto-calculate with $3.00 minimum
+If(
+    IsNumeric(txtEstimatedWeight.Text) && Value(txtEstimatedWeight.Text) > 0,
+    "$" & Text(
+        Max(3.00, Value(txtEstimatedWeight.Text) * 
+            If(varSelectedItem.Method.Value = "Resin", 0.20, 0.10)),
+        "[$-en-US]#,##0.00"
+    ),
+    "$3.00 (minimum)"
+)
+```
+
+## Modal Visibility Pattern
+
+```powerfx
+// Show modal (on button click)
+Set(varShowRejectModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+
+// Hide modal (on cancel/confirm)
+Set(varShowRejectModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false))
+```
+
+## Staff Dropdown Default
+
+```powerfx
+// Items
+colStaff
+
+// DefaultSelectedItems
+Filter(colStaff, Lower(Member.Email) = varMeEmail)
+
+// DisplayFields
+["Member"]
+```
+
+## Expand/Collapse Toggle
+
+```powerfx
+// OnSelect for expand icon
+With(
+    {isCurrentlyExpanded: ThisItem.ID in colExpanded.ID},
+    If(
+        isCurrentlyExpanded,
+        RemoveIf(colExpanded, ID = ThisItem.ID),
+        Collect(colExpanded, {ID: ThisItem.ID})
+    )
+)
+
+// Dynamic TemplateSize
+If(ThisItem.ID in colExpanded.ID || varExpandAll, 480, 380)
+```
+
+## Button Visibility by Status
+
+| Button | Visible When |
+|--------|-------------|
+| Approve | `Status.Value = "Uploaded"` |
+| Reject | `Status.Value = "Uploaded" \|\| Status.Value = "Pending"` |
+| Start Print | `Status.Value = "Ready to Print"` |
+| Complete | `Status.Value = "Printing"` |
+| Picked Up | `Status.Value = "Completed"` |
+| Archive | `Status.Value in ["Completed", "Paid & Picked Up", "Rejected"]` |
+
+## Standard Button Colors
+
+| Action | Fill | Border | Text |
+|--------|------|--------|------|
+| Approve | `RGBA(16, 124, 16, 1)` | Same | White |
+| Reject | `RGBA(209, 52, 56, 1)` | Same | White |
+| Archive | `RGBA(255, 140, 0, 1)` | Same | White |
+| Start Print | `RGBA(107, 105, 214, 1)` | Same | White |
+| Complete | `RGBA(0, 78, 140, 1)` | Same | White |
+| Picked Up | `RGBA(0, 158, 73, 1)` | Same | White |
+| Cancel | `RGBA(150, 150, 150, 1)` | Same | White |
+| Message | `RGBA(70, 130, 220, 1)` | Same | White |
 
 ---
 
