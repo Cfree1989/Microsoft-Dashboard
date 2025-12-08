@@ -1009,9 +1009,11 @@ Switch(
 
 ### Messages Section (Expandable Conversation View)
 
-This section shows message history between staff and students for each request.
+This section shows message history between staff and students for each request, with visual distinction between outbound (staff) and inbound (student) messages.
 
-> **Prerequisites:** Complete Step 16 (Message Modal) first, and ensure `RequestComments` list is connected.
+> **Prerequisites:** 
+> - Complete Step 16 (Message Modal) first
+> - Ensure `RequestComments` list is connected with Direction column (see `SharePoint/RequestComments-Schema-Update.md`)
 
 37. Click **+ Insert** → **Text label**.
 38. **Rename it:** `lblMessagesHeader`
@@ -1040,41 +1042,68 @@ This section shows message history between staff and students for each request.
 | Y | `250` |
 | Width | `Parent.TemplateWidth - 24` |
 | Height | `120` |
-| TemplateSize | `60` |
+| TemplateSize | `70` |
 | TemplatePadding | `2` |
 | Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
 | ShowScrollbar | `true` |
 
+> **Note:** TemplateSize increased to 70 to accommodate Direction indicator.
+
 43. Inside `galMessages`, add a **Rectangle** for message background:
     - **Name:** `recMessageBg`
-    - **X:** `If(ThisItem.AuthorRole.Value = "Staff", Parent.TemplateWidth * 0.3, 0)`
+    - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.3, 0)`
     - **Y:** `0`
     - **Width:** `Parent.TemplateWidth * 0.7 - 10`
     - **Height:** `Parent.TemplateHeight - 4`
-    - **Fill:** `If(ThisItem.AuthorRole.Value = "Staff", RGBA(70, 130, 220, 0.1), RGBA(240, 240, 240, 1))`
+    - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
     - **BorderRadius:** `8`
 
-44. Add message author label:
-    - **Name:** `lblMsgAuthor`
-    - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
+> **Direction-based styling:**
+> - **Outbound (staff → student):** Blue tint, aligned right
+> - **Inbound (student → staff):** Warm yellow tint, aligned left
+
+44. Add direction indicator icon:
+    - **Name:** `icoMsgDirection`
+    - **Icon:** `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)`
     - **X:** `recMessageBg.X + 8`
     - **Y:** `4`
+    - **Width:** `14`
+    - **Height:** `14`
+    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))`
+
+45. Add message author label:
+    - **Name:** `lblMsgAuthor`
+    - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
+    - **X:** `recMessageBg.X + 26`
+    - **Y:** `4`
     - **Size:** `9`
-    - **Color:** `If(ThisItem.AuthorRole.Value = "Staff", RGBA(70, 130, 220, 1), RGBA(100, 100, 100, 1))`
+    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
     - **FontItalic:** `false`
     - **Font:** `Font.'Segoe UI Semibold'`
 
-45. Add message content label:
+46. Add direction badge label:
+    - **Name:** `lblMsgDirectionBadge`
+    - **Text:** `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")`
+    - **X:** `recMessageBg.X + recMessageBg.Width - 50`
+    - **Y:** `4`
+    - **Width:** `40`
+    - **Height:** `14`
+    - **Size:** `8`
+    - **Align:** `Align.Right`
+    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
+    - **FontItalic:** `true`
+
+47. Add message content label:
     - **Name:** `lblMsgContent`
-    - **Text:** `If(Len(ThisItem.Message) > 80, Left(ThisItem.Message, 80) & "...", ThisItem.Message)`
+    - **Text:** `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)`
     - **X:** `recMessageBg.X + 8`
-    - **Y:** `20`
+    - **Y:** `22`
     - **Width:** `recMessageBg.Width - 16`
-    - **Height:** `34`
+    - **Height:** `40`
     - **Size:** `10`
     - **Color:** `RGBA(50, 50, 50, 1)`
 
-46. Add "No messages" placeholder (outside galMessages but same visibility):
+48. Add "No messages" placeholder (outside galMessages but same visibility):
     - **Name:** `lblNoMessages`
     - **Text:** `"No messages yet"`
     - **X:** `12`
@@ -1084,9 +1113,9 @@ This section shows message history between staff and students for each request.
     - **Size:** `10`
     - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
 
-47. Add unread badge for student messages:
+49. Add unread badge for inbound (student) messages:
     - **Name:** `lblUnreadBadge`
-    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)))`
+    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
     - **X:** `120`
     - **Y:** `228`
     - **Width:** `20`
@@ -1095,7 +1124,9 @@ This section shows message history between staff and students for each request.
     - **Color:** `Color.White`
     - **Align:** `Align.Center`
     - **BorderRadius:** `10`
-    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)) > 0`
+    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+
+> **Note:** The unread badge now filters on `Direction.Value = "Inbound"` instead of `AuthorRole.Value = "Student"` for consistency with the new schema.
 
 ---
 
@@ -2313,7 +2344,7 @@ If(
 27. Set **OnSelect:**
 
 ```powerfx
-// Create the message in RequestComments
+// Create the message in RequestComments with Direction field
 Patch(
     RequestComments,
     Defaults(RequestComments),
@@ -2329,6 +2360,7 @@ Patch(
             Email: ddMessageStaff.Selected.Member.Email
         },
         AuthorRole: {Value: "Staff"},
+        Direction: {Value: "Outbound"},  // Marks this as staff-initiated message
         SentAt: Now(),
         ReadByStudent: false,
         ReadByStaff: true,
@@ -2336,7 +2368,7 @@ Patch(
     }
 );
 
-// Update PrintRequest to mark needs attention
+// Update PrintRequest to mark last action
 Patch(
     PrintRequests,
     varSelectedItem,
@@ -2362,6 +2394,8 @@ Reset(ddMessageStaff);
 Notify("Message sent! Student will receive email notification.", NotificationType.Success)
 ```
 
+> **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow E will detect this and send the email with threading headers. See `PowerAutomate/PR-Message_Notifications.md` for details.
+
 ### Adding the Send Message Button to Job Cards
 
 Add a "Send Message" button to each job card in the gallery:
@@ -2386,11 +2420,11 @@ Set(varShowMessageModal, true)
 
 ### Message Count Badge (Optional)
 
-To show unread message count on job cards:
+To show unread inbound message count on job cards:
 
 1. Add a label inside the gallery:
    - **Name:** `lblMessageCount`
-   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)))`
+   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
    - **X:** `Parent.TemplateWidth - 365`
    - **Y:** `95`
    - **Width:** `24`
@@ -2399,7 +2433,9 @@ To show unread message count on job cards:
    - **Color:** `Color.White`
    - **Align:** `Align.Center`
    - **BorderRadius:** `12`
-   - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)) > 0`
+   - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+
+> **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow F when students reply to emails.
 
 ### Testing the Message Modal
 
@@ -2407,9 +2443,10 @@ To show unread message count on job cards:
 - [ ] Clicking "Message" opens the modal with correct request info
 - [ ] Staff dropdown defaults to current user
 - [ ] Send button disabled until subject (3+ chars) and message (10+ chars) entered
-- [ ] Sending creates entry in RequestComments list
+- [ ] Sending creates entry in RequestComments list with Direction = Outbound
 - [ ] Success notification appears
 - [ ] Modal closes and resets after sending
+- [ ] Flow E sends threaded email to student with [REQ-00001] in subject
 
 ---
 

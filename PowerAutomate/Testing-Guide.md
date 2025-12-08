@@ -19,8 +19,9 @@
 9. [Integration Tests](#integration-tests)
 10. [Error Scenarios](#error-scenarios)
 11. [Regression Test Suite](#regression-test-suite)
-12. [Test Result Template](#test-result-template)
-13. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Student Upload Portal Tests](#student-upload-portal-tests) **(NEW)**
+13. [Test Result Template](#test-result-template)
+14. [Troubleshooting Guide](#troubleshooting-guide)
 
 ---
 
@@ -265,13 +266,15 @@ Run comprehensive testing (sections 5-10) when:
 
 ### What We're Testing
 
-This guide covers comprehensive testing for **three Power Automate cloud flows** that automate the 3D print request management system:
+This guide covers comprehensive testing for **five Power Automate cloud flows** that automate the 3D print request management system:
 
 | Flow | Purpose | Trigger Type | Key Features |
 |------|---------|--------------|--------------|
 | **Flow A (PR-Create)** | New request processing | SharePoint Create | ReqKey generation, filename validation, confirmation emails |
 | **Flow B (PR-Audit)** | Change tracking & notifications | SharePoint Modify | Field change logging, automated emails, estimate confirmations |
 | **Flow C (PR-Action)** | Staff action logging | Power Apps | Audit trail from dashboard actions |
+| **Flow G (PR-ValidateUpload)** | Student upload validation | Power Apps (instant) | Validates student can upload to request |
+| **Flow H (PR-ProcessUpload)** | File upload processing | SharePoint Create | Moves files to PrintRequest, validation, notifications |
 
 ### Why Testing Matters
 
@@ -2589,6 +2592,589 @@ FAILED: _____ / 5
 
 ---
 
+## Student Upload Portal Tests
+
+**Time Required:** 45 minutes  
+**Purpose:** Test the Student Upload Portal system (Flow G + Flow H + Power App)
+
+### Overview
+
+The Student Upload Portal allows students to upload replacement or additional files to existing print requests. Testing covers:
+
+- **Flow G (PR-ValidateUpload):** Validates student can upload to a request
+- **Flow H (PR-ProcessUpload):** Processes uploaded files
+- **Power App:** Student-facing upload interface
+
+### Prerequisites for Upload Portal Testing
+
+Before running these tests:
+
+- [ ] `FileUploads` SharePoint list created with all columns
+- [ ] Flow G published and accessible from Power Apps
+- [ ] Flow H published and enabled
+- [ ] Student Upload Portal app published
+- [ ] At least one test PrintRequest exists (not Archived/Rejected)
+
+---
+
+### Flow G Tests (Validation)
+
+#### G-001: Valid Request Lookup
+
+**Objective:** Verify valid email + ReqKey returns request data
+
+**Test Steps:**
+1. In Power Apps (or test the flow directly):
+2. Enter StudentEmail matching an existing request
+3. Enter valid ReqKey (e.g., REQ-00001)
+4. Run Flow G
+
+**Expected Result:**
+- IsValid = `true`
+- RequestData contains: ID, ReqKey, Title, StudentEmail, Status
+- ErrorMessage = empty
+
+**Pass Criteria:**
+- [ ] Flow completes successfully
+- [ ] IsValid = true
+- [ ] RequestData populated correctly
+
+**Status:** [ ] PASS  [ ] FAIL
+
+**Notes:**
+
+---
+
+#### G-002: Invalid ReqKey
+
+**Objective:** Verify non-existent ReqKey returns error
+
+**Test Steps:**
+1. Enter any valid email
+2. Enter ReqKey that doesn't exist (e.g., REQ-99999)
+3. Run Flow G
+
+**Expected Result:**
+- IsValid = `false`
+- ErrorMessage = "No request found with that ID. Please check your Request ID."
+
+**Pass Criteria:**
+- [ ] Flow completes (no failure)
+- [ ] IsValid = false
+- [ ] Correct error message returned
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### G-003: Email Mismatch
+
+**Objective:** Verify wrong email returns error
+
+**Test Steps:**
+1. Find an existing request's ReqKey
+2. Enter a DIFFERENT email than the request's StudentEmail
+3. Run Flow G
+
+**Expected Result:**
+- IsValid = `false`
+- ErrorMessage = "Email does not match the request on file. Use the email you submitted with."
+
+**Pass Criteria:**
+- [ ] Flow completes (no failure)
+- [ ] IsValid = false
+- [ ] Correct error message returned
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### G-004: Archived Request Blocked
+
+**Objective:** Verify archived requests cannot accept uploads
+
+**Test Steps:**
+1. Find or create a PrintRequest with Status = "Archived"
+2. Enter matching email and ReqKey
+3. Run Flow G
+
+**Expected Result:**
+- IsValid = `false`
+- ErrorMessage = "This request has been archived and cannot accept new files."
+
+**Pass Criteria:**
+- [ ] Flow completes (no failure)
+- [ ] Archived request blocked
+- [ ] Correct error message returned
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### G-005: Rejected Request Blocked
+
+**Objective:** Verify rejected requests cannot accept uploads
+
+**Test Steps:**
+1. Find or create a PrintRequest with Status = "Rejected"
+2. Enter matching email and ReqKey
+3. Run Flow G
+
+**Expected Result:**
+- IsValid = `false`
+- ErrorMessage = "This request was rejected. Please submit a new request."
+
+**Pass Criteria:**
+- [ ] Flow completes (no failure)
+- [ ] Rejected request blocked
+- [ ] Correct error message returned
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### G-006: Case-Insensitive Email
+
+**Objective:** Verify email matching is case-insensitive
+
+**Test Steps:**
+1. Find a request with StudentEmail = "jdoe@lsu.edu"
+2. Enter "JDOE@LSU.EDU" (uppercase)
+3. Run Flow G
+
+**Expected Result:**
+- IsValid = `true`
+- Request data returned correctly
+
+**Pass Criteria:**
+- [ ] Case difference ignored
+- [ ] Validation passes
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Flow H Tests (Processing)
+
+#### H-001: Valid Additional Upload
+
+**Objective:** Verify additional files are added to existing
+
+**Test Steps:**
+1. Create a PrintRequest with 1 attachment
+2. Create FileUploads entry:
+   - RequestID = [PrintRequest ID]
+   - ReqKey = [PrintRequest ReqKey]
+   - UploadType = "Additional"
+   - Attach: ValidFile.stl (any valid format)
+3. Wait for Flow H to process (check run history)
+
+**Expected Result:**
+- PrintRequest now has 2 attachments (original + new)
+- FileUploads.Status = "Processed"
+- PrintRequest.NeedsAttention = Yes
+- AuditLog entry created with Action = "File Added"
+- Confirmation email sent to student
+
+**Pass Criteria:**
+- [ ] Original file preserved
+- [ ] New file added
+- [ ] FileUploads.Status = Processed
+- [ ] NeedsAttention = Yes
+- [ ] AuditLog entry exists
+- [ ] Email received
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### H-002: Valid Replacement Upload
+
+**Objective:** Verify replacement deletes existing files
+
+**Test Steps:**
+1. Create a PrintRequest with 2 attachments
+2. Create FileUploads entry:
+   - UploadType = "Replacement"
+   - Attach: NewFile.stl
+3. Wait for Flow H to process
+
+**Expected Result:**
+- PrintRequest now has 1 attachment (only the new one)
+- Original 2 files deleted
+- FileUploads.Status = "Processed"
+- AuditLog entry with Action = "File Replaced"
+
+**Pass Criteria:**
+- [ ] Original files deleted
+- [ ] Only new file remains
+- [ ] FileUploads.Status = Processed
+- [ ] AuditLog shows "File Replaced"
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### H-003: Invalid File Format Rejection
+
+**Objective:** Verify invalid file types are rejected
+
+**Test Steps:**
+1. Create FileUploads entry
+2. Attach: document.pdf (invalid format)
+3. Wait for Flow H
+
+**Expected Result:**
+- FileUploads.Status = "Failed"
+- FileUploads.ErrorMessage contains "Invalid file" and lists accepted formats
+- NO files copied to PrintRequest
+- Rejection email sent to student
+
+**Pass Criteria:**
+- [ ] Status = Failed
+- [ ] ErrorMessage populated
+- [ ] PrintRequest unchanged
+- [ ] Rejection email received
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### H-004: File Size Validation
+
+**Objective:** Verify files over 150MB are rejected
+
+**Test Steps:**
+1. Create FileUploads entry
+2. Attach: LargeFile.stl (over 150MB)
+3. Wait for Flow H
+
+**Expected Result:**
+- FileUploads.Status = "Failed"
+- ErrorMessage mentions size limit
+- Rejection email sent
+
+**Pass Criteria:**
+- [ ] Large file rejected
+- [ ] Error message mentions 150MB
+- [ ] Rejection email received
+
+**Status:** [ ] PASS  [ ] FAIL
+
+**Note:** If you can't create a 150MB test file, skip this test or adjust the size threshold in Flow H for testing.
+
+---
+
+#### H-005: Multiple Files - One Invalid
+
+**Objective:** Verify mixed valid/invalid files all fail
+
+**Test Steps:**
+1. Create FileUploads entry
+2. Attach: ValidFile.stl AND InvalidFile.pdf
+3. Wait for Flow H
+
+**Expected Result:**
+- FileUploads.Status = "Failed"
+- NO files copied (all-or-nothing)
+- ErrorMessage identifies the invalid file
+
+**Pass Criteria:**
+- [ ] Entire upload rejected
+- [ ] Invalid filename shown in error
+- [ ] No files copied to PrintRequest
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### H-006: NeedsAttention Flag Set
+
+**Objective:** Verify dashboard flag is set after upload
+
+**Test Steps:**
+1. Process a valid upload (from H-001 or H-002)
+2. Check PrintRequest in Staff Dashboard
+
+**Expected Result:**
+- NeedsAttention = Yes
+- LastAction = "File Added"
+- LastActionBy = "System"
+
+**Pass Criteria:**
+- [ ] NeedsAttention visible in dashboard
+- [ ] Correct LastAction recorded
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### H-007: AuditLog Entry Verification
+
+**Objective:** Verify complete audit trail
+
+**Test Steps:**
+1. After a successful upload (H-001 or H-002)
+2. Go to AuditLog list
+3. Filter by ReqKey
+
+**Expected Result:**
+Entry contains:
+- Title = "Student File Upload"
+- RequestID and ReqKey populated
+- Action = "File Added" or "File Replaced"
+- FieldName = "Attachments"
+- NewValue = filename(s)
+- ActorRole = "Student"
+- ClientApp = "Upload Portal"
+- FlowRunId populated
+
+**Pass Criteria:**
+- [ ] AuditLog entry exists
+- [ ] All fields populated correctly
+- [ ] ActorRole = Student (not System)
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Power App Tests
+
+#### APP-001: Lookup Screen Validation
+
+**Objective:** Verify client-side input validation
+
+**Test Steps:**
+1. Open Student Upload Portal
+2. Try to submit with empty fields
+3. Enter invalid email (not @lsu.edu)
+4. Enter invalid ReqKey format (ABC123)
+
+**Expected Result:**
+- Button disabled with empty fields
+- Error shown for invalid email format
+- Error shown for invalid ReqKey format
+- Form prevents submission until valid
+
+**Pass Criteria:**
+- [ ] Empty fields blocked
+- [ ] Invalid email blocked
+- [ ] Invalid ReqKey format blocked
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-002: Successful Lookup Flow
+
+**Objective:** Verify successful lookup navigates to upload screen
+
+**Test Steps:**
+1. Enter valid email matching a request
+2. Enter valid ReqKey
+3. Click "Find My Request"
+
+**Expected Result:**
+- Loading state shown briefly
+- Upload screen displays
+- Request info shown (ReqKey, Status)
+
+**Pass Criteria:**
+- [ ] Flow G called successfully
+- [ ] Upload screen reached
+- [ ] Correct request info displayed
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-003: Upload Type Selection
+
+**Objective:** Verify radio buttons work correctly
+
+**Test Steps:**
+1. Navigate to upload screen
+2. Toggle between Replacement and Additional
+3. Check default selection
+
+**Expected Result:**
+- Default = Replacement
+- Selection persists
+- Selection passes to FileUploads entry
+
+**Pass Criteria:**
+- [ ] Default selection correct
+- [ ] Toggle works
+- [ ] Value saved to FileUploads.UploadType
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-004: File Attachment
+
+**Objective:** Verify file attachment works
+
+**Test Steps:**
+1. On upload screen, click attachment control
+2. Select a .stl file
+3. Verify file shows in attachment list
+4. Submit
+
+**Expected Result:**
+- File picker opens
+- File selected and displayed
+- File attached to FileUploads entry
+
+**Pass Criteria:**
+- [ ] File picker functional
+- [ ] File visible in control
+- [ ] Attachment saved to SharePoint
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-005: Empty File Submission Blocked
+
+**Objective:** Verify submit requires attachment
+
+**Test Steps:**
+1. Navigate to upload screen
+2. DO NOT attach any files
+3. Click Submit
+
+**Expected Result:**
+- Error notification shown
+- Form not submitted
+- Stay on upload screen
+
+**Pass Criteria:**
+- [ ] Error displayed
+- [ ] No FileUploads entry created
+- [ ] User stays on screen
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-006: Confirmation Screen
+
+**Objective:** Verify success confirmation displays correctly
+
+**Test Steps:**
+1. Complete a successful upload
+2. Observe confirmation screen
+
+**Expected Result:**
+- Checkmark icon shown
+- ReqKey displayed
+- Upload type displayed
+- File count displayed
+- Next steps shown
+
+**Pass Criteria:**
+- [ ] All info displayed correctly
+- [ ] File count accurate
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### APP-007: Upload More Files Reset
+
+**Objective:** Verify reset works for new upload
+
+**Test Steps:**
+1. On confirmation screen, click "Upload More Files"
+2. Check lookup screen state
+
+**Expected Result:**
+- Navigate to lookup screen
+- Email and ReqKey fields cleared
+- Form reset
+- No previous data visible
+
+**Pass Criteria:**
+- [ ] All fields cleared
+- [ ] Ready for new lookup
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Integration Tests
+
+#### UPLOAD-INT-001: End-to-End Upload Flow
+
+**Objective:** Complete flow from lookup to confirmation
+
+**Test Steps:**
+1. Open Student Upload Portal
+2. Enter valid email + ReqKey
+3. Click "Find My Request"
+4. Select "Additional"
+5. Attach valid .stl file
+6. Add optional note
+7. Click Submit
+8. Observe confirmation
+
+**Expected Result:**
+- Flow G validates → Upload screen
+- Submit creates FileUploads entry
+- Flow H processes (check run history)
+- PrintRequest has new attachment
+- NeedsAttention = Yes
+- AuditLog entry created
+- Confirmation email received
+
+**Pass Criteria:**
+- [ ] All steps complete
+- [ ] File on PrintRequest
+- [ ] Full audit trail
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+#### UPLOAD-INT-002: Rejection Recovery
+
+**Objective:** Verify student can retry after rejection
+
+**Test Steps:**
+1. Upload invalid file (gets rejected)
+2. Check rejection email
+3. Upload valid file
+
+**Expected Result:**
+- First upload: Status = Failed, rejection email
+- Second upload: Status = Processed, success
+
+**Pass Criteria:**
+- [ ] Failed upload doesn't block retry
+- [ ] Recovery possible with valid file
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Student Upload Portal - Quick Regression
+
+**Time:** 10 minutes  
+**When to Run:** After any changes to Flow G, Flow H, or Upload Portal app
+
+| # | Test | Steps | Expected | Status |
+|---|------|-------|----------|--------|
+| 1 | Valid lookup | Email + ReqKey → Find | Upload screen shown | [ ] |
+| 2 | Invalid ReqKey | Bad ReqKey → Find | Error message | [ ] |
+| 3 | Additional upload | Upload .stl as Additional | File added, original kept | [ ] |
+| 4 | Replacement upload | Upload .stl as Replacement | File added, original deleted | [ ] |
+| 5 | Invalid file | Upload .pdf | Status = Failed, error email | [ ] |
+
+**All Pass:** [ ] Yes  [ ] No
+
+---
+
 ## Test Result Template
 
 Use this template for detailed test tracking (copy to spreadsheet):
@@ -2842,9 +3428,11 @@ Based on Power Automate documentation:
 
 ### Flow Documentation Links
 
-- [Flow A (PR-Create): Set ReqKey + Acknowledge](./PR-Create_SetReqKey_Acknowledge.md)
-- [Flow B (PR-Audit): Log changes + Email notifications](./PR-Audit_LogChanges_EmailNotifications.md)
-- [Flow C (PR-Action): Log action](./PR-Action_LogAction.md)
+- [Flow A (PR-Create): Set ReqKey + Acknowledge](./PR-(A)%20Create_SetReqKey_Acknowledge.md)
+- [Flow B (PR-Audit): Log changes + Email notifications](./PR-(B)%20Audit_LogChanges_EmailNotifications.md)
+- [Flow C (PR-Action): Log action](./PR-(C)%20Action_LogAction.md)
+- [Flow G (PR-ValidateUpload): Validate student upload request](./PR-(G)%20ValidateUpload.md)
+- [Flow H (PR-ProcessUpload): Process student file upload](./PR-(H)%20ProcessUpload.md)
 
 ### Key Expressions Reference
 
@@ -2876,6 +3464,7 @@ Join: join(body('Format_Action'), '; ')
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-10-13 | System | Initial comprehensive test guide created |
+| 1.1 | 2025-12-08 | System | Added Student Upload Portal tests (Flow G, Flow H, Power App) |
 
 ---
 
