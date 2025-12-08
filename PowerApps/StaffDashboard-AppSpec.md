@@ -24,10 +24,11 @@
 15. [Adding Search and Filters](#step-13-adding-search-and-filters)
 16. [Adding the Lightbulb Attention System](#step-14-adding-the-lightbulb-attention-system)
 17. [Adding the Attachments Modal](#step-15-adding-the-attachments-modal)
-18. [Publishing the App](#step-16-publishing-the-app)
-19. [Testing the App](#step-17-testing-the-app)
-20. [Troubleshooting](#troubleshooting)
-21. [Quick Reference Card](#quick-reference-card)
+18. [Adding the Message Modal](#step-16-adding-the-message-modal)
+19. [Publishing the App](#step-17-publishing-the-app)
+20. [Testing the App](#step-18-testing-the-app)
+21. [Troubleshooting](#troubleshooting)
+22. [Quick Reference Card](#quick-reference-card)
 
 ---
 
@@ -44,6 +45,27 @@ Before you start, make sure you have:
 
 ---
 
+## ⚠️ CRITICAL: Curly Quotes Warning
+
+**When copying formulas from this guide, you may get errors like:**
+- "Unexpected characters"
+- "Characters are used in the formula in an unexpected way"
+
+**The Problem:** Document formatting often converts straight quotes `"text"` to curly/smart quotes `"text"`. Power Apps only accepts straight quotes.
+
+**The Fix:**
+1. **Best option:** Type formulas directly in Power Apps instead of copy-pasting
+2. **If you paste:** Delete the quotes and retype them using your keyboard (`Shift + '`)
+
+| Wrong (curly) | Correct (straight) |
+|---------------|---------------------|
+| `"Dashboard"` | `"Dashboard"` |
+| `'text'` | `'text'` |
+
+> 💡 **Tip:** If a formula shows red errors after pasting, the quotes are usually the culprit!
+
+---
+
 # STEP 1: Creating the Canvas App
 
 **What you're doing:** Creating a new Canvas app with a Tablet layout, which gives you a wide screen perfect for viewing job queues.
@@ -56,7 +78,7 @@ Before you start, make sure you have:
 4. Under "Create your apps", click **Start with a blank canvas**.
 5. In the popup "Start with a blank canvas", click **Tablet size** (middle option, 1084 x 1386).
 6. Enter these settings:
-   - **App name:** `Console`
+   - **App name:** `Print Lab Dashboard`
 7. Click **Create**.
 
 > 💡 **Tip:** Tablet format gives you a wide landscape canvas—perfect for dashboards with side-by-side content.
@@ -147,7 +169,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 ```powerfx
 // === USER IDENTIFICATION ===
-// Cache user info for performance (Context7 best practice)
+// Cache user info for performance
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
@@ -169,6 +191,9 @@ Set(varQuickQueue, ["Uploaded", "Pending", "Ready to Print", "Printing", "Comple
 // Currently selected status tab
 Set(varSelectedStatus, "Uploaded");
 
+// Current page/view
+Set(varCurrentPage, "Dashboard");
+
 // Search and filter state
 Set(varSearchText, "");
 Set(varNeedsAttention, false);
@@ -180,17 +205,24 @@ Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varShowArchiveModal, 0);
 Set(varShowAddFileModal, false);
+Set(varShowMessageModal, false);
 
-// Currently selected item for modals
-Set(varSelectedItem, Blank());
+// Currently selected item for modals (typed to PrintRequests schema)
+Set(varSelectedItem, LookUp(PrintRequests, false));
 
 // === FORM VALIDATION ===
 Set(varApprovalFormValid, false);
 
 // === ATTACHMENT TRACKING ===
-Set(varSelectedActor, Blank());
-Set(varAttachmentChangeType, Blank());
-Set(varAttachmentChangedName, Blank());
+// Typed to Staff record schema
+Set(varSelectedActor, LookUp(Staff, false));
+Set(varAttachmentChangeType, "");
+Set(varAttachmentChangedName, "");
+
+// === EXPANDED CARDS TRACKING ===
+// Track which cards are expanded (local state, not saved to SharePoint)
+ClearCollect(colExpanded, {ID: -1});
+RemoveIf(colExpanded, true);  // Start with empty collection
 ```
 
 5. Press **Enter** or click away to confirm.
@@ -219,13 +251,21 @@ Set(varAttachmentChangedName, Blank());
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varShowArchiveModal` | ID of item being archived (0=hidden) | Number |
-| `varSelectedItem` | Item currently selected for modal | Record |
+| `varShowAddFileModal` | Show attachment modal | Boolean |
+| `varShowMessageModal` | Show message modal | Boolean |
+| `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
+| `varSelectedActor` | Staff member for attribution | Staff Record |
+| `varAttachmentChangeType` | Type of attachment change | Text |
+| `varAttachmentChangedName` | Name of changed attachment | Text |
+| `colExpanded` | IDs of expanded job cards | Table |
+
+> ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
 ---
 
 ## Understanding Where Things Go (READ THIS!)
 
-Before you start building the UI, understand the difference between **App** and **Screen1**:
+Before you start building the UI, understand the difference between **App** and **scrDashboard** (your screen):
 
 ### Naming Convention
 
@@ -256,7 +296,7 @@ Here's the **complete list** of every control you'll create, with proper names:
 │
 ├── HEADER BAR ─────────────────────────────────────────
 │   recHeader                      ← Dark gray header background
-│   lblAppTitle                    ← "🖨️ 3D Printing Dashboard"
+│   lblAppTitle                    ← "Print Lab Dashboard"
 │   btnNavDashboard                ← Dashboard nav button
 │   btnNavAdmin                    ← Admin nav button  
 │   btnNavAnalytics                ← Analytics nav button
@@ -295,6 +335,7 @@ Here's the **complete list** of every control you'll create, with proper names:
 │       │   btnComplete            ← "✓ Complete" button
 │       │   btnPickedUp            ← "💰 Picked Up" button
 │       │   btnFiles               ← "📎 Files" button
+│       │   btnSendMessage         ← "💬 Message" button
 │       │
 │       └── EXPANDED DETAILS (inside gallery)
 │           conExpandedDetails     ← Container for expanded content
@@ -307,6 +348,10 @@ Here's the **complete list** of every control you'll create, with proper names:
 │           lblDiscipline          ← Discipline
 │           lblProjectType         ← Project type
 │           lblCourse              ← Course number
+│           lblMessagesHeader      ← "Messages (3)" header
+│           galMessages            ← Nested gallery for conversation
+│           lblNoMessages          ← "No messages yet" placeholder
+│           lblUnreadBadge         ← Unread count badge
 │
 ├── REJECTION MODAL ────────────────────────────────────
 │   recRejectOverlay               ← Dark semi-transparent overlay
@@ -366,6 +411,21 @@ Here's the **complete list** of every control you'll create, with proper names:
 │   frmAttachmentsEdit             ← Edit form for attachments
 │   btnFileSave                    ← "Save Changes" button
 │   btnFileCancel                  ← "Cancel" button
+│
+├── MESSAGE MODAL ─────────────────────────────────────
+│   recMessageOverlay              ← Dark semi-transparent overlay
+│   recMessageModal                ← White modal box
+│   lblMessageTitle                ← "Send Message - REQ-00001"
+│   lblMessageStudent              ← Student info display
+│   lblMessageStaffLabel           ← "Performing Action As:"
+│   ddMessageStaff                 ← Staff dropdown
+│   lblMessageSubjectLabel         ← "Subject:"
+│   txtMessageSubject              ← Subject input
+│   lblMessageBodyLabel            ← "Message:"
+│   txtMessageBody                 ← Message text input (multiline)
+│   lblMessageCharCount            ← Character count display
+│   btnMessageCancel               ← "Cancel" button
+│   btnMessageSend                 ← "📧 Send Message" button
 │
 └── UTILITIES ──────────────────────────────────────────
     tmrGlow                        ← Timer for attention animation
@@ -428,7 +488,7 @@ Here's the **complete list** of every control you'll create, with proper names:
 
 | Property | Value |
 |----------|-------|
-| Text | `"🖨️ 3D Printing Dashboard"` |
+| Text | `Print Lab Dashboard` |
 | X | `20` |
 | Y | `15` |
 | Width | `300` |
@@ -539,29 +599,43 @@ Table(
 )
 ```
 
-5. Set **TemplateSize:** `160`
-6. Set **TemplatePadding:** `5`
+5. Set **TemplateSize:** `165`
+6. Set **TemplatePadding:** `3`
+
 
 ### Adding the Tab Button Inside the Gallery (btnStatusTab)
 
-7. With `galStatusTabs` selected, click **+ Insert** → **Button**.
-8. **Rename it:** `btnStatusTab`
-9. The button appears inside the gallery template.
-10. Set the button's **Text** property:
+9. With `galStatusTabs` selected, click **+ Insert** → **Button**.
+10. **Rename it:** `btnStatusTab`
+11. The button appears inside the gallery template.
+12. **First, set the size and position:**
 
-**⬇️ FORMULA: Paste into Button Text (shows status + count)**
+| Property | Value |
+|----------|-------|
+| X | `3` |
+| Y | `5` |
+| Width | `158` |
+| Height | `40` |
+| Size | `11` |
+| BorderRadius | `20` |
+
+> 💡 **Why these sizes?** 8 tabs × 165px = 1320px fits the 1366px screen width. Font size 11 ensures "Paid & Picked Up" fits.
+
+14. Set the button's **Text** property (type directly to avoid quote issues):
 
 ```powerfx
-ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status = ThisItem.Status)))
+ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status)))
 ```
 
-10. Set the **Fill** property:
+> ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
+
+16. Set the **Fill** property:
 
 ```powerfx
 If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))
 ```
 
-11. Set the **Color** property (text color):
+17. Set the **Color** property (text color):
 
 ```powerfx
 If(
@@ -571,14 +645,13 @@ If(
 )
 ```
 
-12. Set the **OnSelect** property:
+18. Set the **OnSelect** property:
 
 ```powerfx
 Set(varSelectedStatus, ThisItem.Status)
 ```
 
-14. Set **Width:** `150`, **Height:** `40`
-15. Set **BorderRadius:** `20` (rounded pill shape)
+> 💡 **Result:** Clicking a tab highlights it with its color and filters the job cards gallery.
 
 ### ✅ Step 5 Checklist
 
@@ -599,14 +672,21 @@ Your Tree view should now include:
 
 ### Instructions
 
-1. Click on **Screen1** in the Tree view (not inside the status tabs gallery).
+1. Click on **scrDashboard** in the Tree view (not inside the status tabs gallery).
 2. Click **+ Insert** → **Blank vertical gallery**.
 3. Rename it to `galJobCards`.
 4. Position and size:
-   - **X:** `20`
-   - **Y:** `170`
-   - **Width:** `1326`
-   - **Height:** `580`
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `115` |
+| Width | `1366` |
+| Height | `653` |
+| **WrapCount** | `4` |
+| TemplatePadding | `8` |
+
+> 💡 **WrapCount = 4** creates a grid layout with 4 cards per row! Each card will be approximately 330px wide.
 
 5. Set the **Items** property:
 
@@ -616,8 +696,8 @@ Your Tree view should now include:
 SortByColumns(
     Filter(
         PrintRequests,
-        // Filter by selected status tab
-        Status = varSelectedStatus,
+        // Filter by selected status tab (use .Value for Choice fields)
+        Status.Value = varSelectedStatus,
         // Search filter (searches name and email)
         If(
             IsBlank(varSearchText), 
@@ -632,70 +712,101 @@ SortByColumns(
 )
 ```
 
-6. Set **TemplateSize:** `180` (we'll make this dynamic later for expand/collapse)
-7. Set **TemplatePadding:** `10`
+> ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint.
+
+6. Set **TemplateSize:** `380` (card height for compact layout)
 
 ### Making Cards Expandable
 
-8. Update the **TemplateSize** property to be dynamic:
+7. Update the **TemplateSize** property to be dynamic:
 
 ```powerfx
-If(ThisItem.Expanded || varExpandAll, 400, 180)
+If(ThisItem.ID in colExpanded.ID || varExpandAll, 480, 380)
 ```
 
-> This makes cards grow taller when expanded.
+> 💡 **How this works:** We track expanded cards in `colExpanded` collection (created in App.OnStart). This avoids storing UI state in SharePoint.
 
 ---
 
 # STEP 7: Creating the Job Card Template
 
-**What you're doing:** Designing what each job card looks like—showing student name, request details, printer, color, etc.
+**What you're doing:** Designing a compact job card (~330px wide × 380px tall) that shows student info, request details, and action buttons.
+
+> 💡 **Card Layout:** With WrapCount=4, you'll see 4 cards per row. Each card is approximately 330px wide.
 
 ### Instructions
 
-With `galJobCards` selected:
+With `galJobCards` selected, you'll add controls **inside** the gallery template.
 
-### Card Background
+### Card Background (recCardBackground)
 
 1. Click **+ Insert** → **Rectangle**.
-2. Position inside the template:
-   - **X:** `0`
-   - **Y:** `0`
-   - **Width:** `Parent.TemplateWidth`
-   - **Height:** `Parent.TemplateHeight - 10`
-3. Set **Fill:**
+2. **Rename it:** `recCardBackground`
+3. Set properties:
 
-```powerfx
-If(
-    ThisItem.NeedsAttention,
-    RGBA(255, 250, 230, 1),
-    Color.White
-)
-```
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.TemplateWidth` |
+| Height | `Parent.TemplateHeight - 8` |
+| Fill | `If(ThisItem.NeedsAttention, RGBA(255, 250, 230, 1), Color.White)` |
+| BorderColor | `RGBA(220, 220, 220, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
 
-4. Set **BorderColor:** `RGBA(220, 220, 220, 1)`
-5. Set **BorderThickness:** `1`
-6. Set border radius properties: `8` for all corners
+### Attention Icon (icoLightbulb)
 
-### Student Name (Header)
+4. Click **+ Insert** → **Icon** → select **Lightbulb** icon.
+5. **Rename it:** `icoLightbulb`
+6. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `Parent.TemplateWidth - 35` |
+| Y | `8` |
+| Width | `24` |
+| Height | `24` |
+| Color | `RGBA(255, 185, 0, 1)` |
+| Visible | `ThisItem.NeedsAttention` |
+
+### Student Name (lblStudentName)
 
 7. Click **+ Insert** → **Text label**.
-8. Rename to `lblStudentName`.
+8. **Rename it:** `lblStudentName`
 9. Set properties:
-   - **Text:** `ThisItem.Student.DisplayName`
-   - **X:** `15`
-   - **Y:** `12`
-   - **Width:** `300`
-   - **Height:** `28`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Size:** `16`
-   - **Color:** `RGBA(50, 50, 50, 1)`
 
-### Submission Time
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Student.DisplayName` |
+| X | `12` |
+| Y | `8` |
+| Width | `Parent.TemplateWidth - 50` |
+| Height | `24` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `14` |
+| Color | `RGBA(50, 50, 50, 1)` |
+
+### Submission Time (lblSubmittedTime)
 
 10. Click **+ Insert** → **Text label**.
-11. Rename to `lblSubmittedTime`.
-12. Set **Text:**
+11. **Rename it:** `lblSubmittedTime`
+12. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `Parent.TemplateWidth - 130` |
+| Y | `8` |
+| Width | `120` |
+| Height | `20` |
+| Align | `Align.Right` |
+| Size | `10` |
+| Color | `RGBA(209, 52, 56, 1)` |
+
+13. Set **Text:**
 
 **⬇️ FORMULA: Shows relative time since submission**
 
@@ -714,207 +825,343 @@ If(
 Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 ```
 
-13. Set other properties:
-   - **X:** `15`
-   - **Y:** `38`
-   - **Width:** `250`
-   - **Size:** `11`
-   - **Color:** 
+> 💡 Items older than 2 days show in red to indicate urgency.
 
-```powerfx
-If(DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 2, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))
-```
+### File Name / Request Info (lblReqKey)
 
-> Items older than 2 days show in red to indicate urgency.
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblReqKey`
+16. Set properties:
 
-### Request Title / ReqKey
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Student.DisplayName & "_" & ThisItem.Method.Value & "_" & ThisItem.Color.Value` |
+| X | `12` |
+| Y | `32` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `20` |
+| Size | `11` |
+| Color | `RGBA(100, 100, 100, 1)` |
 
-14. Add another label for the request identifier:
-   - **Text:** `ThisItem.ReqKey & " — " & ThisItem.Title`
-   - **X:** `15`
-   - **Y:** `58`
-   - **Width:** `500`
-   - **Font:** `Font.'Courier New'`
-   - **Size:** `12`
-   - **Color:** `RGBA(70, 70, 70, 1)`
+### Email Row (lblStudentEmail)
 
-### Student Email
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblStudentEmail`
+19. Set properties:
 
-15. Add label:
-   - **Text:** `ThisItem.StudentEmail`
-   - **X:** `15`
-   - **Y:** `78`
-   - **Width:** `300`
-   - **Size:** `11`
-   - **Color:** `RGBA(100, 100, 100, 1)`
+| Property | Value |
+|----------|-------|
+| Text | `"✉ " & ThisItem.StudentEmail` |
+| X | `12` |
+| Y | `55` |
+| Width | `Parent.TemplateWidth / 2 - 16` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(100, 100, 100, 1)` |
 
-### Printer Icon and Label
+### Printer Label (lblPrinter)
 
-16. Click **+ Insert** → **Icon**.
-17. Set **Icon:** `Icon.Print`
-18. Position: **X:** `15`, **Y:** `100`, **Width:** `20`, **Height:** `20`
-19. Set **Color:** `RGBA(100, 100, 100, 1)`
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblPrinter`
+22. Set properties:
 
-20. Add label next to it:
-   - **Text:** `ThisItem.Printer`
-   - **X:** `40`
-   - **Y:** `100`
-   - **Width:** `200`
-   - **Size:** `12`
+| Property | Value |
+|----------|-------|
+| Text | `"🖨 " & ThisItem.Printer.Value` |
+| X | `Parent.TemplateWidth / 2` |
+| Y | `55` |
+| Width | `Parent.TemplateWidth / 2 - 16` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(100, 100, 100, 1)` |
 
-### Method Badge
+### Color Indicator (lblColor)
 
-21. Add a label for the print method:
-   - **Text:** `ThisItem.Method`
-   - **X:** `15`
-   - **Y:** `125`
-   - **Width:** `80`
-   - **Height:** `24`
-   - **Align:** `Align.Center`
-   - **PaddingTop:** `4`
-   - **Fill:** `If(ThisItem.Method = "Resin", RGBA(156, 39, 176, 0.2), RGBA(33, 150, 243, 0.2))`
-   - **Color:** `If(ThisItem.Method = "Resin", RGBA(156, 39, 176, 1), RGBA(33, 150, 243, 1))`
-   - **BorderRadius:** `12`
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblColor`
+25. Set properties:
 
-### Color Indicator Circle
+| Property | Value |
+|----------|-------|
+| Text | `"⬤ " & ThisItem.Color.Value` |
+| X | `12` |
+| Y | `75` |
+| Width | `150` |
+| Height | `20` |
+| Size | `10` |
+| Color | See formula below |
 
-22. Click **+ Insert** → search for **Circle** (or use an icon).
-23. Position: **X:** `110`, **Y:** `125`, **Width:** `24`, **Height:** `24`
-24. Set **Fill:**
+26. Set **Color** formula (matches the actual color):
 
-**⬇️ FORMULA: Maps color names to actual colors**
+**⬇️ FORMULA: Maps color names to display colors**
 
 ```powerfx
 Switch(
-    ThisItem.Color,
+    ThisItem.Color.Value,
     "Black", RGBA(50, 50, 50, 1),
-    "White", RGBA(245, 245, 245, 1),
+    "White", RGBA(180, 180, 180, 1),
     "Gray", RGBA(128, 128, 128, 1),
     "Red", RGBA(200, 50, 50, 1),
     "Green", RGBA(50, 150, 50, 1),
     "Blue", RGBA(50, 100, 200, 1),
     "Yellow", RGBA(218, 165, 32, 1),
-    "Any", RGBA(200, 200, 200, 1),
-    RGBA(150, 150, 150, 1)
+    "Dark Yellow", RGBA(184, 134, 11, 1),
+    "Any", RGBA(150, 150, 150, 1),
+    RGBA(100, 100, 100, 1)
 )
 ```
 
-25. Set **BorderColor:** `RGBA(200, 200, 200, 1)` and **BorderThickness:** `1`
+> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint.
 
-### Color Name Label
+---
 
-26. Add a label next to the circle:
-   - **Text:** `ThisItem.Color`
-   - **X:** `140`
-   - **Y:** `127`
-   - **Size:** `11`
+### Staff Notes Section (lblStaffNotesHeader + txtStaffNotes)
+
+27. Click **+ Insert** → **Text label**.
+28. **Rename it:** `lblStaffNotesHeader`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Staff Notes"` |
+| X | `12` |
+| Y | `100` |
+| Width | `100` |
+| Height | `20` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `11` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblStaffNotesPlaceholder`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(IsBlank(ThisItem.StaffNotes), "No notes added yet — click to add", ThisItem.StaffNotes)` |
+| X | `12` |
+| Y | `118` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `40` |
+| Size | `10` |
+| Color | `If(IsBlank(ThisItem.StaffNotes), RGBA(150, 150, 150, 1), RGBA(80, 80, 80, 1))` |
+| FontItalic | `IsBlank(ThisItem.StaffNotes)` |
+
+---
+
+### Additional Details Section (Expandable)
+
+33. Click **+ Insert** → **Text label**.
+34. **Rename it:** `lblDetailsHeader`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Additional Details"` |
+| X | `12` |
+| Y | `165` |
+| Width | `150` |
+| Height | `20` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `11` |
+| Color | `RGBA(80, 80, 80, 1)` |
+| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+
+36. Add detail labels (all with `Visible: ThisItem.Expanded || varExpandAll`):
+
+**Job ID Label:**
+| Property | Value |
+|----------|-------|
+| Text | `"Job ID:"` |
+| X | `12` |
+| Y | `185` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+
+**Job ID Value:**
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.ReqKey` |
+| X | `80` |
+| Y | `185` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+
+**Created Label:**
+| Property | Value |
+|----------|-------|
+| Text | `"Created:"` |
+| X | `Parent.TemplateWidth / 2` |
+| Y | `185` |
+| Size | `10` |
+
+**Created Value:**
+| Property | Value |
+|----------|-------|
+| Text | `Text(ThisItem.Created, "mmm dd, yyyy, hh:mm AM/PM")` |
+| X | `Parent.TemplateWidth / 2 + 55` |
+| Y | `185` |
+| Size | `10` |
+
+**Discipline & Class Labels:** (similar pattern at Y = 205)
+
+---
+
+### Messages Section (Expandable Conversation View)
+
+This section shows message history between staff and students for each request.
+
+> **Prerequisites:** Complete Step 16 (Message Modal) first, and ensure `RequestComments` list is connected.
+
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblMessagesHeader`
+39. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"` |
+| X | `12` |
+| Y | `230` |
+| Width | `200` |
+| Height | `20` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `11` |
+| Color | `RGBA(80, 80, 80, 1)` |
+| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+
+40. Click **+ Insert** → **Blank vertical gallery**.
+41. **Rename it:** `galMessages`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Sort(Filter(RequestComments, RequestID = ThisItem.ID), SentAt, SortOrder.Descending)` |
+| X | `12` |
+| Y | `250` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `120` |
+| TemplateSize | `60` |
+| TemplatePadding | `2` |
+| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+| ShowScrollbar | `true` |
+
+43. Inside `galMessages`, add a **Rectangle** for message background:
+    - **Name:** `recMessageBg`
+    - **X:** `If(ThisItem.AuthorRole.Value = "Staff", Parent.TemplateWidth * 0.3, 0)`
+    - **Y:** `0`
+    - **Width:** `Parent.TemplateWidth * 0.7 - 10`
+    - **Height:** `Parent.TemplateHeight - 4`
+    - **Fill:** `If(ThisItem.AuthorRole.Value = "Staff", RGBA(70, 130, 220, 0.1), RGBA(240, 240, 240, 1))`
+    - **BorderRadius:** `8`
+
+44. Add message author label:
+    - **Name:** `lblMsgAuthor`
+    - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
+    - **X:** `recMessageBg.X + 8`
+    - **Y:** `4`
+    - **Size:** `9`
+    - **Color:** `If(ThisItem.AuthorRole.Value = "Staff", RGBA(70, 130, 220, 1), RGBA(100, 100, 100, 1))`
+    - **FontItalic:** `false`
+    - **Font:** `Font.'Segoe UI Semibold'`
+
+45. Add message content label:
+    - **Name:** `lblMsgContent`
+    - **Text:** `If(Len(ThisItem.Message) > 80, Left(ThisItem.Message, 80) & "...", ThisItem.Message)`
+    - **X:** `recMessageBg.X + 8`
+    - **Y:** `20`
+    - **Width:** `recMessageBg.Width - 16`
+    - **Height:** `34`
+    - **Size:** `10`
+    - **Color:** `RGBA(50, 50, 50, 1)`
+
+46. Add "No messages" placeholder (outside galMessages but same visibility):
+    - **Name:** `lblNoMessages`
+    - **Text:** `"No messages yet"`
+    - **X:** `12`
+    - **Y:** `260`
+    - **Color:** `RGBA(150, 150, 150, 1)`
+    - **FontItalic:** `true`
+    - **Size:** `10`
+    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
+
+47. Add unread badge for student messages:
+    - **Name:** `lblUnreadBadge`
+    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)))`
+    - **X:** `120`
+    - **Y:** `228`
+    - **Width:** `20`
+    - **Height:** `20`
+    - **Fill:** `RGBA(209, 52, 56, 1)`
+    - **Color:** `Color.White`
+    - **Align:** `Align.Center`
+    - **BorderRadius:** `10`
+    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)) > 0`
+
+---
+
+### ✅ Step 7 Checklist
+
+Your gallery template should now contain these controls:
+
+```
+▼ galJobCards
+    recCardBackground
+    icoLightbulb
+    lblStudentName
+    lblSubmittedTime
+    lblReqKey
+    lblStudentEmail
+    lblPrinter
+    lblColor
+    lblStaffNotesHeader
+    lblStaffNotesPlaceholder
+    lblDetailsHeader (and detail labels)
+```
+
+Each card displays:
+- Student name + submission time
+- File/request info
+- Email and printer
+- Color indicator
+- Staff notes section
+- Expandable additional details
 
 ---
 
 # STEP 8: Adding Expandable Details
 
-**What you're doing:** Creating the expanded view that shows when staff click to see more details.
+**What you're doing:** Adding the expand/collapse icon and making the Additional Details section toggle.
 
 ### Instructions
 
 Still inside the `galJobCards` gallery template:
 
-### Expand/Collapse Button
+### Expand/Collapse Icon (icoExpandCollapse)
 
-1. Click **+ Insert** → **Icon**.
-2. Set **Icon:**
+1. Click **+ Insert** → **Icon** → select **ChevronDown**.
+2. **Rename it:** `icoExpandCollapse`
+3. Set properties:
 
-```powerfx
-If(ThisItem.Expanded || varExpandAll, Icon.ChevronUp, Icon.ChevronDown)
-```
+| Property | Value |
+|----------|-------|
+| Icon | `If(ThisItem.ID in colExpanded.ID \|\| varExpandAll, Icon.ChevronUp, Icon.ChevronDown)` |
+| X | `Parent.TemplateWidth / 2 - 12` |
+| Y | `Parent.TemplateHeight - 35` |
+| Width | `24` |
+| Height | `24` |
+| Color | `RGBA(150, 150, 150, 1)` |
 
-3. Position in top right: **X:** `Parent.TemplateWidth - 50`, **Y:** `10`
-4. Set **Width:** `30`, **Height:** `30`
-5. Set **Color:** `RGBA(100, 100, 100, 1)`
-6. Set **OnSelect:**
-
-```powerfx
-Patch(PrintRequests, ThisItem, {Expanded: !ThisItem.Expanded})
-```
-
-### Expanded Details Container
-
-7. Click **+ Insert** → **Rectangle** (or Container if available).
-8. Rename to `conExpandedDetails`.
-9. Position:
-   - **X:** `15`
-   - **Y:** `155`
-   - **Width:** `Parent.TemplateWidth - 30`
-   - **Height:** `230`
-10. Set **Visible:**
+4. Set **OnSelect:**
 
 ```powerfx
-ThisItem.Expanded || varExpandAll
+If(
+    ThisItem.ID in colExpanded.ID,
+    RemoveIf(colExpanded, ID = ThisItem.ID),
+    Collect(colExpanded, {ID: ThisItem.ID})
+)
 ```
 
-11. Set **Fill:** `RGBA(250, 250, 250, 1)`
-12. Set border radius: `6` for all corners
-
-### Staff Notes Section (Inside Expanded Area)
-
-13. Add a label:
-   - **Text:** `"Staff Notes"`
-   - **X:** `conExpandedDetails.X + 10`
-   - **Y:** `conExpandedDetails.Y + 10`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Size:** `14`
-   - **Visible:** `ThisItem.Expanded || varExpandAll`
-
-14. Click **+ Insert** → **Text input**.
-15. Rename to `txtStaffNotes`.
-16. Set properties:
-   - **Default:** `ThisItem.StaffNotes`
-   - **Mode:** `TextMode.MultiLine`
-   - **X:** `conExpandedDetails.X + 10`
-   - **Y:** `conExpandedDetails.Y + 35`
-   - **Width:** `400`
-   - **Height:** `80`
-   - **HintText:** `"Add internal notes..."`
-   - **Visible:** `ThisItem.Expanded || varExpandAll`
-
-### Save Notes Button
-
-17. Add a button:
-   - **Text:** `"💾 Save Notes"`
-   - **X:** `txtStaffNotes.X + txtStaffNotes.Width + 10`
-   - **Y:** `txtStaffNotes.Y`
-   - **Width:** `100`
-   - **Height:** `35`
-   - **Fill:** `RGBA(70, 130, 220, 1)`
-   - **Color:** `Color.White`
-   - **Visible:**
-
-```powerfx
-(ThisItem.Expanded || varExpandAll) && txtStaffNotes.Text <> ThisItem.StaffNotes
-```
-
-18. Set **OnSelect:**
-
-```powerfx
-Patch(PrintRequests, ThisItem, {StaffNotes: txtStaffNotes.Text});
-Notify("Notes saved", NotificationType.Success)
-```
-
-### Additional Details (Two Column Layout)
-
-19. Add labels for additional details visible when expanded:
-
-**Left Column:**
-- Job ID: `"Job ID: " & ThisItem.ReqKey`
-- Created: `"Created: " & Text(ThisItem.Created, "mmm dd, yyyy hh:mm")`
-- Due Date: `"Due: " & If(IsBlank(ThisItem.DueDate), "Not set", Text(ThisItem.DueDate, "mmm dd, yyyy"))`
-
-**Right Column:**
-- Discipline: `"Discipline: " & ThisItem.Discipline`
-- Project Type: `"Type: " & ThisItem.ProjectType`
-- Course: `"Course: " & If(IsBlank(ThisItem.'Course Number'), "N/A", Text(ThisItem.'Course Number'))`
-
-Position these at Y positions starting around `conExpandedDetails.Y + 130` with appropriate X offsets.
+> 💡 This toggles the card's expanded state using a local collection (no SharePoint updates needed for UI state).
 
 ---
 
@@ -930,10 +1177,10 @@ Before adding buttons, you need to understand how to update Person fields in Sha
 
 First, let's ensure varActor is set up. We'll create it on the screen's OnVisible event.
 
-1. Click on **Screen1** in Tree view.
+1. Click on **scrDashboard** in Tree view.
 2. Set the **OnVisible** property:
 
-**⬇️ FORMULA: Paste into Screen1.OnVisible**
+**⬇️ FORMULA: Paste into scrDashboard.OnVisible**
 
 ```powerfx
 Set(varActor,
@@ -948,77 +1195,118 @@ Set(varActor,
 
 ### Adding Action Buttons to Job Cards
 
-Go back inside `galJobCards` gallery template:
+Go back inside `galJobCards` gallery template. We'll place buttons at the **bottom** of each card.
 
-### Approve Button
+> 💡 **Button Layout:** Three buttons in a row at the bottom of the card. Different buttons appear based on status.
+
+### Approve Button (btnApprove)
 
 1. Click **+ Insert** → **Button**.
-2. Set properties:
-   - **Text:** `"✓ Approve"`
-   - **X:** `Parent.TemplateWidth - 350`
-   - **Y:** `100`
-   - **Width:** `100`
-   - **Height:** `40`
-   - **Fill:** `RGBA(16, 124, 16, 1)`
-   - **Color:** `Color.White`
-   - **BorderRadius:** `6`
-   - **Visible:** `ThisItem.Status = "Uploaded"`
+2. **Rename it:** `btnApprove`
+3. Set properties:
 
-3. Set **OnSelect:**
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Approve"` |
+| X | `12` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `(Parent.TemplateWidth - 40) / 3` |
+| Height | `32` |
+| Fill | `Color.White` |
+| Color | `RGBA(16, 124, 16, 1)` |
+| BorderColor | `RGBA(16, 124, 16, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Visible | `ThisItem.Status.Value = "Uploaded"` |
+
+4. Set **OnSelect:**
 
 ```powerfx
 Set(varShowApprovalModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-### Reject Button
+### Reject Button (btnReject)
 
-4. Add another button:
-   - **Text:** `"✗ Reject"`
-   - **X:** `Parent.TemplateWidth - 240`
-   - **Y:** `100`
-   - **Width:** `100`
-   - **Height:** `40`
-   - **Fill:** `RGBA(209, 52, 56, 1)`
-   - **Color:** `Color.White`
-   - **BorderRadius:** `6`
-   - **Visible:** `ThisItem.Status = "Uploaded" || ThisItem.Status = "Pending"`
+5. Click **+ Insert** → **Button**.
+6. **Rename it:** `btnReject`
+7. Set properties:
 
-5. Set **OnSelect:**
+| Property | Value |
+|----------|-------|
+| Text | `"✗ Reject"` |
+| X | `12 + (Parent.TemplateWidth - 40) / 3 + 4` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `(Parent.TemplateWidth - 40) / 3` |
+| Height | `32` |
+| Fill | `Color.White` |
+| Color | `RGBA(209, 52, 56, 1)` |
+| BorderColor | `RGBA(209, 52, 56, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Visible | `ThisItem.Status.Value = "Uploaded" \|\| ThisItem.Status.Value = "Pending"` |
+
+8. Set **OnSelect:**
 
 ```powerfx
 Set(varShowRejectModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-### Archive Button
+### Archive Button (btnArchive)
 
-6. Add another button:
-   - **Text:** `"📦 Archive"`
-   - **X:** `Parent.TemplateWidth - 130`
-   - **Y:** `100`
-   - **Width:** `110`
-   - **Height:** `40`
-   - **Fill:** `RGBA(255, 140, 0, 1)`
-   - **Color:** `Color.White`
-   - **BorderRadius:** `6`
-   - **Visible:** `ThisItem.Status = "Completed" || ThisItem.Status = "Paid & Picked Up" || ThisItem.Status = "Rejected"`
+9. Click **+ Insert** → **Button**.
+10. **Rename it:** `btnArchive`
+11. Set properties:
 
-7. Set **OnSelect:**
+| Property | Value |
+|----------|-------|
+| Text | `"📦 Archive"` |
+| X | `12 + 2 * ((Parent.TemplateWidth - 40) / 3 + 4)` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `(Parent.TemplateWidth - 40) / 3` |
+| Height | `32` |
+| Fill | `Color.White` |
+| Color | `RGBA(255, 140, 0, 1)` |
+| BorderColor | `RGBA(255, 140, 0, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Visible | `ThisItem.Status.Value = "Completed" \|\| ThisItem.Status.Value = "Paid & Picked Up" \|\| ThisItem.Status.Value = "Rejected"` |
+
+12. Set **OnSelect:**
 
 ```powerfx
 Set(varShowArchiveModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-### Start Printing Button (for Ready to Print status)
+### Start Printing Button (btnStartPrint)
 
-8. Add button:
-   - **Text:** `"🖨️ Start Print"`
-   - **Visible:** `ThisItem.Status = "Ready to Print"`
-   - **Fill:** `RGBA(107, 105, 214, 1)`
+13. Click **+ Insert** → **Button**.
+14. **Rename it:** `btnStartPrint`
+15. Set properties:
 
-9. Set **OnSelect:**
+| Property | Value |
+|----------|-------|
+| Text | `"🖨️ Start Print"` |
+| X | `12` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `32` |
+| Fill | `RGBA(107, 105, 214, 1)` |
+| Color | `Color.White` |
+| Visible | `ThisItem.Status.Value = "Ready to Print"` |
+
+16. Set **OnSelect:**
 
 ```powerfx
 Patch(PrintRequests, ThisItem, {
@@ -1112,11 +1400,11 @@ Notify("Marked as picked up!", NotificationType.Success)
 
 ### Instructions
 
-Build this on **Screen1**, outside of the gallery (at the screen level).
+Build this on **scrDashboard**, outside of the gallery (at the screen level).
 
 ### Modal Overlay (Dark Background)
 
-1. Click on **Screen1** in Tree view.
+1. Click on **scrDashboard** in Tree view.
 2. Click **+ Insert** → **Rectangle**.
 3. Rename to `recRejectOverlay`.
 4. Set properties:
@@ -1319,7 +1607,7 @@ Reset(chkComplexity)
 
 ### Instructions
 
-Similar to the rejection modal, build on Screen1:
+Similar to the rejection modal, build on scrDashboard:
 
 ### Modal Overlay
 
@@ -1673,7 +1961,7 @@ If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")
 
 For a pulsing glow on cards needing attention:
 
-7. Add a **Timer** control to Screen1 (not in gallery):
+7. Add a **Timer** control to scrDashboard (not in gallery):
    - **Duration:** `1500`
    - **Repeat:** `true`
    - **AutoStart:** `true`
@@ -1799,7 +2087,330 @@ Notify("Attachments updated", NotificationType.Success)
 
 ---
 
-# STEP 16: Publishing the App
+# STEP 16: Adding the Message Modal
+
+**What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
+
+### Overview
+
+This modal allows bi-directional communication between staff and students. Messages are stored in a separate SharePoint list (`RequestComments`) and trigger email notifications to students.
+
+### Prerequisites
+
+Before building this modal:
+- [ ] Create the `RequestComments` SharePoint list (see `SharePoint/RequestComments-List-Setup.md`)
+- [ ] Add `RequestComments` as a data connection in Power Apps
+
+### Adding the Data Connection
+
+1. In the left panel, click the **Data** icon (cylinder).
+2. Click **+ Add data** → **SharePoint**.
+3. Select your site and check **RequestComments**.
+4. Click **Connect**.
+
+### Adding Variables to App.OnStart
+
+Add these variables to your existing `App.OnStart`:
+
+```powerfx
+// === MESSAGE MODAL CONTROLS ===
+Set(varShowMessageModal, false);
+Set(varMessageSubject, "");
+Set(varMessageText, "");
+```
+
+### Controls to Create
+
+```
+├── MESSAGE MODAL ─────────────────────────────────────────
+│   recMessageOverlay               ← Dark semi-transparent overlay
+│   recMessageModal                 ← White modal box
+│   lblMessageTitle                 ← "Send Message - REQ-00001"
+│   lblMessageStudent               ← Student info display
+│   lblMessageStaffLabel            ← "Performing Action As:"
+│   ddMessageStaff                  ← Staff dropdown
+│   lblMessageSubjectLabel          ← "Subject:"
+│   txtMessageSubject               ← Subject input
+│   lblMessageBodyLabel             ← "Message:"
+│   txtMessageBody                  ← Message text input (multiline)
+│   lblMessageCount                 ← Character count display
+│   btnMessageCancel                ← "Cancel" button
+│   btnMessageSend                  ← "Send Message" button
+```
+
+### Building the Modal
+
+#### Modal Overlay
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. Rename to `recMessageOverlay`.
+4. Set properties:
+   - **X:** `0`
+   - **Y:** `0`
+   - **Width:** `1366`
+   - **Height:** `768`
+   - **Fill:** `RGBA(0, 0, 0, 0.7)`
+   - **Visible:** `varShowMessageModal`
+
+#### Modal Content Box
+
+5. Add another **Rectangle**.
+6. Rename to `recMessageModal`.
+7. Set properties:
+   - **X:** `(Parent.Width - 600) / 2`
+   - **Y:** `(Parent.Height - 500) / 2`
+   - **Width:** `600`
+   - **Height:** `500`
+   - **Fill:** `Color.White`
+   - **BorderRadius:** `8` (all corners)
+   - **Visible:** `varShowMessageModal`
+
+#### Modal Title
+
+8. Add **Text label**:
+   - **Name:** `lblMessageTitle`
+   - **Text:** `"Send Message - " & varSelectedItem.ReqKey`
+   - **X:** `recMessageModal.X + 20`
+   - **Y:** `recMessageModal.Y + 20`
+   - **Font:** `Font.'Segoe UI Semibold'`
+   - **Size:** `20`
+   - **Color:** `RGBA(70, 130, 220, 1)`
+   - **Visible:** `varShowMessageModal`
+
+#### Student Info
+
+9. Add label:
+   - **Name:** `lblMessageStudent`
+   - **Text:** `"To: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"`
+   - **X:** `recMessageModal.X + 20`
+   - **Y:** `recMessageModal.Y + 55`
+   - **Visible:** `varShowMessageModal`
+
+#### Staff Attribution Dropdown
+
+10. Add **Text label**:
+    - **Text:** `"Performing Action As: *"`
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 90`
+    - **Font:** `Font.'Segoe UI Semibold'`
+    - **Visible:** `varShowMessageModal`
+
+11. Click **+ Insert** → **Combo box**.
+12. Rename to `ddMessageStaff`.
+13. Set properties:
+    - **Items:** `colStaff`
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 115`
+    - **Width:** `300`
+    - **DisplayFields:** `["Member"]`
+    - **SearchFields:** `["Member"]`
+    - **DefaultSelectedItems:** `Filter(colStaff, Lower(Member.Email) = varMeEmail)`
+    - **Visible:** `varShowMessageModal`
+
+#### Subject Input
+
+14. Add **Text label**:
+    - **Text:** `"Subject:"`
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 165`
+    - **Font:** `Font.'Segoe UI Semibold'`
+    - **Visible:** `varShowMessageModal`
+
+15. Click **+ Insert** → **Text input**.
+16. Rename to `txtMessageSubject`.
+17. Set properties:
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 190`
+    - **Width:** `540`
+    - **Height:** `40`
+    - **HintText:** `"Brief subject (e.g., Question about your file)"`
+    - **Default:** `""`
+    - **Visible:** `varShowMessageModal`
+
+#### Message Body Input
+
+18. Add **Text label**:
+    - **Text:** `"Message:"`
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 240`
+    - **Font:** `Font.'Segoe UI Semibold'`
+    - **Visible:** `varShowMessageModal`
+
+19. Click **+ Insert** → **Text input**.
+20. Rename to `txtMessageBody`.
+21. Set properties:
+    - **Mode:** `TextMode.MultiLine`
+    - **X:** `recMessageModal.X + 20`
+    - **Y:** `recMessageModal.Y + 265`
+    - **Width:** `540`
+    - **Height:** `140`
+    - **HintText:** `"Type your message to the student..."`
+    - **Default:** `""`
+    - **Visible:** `varShowMessageModal`
+
+#### Character Count
+
+22. Add label:
+    - **Name:** `lblMessageCount`
+    - **Text:** `Len(txtMessageBody.Text) & " characters"`
+    - **X:** `recMessageModal.X + 460`
+    - **Y:** `recMessageModal.Y + 408`
+    - **Color:** `If(Len(txtMessageBody.Text) > 1000, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))`
+    - **Size:** `10`
+    - **Visible:** `varShowMessageModal`
+
+#### Cancel Button
+
+23. Add **Button**:
+    - **Name:** `btnMessageCancel`
+    - **Text:** `"Cancel"`
+    - **X:** `recMessageModal.X + 340`
+    - **Y:** `recMessageModal.Y + 440`
+    - **Width:** `100`
+    - **Fill:** `RGBA(150, 150, 150, 1)`
+    - **Visible:** `varShowMessageModal`
+
+24. Set **OnSelect:**
+
+```powerfx
+Set(varShowMessageModal, false);
+Set(varSelectedItem, Blank());
+Reset(txtMessageSubject);
+Reset(txtMessageBody);
+Reset(ddMessageStaff)
+```
+
+#### Send Message Button
+
+25. Add **Button**:
+    - **Name:** `btnMessageSend`
+    - **Text:** `"📧 Send Message"`
+    - **X:** `recMessageModal.X + 450`
+    - **Y:** `recMessageModal.Y + 440`
+    - **Width:** `130`
+    - **Fill:** `RGBA(70, 130, 220, 1)`
+    - **Color:** `Color.White`
+    - **Visible:** `varShowMessageModal`
+
+26. Set **DisplayMode:**
+
+```powerfx
+If(
+    !IsBlank(ddMessageStaff.Selected) && 
+    !IsBlank(txtMessageSubject.Text) && 
+    Len(txtMessageSubject.Text) >= 3 &&
+    !IsBlank(txtMessageBody.Text) &&
+    Len(txtMessageBody.Text) >= 10,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+27. Set **OnSelect:**
+
+```powerfx
+// Create the message in RequestComments
+Patch(
+    RequestComments,
+    Defaults(RequestComments),
+    {
+        Title: txtMessageSubject.Text,
+        RequestID: varSelectedItem.ID,
+        ReqKey: varSelectedItem.ReqKey,
+        Message: txtMessageBody.Text,
+        Author: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            DisplayName: ddMessageStaff.Selected.Member.DisplayName,
+            Email: ddMessageStaff.Selected.Member.Email
+        },
+        AuthorRole: {Value: "Staff"},
+        SentAt: Now(),
+        ReadByStudent: false,
+        ReadByStaff: true,
+        StudentEmail: varSelectedItem.StudentEmail
+    }
+);
+
+// Update PrintRequest to mark needs attention
+Patch(
+    PrintRequests,
+    varSelectedItem,
+    {
+        LastAction: "Message Sent",
+        LastActionBy: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            DisplayName: ddMessageStaff.Selected.Member.DisplayName,
+            Email: ddMessageStaff.Selected.Member.Email
+        },
+        LastActionAt: Now()
+    }
+);
+
+// Close modal and notify
+Set(varShowMessageModal, false);
+Set(varSelectedItem, Blank());
+Reset(txtMessageSubject);
+Reset(txtMessageBody);
+Reset(ddMessageStaff);
+
+Notify("Message sent! Student will receive email notification.", NotificationType.Success)
+```
+
+### Adding the Send Message Button to Job Cards
+
+Add a "Send Message" button to each job card in the gallery:
+
+1. Inside `galJobCards`, add a **Button**:
+   - **Name:** `btnSendMessage`
+   - **Text:** `"💬 Message"`
+   - **X:** `Parent.TemplateWidth - 470`
+   - **Y:** `100`
+   - **Width:** `110`
+   - **Height:** `40`
+   - **Fill:** `RGBA(70, 130, 220, 1)`
+   - **Color:** `Color.White`
+   - **BorderRadius:** `6`
+
+2. Set **OnSelect:**
+
+```powerfx
+Set(varSelectedItem, ThisItem);
+Set(varShowMessageModal, true)
+```
+
+### Message Count Badge (Optional)
+
+To show unread message count on job cards:
+
+1. Add a label inside the gallery:
+   - **Name:** `lblMessageCount`
+   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)))`
+   - **X:** `Parent.TemplateWidth - 365`
+   - **Y:** `95`
+   - **Width:** `24`
+   - **Height:** `24`
+   - **Fill:** `RGBA(209, 52, 56, 1)`
+   - **Color:** `Color.White`
+   - **Align:** `Align.Center`
+   - **BorderRadius:** `12`
+   - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID && AuthorRole.Value = "Student" && ReadByStaff = false)) > 0`
+
+### Testing the Message Modal
+
+- [ ] Message button appears on all job cards
+- [ ] Clicking "Message" opens the modal with correct request info
+- [ ] Staff dropdown defaults to current user
+- [ ] Send button disabled until subject (3+ chars) and message (10+ chars) entered
+- [ ] Sending creates entry in RequestComments list
+- [ ] Success notification appears
+- [ ] Modal closes and resets after sending
+
+---
+
+# STEP 17: Publishing the App
 
 **What you're doing:** Saving and publishing your app so staff can use it.
 
@@ -1824,7 +2435,7 @@ Notify("Attachments updated", NotificationType.Success)
 
 ---
 
-# STEP 17: Testing the App
+# STEP 18: Testing the App
 
 **What you're doing:** Verifying everything works correctly.
 
@@ -1873,6 +2484,27 @@ Notify("Attachments updated", NotificationType.Success)
 ---
 
 # Troubleshooting
+
+## Problem: "Unexpected characters" or formula errors after pasting
+
+**Cause:** Curly/smart quotes from the documentation instead of straight quotes.
+
+**What you see:**
+- Red error: "Unexpected characters. Characters are used in the formula in an unexpected way"
+- The quotes look like `"text"` instead of `"text"`
+
+**Solution:**
+1. Delete the quoted text in the formula
+2. Retype the quotes manually using your keyboard (`Shift + '`)
+3. Or type the entire formula directly instead of copy-pasting
+
+**Example:**
+```
+❌ Set(varCurrentPage, "Dashboard")   ← curly quotes (from docs)
+✅ Set(varCurrentPage, "Dashboard")   ← straight quotes (typed)
+```
+
+---
 
 ## Problem: "Data source not found" error
 
