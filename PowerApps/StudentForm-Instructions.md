@@ -10,12 +10,13 @@
 1. [Opening the Form Editor](#step-1-opening-the-form-editor)
 2. [Setting Default Values](#step-2-setting-default-values)
 3. [Hiding Staff-Only Fields](#step-3-hiding-staff-only-fields)
-4. [Adding File Naming Instructions](#step-4-adding-file-naming-instructions)
-5. [Publishing the Form](#step-5-publishing-the-form)
-6. [Setting the Form as Default](#step-6-setting-the-form-as-default)
-7. [Testing the Form](#step-7-testing-the-form)
-8. [Troubleshooting](#troubleshooting)
-9. [Reference: File Naming Examples](#reference-file-naming-examples)
+4. [Cascading Printer Dropdown](#step-4-cascading-printer-dropdown-method-based-filtering) ← **Prevents printer/method mismatches**
+5. [Adding File Naming Instructions](#step-5-adding-file-naming-instructions)
+6. [Publishing the Form](#step-6-publishing-the-form)
+7. [Setting the Form as Default](#step-7-setting-the-form-as-default)
+8. [Testing the Form](#step-8-testing-the-form)
+9. [Troubleshooting](#troubleshooting)
+10. [Reference: File Naming Examples](#reference-file-naming-examples)
 
 ---
 
@@ -242,7 +243,61 @@ After completing this step, students should see these fields:
 
 ---
 
-# STEP 4: Adding File Naming Instructions
+# STEP 4: Cascading Printer Dropdown (Method-Based Filtering)
+
+**What you're doing:** Making the Printer dropdown only show printers compatible with the selected Method. This prevents students from accidentally selecting a resin printer for a filament job (or vice versa).
+
+### Printer/Method Compatibility
+
+| Method | Compatible Printers |
+|--------|---------------------|
+| **Filament** | Prusa MK4S, Prusa XL, Raised3D Pro 2 Plus |
+| **Resin** | Form 3 |
+
+---
+
+## Instructions
+
+1. In the **Tree View**, expand `Printer_DataCard1`.
+2. Click on the **ComboBox** control inside (e.g., `DataCardValue6` — the exact name may vary).
+3. Look at the **formula bar** at the top — it should show **Items**.
+4. Delete whatever is there and paste this formula:
+
+**⬇️ FORMULA: Paste into Items property**
+
+```powerfx
+Filter(
+    Choices([@PrintRequests].Printer),
+    If(
+        // Filament → show FDM printers only
+        DataCardValue5.Selected.Value = "Filament",
+        Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
+        // Resin → show resin printers only
+        DataCardValue5.Selected.Value = "Resin",
+        Value = "Form 3 (5.7×5.7×7.3in)",
+        // No method selected yet → show all
+        true
+    )
+)
+```
+
+5. Press **Enter** to confirm.
+
+> ⚠️ **IMPORTANT:** `DataCardValue5` is the Method dropdown control. Your form may have a different control name! To find the correct name:
+> 1. Click on the **Method_DataCard1** in the Tree View
+> 2. Expand it and note the control name inside (e.g., `DataCardValue5`, `DataCardValue7`, etc.)
+> 3. Replace `DataCardValue5` in the formula above with your actual control name
+
+### Test It
+
+1. Press **F5** (Preview mode)
+2. Select **Method = Filament** → Printer dropdown should only show 3 FDM printers
+3. Select **Method = Resin** → Printer dropdown should only show Form 3
+4. If no Method is selected → all printers show (allows selection in any order)
+
+---
+
+# STEP 5: Adding File Naming Instructions
 
 **What you're doing:** Adding a warning label so students know how to name their files correctly.
 
@@ -294,7 +349,7 @@ With the label selected, set these properties in the Advanced tab:
 
 ---
 
-# STEP 5: Publishing the Form
+# STEP 6: Publishing the Form
 
 **What you're doing:** Saving your changes and making them live for all users.
 
@@ -309,7 +364,7 @@ With the label selected, set these properties in the Advanced tab:
 
 ---
 
-# STEP 6: Setting the Form as Default
+# STEP 7: Setting the Form as Default
 
 **What you're doing:** Making sure SharePoint uses your custom form instead of the default form.
 
@@ -326,7 +381,7 @@ With the label selected, set these properties in the Advanced tab:
 
 ---
 
-# STEP 7: Testing the Form
+# STEP 8: Testing the Form
 
 **What you're doing:** Making sure everything works correctly before going live.
 

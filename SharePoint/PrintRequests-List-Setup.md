@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 22 total fields (12 student-facing + 10 staff-only)
+- 26 total fields (12 student-facing + 14 staff-only)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -122,7 +122,8 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
    - Blue
    - Yellow
    - Other
-5. Click **Save**
+5. **Require that this column contains information:** Yes
+6. Click **Save**
 
 ### Column 8: Method (Choice)
 
@@ -282,16 +283,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Default value:** No
 5. Click **Save**
 
-### Column 23: AttachmentCount (Number)
-
-1. Click **+ Add column** → **Number**
-2. **Name:** `AttachmentCount`
-3. **Description:** `Tracks attachment changes for audit (hidden from students)`
-4. **Default value:** 0
-5. **Number of decimal places:** 0
-6. Click **Save**
-
-### Column 24: LastAction (Choice)
+### Column 23: LastAction (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `LastAction`
@@ -308,7 +300,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
    - System
 5. Click **Save**
 
-### Column 25: LastActionBy (Single line of text)
+### Column 24: LastActionBy (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `LastActionBy`
@@ -317,7 +309,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 **Note:** This is Single line text (not Person) to allow "System" value for infinite loop prevention.
 
-### Column 26: LastActionAt (Date and time)
+### Column 25: LastActionAt (Date and time)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `LastActionAt`
@@ -393,7 +385,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |
 | ProjectType | Choice | No | - | Class Project; Research; Personal; Other |
-| Color | Choice | No | - | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
+| Color | Choice | Yes | - | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
 | Method | Choice | Yes | - | Filament; Resin |
 | Printer | Choice | Yes | - | Printer with build dimensions |
 | DueDate | Date | No | - | Timeline planning |
@@ -414,7 +406,6 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 | StudentConfirmed | Yes/No | No | No | Student approval of estimate |
 | NeedsAttention | Yes/No | No | No | Flags for staff review |
 | Expanded | Yes/No | No | No | Power Apps UI state |
-| AttachmentCount | Number | No | 0 | Tracks attachment changes |
 | LastAction | Choice | No | - | Most recent action type |
 | LastActionBy | Single line | No | - | Action attribution |
 | LastActionAt | DateTime | No | - | Audit timestamp |
@@ -434,7 +425,6 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 - [ ] Method has choices: Filament, Resin
 - [ ] Printer has all 4 printer options with dimensions
 - [ ] StudentConfirmed, NeedsAttention, Expanded default to No
-- [ ] AttachmentCount defaults to 0
 - [ ] Status column formatting applied
 - [ ] Views created: My Requests, All Requests, Active Queue
 

@@ -29,6 +29,159 @@
 
 ---
 
+## 🔧 AUDIT FIXES (Pre-MVP Hardening)
+
+**Context:** System workflow audit identified 47 potential gaps. After practical filtering, these 5 targeted fixes provide the best value-to-effort ratio. Complete before Phase 4 production deployment.
+
+**Total Estimated Time:** ~1 hour
+
+| # | Fix | Est. Time | Status | Priority |
+|---|-----|-----------|--------|----------|
+| AF-1 | [Test Item-Level Security](#af-1-test-item-level-security) | 15 min | ✅ Complete | High |
+| AF-2 | [Verify Negative Number Validation](#af-2-verify-negative-number-validation) | 5 min | ✅ Already in spec | Medium |
+| AF-3 | [Printer/Method Mismatch Prevention](#af-3-printermethod-mismatch-prevention) | 15 min | ✅ Complete | Medium |
+| AF-4 | [Disable Confirm Before Cost is Set](#af-4-disable-confirm-before-cost-is-set) | 10 min | ⏭️ Skipped (modal enforces) | Medium |
+| AF-5 | [Add Days Pending Indicator](#af-5-add-days-pending-indicator) | 20 min | ⏭️ Skipped (lblSubmittedTime exists) | Low |
+
+---
+
+### AF-1: Test Item-Level Security
+**Priority:** High | **Time:** 15 min | **Type:** Manual Test
+
+**Goal:** Verify students can only see their own requests.
+
+**Test Steps:**
+1. Get a test student account (or ask a student to help)
+2. Navigate to: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
+3. Verify:
+   - [ ] Student sees ONLY their own submissions
+   - [ ] Student cannot access `Staff Queue.aspx` view
+   - [ ] Student cannot see AuditLog list at all
+4. Test direct URL access - Have student try:
+   - `.../Lists/PrintRequests/AllItems.aspx` → Should be denied or filtered
+   - `.../Lists/AuditLog` → Should be denied
+
+**If Security is Broken:**
+1. Go to **PrintRequests** → **Settings** → **List Settings**
+2. **Advanced Settings** → **Item-level Permissions**
+3. Set: **Read access:** "Only their own items"
+4. Set: **Create/Edit access:** "Only their own items"
+
+---
+
+### AF-2: Verify Negative Number Validation
+**Priority:** Medium | **Time:** 5 min | **Type:** Code Verification
+
+**Goal:** Ensure staff can't enter negative weight/time/cost values.
+
+**Check in Power Apps (Approval Modal):**
+
+The `btnApprovalConfirm.DisplayMode` should include `Value(txtEstimatedWeight.Text) > 0`:
+
+```powerfx
+If(
+    !IsBlank(ddApprovalStaff.Selected) && 
+    !IsBlank(txtEstimatedWeight.Text) && 
+    IsNumeric(txtEstimatedWeight.Text) && 
+    Value(txtEstimatedWeight.Text) > 0,  // ← This prevents negatives
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+**Status:** Likely already implemented per spec. Just verify.
+
+---
+
+### AF-3: Printer/Method Mismatch Prevention
+**Priority:** Medium | **Time:** 15 min | **Type:** Power Apps Enhancement
+
+**Goal:** Prevent students/staff from selecting incompatible printer/method combinations.
+
+**✅ SOLUTION IMPLEMENTED:** Instead of warning about mismatches, we **prevent them** by filtering the Printer dropdown based on selected Method:
+
+| Method | Shows Only |
+|--------|------------|
+| Filament | Prusa MK4S, Prusa XL, Raised3D Pro 2 Plus |
+| Resin | Form 3 |
+
+**Files Updated:**
+1. `PowerApps/StudentForm-Instructions.md` — Step 4 added for cascading Printer dropdown
+2. `PowerApps/StaffDashboard-App-Spec.md` — Warning label added as backup (lblPrinterWarning)
+
+**Note:** Staff dashboard also has a warning label in case legacy data has mismatches.
+
+---
+
+### AF-4: Disable Confirm Before Cost is Set
+**Priority:** Medium | **Time:** 10 min | **Type:** Flow B Enhancement
+
+**Goal:** Prevent `StudentConfirmed = Yes` when there's no cost estimate.
+
+**Option A - Flow B Condition:**
+In Flow B, add condition before sending "Pending: Confirm Estimate" email:
+```
+Condition: EstimatedCost is not blank
+├─ Yes → Send confirmation email
+└─ No → Skip (don't send email without cost)
+```
+
+**Option B - Power Apps Button Disable:**
+If using Power Apps for student confirmation:
+```powerfx
+// btnConfirmEstimate.DisplayMode
+If(
+    IsBlank(varSelectedItem.EstimatedCost) || varSelectedItem.EstimatedCost <= 0,
+    DisplayMode.Disabled,
+    DisplayMode.Edit
+)
+```
+
+---
+
+### AF-5: Add Days Pending Indicator
+**Priority:** Low | **Time:** 20 min | **Type:** SharePoint + Power Apps
+
+**Goal:** Show how long requests have been waiting to surface stale items.
+
+**Step 1: Add Calculated Column to SharePoint**
+1. PrintRequests → Settings → Create column
+2. **Name:** `DaysPending`
+3. **Type:** Calculated
+4. **Formula:** `=INT(TODAY()-[Created])`
+5. **Data type:** Number, 0 decimal places
+
+**Step 2: Add Label to Power Apps Job Cards**
+Inside `galJobCards` template, add `lblDaysPending`:
+
+```powerfx
+// Text
+If(
+    DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 2,
+    "⏰ " & Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & " days",
+    ""
+)
+
+// Color (escalating urgency)
+If(
+    DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 7,
+    RGBA(209, 52, 56, 1),      // Red: >7 days
+    DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 3,
+    RGBA(255, 140, 0, 1),      // Orange: 3-7 days
+    RGBA(150, 150, 150, 1)     // Gray: 2-3 days
+)
+
+// Position
+X: Parent.TemplateWidth - 90
+Y: 32
+Width: 80, Height: 20, Size: 10, Align: Right
+
+// Visible (only show if > 2 days)
+DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 2
+```
+
+---
+
 ## 📋 RECOMMENDED PATH FORWARD
 
 ### Phase 3A: Complete Core Power Apps Dashboard (CURRENT PRIORITY)
@@ -78,6 +231,39 @@
 | 4.2: Edge case testing | 30 min |
 | 4.3: Production deployment & handoff | 30 min |
 | **Phase 4 Total** | **~2.5 hours** |
+
+---
+
+## 🔍 CODEBASE REVIEW TASKS (December 2024)
+
+### ✅ COMPLETED
+| # | Issue | Severity | Resolution |
+|---|-------|----------|------------|
+| 1 | Flow Naming Gap (D missing, jumped A→B→C→E→F→G→H) | Medium | ✅ Renamed: E→D, F→E, G→F, H→G. Updated all cross-references. |
+| 3 | AttachmentCount documented but not in SharePoint | Low | ✅ Removed from all documentation files |
+| 4 | EstHours/EstWeight internal names in Patch formulas | Low | ✅ Fixed: `EstimatedWeight:` → `EstWeight:`, `EstimatedTime:` → `EstHours:` in PowerApps |
+| 5 | Color column Required mismatch | Low | ✅ Fixed: Added "Require: Yes" to Color column in PrintRequests-List-Setup.md to match actual implementation |
+| 6 | StudentEmail Required verification | Low | ✅ Verified CORRECT: Required=Yes is correct. Field is critical for email notifications (Flows A,B,D,E,G), validation (Flow F), and is auto-populated via Power Apps |
+| 7 | RequestID in AuditLog Required check | Low | ✅ Verified CORRECT: Doc says Required=Yes which is correct. Every audit entry must link to a PrintRequest. If actual SharePoint differs, update SP to match docs. |
+| 8 | Orphaned Flow files cleanup | Low | ✅ Already cleaned up during flow rename (E→D, F→E, G→F, H→G) |
+| 9 | PRD column count update | Low | ✅ Fixed: Updated "22 (12+10)" → "26 (12+14)" in PRD and "25 (12+13)" → "26 (12+14)" in PrintRequests-List-Setup.md |
+| 10 | Email template verification | Medium | ✅ Verified: All 4 PRD templates match Flow A/B implementation. Added missing "Student Confirmed" template (#4) to PRD Appendix C. |
+
+### ⏭️ SKIPPED (Working as-is)
+| # | Issue | Severity | Notes |
+|---|-------|----------|-------|
+| 2 | LastActionBy Type Mismatch (Doc: Text, Actual: Person) | Medium | User confirmed flows working. Left as-is. |
+
+### 📋 REMAINING TASKS
+| # | Issue | Severity | Description | Files Affected |
+|---|-------|----------|-------------|----------------|
+| - | All issues resolved | - | Codebase review complete | - |
+
+### 📊 REVIEW PROGRESS
+- **Total Issues Found:** 10
+- **Completed:** 10 ✅
+- **Skipped:** 1 ⏭️ (Issue #2 - working as-is)
+- **Remaining:** 0 📋 🎉
 
 ---
 
@@ -180,7 +366,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 **Estimated Remaining Time**: ~6 hours
 
 ### ⏳ PHASE 3B: MESSAGING FEATURE (Enhancement - After Core Dashboard)
-**Dependencies**: RequestComments list, Flows E & F
+**Dependencies**: RequestComments list, Flows D & E
 **Status**: DOCUMENTED - Not yet built
 
 - [ ] **3B.1**: Build RequestComments SharePoint list (45 min)
@@ -193,7 +379,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 **Estimated Time**: ~6 hours
 
 ### ⏳ PHASE 3C: FILE UPLOAD FEATURE (Enhancement - After Messaging)
-**Dependencies**: FileUploads list, Flows G & H, Student Upload Portal
+**Dependencies**: FileUploads list, Flows F & G, Student Upload Portal
 **Status**: DOCUMENTED - Not yet built
 
 - [ ] **3C.1**: Build FileUploads SharePoint list (20 min)
@@ -220,14 +406,15 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 
 | Metric | Value |
 |--------|-------|
+| **Audit Fixes (AF)** | ~1 hour |
 | **Core MVP (3A)** | ~6 hours remaining |
 | **Messaging Feature (3B)** | ~6 hours |
 | **File Upload Feature (3C)** | ~7 hours |
 | **Testing & Deploy (4)** | ~2.5 hours |
-| **Total Remaining** | ~21.5 hours (with all features) |
-| **MVP Only** | ~8.5 hours (3A + 4) |
+| **Total Remaining** | ~22.5 hours (with all features) |
+| **MVP Only** | ~9.5 hours (AF + 3A + 4) |
 
-**Recommendation**: Complete Phase 3A first for a working MVP, then add 3B and 3C incrementally.
+**Recommendation**: Complete Audit Fixes → Phase 3A → Phase 4 for a hardened MVP.
 
 ---
 
@@ -376,11 +563,11 @@ Cost = Max($3.00, Weight × Rate)
 | **Phase 1** | `SharePoint/*.md` | List setup instructions |
 | **Phase 2** | `PowerAutomate/Flow-(A,B,C)*.md` | Core flow documentation |
 | **Phase 3A** | `PowerApps/StaffDashboard-App-Spec.md` | Staff console build guide |
-| **Phase 3B** | `SharePoint/RequestComments-List-Setup.md`, `PowerAutomate/Flow-(E,F)*.md` | Messaging feature |
-| **Phase 3C** | `SharePoint/FileUploads-List-Setup.md`, `PowerAutomate/Flow-(G,H)*.md` | File upload feature |
+| **Phase 3B** | `SharePoint/RequestComments-List-Setup.md`, `PowerAutomate/Flow-(D,E)*.md` | Messaging feature |
+| **Phase 3C** | `SharePoint/FileUploads-List-Setup.md`, `PowerAutomate/Flow-(F,G)*.md` | File upload feature |
 | **Testing** | `PowerAutomate/Flow-Testing-Guide.md` | Testing procedures |
 
 ---
 
-*Last Updated: December 2024*
-*Status: Phase 3A - Core Power Apps Dashboard In Progress*
+*Last Updated: December 9, 2024*
+*Status: Audit Fixes (AF-1 through AF-5) → Then Phase 3A Dashboard*

@@ -1208,21 +1208,18 @@ Update these sections in the email templates for your lab:
 2. Verify field internal names in SharePoint List Settings → Columns
 3. Check that Trigger Window Start Token is bound correctly in Get Item Changes
 
-#### Issue 4: Attachment Count Not Updating
+#### Issue 4: Attachment Changes Not Logged
 
 **Symptoms:**
-- Attachments added/removed but AttachmentCount field doesn't change
-- No "Attachment:" entries in AuditLog
+- No "Attachment:" entries in AuditLog when files are added/removed
 
 **Root Causes:**
-- AttachmentCount column missing from PrintRequests list
 - Attachment detection logic not implemented (Step 6)
 - Null handling issues with trigger attachment data
 
 **Fix:**
-1. **Add AttachmentCount column:** SharePoint → PrintRequests → Create Column → Number (default: 0)
-2. **Implement Step 6** attachment detection logic (see documentation)
-3. **Use null-safe expressions:** `if(equals(triggerOutputs()?['body/Attachments'], null), 0, length(triggerOutputs()?['body/Attachments']))`
+1. **Implement Step 6** attachment detection logic (see documentation)
+2. **Use null-safe expressions:** `if(equals(triggerOutputs()?['body/Attachments'], null), 0, length(triggerOutputs()?['body/Attachments']))`
 
 #### Issue 5: Email Template Errors
 

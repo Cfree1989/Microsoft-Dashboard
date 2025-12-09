@@ -134,7 +134,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 #### PrintRequests List (P0 - Critical)
 - **Description:** Central repository for all 3D print requests
 - **Acceptance Criteria:**
-  - 22 total fields (12 student-facing, 10 staff-only)
+  - 26 total fields (12 student-facing, 14 staff-only)
   - Item-level security ensuring students see only their requests
   - Attachment support for 3D model files
   - Version history enabled for change tracking
@@ -459,7 +459,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 #### PrintRequests List Schema
 
-**Total Fields:** 22 (12 student-facing + 10 staff-only)
+**Total Fields:** 26 (12 student-facing + 14 staff-only)
 
 **Student-Facing Fields (12):**
 - **Title** (Single line text) - Request title
@@ -475,7 +475,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **DueDate** (Date) - Timeline planning
 - **Notes** (Multiple lines text) - Additional instructions
 
-**Staff-Only Fields (10):**
+**Staff-Only Fields (14):**
 - **Status** (Choice) - Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived
 - **Priority** (Choice) - Low; Normal; High; Rush
 - **AssignedTo** (Person) - Optional field for manual assignment if needed (not used in automated workflows)
@@ -487,7 +487,6 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **StudentConfirmed** (Yes/No, Default: No) - Student approval of cost estimate
 - **NeedsAttention** (Yes/No, Default: No) - Flags items requiring staff review
 - **Expanded** (Yes/No, Default: No) - Power Apps UI state for collapsed/expanded view
-- **AttachmentCount** (Number, Default: 0) - Tracks attachment changes for audit (hidden from students)
 - **LastAction** (Choice) - Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System
 - **LastActionBy** (Single line text) - High-level action attribution (stores "System" or staff name)
 - **LastActionAt** (Date and Time) - Audit timestamp
@@ -727,7 +726,45 @@ NEXT STEPS:
 This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
-#### 4. Completion Notification Template
+#### 4. Student Confirmation Received Template
+
+**Trigger:** Flow B - When StudentConfirmed changes from No to Yes (while Status = Pending)
+
+```
+Subject: Estimate confirmed – [ReqKey] – Ready to print
+
+Hi [Student Display Name],
+
+✅ YOUR ESTIMATE HAS BEEN CONFIRMED SUCCESSFULLY!
+
+CONFIRMATION DETAILS:
+- Request: [ReqKey]
+- Status: Ready to Print
+- Confirmed: [Timestamp]
+
+WHAT HAPPENS NEXT:
+• Your request is now in our print queue
+• We'll begin preparing and printing your job
+• You'll receive another email when it's completed and ready for pickup
+• Payment will be due at pickup (TigerCASH only)
+
+IMPORTANT REMINDERS:
+• Print times are estimates and may vary
+• Final cost may differ slightly based on actual material used
+• Bring your student ID for pickup
+
+View My Requests:
+[My Requests View: /Lists/PrintRequests/My%20Requests.aspx]
+
+If you have any questions, feel free to contact us!
+
+Thank you,
+LSU Digital Fabrication Lab
+
+Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
+```
+
+#### 5. Completion Notification Template
 
 **Trigger:** Flow B - When Status changes to "Completed"
 
