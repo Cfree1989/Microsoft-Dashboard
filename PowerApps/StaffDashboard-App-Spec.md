@@ -207,7 +207,7 @@ Set(varExpandAll, false);
 Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varShowArchiveModal, 0);
-Set(varShowReassignModal, 0);
+Set(varShowDetailsModal, 0);
 Set(varShowAddFileModal, false);
 Set(varShowMessageModal, false);
 
@@ -255,7 +255,7 @@ RemoveIf(colExpanded, true);  // Start with empty collection
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varShowArchiveModal` | ID of item being archived (0=hidden) | Number |
-| `varShowReassignModal` | ID of item being reassigned (0=hidden) | Number |
+| `varShowDetailsModal` | ID of item for detail changes (0=hidden) | Number |
 | `varShowAddFileModal` | Show attachment modal | Boolean |
 | `varShowMessageModal` | Show message modal | Boolean |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
@@ -339,7 +339,7 @@ Here's the **complete list** of every control you'll create, with proper names:
 │       │   btnStartPrint          ← "🖨️ Start Print" button
 │       │   btnComplete            ← "✓ Complete" button
 │       │   btnPickedUp            ← "💰 Picked Up" button
-│       │   btnReassign            ← "🖨️ Reassign" button
+│       │   btnChangeDetails        ← "✏️ Details" button
 │       │   btnFiles               ← "📎 Files" button
 │       │   btnSendMessage         ← "💬 Message" button
 │       │
@@ -408,18 +408,20 @@ Here's the **complete list** of every control you'll create, with proper names:
 │   btnArchiveCancel               ← "Cancel" button
 │   btnArchiveConfirm              ← "📦 Confirm Archive" button
 │
-├── REASSIGN PRINTER MODAL ─────────────────────────────
-│   recReassignOverlay             ← Dark semi-transparent overlay
-│   recReassignModal               ← White modal box
-│   lblReassignTitle               ← "Reassign Printer - REQ-00001"
-│   lblReassignCurrentLabel        ← "Current Assignment:"
-│   lblReassignCurrent             ← Shows current Method + Printer
-│   lblReassignStaffLabel          ← "Performing Action As:"
-│   ddReassignStaff                ← Staff dropdown
-│   lblReassignPrinterLabel        ← "New Printer:"
-│   ddReassignPrinter              ← Printer dropdown (filtered by Method)
-│   btnReassignCancel              ← "Cancel" button
-│   btnReassignConfirm             ← "🖨️ Confirm Reassignment" button
+├── CHANGE DETAILS MODAL ───────────────────────────────
+│   recDetailsOverlay              ← Dark semi-transparent overlay
+│   recDetailsModal                ← White modal box
+│   lblDetailsTitle                ← "Change Print Details - REQ-00001"
+│   lblDetailsCurrentLabel         ← "Current Settings:"
+│   lblDetailsCurrent              ← Shows current Method, Printer, Color
+│   lblDetailsStaffLabel           ← "Performing Action As:"
+│   ddDetailsStaff                 ← Staff dropdown
+│   lblDetailsPrinterLabel         ← "Printer: (optional)"
+│   ddDetailsPrinter               ← Printer dropdown (filtered by Method)
+│   lblDetailsColorLabel           ← "Color: (optional)"
+│   ddDetailsColor                 ← Color dropdown
+│   btnDetailsCancel               ← "Cancel" button
+│   btnDetailsConfirm              ← "✓ Save Changes" button
 │
 ├── ATTACHMENTS MODAL ──────────────────────────────────
 │   recFileOverlay                 ← Dark semi-transparent overlay
@@ -1912,36 +1914,36 @@ Reset(ddArchiveStaff)
 
 ---
 
-# STEP 12B: Building the Reassign Printer Modal
+# STEP 12B: Building the Change Print Details Modal
 
-**What you're doing:** Creating a modal that allows staff to reassign a job to a different printer. The printer dropdown is filtered based on the job's Method (Filament/Resin) to prevent mismatches.
+**What you're doing:** Creating a modal that allows staff to change printer and/or color for a job. All changes are optional — staff can update one, both, or neither field.
 
-> 💡 **Why this matters:** Prevents staff from accidentally assigning a resin job to an FDM printer (or vice versa).
+> 💡 **Why this matters:** Provides flexibility while still preventing printer/method mismatches via filtered dropdown.
 
 ### Instructions
 
 ### Modal Overlay and Box
 
-1. Create `recReassignOverlay` and `recReassignModal` following the same pattern as previous modals.
-2. **Visible:** `varShowReassignModal > 0`
-3. **Modal size:** 500×400
+1. Create `recDetailsOverlay` and `recDetailsModal` following the same pattern as previous modals.
+2. **Visible:** `varShowDetailsModal > 0`
+3. **Modal size:** 500×520
 
 ### Modal Title
 
-4. Add label `lblReassignTitle`:
-   - **Text:** `"Reassign Printer - " & varSelectedItem.ReqKey`
+4. Add label `lblDetailsTitle`:
+   - **Text:** `"Change Print Details - " & varSelectedItem.ReqKey`
    - **Color:** `RGBA(0, 120, 212, 1)` (blue)
 
-### Current Assignment Display
+### Current Settings Display
 
-5. Add label `lblReassignCurrentLabel`:
-   - **Text:** `"Current Assignment:"`
+5. Add label `lblDetailsCurrentLabel`:
+   - **Text:** `"Current Settings:"`
 
-6. Add label `lblReassignCurrent`:
+6. Add label `lblDetailsCurrent`:
    - **Text:**
 
 ```powerfx
-"Method: " & varSelectedItem.Method.Value & "  |  Printer: " & varSelectedItem.Printer.Value
+"Method: " & varSelectedItem.Method.Value & "  |  Printer: " & varSelectedItem.Printer.Value & "  |  Color: " & varSelectedItem.Color.Value
 ```
 
    - **Font:** `Font.'Segoe UI Semibold'`
@@ -1949,14 +1951,14 @@ Reset(ddArchiveStaff)
 
 ### Staff Dropdown
 
-7. Add **Combo box** named `ddReassignStaff`:
+7. Add **Combo box** named `ddDetailsStaff`:
    - Same setup as other modals (Items = colStaff, etc.)
 
-### Printer Dropdown (METHOD-FILTERED)
+### Printer Dropdown (METHOD-FILTERED, OPTIONAL)
 
-8. Add label: `"New Printer: *"`
+8. Add label: `"Printer: (leave blank to keep current)"`
 
-9. Add **Combo box** named `ddReassignPrinter`:
+9. Add **Combo box** named `ddDetailsPrinter`:
    - **Width:** `350`
    - **Height:** `40`
 
@@ -1982,51 +1984,88 @@ Filter(
 
 11. Set **DisplayFields:** `["Value"]`
 12. Set **SelectMultiple:** `false`
+13. Set **AllowEmptySelection:** `true`
+
+### Color Dropdown (OPTIONAL)
+
+14. Add label: `"Color: (leave blank to keep current)"`
+
+15. Add **Combo box** named `ddDetailsColor`:
+   - **Width:** `350`
+   - **Height:** `40`
+
+16. Set **Items:**
+
+```powerfx
+Choices([@PrintRequests].Color)
+```
+
+17. Set **DisplayFields:** `["Value"]`
+18. Set **SelectMultiple:** `false`
+19. Set **AllowEmptySelection:** `true`
 
 ### Cancel Button
 
-13. Add cancel button `btnReassignCancel`:
+20. Add cancel button `btnDetailsCancel`:
    - **Text:** `"Cancel"`
-   - **OnSelect:** `Set(varShowReassignModal, 0); Reset(ddReassignPrinter); Reset(ddReassignStaff)`
+   - **OnSelect:** `Set(varShowDetailsModal, 0); Reset(ddDetailsPrinter); Reset(ddDetailsColor); Reset(ddDetailsStaff)`
 
-### Confirm Reassignment Button
+### Save Changes Button
 
-14. Add **Button** `btnReassignConfirm`:
-   - **Text:** `"🖨️ Confirm Reassignment"`
+21. Add **Button** `btnDetailsConfirm`:
+   - **Text:** `"✓ Save Changes"`
    - **Fill:** `RGBA(0, 120, 212, 1)` (blue)
    - **Color:** `Color.White`
 
-15. Set **DisplayMode:**
+22. Set **DisplayMode:**
 
 ```powerfx
 If(
-    !IsBlank(ddReassignStaff.Selected) && 
-    !IsBlank(ddReassignPrinter.Selected) &&
-    ddReassignPrinter.Selected.Value <> varSelectedItem.Printer.Value,
+    !IsBlank(ddDetailsStaff.Selected) && 
+    (
+        // At least one field must be changed
+        (!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value) ||
+        (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value)
+    ),
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> 💡 Button is disabled if no staff selected, no printer selected, or the printer is unchanged.
+> 💡 Button is enabled only when staff is selected AND at least one field is being changed.
 
-16. Set **OnSelect:**
+23. Set **OnSelect:**
 
-**⬇️ FORMULA: Complete reassignment logic with audit logging**
+**⬇️ FORMULA: Complete change logic with audit logging**
 
 ```powerfx
-// Update SharePoint item with new printer
+// Build change description for audit
+Set(varChangeDesc, "");
+
+// Track what changed
+If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value,
+    Set(varChangeDesc, "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value)
+);
+If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
+    Set(varChangeDesc, 
+        If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & 
+        "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value
+    )
+);
+
+// Update SharePoint item (only changed fields)
 Patch(
     PrintRequests,
     varSelectedItem,
     {
-        Printer: ddReassignPrinter.Selected,
-        LastAction: "Printer Reassigned: " & varSelectedItem.Printer.Value & " → " & ddReassignPrinter.Selected.Value,
+        Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
+        Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
+        LastAction: "Details Changed: " & varChangeDesc,
         LastActionBy: {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & Lower(LookUp(colStaff, DisplayName = ddReassignStaff.Selected.DisplayName).Email),
-            DisplayName: ddReassignStaff.Selected.DisplayName,
-            Email: LookUp(colStaff, DisplayName = ddReassignStaff.Selected.DisplayName).Email
+            Claims: "i:0#.f|membership|" & Lower(LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email),
+            DisplayName: ddDetailsStaff.Selected.DisplayName,
+            Email: LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email
         },
         LastActionAt: Now()
     }
@@ -2035,33 +2074,34 @@ Patch(
 // Log to audit via Flow C
 'PR-Action'.Run(
     varSelectedItem.ID,
-    "Printer Reassigned",
-    ddReassignStaff.Selected.DisplayName,
+    "Details Changed",
+    ddDetailsStaff.Selected.DisplayName,
     "Power Apps",
-    "From: " & varSelectedItem.Printer.Value & " → To: " & ddReassignPrinter.Selected.Value
+    varChangeDesc
 );
 
 // Close modal and reset
-Set(varShowReassignModal, 0);
+Set(varShowDetailsModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
-Reset(ddReassignPrinter);
-Reset(ddReassignStaff);
-Notify("Printer reassigned successfully.", NotificationType.Success)
+Reset(ddDetailsPrinter);
+Reset(ddDetailsColor);
+Reset(ddDetailsStaff);
+Notify("Print details updated.", NotificationType.Success)
 ```
 
 ---
 
-### Adding the Reassign Button to Job Cards
+### Adding the Change Details Button to Job Cards
 
-Go back to `galJobCards` and add the Reassign button:
+Go back to `galJobCards` and add the button:
 
-17. Click **+ Insert** → **Button**.
-18. **Rename it:** `btnReassign`
-19. Set properties:
+24. Click **+ Insert** → **Button**.
+25. **Rename it:** `btnChangeDetails`
+26. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"🖨️ Reassign"` |
+| Text | `"✏️ Details"` |
 | X | Position after other action buttons |
 | Y | `Parent.TemplateHeight - 50` |
 | Width | `90` |
@@ -2072,14 +2112,14 @@ Go back to `galJobCards` and add the Reassign button:
 | BorderThickness | `1` |
 | Visible | `ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]` |
 
-20. Set **OnSelect:**
+27. Set **OnSelect:**
 
 ```powerfx
-Set(varShowReassignModal, ThisItem.ID);
+Set(varShowDetailsModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **When visible:** The Reassign button appears for jobs that haven't started printing yet (Uploaded, Pending, Ready to Print). Once printing starts, the printer assignment is locked.
+> 💡 **When visible:** The Details button appears for jobs that haven't started printing yet (Uploaded, Pending, Ready to Print). Once printing starts, details are locked.
 
 ---
 

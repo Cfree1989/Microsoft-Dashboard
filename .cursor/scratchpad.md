@@ -107,9 +107,10 @@ If(
 
 **Files Updated:**
 1. `PowerApps/StudentForm-Instructions.md` — Step 4 added for cascading Printer dropdown
-2. `PowerApps/StaffDashboard-App-Spec.md` — Warning label added as backup (lblPrinterWarning)
+2. `PowerApps/StaffDashboard-App-Spec.md` — Step 12B: Change Print Details Modal (Printer + Color, both optional)
+3. `PowerApps/StaffDashboard-App-Spec.md` — Warning label as backup (lblPrinterWarning)
 
-**Note:** Staff dashboard also has a warning label in case legacy data has mismatches.
+**Note:** Staff can change Printer and/or Color via the Details modal. Warning label catches legacy mismatches.
 
 ---
 
