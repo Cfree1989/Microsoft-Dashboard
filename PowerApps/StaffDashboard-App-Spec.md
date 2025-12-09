@@ -1016,7 +1016,7 @@ This section shows message history between staff and students for each request, 
 
 > **Prerequisites:** 
 > - Complete Step 16 (Message Modal) first
-> - Ensure `RequestComments` list is connected with Direction column (see `SharePoint/RequestComments-Schema-Update.md`)
+> - Ensure `RequestComments` list is connected with Direction column (see `SharePoint/RequestComments-List-Setup.md`)
 
 37. Click **+ Insert** → **Text label**.
 38. **Rename it:** `lblMessagesHeader`
@@ -2446,7 +2446,7 @@ Reset(ddMessageStaff);
 Notify("Message sent! Student will receive email notification.", NotificationType.Success)
 ```
 
-> **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow E will detect this and send the email with threading headers. See `PowerAutomate/PR-Message_Notifications.md` for details.
+> **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow D will detect this and send the email with threading headers. See `PowerAutomate/Flow-(D)-Message-Notifications.md` for details.
 
 ### Adding the Send Message Button to Job Cards
 
@@ -2487,7 +2487,7 @@ To show unread inbound message count on job cards:
    - **BorderRadius:** `12`
    - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
 
-> **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow F when students reply to emails.
+> **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow E when students reply to emails.
 
 ### Testing the Message Modal
 
@@ -2498,7 +2498,7 @@ To show unread inbound message count on job cards:
 - [ ] Sending creates entry in RequestComments list with Direction = Outbound
 - [ ] Success notification appears
 - [ ] Modal closes and resets after sending
-- [ ] Flow E sends threaded email to student with [REQ-00001] in subject
+- [ ] Flow D sends threaded email to student with [REQ-00001] in subject
 
 ---
 

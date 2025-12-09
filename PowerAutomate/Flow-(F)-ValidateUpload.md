@@ -1,4 +1,4 @@
-# Flow G (PR-ValidateUpload)
+# Flow F (PR-ValidateUpload)
 
 **Full Name:** PR-ValidateUpload: Validate student upload request  
 **Trigger:** Power Apps (instant flow)
@@ -73,7 +73,7 @@ This flow validates student upload requests by:
 ### Step 1: Create the Flow
 
 1. Go to **Power Automate** → **Create** → **Instant cloud flow**
-2. **Name:** `Flow G (PR-ValidateUpload)` or `PR-ValidateUpload: Validate student upload request`
+2. **Name:** `Flow F (PR-ValidateUpload)` or `PR-ValidateUpload: Validate student upload request`
 3. **Trigger:** Select **PowerApps (V2)**
 4. Click **Create**
 

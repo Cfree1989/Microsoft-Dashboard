@@ -19,7 +19,7 @@
 9. [Integration Tests](#integration-tests)
 10. [Error Scenarios](#error-scenarios)
 11. [Regression Test Suite](#regression-test-suite)
-12. [Student Upload Portal Tests](#student-upload-portal-tests) **(NEW)**
+12. [Student Upload Portal Tests (Flow F & G)](#student-upload-portal-tests) **(NEW)**
 13. [Test Result Template](#test-result-template)
 14. [Troubleshooting Guide](#troubleshooting-guide)
 
@@ -273,8 +273,8 @@ This guide covers comprehensive testing for **five Power Automate cloud flows** 
 | **Flow A (PR-Create)** | New request processing | SharePoint Create | ReqKey generation, filename validation, confirmation emails |
 | **Flow B (PR-Audit)** | Change tracking & notifications | SharePoint Modify | Field change logging, automated emails, estimate confirmations |
 | **Flow C (PR-Action)** | Staff action logging | Power Apps | Audit trail from dashboard actions |
-| **Flow G (PR-ValidateUpload)** | Student upload validation | Power Apps (instant) | Validates student can upload to request |
-| **Flow H (PR-ProcessUpload)** | File upload processing | SharePoint Create | Moves files to PrintRequest, validation, notifications |
+| **Flow F (PR-ValidateUpload)** | Student upload validation | Power Apps (instant) | Validates student can upload to request |
+| **Flow G (PR-ProcessUpload)** | File upload processing | SharePoint Create | Moves files to PrintRequest, validation, notifications |
 
 ### Why Testing Matters
 
@@ -2595,14 +2595,15 @@ FAILED: _____ / 5
 ## Student Upload Portal Tests
 
 **Time Required:** 45 minutes  
-**Purpose:** Test the Student Upload Portal system (Flow G + Flow H + Power App)
+**Purpose:** Test the Student Upload Portal system (Flow F + Flow G + Power App)
 
 ### Overview
 
 The Student Upload Portal allows students to upload replacement or additional files to existing print requests. Testing covers:
 
-- **Flow G (PR-ValidateUpload):** Validates student can upload to a request
-- **Flow H (PR-ProcessUpload):** Processes uploaded files
+- **Flow F (PR-ValidateUpload):** Validates student can upload to a request
+- **Flow G (PR-ProcessUpload):** Processes uploaded files
+
 - **Power App:** Student-facing upload interface
 
 ### Prerequisites for Upload Portal Testing
@@ -2610,14 +2611,14 @@ The Student Upload Portal allows students to upload replacement or additional fi
 Before running these tests:
 
 - [ ] `FileUploads` SharePoint list created with all columns
-- [ ] Flow G published and accessible from Power Apps
-- [ ] Flow H published and enabled
+- [ ] Flow F published and accessible from Power Apps
+- [ ] Flow G (PR-ProcessUpload) published and enabled
 - [ ] Student Upload Portal app published
 - [ ] At least one test PrintRequest exists (not Archived/Rejected)
 
 ---
 
-### Flow G Tests (Validation)
+### Flow F Tests (Validation)
 
 #### G-001: Valid Request Lookup
 
@@ -2627,7 +2628,7 @@ Before running these tests:
 1. In Power Apps (or test the flow directly):
 2. Enter StudentEmail matching an existing request
 3. Enter valid ReqKey (e.g., REQ-00001)
-4. Run Flow G
+4. Run Flow F
 
 **Expected Result:**
 - IsValid = `true`
@@ -2652,7 +2653,7 @@ Before running these tests:
 **Test Steps:**
 1. Enter any valid email
 2. Enter ReqKey that doesn't exist (e.g., REQ-99999)
-3. Run Flow G
+3. Run Flow F
 
 **Expected Result:**
 - IsValid = `false`
@@ -2674,7 +2675,7 @@ Before running these tests:
 **Test Steps:**
 1. Find an existing request's ReqKey
 2. Enter a DIFFERENT email than the request's StudentEmail
-3. Run Flow G
+3. Run Flow F
 
 **Expected Result:**
 - IsValid = `false`
@@ -2696,7 +2697,7 @@ Before running these tests:
 **Test Steps:**
 1. Find or create a PrintRequest with Status = "Archived"
 2. Enter matching email and ReqKey
-3. Run Flow G
+3. Run Flow F
 
 **Expected Result:**
 - IsValid = `false`
@@ -2718,7 +2719,7 @@ Before running these tests:
 **Test Steps:**
 1. Find or create a PrintRequest with Status = "Rejected"
 2. Enter matching email and ReqKey
-3. Run Flow G
+3. Run Flow F
 
 **Expected Result:**
 - IsValid = `false`
@@ -2740,7 +2741,7 @@ Before running these tests:
 **Test Steps:**
 1. Find a request with StudentEmail = "jdoe@lsu.edu"
 2. Enter "JDOE@LSU.EDU" (uppercase)
-3. Run Flow G
+3. Run Flow F
 
 **Expected Result:**
 - IsValid = `true`
@@ -2754,7 +2755,7 @@ Before running these tests:
 
 ---
 
-### Flow H Tests (Processing)
+### Flow G Tests (Processing)
 
 #### H-001: Valid Additional Upload
 
@@ -2767,7 +2768,7 @@ Before running these tests:
    - ReqKey = [PrintRequest ReqKey]
    - UploadType = "Additional"
    - Attach: ValidFile.stl (any valid format)
-3. Wait for Flow H to process (check run history)
+3. Wait for Flow G to process (check run history)
 
 **Expected Result:**
 - PrintRequest now has 2 attachments (original + new)
@@ -2797,7 +2798,7 @@ Before running these tests:
 2. Create FileUploads entry:
    - UploadType = "Replacement"
    - Attach: NewFile.stl
-3. Wait for Flow H to process
+3. Wait for Flow G to process
 
 **Expected Result:**
 - PrintRequest now has 1 attachment (only the new one)
@@ -2822,7 +2823,7 @@ Before running these tests:
 **Test Steps:**
 1. Create FileUploads entry
 2. Attach: document.pdf (invalid format)
-3. Wait for Flow H
+3. Wait for Flow G
 
 **Expected Result:**
 - FileUploads.Status = "Failed"
@@ -2847,7 +2848,7 @@ Before running these tests:
 **Test Steps:**
 1. Create FileUploads entry
 2. Attach: LargeFile.stl (over 150MB)
-3. Wait for Flow H
+3. Wait for Flow G
 
 **Expected Result:**
 - FileUploads.Status = "Failed"
@@ -2861,7 +2862,7 @@ Before running these tests:
 
 **Status:** [ ] PASS  [ ] FAIL
 
-**Note:** If you can't create a 150MB test file, skip this test or adjust the size threshold in Flow H for testing.
+**Note:** If you can't create a 150MB test file, skip this test or adjust the size threshold in Flow G for testing.
 
 ---
 
@@ -2872,7 +2873,7 @@ Before running these tests:
 **Test Steps:**
 1. Create FileUploads entry
 2. Attach: ValidFile.stl AND InvalidFile.pdf
-3. Wait for Flow H
+3. Wait for Flow G
 
 **Expected Result:**
 - FileUploads.Status = "Failed"
@@ -2980,7 +2981,7 @@ Entry contains:
 - Request info shown (ReqKey, Status)
 
 **Pass Criteria:**
-- [ ] Flow G called successfully
+- [ ] Flow F called successfully
 - [ ] Upload screen reached
 - [ ] Correct request info displayed
 
@@ -3120,9 +3121,9 @@ Entry contains:
 8. Observe confirmation
 
 **Expected Result:**
-- Flow G validates → Upload screen
+- Flow F validates → Upload screen
 - Submit creates FileUploads entry
-- Flow H processes (check run history)
+- Flow G processes (check run history)
 - PrintRequest has new attachment
 - NeedsAttention = Yes
 - AuditLog entry created
@@ -3161,7 +3162,7 @@ Entry contains:
 ### Student Upload Portal - Quick Regression
 
 **Time:** 10 minutes  
-**When to Run:** After any changes to Flow G, Flow H, or Upload Portal app
+**When to Run:** After any changes to Flow F, Flow G, or Upload Portal app
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
@@ -3431,8 +3432,8 @@ Based on Power Automate documentation:
 - [Flow A (PR-Create): Set ReqKey + Acknowledge](./PR-(A)%20Create_SetReqKey_Acknowledge.md)
 - [Flow B (PR-Audit): Log changes + Email notifications](./PR-(B)%20Audit_LogChanges_EmailNotifications.md)
 - [Flow C (PR-Action): Log action](./PR-(C)%20Action_LogAction.md)
-- [Flow G (PR-ValidateUpload): Validate student upload request](./PR-(G)%20ValidateUpload.md)
-- [Flow H (PR-ProcessUpload): Process student file upload](./PR-(H)%20ProcessUpload.md)
+- [Flow F (PR-ValidateUpload): Validate student upload request](./Flow-(F)-ValidateUpload.md)
+- [Flow G (PR-ProcessUpload): Process student file upload](./Flow-(G)-ProcessUpload.md)
 
 ### Key Expressions Reference
 
@@ -3464,7 +3465,7 @@ Join: join(body('Format_Action'), '; ')
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-10-13 | System | Initial comprehensive test guide created |
-| 1.1 | 2025-12-08 | System | Added Student Upload Portal tests (Flow G, Flow H, Power App) |
+| 1.1 | 2025-12-08 | System | Added Student Upload Portal tests (Flow F, Flow G, Power App) |
 
 ---
 

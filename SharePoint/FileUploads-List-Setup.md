@@ -278,8 +278,8 @@ Staff should have **Full Control** (inherited from site permissions) for trouble
 
 ## Next Steps
 
-1. Create **Flow G (PR-ValidateUpload)** - validates student upload requests
-2. Create **Flow H (PR-ProcessUpload)** - processes uploads and moves files
+1. Create **Flow F (PR-ValidateUpload)** - validates student upload requests
+2. Create **Flow G (PR-ProcessUpload)** - processes uploads and moves files
 3. Build **Student Upload Portal** Power App
 4. Test end-to-end workflow
 
@@ -297,6 +297,6 @@ Staff should have **Full Control** (inherited from site permissions) for trouble
 
 ### Processing Failures
 - Check the ErrorMessage column for specific error details
-- Review Flow H run history in Power Automate
-- Verify Flow H has permissions to read/write PrintRequests
+- Review Flow G run history in Power Automate
+- Verify Flow G has permissions to read/write PrintRequests
 

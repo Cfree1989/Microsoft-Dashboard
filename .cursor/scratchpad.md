@@ -21,10 +21,10 @@
 |-----------|---------|---------------|
 | **FileUploads List** | Staging area for student file updates | `SharePoint/FileUploads-List-Setup.md` |
 | **RequestComments List** | Bi-directional staff/student messaging with email threading | `SharePoint/RequestComments-List-Setup.md` |
-| **Flow E (PR-Message)** | Send threaded email notifications to students | `PowerAutomate/Flow-(E)-Message-Notifications.md` |
-| **Flow F (PR-Mailbox)** | Process inbound student email replies | `PowerAutomate/Flow-(F)-Mailbox-InboundReplies.md` |
-| **Flow G (PR-ValidateUpload)** | Validate student upload requests (instant flow) | `PowerAutomate/Flow-(G)-ValidateUpload.md` |
-| **Flow H (PR-ProcessUpload)** | Process validated uploads, move files to PrintRequest | `PowerAutomate/Flow-(H)-ProcessUpload.md` |
+| **Flow D (PR-Message)** | Send threaded email notifications to students | `PowerAutomate/Flow-(D)-Message-Notifications.md` |
+| **Flow E (PR-Mailbox)** | Process inbound student email replies | `PowerAutomate/Flow-(E)-Mailbox-InboundReplies.md` |
+| **Flow F (PR-ValidateUpload)** | Validate student upload requests (instant flow) | `PowerAutomate/Flow-(F)-ValidateUpload.md` |
+| **Flow G (PR-ProcessUpload)** | Process validated uploads, move files to PrintRequest | `PowerAutomate/Flow-(G)-ProcessUpload.md` |
 | **Student Upload Portal** | Separate app for replacement/additional file uploads | `PowerApps/StudentUploadPortal-App-Spec.md` |
 
 ---
@@ -47,25 +47,25 @@
 | **Phase 3A Total** | **~6 hours** | |
 
 ### Phase 3B: Add Messaging Feature (Enhancement)
-**Dependencies:** RequestComments list, Flows E & F
+**Dependencies:** RequestComments list, Flows D & E
 
 | Task | Est. Time | Status |
 |------|-----------|--------|
 | 3B.1: Build RequestComments SharePoint list | 45 min | Pending |
-| 3B.2: Build Flow E (PR-Message) | 1.5 hours | Pending |
-| 3B.3: Build Flow F (PR-Mailbox) | 2 hours | Pending |
+| 3B.2: Build Flow D (PR-Message) | 1.5 hours | Pending |
+| 3B.3: Build Flow E (PR-Mailbox) | 2 hours | Pending |
 | 3B.4: Add Message Modal to Power Apps | 1 hour | Pending |
 | 3B.5: Add conversation view to job cards | 1 hour | Pending |
 | **Phase 3B Total** | **~6 hours** | |
 
 ### Phase 3C: Add File Upload Feature (Enhancement)
-**Dependencies:** FileUploads list, Flows G & H, Student Upload Portal
+**Dependencies:** FileUploads list, Flows F & G, Student Upload Portal
 
 | Task | Est. Time | Status |
 |------|-----------|--------|
 | 3C.1: Build FileUploads SharePoint list | 20 min | Pending |
-| 3C.2: Build Flow G (PR-ValidateUpload) | 1 hour | Pending |
-| 3C.3: Build Flow H (PR-ProcessUpload) | 2 hours | Pending |
+| 3C.2: Build Flow F (PR-ValidateUpload) | 1 hour | Pending |
+| 3C.3: Build Flow G (PR-ProcessUpload) | 2 hours | Pending |
 | 3C.4: Build Student Upload Portal app | 3 hours | Pending |
 | 3C.5: Add file attachment modal to dashboard | 1 hour | Pending |
 | **Phase 3C Total** | **~7 hours** | |
@@ -184,8 +184,8 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 **Status**: DOCUMENTED - Not yet built
 
 - [ ] **3B.1**: Build RequestComments SharePoint list (45 min)
-- [ ] **3B.2**: Build Flow E (PR-Message) - outbound email notifications with threading (1.5 hours)
-- [ ] **3B.3**: Build Flow F (PR-Mailbox) - inbound email reply processing (2 hours)
+- [ ] **3B.2**: Build Flow D (PR-Message) - outbound email notifications with threading (1.5 hours)
+- [ ] **3B.3**: Build Flow E (PR-Mailbox) - inbound email reply processing (2 hours)
 - [ ] **3B.4**: Add Message Modal to Power Apps dashboard (1 hour)
 - [ ] **3B.5**: Add conversation view to expanded job cards (1 hour)
 - [ ] **3B.6**: Messaging feature testing
@@ -197,8 +197,8 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 **Status**: DOCUMENTED - Not yet built
 
 - [ ] **3C.1**: Build FileUploads SharePoint list (20 min)
-- [ ] **3C.2**: Build Flow G (PR-ValidateUpload) - instant validation flow (1 hour)
-- [ ] **3C.3**: Build Flow H (PR-ProcessUpload) - file processing flow (2 hours)
+- [ ] **3C.2**: Build Flow F (PR-ValidateUpload) - instant validation flow (1 hour)
+- [ ] **3C.3**: Build Flow G (PR-ProcessUpload) - file processing flow (2 hours)
 - [ ] **3C.4**: Build Student Upload Portal Canvas app (3 hours)
 - [ ] **3C.5**: Add Attachments Modal to dashboard (1 hour)
 - [ ] **3C.6**: File upload feature testing
@@ -263,16 +263,16 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 | Component | Documentation | Purpose |
 |-----------|---------------|---------|
 | RequestComments List | `SharePoint/RequestComments-List-Setup.md` | 13 columns for threaded conversations |
-| Flow E (PR-Message) | `PowerAutomate/Flow-(E)-Message-Notifications.md` | Send threaded emails with `[REQ-00001]` format |
-| Flow F (PR-Mailbox) | `PowerAutomate/Flow-(F)-Mailbox-InboundReplies.md` | Parse inbound replies, validate sender |
+| Flow D (PR-Message) | `PowerAutomate/Flow-(D)-Message-Notifications.md` | Send threaded emails with `[REQ-00001]` format |
+| Flow E (PR-Mailbox) | `PowerAutomate/Flow-(E)-Mailbox-InboundReplies.md` | Parse inbound replies, validate sender |
 | Power Apps Message Modal | `PowerApps/StaffDashboard-App-Spec.md` Step 16 | Staff sends messages from dashboard |
 
 **Phase 3C: File Upload System** (Student file replacement/addition)
 | Component | Documentation | Purpose |
 |-----------|---------------|---------|
 | FileUploads List | `SharePoint/FileUploads-List-Setup.md` | 10 columns for upload queue |
-| Flow G (PR-ValidateUpload) | `PowerAutomate/Flow-(G)-ValidateUpload.md` | Instant validation before upload UI |
-| Flow H (PR-ProcessUpload) | `PowerAutomate/Flow-(H)-ProcessUpload.md` | Move validated files to PrintRequest |
+| Flow F (PR-ValidateUpload) | `PowerAutomate/Flow-(F)-ValidateUpload.md` | Instant validation before upload UI |
+| Flow G (PR-ProcessUpload) | `PowerAutomate/Flow-(G)-ProcessUpload.md` | Move validated files to PrintRequest |
 | Student Upload Portal | `PowerApps/StudentUploadPortal-App-Spec.md` | Separate app for student uploads |
 
 ---
@@ -316,10 +316,10 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 | **Flow A (PR-Create)** | ReqKey + filename validation + confirmation emails | ✅ DONE |
 | **Flow B (PR-Audit)** | Field change logging + status emails | ✅ DONE |
 | **Flow C (PR-Action)** | Staff action logging from Power Apps | ✅ DONE |
-| **Flow E (PR-Message)** | Outbound message notifications with threading | 📄 Documented |
-| **Flow F (PR-Mailbox)** | Inbound email reply processing | 📄 Documented |
-| **Flow G (PR-ValidateUpload)** | Student upload validation (instant) | 📄 Documented |
-| **Flow H (PR-ProcessUpload)** | File processing and transfer | 📄 Documented |
+| **Flow D (PR-Message)** | Outbound message notifications with threading | 📄 Documented |
+| **Flow E (PR-Mailbox)** | Inbound email reply processing | 📄 Documented |
+| **Flow F (PR-ValidateUpload)** | Student upload validation (instant) | 📄 Documented |
+| **Flow G (PR-ProcessUpload)** | File processing and transfer | 📄 Documented |
 
 ### SharePoint Internal Field Names (Critical)
 | Display Name | Internal Name | Type |

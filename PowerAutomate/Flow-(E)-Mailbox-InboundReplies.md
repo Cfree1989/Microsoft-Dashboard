@@ -1,4 +1,4 @@
-# Flow F (PR-Mailbox)
+# Flow E (PR-Mailbox)
 
 **Full Name:** PR-Mailbox: Process inbound replies  
 **Trigger:** Office 365 Outlook — When a new email arrives in a shared mailbox (V2)
@@ -27,14 +27,14 @@ When a student replies to an email about their print request:
 - [ ] `AuditLog` list exists
 - [ ] Shared mailbox `coad-fablab@lsu.edu` configured
 - [ ] Flow owner has "Read and manage" permissions on shared mailbox
-- [ ] Flow E (PR-Message) sending emails with `[REQ-00001]` subject format
+- [ ] Flow D (PR-Message) sending emails with `[REQ-00001]` subject format
 
 ---
 
 ## Step 1: Create the Flow
 
 1. **Power Automate** → **My flows** → **+ New flow** → **Automated cloud flow**
-2. **Name:** `Flow F (PR-Mailbox)` or `PR-Mailbox: Process inbound replies`
+2. **Name:** `Flow E (PR-Mailbox)` or `PR-Mailbox: Process inbound replies`
 3. **Trigger:** Office 365 Outlook – **When a new email arrives in a shared mailbox (V2)**
 4. **Configure trigger:**
    - **Original Mailbox Address:** `coad-fablab@lsu.edu`
@@ -485,10 +485,10 @@ Mark email as read
 
 ## Integration Notes
 
-### With Flow E (PR-Message)
+### With Flow D (PR-Message)
 
 - Flow E sends **outbound** messages with `[REQ-00001]` subject format
-- Flow F processes **inbound** replies with same subject format
+- Flow E processes **inbound** replies with same subject format
 - Both flows use same ThreadID for conversation continuity
 
 ### With Power Apps Dashboard

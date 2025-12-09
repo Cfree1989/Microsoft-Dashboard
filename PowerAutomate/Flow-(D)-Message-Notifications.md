@@ -1,4 +1,4 @@
-# Flow E (PR-Message)
+# Flow D (PR-Message)
 
 **Full Name:** PR-Message: Send notifications  
 **Trigger:** SharePoint — When an item is **created** (List: `RequestComments`)
@@ -10,7 +10,7 @@
 ## Overview
 
 - **Staff sends message** → Student receives threaded email notification
-- **Student sends message** → NeedsAttention flag set on request (inbound replies handled by Flow F)
+- **Student sends message** → NeedsAttention flag set on request (inbound replies handled by Flow E)
 - **Email threading** → All messages in a conversation stay in the same email thread
 
 ---
@@ -28,7 +28,7 @@
 ## Step 1: Create the Flow
 
 1. **Power Automate** → **My flows** → **+ New flow** → **Automated cloud flow**
-2. **Name:** `Flow E (PR-Message)`
+2. **Name:** `Flow D (PR-Message)`
 3. **Trigger:** SharePoint – When an item is created
 4. **Site:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 5. **List:** `RequestComments`
@@ -46,7 +46,7 @@
 
 ## Step 3: Check Direction (Skip Inbound Messages)
 
-**What this does:** Flow E only sends emails for outbound (staff) messages. Inbound messages are processed by Flow F.
+**What this does:** Flow D only sends emails for outbound (staff) messages. Inbound messages are processed by Flow E.
 
 1. **+ New step** → **Condition**
 2. **Rename:** `Check if Outbound Message`
@@ -149,7 +149,7 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
 concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()?['body/Title'])
 ```
 
-> **Important:** The `[REQ-00001]` prefix in the subject enables Flow F to parse student replies and match them to the correct request.
+> **Important:** The `[REQ-00001]` prefix in the subject enables Flow E to parse student replies and match them to the correct request.
 
 6. **Body:**
 ```
@@ -210,7 +210,7 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 
 ## Step 9: NO Branch (Student Message - No Action Needed)
 
-> **Note:** For outbound messages, this branch won't execute because we check Direction = Outbound in Step 3. This branch exists for completeness but Flow E only processes outbound messages. Inbound student replies are handled by Flow F (PR-Mailbox).
+> **Note:** For outbound messages, this branch won't execute because we check Direction = Outbound in Step 3. This branch exists for completeness but Flow D only processes outbound messages. Inbound student replies are handled by Flow E (PR-Mailbox).
 
 Leave this branch empty or add a **Terminate** action:
 1. **+ Add action** → **Terminate**
@@ -221,13 +221,13 @@ Leave this branch empty or add a **Terminate** action:
 
 ## Legacy Step Reference: Student Messages (Deprecated)
 
-> **Note:** The following logic has been moved to Flow F (PR-Mailbox) which handles inbound email replies. This section is kept for reference only.
+> **Note:** The following logic has been moved to Flow E (PR-Mailbox) which handles inbound email replies. This section is kept for reference only.
 
 ### Original Step 5: NO Branch (Student → Flag for Staff)
 
-### Update NeedsAttention (Legacy - Now in Flow F)
+### Update NeedsAttention (Legacy - Now in Flow E)
 
-> This logic has been moved to Flow F for inbound email processing.
+> This logic has been moved to Flow E for inbound email processing.
 
 1. **+ Add action** → **Update item** (SharePoint) → List: `PrintRequests`
 2. **Id:** `triggerOutputs()?['body/RequestID']`
@@ -235,7 +235,7 @@ Leave this branch empty or add a **Terminate** action:
 4. **LastAction Value:** `Message Received`
 5. **LastActionAt:** `utcNow()`
 
-### Log to Audit (Legacy - Now in Flow F)
+### Log to Audit (Legacy - Now in Flow E)
 
 1. **+ Add action** → **Create item** (SharePoint) → List: `AuditLog`
 2. **Title:** `Student Message Received`
@@ -257,11 +257,11 @@ Leave this branch empty or add a **Terminate** action:
 - [ ] First message creates new ThreadID (format: `REQ-00001-{timestamp}`)
 - [ ] RequestComments item updated with ThreadID and MessageID
 - [ ] Second message to same request reuses existing ThreadID
-- [ ] Student can reply to email (reply processed by Flow F)
+- [ ] Student can reply to email (reply processed by Flow E)
 
 ### Direction Filtering
 - [ ] Outbound messages (staff) trigger email sending
-- [ ] Inbound messages (via Flow F) do NOT trigger this flow
+- [ ] Inbound messages (via Flow E) do NOT trigger this flow
 - [ ] Direction field correctly identifies message type
 
 ### Edge Cases
@@ -300,9 +300,9 @@ Staff sends message via Power Apps
         ↓
 RequestComments item created (Direction: Outbound)
         ↓
-Flow E triggers
+Flow D triggers
         ↓
-Check Direction = Outbound? ──NO──→ Terminate (handled by Flow F)
+Check Direction = Outbound? ──NO──→ Terminate (handled by Flow E)
         ↓ YES
 Get Print Request details
         ↓
@@ -323,12 +323,12 @@ Log to AuditLog
 
 **Outbound:** `[REQ-00001] Your subject here`
 - Square brackets enable reliable regex parsing
-- ReqKey allows Flow F to match replies to requests
+- ReqKey allows Flow E to match replies to requests
 
-### Integration with Flow F
+### Integration with Flow E
 
-Flow E handles **outbound** messages (staff → student)  
-Flow F handles **inbound** messages (student email replies → SharePoint)
+Flow D handles **outbound** messages (staff → student)  
+Flow E handles **inbound** messages (student email replies → SharePoint)
 
 See `PR-Mailbox_InboundReplies.md` for inbound processing documentation.
 

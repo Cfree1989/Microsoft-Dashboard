@@ -2,7 +2,7 @@
 
 **Purpose:** Allow students to upload replacement or additional files to their existing print requests without accessing the internal staff dashboard.  
 **Estimated Build Time:** 4-6 hours  
-**Dependencies:** `FileUploads` list, `PrintRequests` list, `AuditLog` list, Flow G, Flow H
+**Dependencies:** `FileUploads` list, `PrintRequests` list, `AuditLog` list, Flow F, Flow G
 
 ---
 
@@ -36,7 +36,7 @@ Student opens Upload Portal (direct link)
         ↓
 Enter Email + ReqKey
         ↓
-Flow G validates request exists
+Flow F validates request exists
   └── Email matches StudentEmail?
   └── Status not Archived/Rejected?
         ↓ Valid
@@ -48,7 +48,7 @@ Student attaches files
         ↓
 Submit creates FileUploads entry
         ↓
-Flow H processes upload
+Flow G processes upload
   └── Validates file format
   └── If Replacement: deletes existing files
   └── Copies files to PrintRequest
@@ -127,9 +127,9 @@ Student sees success confirmation
 3. Search for **SharePoint** → Connect to your site
 4. Add list: `FileUploads`
 5. Click **Add data** again → Search for **Power Automate**
-6. Find and add: `Flow G (PR-ValidateUpload)` or your flow name
+6. Find and add: `Flow F (PR-ValidateUpload)` or your flow name
 
-> **Note:** Flow G must be published and you must have run access to see it in Power Apps.
+> **Note:** Flow F must be published and you must have run access to see it in Power Apps.
 
 ---
 
@@ -246,7 +246,7 @@ If(
     Return()
 );
 
-// Call Flow G to validate
+// Call Flow F to validate
 Set(
     varValidationResult, 
     'PR-ValidateUpload'.Run(
@@ -507,7 +507,7 @@ Navigate(scrLookup, ScreenTransition.Fade)
 | varUploadedItem | Record | Stores the created FileUploads item |
 | varFileCount | Number | Count of files uploaded for confirmation |
 | colUploadTypes | Collection | Radio button options |
-| varValidationResult | Record | Response from Flow G |
+| varValidationResult | Record | Response from Flow F |
 
 ---
 
@@ -517,7 +517,7 @@ The flow name in Power Apps depends on how you named it in Power Automate:
 
 | If Flow Named | Use in Power Apps |
 |--------------|-------------------|
-| `Flow G (PR-ValidateUpload)` | `'Flow G (PR-ValidateUpload)'.Run(...)` |
+| `Flow F (PR-ValidateUpload)` | `'Flow F (PR-ValidateUpload)'.Run(...)` |
 | `PR-ValidateUpload: Validate student upload request` | `'PR-ValidateUpload: Validate student upload request'.Run(...)` |
 
 Update the `btnLookup.OnSelect` code to match your flow name.
@@ -526,13 +526,13 @@ Update the `btnLookup.OnSelect` code to match your flow name.
 
 ## Power Automate Flows
 
-### Flow G: Validate Upload Request
+### Flow F: Validate Upload Request
 
 **Full Name:** PR-ValidateUpload: Validate student upload request  
 **Trigger:** Power Apps (instant)  
 **Purpose:** Validates that a student can upload to a specific request
 
-📋 **Full implementation details:** See [`PowerAutomate/PR-(G) ValidateUpload.md`](../PowerAutomate/PR-(G)%20ValidateUpload.md)
+📋 **Full implementation details:** See [`PowerAutomate/Flow-(F)-ValidateUpload.md`](../PowerAutomate/Flow-(F)-ValidateUpload.md)
 
 **Quick Summary:**
 1. Accept StudentEmail and ReqKey parameters from Power Apps
@@ -565,13 +565,13 @@ Update the `btnLookup.OnSelect` code to match your flow name.
 
 ---
 
-### Flow H: Process File Upload
+### Flow G: Process File Upload
 
 **Full Name:** PR-ProcessUpload: Process student file upload  
 **Trigger:** SharePoint - When an item is created (List: `FileUploads`)  
 **Purpose:** Moves uploaded files to the correct PrintRequest
 
-📋 **Full implementation details:** See [`PowerAutomate/PR-(H) ProcessUpload.md`](../PowerAutomate/PR-(H)%20ProcessUpload.md)
+📋 **Full implementation details:** See [`PowerAutomate/Flow-(G)-ProcessUpload.md`](../PowerAutomate/Flow-(G)-ProcessUpload.md)
 
 **Quick Summary:**
 
@@ -693,15 +693,15 @@ If any file fails validation:
 | Email System | Confirmations and error notifications |
 
 ### Flow Dependencies
-- Flow G must complete before upload form shows
-- Flow H triggers automatically on FileUploads creation
-- Flow H should complete within 5 minutes (timeout consideration)
+- Flow F must complete before upload form shows
+- Flow G triggers automatically on FileUploads creation
+- Flow G should complete within 5 minutes (timeout consideration)
 
 ---
 
 ## Testing Checklist
 
-### Flow G (Validation)
+### Flow F (Validation)
 - [ ] Valid email + ReqKey → Returns request data with IsValid = true
 - [ ] Invalid ReqKey → Returns "No request found" error
 - [ ] Email mismatch → Returns "Email does not match" error
@@ -709,7 +709,7 @@ If any file fails validation:
 - [ ] Rejected request → Returns "Request rejected" error
 - [ ] Case-insensitive email matching works (JDoe@lsu.edu = jdoe@lsu.edu)
 
-### Flow H (Processing)
+### Flow G (Processing)
 - [ ] Valid file upload creates attachment on PrintRequest
 - [ ] Replacement type deletes existing files
 - [ ] Additional type keeps existing files
@@ -770,8 +770,8 @@ If any file fails validation:
 | File | Purpose |
 |------|---------|
 | [`SharePoint/FileUploads-List-Setup.md`](../SharePoint/FileUploads-List-Setup.md) | List creation instructions |
-| [`PowerAutomate/PR-(G) ValidateUpload.md`](../PowerAutomate/PR-(G)%20ValidateUpload.md) | Flow G documentation |
-| [`PowerAutomate/PR-(H) ProcessUpload.md`](../PowerAutomate/PR-(H)%20ProcessUpload.md) | Flow H documentation |
+| [`PowerAutomate/Flow-(F)-ValidateUpload.md`](../PowerAutomate/Flow-(F)-ValidateUpload.md) | Flow F documentation |
+| [`PowerAutomate/Flow-(G)-ProcessUpload.md`](../PowerAutomate/Flow-(G)-ProcessUpload.md) | Flow G documentation |
 | [`PowerApps/StudentUploadPortal-Spec.md`](StudentUploadPortal-Spec.md) | This file - full app build guide |
 
 ---
@@ -779,8 +779,8 @@ If any file fails validation:
 ## Implementation Order
 
 1. **SharePoint:** Create FileUploads list with all columns (see setup guide)
-2. **Flow G:** Build validation flow, test with sample data
-3. **Flow H:** Build processing flow, test file operations
+2. **Flow F:** Build validation flow, test with sample data
+3. **Flow G:** Build processing flow, test file operations
 4. **Power Apps:** Build portal screens following this spec
 5. **Integration Testing:** End-to-end with real files
 6. **Security Testing:** Verify permission boundaries

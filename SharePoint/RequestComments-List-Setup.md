@@ -234,7 +234,7 @@ This approach is simpler and supports bi-directional messaging.
 ### Outbound Messages (Staff → Student)
 
 1. Staff sends message via Power Apps dashboard
-2. Flow E generates:
+2. Flow D generates:
    - `ThreadID`: `REQ-00001-{timestamp}` (new thread) or existing ThreadID (reply)
    - `MessageID`: `<{ThreadID}@fablab.lsu.edu>`
 3. Email sent with:
@@ -247,7 +247,7 @@ This approach is simpler and supports bi-directional messaging.
 
 1. Student replies to email
 2. Email arrives in shared mailbox with `[REQ-00001]` in subject
-3. Flow F parses:
+3. Flow E parses:
    - Extracts ReqKey from subject
    - Reads In-Reply-To header to find parent MessageID
    - Looks up ThreadID from parent message
@@ -312,6 +312,6 @@ first(split(last(split(triggerOutputs()?['body/Subject'], '[')), ']'))
 
 1. Add data connection in Power Apps Staff Console
 2. Build Send Message modal
-3. Create Flow E (PR-Message) for notifications with threading headers
-4. Create Flow F (PR-Mailbox) to process inbound student replies
+3. Create Flow D (PR-Message) for notifications with threading headers
+4. Create Flow E (PR-Mailbox) to process inbound student replies
 5. Configure student-facing message view with Direction styling

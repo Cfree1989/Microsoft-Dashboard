@@ -1,4 +1,4 @@
-# Flow H (PR-ProcessUpload)
+# Flow G (PR-ProcessUpload)
 
 **Full Name:** PR-ProcessUpload: Process student file upload  
 **Trigger:** SharePoint — When an item is **created** (List: `FileUploads`)
@@ -36,7 +36,7 @@ This flow runs automatically when a student submits files via the Upload Portal:
 ### Step 1: Create the Flow
 
 1. Go to **Power Automate** → **Create** → **Automated cloud flow**
-2. **Name:** `Flow H (PR-ProcessUpload)` or `PR-ProcessUpload: Process student file upload`
+2. **Name:** `Flow G (PR-ProcessUpload)` or `PR-ProcessUpload: Process student file upload`
 3. **Trigger:** Select **SharePoint – When an item is created**
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
