@@ -3098,7 +3098,7 @@ If(ThisItem.ID in colExpanded.ID || varExpandAll, 480, 380)
 | Button | Visible When |
 |--------|-------------|
 | Approve | `Status.Value = "Uploaded"` |
-| Reject | `Status.Value = "Uploaded" \|\| Status.Value = "Pending"` |
+| Reject | `Status.Value in ["Uploaded", "Pending"]` |
 | Start Print | `Status.Value = "Ready to Print"` |
 | Complete | `Status.Value = "Printing"` |
 | Picked Up | `Status.Value = "Completed"` |
