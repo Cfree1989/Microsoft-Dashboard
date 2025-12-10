@@ -26,7 +26,10 @@
 15. [Adding Search and Filters](#step-13-adding-search-and-filters)
 16. [Adding the Lightbulb Attention System](#step-14-adding-the-lightbulb-attention-system)
 17. [Adding the Attachments Modal](#step-15-adding-the-attachments-modal)
-18. [Adding the Message Modal](#step-16-adding-the-message-modal)
+18. [Adding the Messaging System](#step-16-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
+    - [Step 16A: Adding the Data Connection](#step-16a-adding-the-data-connection)
+    - [Step 16B: Adding Messages Display to Job Cards](#step-16b-adding-messages-display-to-job-cards)
+    - [Step 16C: Building the Message Modal](#step-16c-building-the-message-modal)
 19. [Publishing the App](#step-17-publishing-the-app)
 20. [Testing the App](#step-18-testing-the-app)
 21. [Troubleshooting](#troubleshooting)
@@ -293,141 +296,146 @@ We use **prefixes** to identify control types at a glance:
 
 ### Complete Tree View — All Controls
 
-Here's the **complete Tree view** exactly as it should appear in Power Apps:
+Here's the **complete Tree view** exactly as it should appear in Power Apps after all steps are complete:
 
 > ⚠️ **Z-ORDER RULE:** TOP of list = FRONT (renders on top) · BOTTOM of list = BACK (renders behind)
+
+> 📝 **Build Order Notes:**
+> - Controls are listed in Z-order (top = front), not build order
+> - Message Modal controls (btnMessageSend through recMessageOverlay) are added in **Step 16C**
+> - Message display controls in galJobCards (galMessages, lblNoMessages, lblUnreadBadge, btnSendMessage) are added in **Step 16B**
 
 ```
 ▼ App
 ▼ scrDashboard
-    btnMessageSend
-    btnMessageCancel
-    lblMessageCharCount
-    txtMessageBody
-    lblMessageBodyLabel
-    txtMessageSubject
-    lblMessageSubjectLabel
-    ddMessageStaff
-    lblMessageStaffLabel
-    lblMessageStudent
-    lblMessageTitle
-    recMessageModal
-    recMessageOverlay
-    btnFileCancel
-    btnFileSave
-    frmAttachmentsEdit
-    ddFileActor
-    lblFileStaffLabel
-    lblFileTitle
-    recFileModal
-    recFileOverlay
-    btnDetailsConfirm
-    btnDetailsCancel
-    ddDetailsColor
-    lblDetailsColorLabel
-    ddDetailsPrinter
-    lblDetailsPrinterLabel
-    ddDetailsStaff
-    lblDetailsStaffLabel
-    lblDetailsCurrent
-    lblDetailsCurrentLabel
-    lblDetailsTitle
-    recDetailsModal
-    recDetailsOverlay
-    btnArchiveConfirm
-    btnArchiveCancel
-    txtArchiveReason
-    lblArchiveReasonLabel
-    ddArchiveStaff
-    lblArchiveStaffLabel
-    lblArchiveWarning
-    lblArchiveTitle
-    recArchiveModal
-    recArchiveOverlay
-    btnApprovalConfirm
-    btnApprovalCancel
-    txtApprovalComments
-    lblApprovalCommentsLabel
-    lblCalculatedCost
-    lblCostLabel
-    txtEstimatedTime
-    lblTimeLabel
-    lblWeightError
-    txtEstimatedWeight
-    lblWeightLabel
-    ddApprovalStaff
-    lblApprovalStaffLabel
-    lblApprovalStudent
-    lblApprovalTitle
-    recApprovalModal
-    recApprovalOverlay
-    btnRejectConfirm
-    btnRejectCancel
-    txtRejectComments
-    lblRejectCommentsLabel
-    chkComplexity
-    chkCopyright
-    chkDetail
-    chkSafety
-    chkIncomplete
-    lblRejectReasonsLabel
-    ddRejectStaff
-    lblRejectStaffLabel
-    lblRejectStudent
-    lblRejectTitle
-    recRejectModal
-    recRejectOverlay
-    ▼ galJobCards
-        btnSendMessage
-        btnFiles
-        btnChangeDetails
-        btnPickedUp
-        btnComplete
-        btnStartPrint
-        btnArchive
-        btnReject
-        btnApprove
-        icoLightbulb
-        icoExpandCollapse
-        lblUnreadBadge
-        ▼ galMessages
-            lblMsgContent
-            lblMsgDirectionBadge
-            lblMsgAuthor
-            icoMsgDirection
-            recMessageBg
-        lblNoMessages
-        lblMessagesHeader
-        lblCourse
-        lblProjectType
-        lblDiscipline
-        lblDueDate
-        lblCreated
-        lblJobId
-        btnSaveNotes
-        txtStaffNotes
-        lblStaffNotesPlaceholder
-        lblStaffNotesHeader
-        lblColor
-        lblPrinter
-        lblStudentEmail
-        lblReqKey
-        lblSubmittedTime
-        lblStudentName
-        recCardBackground
-    btnClearFilters
-    btnExpandAll
-    chkNeedsAttention
-    txtSearch
-    ▼ galStatusTabs
-        btnStatusTab
-    lblUserName
-    btnNavAnalytics
-    btnNavAdmin
-    btnNavDashboard
-    lblAppTitle
-    recHeader
-    tmrGlow
+    btnMessageSend                    ← Step 16C
+    btnMessageCancel                  ← Step 16C
+    lblMessageCharCount               ← Step 16C
+    txtMessageBody                    ← Step 16C
+    lblMessageBodyLabel               ← Step 16C
+    txtMessageSubject                 ← Step 16C
+    lblMessageSubjectLabel            ← Step 16C
+    ddMessageStaff                    ← Step 16C
+    lblMessageStaffLabel              ← Step 16C
+    lblMessageStudent                 ← Step 16C
+    lblMessageTitle                   ← Step 16C
+    recMessageModal                   ← Step 16C
+    recMessageOverlay                 ← Step 16C
+    btnFileCancel                     ← Step 15
+    btnFileSave                       ← Step 15
+    frmAttachmentsEdit                ← Step 15
+    ddFileActor                       ← Step 15
+    lblFileStaffLabel                 ← Step 15
+    lblFileTitle                      ← Step 15
+    recFileModal                      ← Step 15
+    recFileOverlay                    ← Step 15
+    btnDetailsConfirm                 ← Step 12B
+    btnDetailsCancel                  ← Step 12B
+    ddDetailsColor                    ← Step 12B
+    lblDetailsColorLabel              ← Step 12B
+    ddDetailsPrinter                  ← Step 12B
+    lblDetailsPrinterLabel            ← Step 12B
+    ddDetailsStaff                    ← Step 12B
+    lblDetailsStaffLabel              ← Step 12B
+    lblDetailsCurrent                 ← Step 12B
+    lblDetailsCurrentLabel            ← Step 12B
+    lblDetailsTitle                   ← Step 12B
+    recDetailsModal                   ← Step 12B
+    recDetailsOverlay                 ← Step 12B
+    btnArchiveConfirm                 ← Step 12
+    btnArchiveCancel                  ← Step 12
+    txtArchiveReason                  ← Step 12
+    lblArchiveReasonLabel             ← Step 12
+    ddArchiveStaff                    ← Step 12
+    lblArchiveStaffLabel              ← Step 12
+    lblArchiveWarning                 ← Step 12
+    lblArchiveTitle                   ← Step 12
+    recArchiveModal                   ← Step 12
+    recArchiveOverlay                 ← Step 12
+    btnApprovalConfirm                ← Step 11
+    btnApprovalCancel                 ← Step 11
+    txtApprovalComments               ← Step 11
+    lblApprovalCommentsLabel          ← Step 11
+    lblCalculatedCost                 ← Step 11
+    lblCostLabel                      ← Step 11
+    txtEstimatedTime                  ← Step 11
+    lblTimeLabel                      ← Step 11
+    lblWeightError                    ← Step 11
+    txtEstimatedWeight                ← Step 11
+    lblWeightLabel                    ← Step 11
+    ddApprovalStaff                   ← Step 11
+    lblApprovalStaffLabel             ← Step 11
+    lblApprovalStudent                ← Step 11
+    lblApprovalTitle                  ← Step 11
+    recApprovalModal                  ← Step 11
+    recApprovalOverlay                ← Step 11
+    btnRejectConfirm                  ← Step 10
+    btnRejectCancel                   ← Step 10
+    txtRejectComments                 ← Step 10
+    lblRejectCommentsLabel            ← Step 10
+    chkComplexity                     ← Step 10
+    chkCopyright                      ← Step 10
+    chkDetail                         ← Step 10
+    chkSafety                         ← Step 10
+    chkIncomplete                     ← Step 10
+    lblRejectReasonsLabel             ← Step 10
+    ddRejectStaff                     ← Step 10
+    lblRejectStaffLabel               ← Step 10
+    lblRejectStudent                  ← Step 10
+    lblRejectTitle                    ← Step 10
+    recRejectModal                    ← Step 10
+    recRejectOverlay                  ← Step 10
+    ▼ galJobCards                     ← Step 6
+        btnSendMessage                ← Step 16C
+        btnFiles                      ← Step 15
+        btnChangeDetails              ← Step 12B
+        btnPickedUp                   ← Step 9
+        btnComplete                   ← Step 9
+        btnStartPrint                 ← Step 9
+        btnArchive                    ← Step 9
+        btnReject                     ← Step 9
+        btnApprove                    ← Step 9
+        icoLightbulb                  ← Step 14
+        icoExpandCollapse             ← Step 8
+        lblUnreadBadge                ← Step 16B
+        ▼ galMessages                 ← Step 16B
+            lblMsgContent             ← Step 16B
+            lblMsgDirectionBadge      ← Step 16B
+            lblMsgAuthor              ← Step 16B
+            icoMsgDirection           ← Step 16B
+            recMessageBg              ← Step 16B
+        lblNoMessages                 ← Step 16B
+        lblMessagesHeader             ← Step 16B
+        lblCourse                     ← Step 7
+        lblProjectType                ← Step 7
+        lblDiscipline                 ← Step 7
+        lblDueDate                    ← Step 7
+        lblCreated                    ← Step 7
+        lblJobId                      ← Step 7
+        btnSaveNotes                  ← Step 7
+        txtStaffNotes                 ← Step 7
+        lblStaffNotesPlaceholder      ← Step 7
+        lblStaffNotesHeader           ← Step 7
+        lblColor                      ← Step 7
+        lblPrinter                    ← Step 7
+        lblStudentEmail               ← Step 7
+        lblReqKey                     ← Step 7
+        lblSubmittedTime              ← Step 7
+        lblStudentName                ← Step 7
+        recCardBackground             ← Step 7
+    btnClearFilters                   ← Step 13
+    btnExpandAll                      ← Step 13
+    chkNeedsAttention                 ← Step 13
+    txtSearch                         ← Step 13
+    ▼ galStatusTabs                   ← Step 5
+        btnStatusTab                  ← Step 5
+    lblUserName                       ← Step 4
+    btnNavAnalytics                   ← Step 4
+    btnNavAdmin                       ← Step 4
+    btnNavDashboard                   ← Step 4
+    lblAppTitle                       ← Step 4
+    recHeader                         ← Step 4
+    tmrGlow                           ← Step 14
 ```
 
 ### Key Rules
@@ -757,26 +765,13 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-### Attention Icon (icoLightbulb)
-
-4. Click **+ Insert** → **Icon** → select **Lightbulb** icon.
-5. **Rename it:** `icoLightbulb`
-6. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `Parent.TemplateWidth - 35` |
-| Y | `8` |
-| Width | `24` |
-| Height | `24` |
-| Color | `RGBA(255, 185, 0, 1)` |
-| Visible | `ThisItem.NeedsAttention` |
+> 📝 **Note:** The attention icon (`icoLightbulb`) is added in **Step 14** with toggle functionality.
 
 ### Student Name (lblStudentName)
 
-7. Click **+ Insert** → **Text label**.
-8. **Rename it:** `lblStudentName`
-9. Set properties:
+4. Click **+ Insert** → **Text label**.
+5. **Rename it:** `lblStudentName`
+6. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -791,9 +786,9 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 
 ### Submission Time (lblSubmittedTime)
 
-10. Click **+ Insert** → **Text label**.
-11. **Rename it:** `lblSubmittedTime`
-12. Set properties:
+7. Click **+ Insert** → **Text label**.
+8. **Rename it:** `lblSubmittedTime`
+9. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -805,7 +800,7 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Size | `10` |
 | Color | `RGBA(209, 52, 56, 1)` |
 
-13. Set **Text:**
+10. Set **Text:**
 
 **⬇️ FORMULA: Shows relative time since submission**
 
@@ -828,9 +823,9 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 
 ### File Name / Request Info (lblReqKey)
 
-14. Click **+ Insert** → **Text label**.
-15. **Rename it:** `lblReqKey`
-16. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblReqKey`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -844,9 +839,9 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 
 ### Email Row (lblStudentEmail)
 
-17. Click **+ Insert** → **Text label**.
-18. **Rename it:** `lblStudentEmail`
-19. Set properties:
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblStudentEmail`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -860,9 +855,9 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 
 ### Printer Label (lblPrinter)
 
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblPrinter`
-22. Set properties:
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblPrinter`
+19. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -878,9 +873,9 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 
 ### Color Indicator (lblColor)
 
-23. Click **+ Insert** → **Text label**.
-24. **Rename it:** `lblColor`
-25. Set properties:
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblColor`
+22. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -892,7 +887,7 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 | Size | `10` |
 | Color | See formula below |
 
-26. Set **Color** formula (matches the actual color):
+23. Set **Color** formula (matches the actual color):
 
 **⬇️ FORMULA: Maps color names to display colors**
 
@@ -916,11 +911,11 @@ Switch(
 
 ---
 
-### Staff Notes Section (lblStaffNotesHeader + txtStaffNotes)
+### Staff Notes Section (lblStaffNotesHeader + lblStaffNotesPlaceholder)
 
-27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblStaffNotesHeader`
-29. Set properties:
+24. Click **+ Insert** → **Text label**.
+25. **Rename it:** `lblStaffNotesHeader`
+26. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -933,9 +928,9 @@ Switch(
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
 
-30. Click **+ Insert** → **Text label**.
-31. **Rename it:** `lblStaffNotesPlaceholder`
-32. Set properties:
+27. Click **+ Insert** → **Text label**.
+28. **Rename it:** `lblStaffNotesPlaceholder`
+29. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -952,9 +947,9 @@ Switch(
 
 ### Additional Details Section (Expandable)
 
-33. Click **+ Insert** → **Text label**.
-34. **Rename it:** `lblDetailsHeader`
-35. Set properties:
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblDetailsHeader`
+32. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -968,186 +963,194 @@ Switch(
 | Color | `RGBA(80, 80, 80, 1)` |
 | Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-36. Add detail labels (all with `Visible: ThisItem.Expanded || varExpandAll`):
+### Expanded Detail Labels
 
-**Job ID Label:**
+These labels show additional info when the card is expanded. All have the same Visible formula.
+
+#### Job ID Row (Y = 185)
+
+33. Click **+ Insert** → **Text label**.
+34. **Rename it:** `lblJobIdLabel`
+35. Set properties:
+
 | Property | Value |
 |----------|-------|
 | Text | `"Job ID:"` |
 | X | `12` |
 | Y | `185` |
+| Width | `65` |
+| Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-**Job ID Value:**
+36. Click **+ Insert** → **Text label**.
+37. **Rename it:** `lblJobId`
+38. Set properties:
+
 | Property | Value |
 |----------|-------|
 | Text | `ThisItem.ReqKey` |
 | X | `80` |
 | Y | `185` |
+| Width | `120` |
+| Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-**Created Label:**
+39. Click **+ Insert** → **Text label**.
+40. **Rename it:** `lblCreatedLabel`
+41. Set properties:
+
 | Property | Value |
 |----------|-------|
 | Text | `"Created:"` |
 | X | `Parent.TemplateWidth / 2` |
 | Y | `185` |
+| Width | `55` |
+| Height | `20` |
 | Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-**Created Value:**
+42. Click **+ Insert** → **Text label**.
+43. **Rename it:** `lblCreated`
+44. Set properties:
+
 | Property | Value |
 |----------|-------|
-| Text | `Text(ThisItem.Created, "mmm dd, yyyy, hh:mm AM/PM")` |
+| Text | `Text(ThisItem.Created, "mmm dd, yyyy hh:mm AM/PM")` |
 | X | `Parent.TemplateWidth / 2 + 55` |
 | Y | `185` |
-| Size | `10` |
-
-**Discipline & Class Labels:** (similar pattern at Y = 205)
-
----
-
-### Messages Section (Expandable Conversation View)
-
-This section shows message history between staff and students for each request, with visual distinction between outbound (staff) and inbound (student) messages.
-
-> **Prerequisites:** 
-> - Complete Step 16 (Message Modal) first
-> - Ensure `RequestComments` list is connected with Direction column (see `SharePoint/RequestComments-List-Setup.md`)
-
-37. Click **+ Insert** → **Text label**.
-38. **Rename it:** `lblMessagesHeader`
-39. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"` |
-| X | `12` |
-| Y | `230` |
-| Width | `200` |
+| Width | `150` |
 | Height | `20` |
-| Font | `Font.'Segoe UI Semibold'` |
-| Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
 | Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-40. Click **+ Insert** → **Blank vertical gallery**.
-41. **Rename it:** `galMessages`
-42. Set properties:
+#### Discipline & Project Row (Y = 205)
+
+45. Click **+ Insert** → **Text label**.
+46. **Rename it:** `lblDisciplineLabel`
+47. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Items | `Sort(Filter(RequestComments, RequestID = ThisItem.ID), SentAt, SortOrder.Descending)` |
+| Text | `"Discipline:"` |
 | X | `12` |
-| Y | `250` |
-| Width | `Parent.TemplateWidth - 24` |
-| Height | `120` |
-| TemplateSize | `70` |
-| TemplatePadding | `2` |
+| Y | `205` |
+| Width | `65` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
 | Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
-| ShowScrollbar | `true` |
 
-> **Note:** TemplateSize increased to 70 to accommodate Direction indicator.
+48. Click **+ Insert** → **Text label**.
+49. **Rename it:** `lblDiscipline`
+50. Set properties:
 
-43. Inside `galMessages`, add a **Rectangle** for message background:
-    - **Name:** `recMessageBg`
-    - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.3, 0)`
-    - **Y:** `0`
-    - **Width:** `Parent.TemplateWidth * 0.7 - 10`
-    - **Height:** `Parent.TemplateHeight - 4`
-    - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
-    - **BorderRadius:** `8`
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Discipline.Value` |
+| X | `80` |
+| Y | `205` |
+| Width | `120` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-> **Direction-based styling:**
-> - **Outbound (staff → student):** Blue tint, aligned right
-> - **Inbound (student → staff):** Warm yellow tint, aligned left
+51. Click **+ Insert** → **Text label**.
+52. **Rename it:** `lblProjectTypeLabel`
+53. Set properties:
 
-44. Add direction indicator icon:
-    - **Name:** `icoMsgDirection`
-    - **Icon:** `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)`
-    - **X:** `recMessageBg.X + 8`
-    - **Y:** `4`
-    - **Width:** `14`
-    - **Height:** `14`
-    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))`
+| Property | Value |
+|----------|-------|
+| Text | `"Project:"` |
+| X | `Parent.TemplateWidth / 2` |
+| Y | `205` |
+| Width | `50` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-45. Add message author label:
-    - **Name:** `lblMsgAuthor`
-    - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
-    - **X:** `recMessageBg.X + 26`
-    - **Y:** `4`
-    - **Size:** `9`
-    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
-    - **FontItalic:** `false`
-    - **Font:** `Font.'Segoe UI Semibold'`
+54. Click **+ Insert** → **Text label**.
+55. **Rename it:** `lblProjectType`
+56. Set properties:
 
-46. Add direction badge label:
-    - **Name:** `lblMsgDirectionBadge`
-    - **Text:** `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")`
-    - **X:** `recMessageBg.X + recMessageBg.Width - 50`
-    - **Y:** `4`
-    - **Width:** `40`
-    - **Height:** `14`
-    - **Size:** `8`
-    - **Align:** `Align.Right`
-    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
-    - **FontItalic:** `true`
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.ProjectType.Value` |
+| X | `Parent.TemplateWidth / 2 + 50` |
+| Y | `205` |
+| Width | `150` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-47. Add message content label:
-    - **Name:** `lblMsgContent`
-    - **Text:** `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)`
-    - **X:** `recMessageBg.X + 8`
-    - **Y:** `22`
-    - **Width:** `recMessageBg.Width - 16`
-    - **Height:** `40`
-    - **Size:** `10`
-    - **Color:** `RGBA(50, 50, 50, 1)`
+#### Course Row (Y = 225) - Optional
 
-48. Add "No messages" placeholder (outside galMessages but same visibility):
-    - **Name:** `lblNoMessages`
-    - **Text:** `"No messages yet"`
-    - **X:** `12`
-    - **Y:** `260`
-    - **Color:** `RGBA(150, 150, 150, 1)`
-    - **FontItalic:** `true`
-    - **Size:** `10`
-    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
+57. Click **+ Insert** → **Text label**.
+58. **Rename it:** `lblCourseLabel`
+59. Set properties:
 
-49. Add unread badge for inbound (student) messages:
-    - **Name:** `lblUnreadBadge`
-    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
-    - **X:** `120`
-    - **Y:** `228`
-    - **Width:** `20`
-    - **Height:** `20`
-    - **Fill:** `RGBA(209, 52, 56, 1)`
-    - **Color:** `Color.White`
-    - **Align:** `Align.Center`
-    - **BorderRadius:** `10`
-    - **Visible:** `(ThisItem.Expanded || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+| Property | Value |
+|----------|-------|
+| Text | `"Course:"` |
+| X | `12` |
+| Y | `225` |
+| Width | `65` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
-> **Note:** The unread badge now filters on `Direction.Value = "Inbound"` instead of `AuthorRole.Value = "Student"` for consistency with the new schema.
+60. Click **+ Insert** → **Text label**.
+61. **Rename it:** `lblCourse`
+62. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `Coalesce(ThisItem.'Course Number', "—")` |
+| X | `80` |
+| Y | `225` |
+| Width | `150` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
 ---
 
 ### ✅ Step 7 Checklist
 
-Your gallery template should now contain these controls:
+Your gallery template should now contain these controls (Z-order: top = front):
 
 ```
 ▼ galJobCards
-    recCardBackground
-    icoLightbulb
-    lblStudentName
-    lblSubmittedTime
-    lblReqKey
-    lblStudentEmail
-    lblPrinter
-    lblColor
-    lblStaffNotesHeader
+    lblCourse
+    lblCourseLabel
+    lblProjectType
+    lblProjectTypeLabel
+    lblDiscipline
+    lblDisciplineLabel
+    lblCreated
+    lblCreatedLabel
+    lblJobId
+    lblJobIdLabel
+    lblDetailsHeader
     lblStaffNotesPlaceholder
-    lblDetailsHeader (and detail labels)
+    lblStaffNotesHeader
+    lblColor
+    lblPrinter
+    lblStudentEmail
+    lblReqKey
+    lblSubmittedTime
+    lblStudentName
+    recCardBackground              ← Bottom (background)
 ```
 
 Each card displays:
@@ -1157,6 +1160,8 @@ Each card displays:
 - Color indicator
 - Staff notes section
 - Expandable additional details
+
+> 📝 **Added in later steps:** `icoLightbulb` (Step 14), `icoExpandCollapse` (Step 8), action buttons (Step 9), message display (Step 16B)
 
 ---
 
@@ -2381,26 +2386,194 @@ Notify("Attachments updated", NotificationType.Success)
 
 ---
 
-# STEP 16: Adding the Message Modal
+# STEP 16: Adding the Messaging System
 
-**What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
+**What you're doing:** Building the complete messaging system — including the modal for sending messages AND the message display on job cards.
 
-### Overview
+> ⏸️ **STOP — Complete Prerequisites First:**
+> 
+> Before continuing with this step, you MUST complete these prerequisites:
+> 1. **Create the `RequestComments` SharePoint list** — See `SharePoint/RequestComments-List-Setup.md`
+> 2. **Return here** once the list is created
+>
+> ⚠️ Do NOT proceed until the RequestComments list exists in SharePoint.
 
-This modal allows bi-directional communication between staff and students. Messages are stored in a separate SharePoint list (`RequestComments`) and trigger email notifications to students.
+---
 
-### Prerequisites
+## Step 16A: Adding the Data Connection
 
-Before building this modal:
-- [ ] Create the `RequestComments` SharePoint list (see `SharePoint/RequestComments-List-Setup.md`)
-- [ ] Add `RequestComments` as a data connection in Power Apps
+**What you're doing:** Connecting your app to the RequestComments list.
 
-### Adding the Data Connection
+### Instructions
 
 1. In the left panel, click the **Data** icon (cylinder).
 2. Click **+ Add data** → **SharePoint**.
 3. Select your site and check **RequestComments**.
 4. Click **Connect**.
+
+### Verification
+
+In the Data panel, you should now see:
+- ✅ PrintRequests
+- ✅ AuditLog  
+- ✅ Staff
+- ✅ **RequestComments** ← NEW
+
+---
+
+## Step 16B: Adding Messages Display to Job Cards
+
+**What you're doing:** Adding a message history section to each job card that shows the conversation between staff and students.
+
+### Overview
+
+This section shows message history between staff and students for each request, with visual distinction between outbound (staff) and inbound (student) messages.
+
+### Instructions
+
+Go back inside `galJobCards` gallery template to add the messages display.
+
+#### Messages Header (lblMessagesHeader)
+
+1. Click **+ Insert** → **Text label**.
+2. **Rename it:** `lblMessagesHeader`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"` |
+| X | `12` |
+| Y | `230` |
+| Width | `200` |
+| Height | `20` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `11` |
+| Color | `RGBA(80, 80, 80, 1)` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+
+#### Messages Gallery (galMessages)
+
+4. Click **+ Insert** → **Blank vertical gallery**.
+5. **Rename it:** `galMessages`
+6. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Sort(Filter(RequestComments, RequestID = ThisItem.ID), SentAt, SortOrder.Descending)` |
+| X | `12` |
+| Y | `250` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `120` |
+| TemplateSize | `70` |
+| TemplatePadding | `2` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| ShowScrollbar | `true` |
+
+> **Note:** TemplateSize is 70 to accommodate Direction indicator.
+
+#### Inside galMessages — Message Background
+
+7. Inside `galMessages`, add a **Rectangle** for message background:
+   - **Name:** `recMessageBg`
+   - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.3, 0)`
+   - **Y:** `0`
+   - **Width:** `Parent.TemplateWidth * 0.7 - 10`
+   - **Height:** `Parent.TemplateHeight - 4`
+   - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
+   - **BorderRadius:** `8`
+
+> **Direction-based styling:**
+> - **Outbound (staff → student):** Blue tint, aligned right
+> - **Inbound (student → staff):** Warm yellow tint, aligned left
+
+#### Inside galMessages — Direction Icon
+
+8. Add direction indicator icon:
+   - **Name:** `icoMsgDirection`
+   - **Icon:** `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)`
+   - **X:** `recMessageBg.X + 8`
+   - **Y:** `4`
+   - **Width:** `14`
+   - **Height:** `14`
+   - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))`
+
+#### Inside galMessages — Author Label
+
+9. Add message author label:
+   - **Name:** `lblMsgAuthor`
+   - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
+   - **X:** `recMessageBg.X + 26`
+   - **Y:** `4`
+   - **Size:** `9`
+   - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
+   - **FontItalic:** `false`
+   - **Font:** `Font.'Segoe UI Semibold'`
+
+#### Inside galMessages — Direction Badge
+
+10. Add direction badge label:
+    - **Name:** `lblMsgDirectionBadge`
+    - **Text:** `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")`
+    - **X:** `recMessageBg.X + recMessageBg.Width - 50`
+    - **Y:** `4`
+    - **Width:** `40`
+    - **Height:** `14`
+    - **Size:** `8`
+    - **Align:** `Align.Right`
+    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
+    - **FontItalic:** `true`
+
+#### Inside galMessages — Message Content
+
+11. Add message content label:
+    - **Name:** `lblMsgContent`
+    - **Text:** `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)`
+    - **X:** `recMessageBg.X + 8`
+    - **Y:** `22`
+    - **Width:** `recMessageBg.Width - 16`
+    - **Height:** `40`
+    - **Size:** `10`
+    - **Color:** `RGBA(50, 50, 50, 1)`
+
+#### No Messages Placeholder (Outside galMessages)
+
+12. Click on `galJobCards` (not galMessages) to add at the job card level.
+13. Add **Text label**:
+    - **Name:** `lblNoMessages`
+    - **Text:** `"No messages yet"`
+    - **X:** `12`
+    - **Y:** `260`
+    - **Color:** `RGBA(150, 150, 150, 1)`
+    - **FontItalic:** `true`
+    - **Size:** `10`
+    - **Visible:** `(ThisItem.ID in colExpanded.ID || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
+
+#### Unread Badge (Outside galMessages)
+
+14. Add unread badge for inbound (student) messages:
+    - **Name:** `lblUnreadBadge`
+    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
+    - **X:** `120`
+    - **Y:** `228`
+    - **Width:** `20`
+    - **Height:** `20`
+    - **Fill:** `RGBA(209, 52, 56, 1)`
+    - **Color:** `Color.White`
+    - **Align:** `Align.Center`
+    - **BorderRadius:** `10`
+    - **Visible:** `(ThisItem.ID in colExpanded.ID || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+
+> **Note:** The unread badge filters on `Direction.Value = "Inbound"` to count student email replies.
+
+---
+
+## Step 16C: Building the Message Modal
+
+**What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
+
+### Overview
+
+This modal allows bi-directional communication between staff and students. Messages are stored in the `RequestComments` list and trigger email notifications to students via Flow D.
 
 ### Adding Variables to App.OnStart
 
