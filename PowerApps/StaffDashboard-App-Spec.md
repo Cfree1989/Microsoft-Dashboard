@@ -293,184 +293,141 @@ We use **prefixes** to identify control types at a glance:
 
 ### Complete Tree View — All Controls
 
-Here's the **complete list** of every control you'll create, with proper names:
+Here's the **complete Tree view** exactly as it should appear in Power Apps:
 
-> ⚠️ **Z-ORDER MATTERS!** In Power Apps Tree view:
-> - **TOP of list = FRONT** (renders on top, highest z-index)
-> - **BOTTOM of list = BACK** (renders behind, lowest z-index)
->
-> The order below is the **correct Tree view order** for proper layering.
+> ⚠️ **Z-ORDER RULE:** TOP of list = FRONT (renders on top) · BOTTOM of list = BACK (renders behind)
 
 ```
-▼ App                              ← OnStart formula only
-▼ scrDashboard                     ← Main screen (rename Screen1 to this)
-│
-│   ══════════════════════════════════════════════════════
-│   MODALS (TOP = render in front of everything when visible)
-│   ══════════════════════════════════════════════════════
-│
-├── MESSAGE MODAL (front-most modal) ──────────────────
-│   btnMessageSend                 ← "📧 Send Message" button
-│   btnMessageCancel               ← "Cancel" button
-│   lblMessageCharCount            ← Character count display
-│   txtMessageBody                 ← Message text input (multiline)
-│   lblMessageBodyLabel            ← "Message:"
-│   txtMessageSubject              ← Subject input
-│   lblMessageSubjectLabel         ← "Subject:"
-│   ddMessageStaff                 ← Staff dropdown
-│   lblMessageStaffLabel           ← "Performing Action As:"
-│   lblMessageStudent              ← Student info display
-│   lblMessageTitle                ← "Send Message - REQ-00001"
-│   recMessageModal                ← White modal box
-│   recMessageOverlay              ← Dark semi-transparent overlay (behind modal content)
-│
-├── ATTACHMENTS MODAL ─────────────────────────────────
-│   btnFileCancel                  ← "Cancel" button
-│   btnFileSave                    ← "Save Changes" button
-│   frmAttachmentsEdit             ← Edit form for attachments
-│   ddFileActor                    ← Staff dropdown
-│   lblFileStaffLabel              ← "Performing Action As:"
-│   lblFileTitle                   ← "Manage Attachments"
-│   recFileModal                   ← White modal box
-│   recFileOverlay                 ← Dark semi-transparent overlay
-│
-├── CHANGE DETAILS MODAL ──────────────────────────────
-│   btnDetailsConfirm              ← "✓ Save Changes" button
-│   btnDetailsCancel               ← "Cancel" button
-│   ddDetailsColor                 ← Color dropdown
-│   lblDetailsColorLabel           ← "Color: (optional)"
-│   ddDetailsPrinter               ← Printer dropdown (filtered by Method)
-│   lblDetailsPrinterLabel         ← "Printer: (optional)"
-│   ddDetailsStaff                 ← Staff dropdown
-│   lblDetailsStaffLabel           ← "Performing Action As:"
-│   lblDetailsCurrent              ← Shows current Method, Printer, Color
-│   lblDetailsCurrentLabel         ← "Current Settings:"
-│   lblDetailsTitle                ← "Change Print Details - REQ-00001"
-│   recDetailsModal                ← White modal box
-│   recDetailsOverlay              ← Dark semi-transparent overlay
-│
-├── ARCHIVE MODAL ─────────────────────────────────────
-│   btnArchiveConfirm              ← "📦 Confirm Archive" button
-│   btnArchiveCancel               ← "Cancel" button
-│   txtArchiveReason               ← Reason text input
-│   lblArchiveReasonLabel          ← "Reason (optional):"
-│   ddArchiveStaff                 ← Staff dropdown
-│   lblArchiveStaffLabel           ← "Performing Action As:"
-│   lblArchiveWarning              ← Warning message
-│   lblArchiveTitle                ← "Archive Request - REQ-00001"
-│   recArchiveModal                ← White modal box
-│   recArchiveOverlay              ← Dark semi-transparent overlay
-│
-├── APPROVAL MODAL ────────────────────────────────────
-│   btnApprovalConfirm             ← "✓ Confirm Approval" button
-│   btnApprovalCancel              ← "Cancel" button
-│   txtApprovalComments            ← Comments text input
-│   lblApprovalCommentsLabel       ← "Comments:"
-│   lblCalculatedCost              ← "$12.50" calculated display
-│   lblCostLabel                   ← "Estimated Cost:"
-│   txtEstimatedTime               ← Time input (optional)
-│   lblTimeLabel                   ← "Estimated Print Time (hours):"
-│   lblWeightError                 ← Weight validation error
-│   txtEstimatedWeight             ← Weight input
-│   lblWeightLabel                 ← "Estimated Weight (grams):"
-│   ddApprovalStaff                ← Staff dropdown
-│   lblApprovalStaffLabel          ← "Performing Action As:"
-│   lblApprovalStudent             ← Student info display
-│   lblApprovalTitle               ← "Approve Request - REQ-00001"
-│   recApprovalModal               ← White modal box
-│   recApprovalOverlay             ← Dark semi-transparent overlay
-│
-├── REJECTION MODAL ───────────────────────────────────
-│   btnRejectConfirm               ← "✗ Confirm Rejection" button
-│   btnRejectCancel                ← "Cancel" button
-│   txtRejectComments              ← Comments text input
-│   lblRejectCommentsLabel         ← "Additional Comments:"
-│   chkComplexity                  ← "Too complex for equipment"
-│   chkCopyright                   ← "Copyright/IP concerns"
-│   chkDetail                      ← "Insufficient detail/resolution"
-│   chkSafety                      ← "Safety concerns with design"
-│   chkIncomplete                  ← "Incomplete project description"
-│   lblRejectReasonsLabel          ← "Rejection Reasons:"
-│   ddRejectStaff                  ← Staff dropdown
-│   lblRejectStaffLabel            ← "Performing Action As:"
-│   lblRejectStudent               ← Student info display
-│   lblRejectTitle                 ← "Reject Request - REQ-00001"
-│   recRejectModal                 ← White modal box
-│   recRejectOverlay               ← Dark semi-transparent overlay
-│
-│   ══════════════════════════════════════════════════════
-│   MAIN CONTENT (below modals)
-│   ══════════════════════════════════════════════════════
-│
-├── JOB CARDS GALLERY ─────────────────────────────────
-│   ▼ galJobCards                  ← Main vertical gallery
-│       │
-│       │   ── FRONT (top of gallery tree = renders on top) ──
-│       │
-│       ├── ACTION BUTTONS (clickable, must be in front)
-│       │   btnSendMessage         ← "💬 Message" button
-│       │   btnFiles               ← "📎 Files" button
-│       │   btnChangeDetails       ← "✏️ Details" button
-│       │   btnPickedUp            ← "💰 Picked Up" button
-│       │   btnComplete            ← "✓ Complete" button
-│       │   btnStartPrint          ← "🖨️ Start Print" button
-│       │   btnArchive             ← "📦 Archive" button
-│       │   btnReject              ← "✗ Reject" button
-│       │   btnApprove             ← "✓ Approve" button
-│       │
-│       ├── ICONS (need to be visible/clickable)
-│       │   icoLightbulb           ← Attention lightbulb (clickable toggle)
-│       │   icoExpandCollapse      ← Chevron up/down icon (clickable)
-│       │
-│       ├── EXPANDED DETAILS (visible when expanded)
-│       │   lblUnreadBadge         ← Unread count badge
-│       │   galMessages            ← Nested gallery for conversation
-│       │   lblNoMessages          ← "No messages yet" placeholder
-│       │   lblMessagesHeader      ← "Messages (3)" header
-│       │   lblCourse              ← Course number
-│       │   lblProjectType         ← Project type
-│       │   lblDiscipline          ← Discipline
-│       │   lblDueDate             ← Due date
-│       │   lblCreated             ← Created date
-│       │   lblJobId               ← Job ID display
-│       │   btnSaveNotes           ← "💾 Save Notes" button
-│       │   txtStaffNotes          ← Staff notes text input
-│       │
-│       ├── CARD CONTENT LABELS
-│       │   lblStaffNotesPlaceholder ← Staff notes display/placeholder
-│       │   lblStaffNotesHeader    ← "Staff Notes" label
-│       │   lblColor               ← Color name with ⬤ indicator
-│       │   lblMethod              ← "Filament" or "Resin" badge
-│       │   lblPrinter             ← Printer name
-│       │   lblStudentEmail        ← Student email
-│       │   lblReqKey              ← "StudentName_Method_Color"
-│       │   lblSubmittedTime       ← "Submitted 2h ago"
-│       │   lblStudentName         ← Student display name
-│       │
-│       │   ── BACK (bottom of gallery tree = renders behind) ──
-│       │
-│       └── recCardBackground      ← Card background rectangle (MUST BE LAST)
-│
-├── SEARCH & FILTERS ──────────────────────────────────
-│   btnClearFilters                ← Clear filters button
-│   btnExpandAll                   ← Expand/Collapse all button
-│   chkNeedsAttention              ← "Needs Attention Only" checkbox
-│   txtSearch                      ← Search input box
-│
-├── STATUS TABS ───────────────────────────────────────
-│   ▼ galStatusTabs                ← Horizontal gallery of status tabs
-│       btnStatusTab               ← Button inside gallery template
-│
-├── HEADER BAR ────────────────────────────────────────
-│   lblUserName                    ← Shows logged-in user name
-│   btnNavAnalytics                ← Analytics nav button
-│   btnNavAdmin                    ← Admin nav button  
-│   btnNavDashboard                ← Dashboard nav button
-│   lblAppTitle                    ← "Print Lab Dashboard"
-│   recHeader                      ← Dark gray header background (LAST = behind)
-│
-└── UTILITIES ─────────────────────────────────────────
-    tmrGlow                        ← Timer for attention animation (invisible)
+▼ App
+▼ scrDashboard
+    btnMessageSend
+    btnMessageCancel
+    lblMessageCharCount
+    txtMessageBody
+    lblMessageBodyLabel
+    txtMessageSubject
+    lblMessageSubjectLabel
+    ddMessageStaff
+    lblMessageStaffLabel
+    lblMessageStudent
+    lblMessageTitle
+    recMessageModal
+    recMessageOverlay
+    btnFileCancel
+    btnFileSave
+    frmAttachmentsEdit
+    ddFileActor
+    lblFileStaffLabel
+    lblFileTitle
+    recFileModal
+    recFileOverlay
+    btnDetailsConfirm
+    btnDetailsCancel
+    ddDetailsColor
+    lblDetailsColorLabel
+    ddDetailsPrinter
+    lblDetailsPrinterLabel
+    ddDetailsStaff
+    lblDetailsStaffLabel
+    lblDetailsCurrent
+    lblDetailsCurrentLabel
+    lblDetailsTitle
+    recDetailsModal
+    recDetailsOverlay
+    btnArchiveConfirm
+    btnArchiveCancel
+    txtArchiveReason
+    lblArchiveReasonLabel
+    ddArchiveStaff
+    lblArchiveStaffLabel
+    lblArchiveWarning
+    lblArchiveTitle
+    recArchiveModal
+    recArchiveOverlay
+    btnApprovalConfirm
+    btnApprovalCancel
+    txtApprovalComments
+    lblApprovalCommentsLabel
+    lblCalculatedCost
+    lblCostLabel
+    txtEstimatedTime
+    lblTimeLabel
+    lblWeightError
+    txtEstimatedWeight
+    lblWeightLabel
+    ddApprovalStaff
+    lblApprovalStaffLabel
+    lblApprovalStudent
+    lblApprovalTitle
+    recApprovalModal
+    recApprovalOverlay
+    btnRejectConfirm
+    btnRejectCancel
+    txtRejectComments
+    lblRejectCommentsLabel
+    chkComplexity
+    chkCopyright
+    chkDetail
+    chkSafety
+    chkIncomplete
+    lblRejectReasonsLabel
+    ddRejectStaff
+    lblRejectStaffLabel
+    lblRejectStudent
+    lblRejectTitle
+    recRejectModal
+    recRejectOverlay
+    ▼ galJobCards
+        btnSendMessage
+        btnFiles
+        btnChangeDetails
+        btnPickedUp
+        btnComplete
+        btnStartPrint
+        btnArchive
+        btnReject
+        btnApprove
+        icoLightbulb
+        icoExpandCollapse
+        lblUnreadBadge
+        ▼ galMessages
+            lblMsgContent
+            lblMsgDirectionBadge
+            lblMsgAuthor
+            icoMsgDirection
+            recMessageBg
+        lblNoMessages
+        lblMessagesHeader
+        lblCourse
+        lblProjectType
+        lblDiscipline
+        lblDueDate
+        lblCreated
+        lblJobId
+        btnSaveNotes
+        txtStaffNotes
+        lblStaffNotesPlaceholder
+        lblStaffNotesHeader
+        lblColor
+        lblPrinter
+        lblStudentEmail
+        lblReqKey
+        lblSubmittedTime
+        lblStudentName
+        recCardBackground
+    btnClearFilters
+    btnExpandAll
+    chkNeedsAttention
+    txtSearch
+    ▼ galStatusTabs
+        btnStatusTab
+    lblUserName
+    btnNavAnalytics
+    btnNavAdmin
+    btnNavDashboard
+    lblAppTitle
+    recHeader
+    tmrGlow
 ```
 
 ### Key Rules
@@ -1009,7 +966,7 @@ Switch(
 | Font | `Font.'Segoe UI Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
-| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
 36. Add detail labels (all with `Visible: ThisItem.Expanded || varExpandAll`):
 
@@ -1073,7 +1030,7 @@ This section shows message history between staff and students for each request, 
 | Font | `Font.'Segoe UI Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
-| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 
 40. Click **+ Insert** → **Blank vertical gallery**.
 41. **Rename it:** `galMessages`
@@ -1088,7 +1045,7 @@ This section shows message history between staff and students for each request, 
 | Height | `120` |
 | TemplateSize | `70` |
 | TemplatePadding | `2` |
-| Visible | `ThisItem.ID in colExpanded.ID \|\| varExpandAll` |
+| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
 | ShowScrollbar | `true` |
 
 > **Note:** TemplateSize increased to 70 to accommodate Direction indicator.
@@ -1219,7 +1176,7 @@ Still inside the `galJobCards` gallery template:
 
 | Property | Value |
 |----------|-------|
-| Icon | `If(ThisItem.ID in colExpanded.ID \|\| varExpandAll, Icon.ChevronUp, Icon.ChevronDown)` |
+| Icon | `If(Or(ThisItem.ID in colExpanded.ID, varExpandAll), Icon.ChevronUp, Icon.ChevronDown)` |
 | X | `Parent.TemplateWidth / 2 - 12` |
 | Y | `Parent.TemplateHeight - 35` |
 | Width | `24` |
@@ -1328,7 +1285,7 @@ Set(varSelectedItem, ThisItem)
 | RadiusTopRight | `4` |
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
-| Visible | `ThisItem.Status.Value = "Uploaded" \|\| ThisItem.Status.Value = "Pending"` |
+| Visible | `Or(ThisItem.Status.Value = "Uploaded", ThisItem.Status.Value = "Pending")` |
 
 8. Set **OnSelect:**
 
@@ -1358,7 +1315,7 @@ Set(varSelectedItem, ThisItem)
 | RadiusTopRight | `4` |
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
-| Visible | `ThisItem.Status.Value = "Completed" \|\| ThisItem.Status.Value = "Paid & Picked Up" \|\| ThisItem.Status.Value = "Rejected"` |
+| Visible | `ThisItem.Status.Value in ["Completed", "Paid & Picked Up", "Rejected"]` |
 
 12. Set **OnSelect:**
 
