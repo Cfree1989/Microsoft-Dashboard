@@ -154,9 +154,9 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 - ✅ Staff
 
 **In the Power Automate panel**, you should see:
-- ✅ Flow C (PR-Action)
+- ✅ Flow-(C)-Action-LogAction
 
-> ⚠️ **Flow Name Note:** Your flow might be named `PR-Action: Log action`, `Flow C (PR-Action)`, or `PR-Action_LogAction`. The formulas in this guide use `'Flow C (PR-Action)'` — replace with your actual flow name as it appears in Power Apps.
+> ⚠️ **Flow Name Note:** All formulas in this guide use `'Flow-(C)-Action-LogAction'`. If your flow has a different name in Power Apps, replace accordingly.
 
 ---
 
@@ -265,7 +265,7 @@ RemoveIf(colExpanded, true);  // Start with empty collection
 | `varSelectedActor` | Staff member for attribution | Staff Record |
 | `varAttachmentChangeType` | Type of attachment change | Text |
 | `varAttachmentChangedName` | Name of changed attachment | Text |
-| `colExpanded` | IDs of expanded job cards | Table |
+| `colExpanded` | ~~IDs of expanded job cards~~ (no longer used - details always visible) | Table |
 
 > ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
@@ -396,7 +396,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnReject                     ← Step 9
         btnApprove                    ← Step 9
         icoLightbulb                  ← Step 14
-        icoExpandCollapse             ← Step 8
+        // icoExpandCollapse removed (details always visible)
         lblUnreadBadge                ← Step 16B
         ▼ galMessages                 ← Step 16B
             lblMsgContent             ← Step 16B
@@ -423,6 +423,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblSubmittedTime              ← Step 7
         lblStudentName                ← Step 7
         recCardBackground             ← Step 7
+    lblEmptyState                     ← Step 9
     btnClearFilters                   ← Step 13
     btnExpandAll                      ← Step 13
     chkNeedsAttention                 ← Step 13
@@ -721,17 +722,11 @@ SortByColumns(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint.
 
-6. Set **TemplateSize:** `380` (card height for compact layout)
+6. Set **TemplateSize:** `380` (fixed card height - accommodates both collapsed and expanded content)
 
-### Making Cards Expandable
+> ⚠️ **Power Apps Limitation:** The `TemplateSize` property cannot use `ThisItem` because it's evaluated at the gallery level, not per-item. All cards must have the same height. The expand/collapse feature works by showing/hiding the "Additional Details" section within this fixed space.
 
-7. Update the **TemplateSize** property to be dynamic:
-
-```powerfx
-If(ThisItem.ID in colExpanded.ID || varExpandAll, 480, 380)
-```
-
-> 💡 **How this works:** We track expanded cards in `colExpanded` collection (created in App.OnStart). This avoids storing UI state in SharePoint.
+> 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
 ---
 
@@ -961,7 +956,7 @@ Switch(
 | Font | `Font.'Segoe UI Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 ### Expanded Detail Labels
 
@@ -982,7 +977,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 36. Click **+ Insert** → **Text label**.
 37. **Rename it:** `lblJobId`
@@ -997,7 +992,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 39. Click **+ Insert** → **Text label**.
 40. **Rename it:** `lblCreatedLabel`
@@ -1012,7 +1007,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 42. Click **+ Insert** → **Text label**.
 43. **Rename it:** `lblCreated`
@@ -1027,7 +1022,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 #### Discipline & Project Row (Y = 205)
 
@@ -1044,7 +1039,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 48. Click **+ Insert** → **Text label**.
 49. **Rename it:** `lblDiscipline`
@@ -1059,7 +1054,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 51. Click **+ Insert** → **Text label**.
 52. **Rename it:** `lblProjectTypeLabel`
@@ -1074,7 +1069,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 54. Click **+ Insert** → **Text label**.
 55. **Rename it:** `lblProjectType`
@@ -1089,7 +1084,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 #### Course Row (Y = 225) - Optional
 
@@ -1106,7 +1101,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 60. Click **+ Insert** → **Text label**.
 61. **Rename it:** `lblCourse`
@@ -1121,7 +1116,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 ---
 
@@ -1173,35 +1168,9 @@ Each card displays:
 
 Still inside the `galJobCards` gallery template:
 
-### Expand/Collapse Icon (icoExpandCollapse)
+### Expand/Collapse Icon — REMOVED
 
-1. Click **+ Insert** → **Icon** → select **ChevronDown**.
-2. **Rename it:** `icoExpandCollapse`
-3. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Icon | `If(Or(ThisItem.ID in colExpanded.ID, varExpandAll), Icon.ChevronUp, Icon.ChevronDown)` |
-| X | `Parent.TemplateWidth / 2 - 12` |
-| Y | `Parent.TemplateHeight - 35` |
-| Width | `24` |
-| Height | `24` |
-| Color | `RGBA(150, 150, 150, 1)` |
-
-4. Set **OnSelect:**
-
-```powerfx
-With(
-    {isCurrentlyExpanded: ThisItem.ID in colExpanded.ID},
-    If(
-        isCurrentlyExpanded,
-        RemoveIf(colExpanded, ID = ThisItem.ID),
-        Collect(colExpanded, {ID: ThisItem.ID})
-    )
-)
-```
-
-> 💡 This toggles the card's expanded state using a local collection (no SharePoint updates needed for UI state). The `With()` function captures the current state before modifying the collection, ensuring correct toggle behavior.
+> ⚠️ **No longer needed:** Since all details are always visible, the expand/collapse icon has been removed. If you already have `icoExpandCollapse`, delete it or set its `Visible` property to `false`.
 
 ---
 
@@ -1223,15 +1192,17 @@ First, let's ensure varActor is set up. We'll create it on the screen's OnVisibl
 **⬇️ FORMULA: Paste into scrDashboard.OnVisible**
 
 ```powerfx
-Set(varActor,
-{
-  '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-  Claims: "i:0#.f|membership|" & varMeEmail,
-  DisplayName: varMeName,
-  Email: varMeEmail
-    }
-)
+Set(varActor, {
+    Claims: "i:0#.f|membership|" & varMeEmail,
+    Department: "",
+    DisplayName: varMeName,
+    Email: varMeEmail,
+    JobTitle: "",
+    Picture: ""
+})
 ```
+
+> 💡 **SharePoint Person fields** require all six properties (Claims, Department, DisplayName, Email, JobTitle, Picture) even if some are empty strings.
 
 ### Adding Action Buttons to Job Cards
 
@@ -1350,87 +1321,145 @@ Set(varSelectedItem, ThisItem)
 
 ```powerfx
 Patch(PrintRequests, ThisItem, {
-    Status: "Printing",
-    LastAction: "Printing",
-    LastActionBy: varActor,
-    LastActionAt: Now()
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Printing"),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionAt: Now(),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & User().Email,
+        Department: "",
+        DisplayName: User().FullName,
+        Email: User().Email,
+        JobTitle: "",
+        Picture: ""
+    }
 });
 
-'Flow C (PR-Action)'.Run(
+'Flow-(C)-Action-LogAction'.Run(
     Text(ThisItem.ID),
     "Status Change",
     "Status",
-    ThisItem.Status,
     "Printing",
-    varMeEmail,
-    "Power Apps",
-    "Started printing"
+    varMeEmail
 );
 
 Notify("Print started!", NotificationType.Success)
 ```
 
-### Complete Printing Button
+> 💡 **Flow C Parameters:** Only pass the 5 required parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The optional parameters (OldValue, ClientApp, Notes) are not passed.
 
-10. Add button:
-   - **Text:** `"✓ Complete"`
-   - **Visible:** `ThisItem.Status = "Printing"`
-   - **Fill:** `RGBA(0, 78, 140, 1)`
+### Complete Printing Button (btnComplete)
 
-11. Set **OnSelect:**
+17. Click **+ Insert** → **Button**.
+18. **Rename it:** `btnComplete`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Complete"` |
+| X | `12` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `(Parent.TemplateWidth - 28) / 2` |
+| Height | `32` |
+| Fill | `RGBA(0, 78, 140, 1)` |
+| Color | `Color.White` |
+| Visible | `ThisItem.Status.Value = "Printing"` |
+
+20. Set **OnSelect:**
 
 ```powerfx
-    Patch(PrintRequests, ThisItem, {
-    Status: "Completed",
-    LastAction: "Completed",
-        LastActionBy: varActor,
-        LastActionAt: Now()
-    });
+Patch(PrintRequests, ThisItem, {
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionAt: Now(),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & User().Email,
+        Department: "",
+        DisplayName: User().FullName,
+        Email: User().Email,
+        JobTitle: "",
+        Picture: ""
+    }
+});
 
-'Flow C (PR-Action)'.Run(
-        Text(ThisItem.ID),
-        "Status Change",
-        "Status",
-        ThisItem.Status,
+'Flow-(C)-Action-LogAction'.Run(
+    Text(ThisItem.ID),
+    "Status Change",
+    "Status",
     "Completed",
-        varMeEmail,
-        "Power Apps",
-    "Print completed - ready for pickup"
+    varMeEmail
 );
 
 Notify("Marked as completed!", NotificationType.Success)
 ```
 
-### Picked Up Button
+### Picked Up Button (btnPickedUp)
 
-12. Add button:
-   - **Text:** `"💰 Picked Up"`
-   - **Visible:** `ThisItem.Status = "Completed"`
-   - **Fill:** `RGBA(0, 158, 73, 1)`
+21. Click **+ Insert** → **Button**.
+22. **Rename it:** `btnPickedUp`
+23. Set properties:
 
-13. Set **OnSelect:**
+| Property | Value |
+|----------|-------|
+| Text | `"💰 Picked Up"` |
+| X | `12 + (Parent.TemplateWidth - 28) / 2 + 4` |
+| Y | `Parent.TemplateHeight - 50` |
+| Width | `(Parent.TemplateWidth - 28) / 2` |
+| Height | `32` |
+| Fill | `RGBA(0, 158, 73, 1)` |
+| Color | `Color.White` |
+| Visible | `ThisItem.Status.Value = "Completed"` |
+
+24. Set **OnSelect:**
 
 ```powerfx
 Patch(PrintRequests, ThisItem, {
-    Status: "Paid & Picked Up",
-    LastAction: "Picked Up",
-    LastActionBy: varActor,
-    LastActionAt: Now()
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionAt: Now(),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & User().Email,
+        Department: "",
+        DisplayName: User().FullName,
+        Email: User().Email,
+        JobTitle: "",
+        Picture: ""
+    }
 });
 
-'Flow C (PR-Action)'.Run(
+'Flow-(C)-Action-LogAction'.Run(
     Text(ThisItem.ID),
     "Status Change",
     "Status",
-    ThisItem.Status,
     "Paid & Picked Up",
-    varMeEmail,
-    "Power Apps",
-    "Student picked up and paid"
+    varMeEmail
 );
 
 Notify("Marked as picked up!", NotificationType.Success)
 ```
+
+### Empty State Label (lblEmptyState)
+
+**What this does:** Shows a friendly message when no requests match the current filter, instead of showing a blank area.
+
+25. Click on **scrDashboard** in Tree view (outside the gallery).
+26. Click **+ Insert** → **Text label**.
+27. **Rename it:** `lblEmptyState`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"No " & varSelectedStatus & " requests found"` |
+| X | `(1366 - 400) / 2` |
+| Y | `300` |
+| Width | `400` |
+| Height | `100` |
+| Size | `14` |
+| Align | `Align.Center` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Font | `Font.'Segoe UI'` |
+| Visible | `CountRows(galJobCards.AllItems) = 0` |
+
+> 💡 **How it works:** The label is centered on screen and only appears when the gallery has zero items. When a user selects a status tab with no matching requests, they'll see "No Uploaded requests found" (or whichever status is selected) instead of empty space.
 
 ---
 
@@ -1594,14 +1623,16 @@ Set(varRejectionReasons,
 
 // Update the SharePoint item
 Patch(PrintRequests, varSelectedItem, {
-    Status: "Rejected",
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
     NeedsAttention: false,
-    LastAction: "Rejected",
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
     LastActionBy: {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
         Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.Member.Email,
+        Department: "",
         DisplayName: ddRejectStaff.Selected.Member.DisplayName,
-        Email: ddRejectStaff.Selected.Member.Email
+        Email: ddRejectStaff.Selected.Member.Email,
+        JobTitle: "",
+        Picture: ""
     },
     LastActionAt: Now(),
     StaffNotes: Concatenate(
@@ -1613,15 +1644,12 @@ Patch(PrintRequests, varSelectedItem, {
 
 // Log to AuditLog via Flow C
 IfError(
-    'Flow C (PR-Action)'.Run(
+    'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
         "Rejected",
         "Status",
-        varSelectedItem.Status,
         "Rejected",
-        ddRejectStaff.Selected.Member.Email,
-        "Power Apps",
-        "Rejected: " & varRejectionReasons & txtRejectComments.Text
+        ddRejectStaff.Selected.Member.Email
     ),
     Notify("Could not log rejection.", NotificationType.Error),
     Notify("Request rejected. Student will be notified.", NotificationType.Success)
@@ -1780,14 +1808,16 @@ Set(varCalculatedCost,
 // Update SharePoint item
 // ⚠️ IMPORTANT: Use internal column names (EstWeight, EstHours) not display names
 Patch(PrintRequests, varSelectedItem, {
-    Status: "Pending",
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
     NeedsAttention: false,
-    LastAction: "Approved",
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
         Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.Member.Email,
+        Department: "",
         DisplayName: ddApprovalStaff.Selected.Member.DisplayName,
-        Email: ddApprovalStaff.Selected.Member.Email
+        Email: ddApprovalStaff.Selected.Member.Email,
+        JobTitle: "",
+        Picture: ""
     },
     LastActionAt: Now(),
     EstWeight: Value(txtEstimatedWeight.Text),           // Internal name (not EstimatedWeight)
@@ -1804,15 +1834,12 @@ Patch(PrintRequests, varSelectedItem, {
 
 // Log action
 IfError(
-    'Flow C (PR-Action)'.Run(
+    'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
         "Approved",
         "Status",
-        varSelectedItem.Status,
         "Pending",
-        ddApprovalStaff.Selected.Member.Email,
-        "Power Apps",
-        "Approved - Weight: " & txtEstimatedWeight.Text & "g, Cost: $" & Text(varCalculatedCost, "[$-en-US]#,##0.00")
+        ddApprovalStaff.Selected.Member.Email
     ),
     Notify("Could not log approval.", NotificationType.Error),
     Notify("Approved! Student will receive estimate email.", NotificationType.Success)
@@ -1858,14 +1885,16 @@ Follow the same modal pattern:
 
 ```powerfx
 Patch(PrintRequests, varSelectedItem, {
-    Status: "Archived",
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
     NeedsAttention: false,
-    LastAction: "Archived",
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
         Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.Member.Email,
+        Department: "",
         DisplayName: ddArchiveStaff.Selected.Member.DisplayName,
-        Email: ddArchiveStaff.Selected.Member.Email
+        Email: ddArchiveStaff.Selected.Member.Email,
+        JobTitle: "",
+        Picture: ""
     },
     LastActionAt: Now(),
     StaffNotes: Concatenate(
@@ -1877,15 +1906,12 @@ Patch(PrintRequests, varSelectedItem, {
 });
 
 IfError(
-    'Flow C (PR-Action)'.Run(
+    'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
         "Archived",
         "Status",
-        varSelectedItem.Status,
         "Archived",
-        ddArchiveStaff.Selected.Member.Email,
-        "Power Apps",
-        If(!IsBlank(txtArchiveReason.Text), "Reason: " & txtArchiveReason.Text, "")
+        ddArchiveStaff.Selected.Member.Email
     ),
     Notify("Could not log archive.", NotificationType.Error),
     Notify("Request archived.", NotificationType.Success)
@@ -2045,12 +2071,14 @@ Patch(
     {
         Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
         Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
-        LastAction: "Details Changed: " & varChangeDesc,
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
         LastActionBy: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & Lower(LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email),
+            Department: "",
             DisplayName: ddDetailsStaff.Selected.DisplayName,
-            Email: LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email
+            Email: LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email,
+            JobTitle: "",
+            Picture: ""
         },
         LastActionAt: Now()
     }
@@ -2137,15 +2165,9 @@ Set(varSelectedItem, ThisItem)
    - **OnCheck:** `Set(varNeedsAttention, true)`
    - **OnUncheck:** `Set(varNeedsAttention, false)`
 
-### Expand All Button
+### Expand All Button — REMOVED
 
-7. Add **Button**:
-   - **Text:** `If(varExpandAll, "Collapse All", "Expand All")`
-   - **X:** `550`
-   - **Y:** `120`
-   - **Width:** `120`
-   - **Height:** `40`
-   - **OnSelect:** `Set(varExpandAll, !varExpandAll)`
+> ⚠️ **No longer needed:** Since all details are always visible, this button has been removed.
 
 ### Clear Filters Button
 
@@ -2311,14 +2333,14 @@ Set(varSelectedActor, LookUp(Staff, false))
 9. Set **OnChange:**
 
 ```powerfx
-Set(varSelectedActor,
-    {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-        Claims: "i:0#.f|membership|" & ddFileActor.Selected.Member.Email,
-        DisplayName: ddFileActor.Selected.Member.DisplayName,
-        Email: ddFileActor.Selected.Member.Email
-    }
-)
+Set(varSelectedActor, {
+    Claims: "i:0#.f|membership|" & ddFileActor.Selected.Member.Email,
+    Department: "",
+    DisplayName: ddFileActor.Selected.Member.DisplayName,
+    Email: ddFileActor.Selected.Member.Email,
+    JobTitle: "",
+    Picture: ""
+})
 ```
 
 ### Save Button
@@ -2358,15 +2380,12 @@ Patch(
 
 // Optional: Log to AuditLog via Flow C for detailed tracking
 IfError(
-    'Flow C (PR-Action)'.Run(
+    'Flow-(C)-Action-LogAction'.Run(
         Text(frmAttachmentsEdit.LastSubmit.ID),
         If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
         "Attachments",
-        "",
-        "",
-        varMeEmail,
-        "Power Apps",
-        Coalesce(varAttachmentChangedName, "")
+        Coalesce(varAttachmentChangedName, ""),
+        varMeEmail
     ),
     Notify("Could not log attachment action.", NotificationType.Error)
 );
@@ -2449,7 +2468,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Font | `Font.'Segoe UI Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 
 #### Messages Gallery (galMessages)
 
@@ -2466,7 +2485,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Height | `120` |
 | TemplateSize | `70` |
 | TemplatePadding | `2` |
-| Visible | `Or(ThisItem.ID in colExpanded.ID, varExpandAll)` |
+| Visible | `true` |
 | ShowScrollbar | `true` |
 
 > **Note:** TemplateSize is 70 to accommodate Direction indicator.
@@ -2546,7 +2565,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
     - **Color:** `RGBA(150, 150, 150, 1)`
     - **FontItalic:** `true`
     - **Size:** `10`
-    - **Visible:** `(ThisItem.ID in colExpanded.ID || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
+    - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
 
 #### Unread Badge (Outside galMessages)
 
@@ -2561,7 +2580,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
     - **Color:** `Color.White`
     - **Align:** `Align.Center`
     - **BorderRadius:** `10`
-    - **Visible:** `(ThisItem.ID in colExpanded.ID || varExpandAll) && CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+    - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)) > 0`
 
 > **Note:** The unread badge filters on `Direction.Value = "Inbound"` to count student email replies.
 
@@ -2787,13 +2806,15 @@ Patch(
         ReqKey: varSelectedItem.ReqKey,
         Message: txtMessageBody.Text,
         Author: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            Department: "",
             DisplayName: ddMessageStaff.Selected.Member.DisplayName,
-            Email: ddMessageStaff.Selected.Member.Email
+            Email: ddMessageStaff.Selected.Member.Email,
+            JobTitle: "",
+            Picture: ""
         },
-        AuthorRole: {Value: "Staff"},
-        Direction: {Value: "Outbound"},  // Marks this as staff-initiated message
+        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
         SentAt: Now(),
         ReadByStudent: false,
         ReadByStaff: true,
@@ -2806,12 +2827,14 @@ Patch(
     PrintRequests,
     varSelectedItem,
     {
-        LastAction: "Message Sent",
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
         LastActionBy: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            Department: "",
             DisplayName: ddMessageStaff.Selected.Member.DisplayName,
-            Email: ddMessageStaff.Selected.Member.Email
+            Email: ddMessageStaff.Selected.Member.Email,
+            JobTitle: "",
+            Picture: ""
         },
         LastActionAt: Now()
     }
@@ -3010,18 +3033,22 @@ To show unread inbound message count on job cards:
 
 ## Problem: Person field won't save (Patch fails)
 
-**Cause:** Incorrect person field format.
+**Cause:** Incorrect person field format — SharePoint Person fields require all six properties.
 
-**Solution:** Use the exact format:
+**Solution:** Use this exact format with all six properties:
 
 ```powerfx
 {
-    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
     Claims: "i:0#.f|membership|" & Lower(userEmail),
+    Department: "",
     DisplayName: userName,
-    Email: Lower(userEmail)
+    Email: Lower(userEmail),
+    JobTitle: "",
+    Picture: ""
 }
 ```
+
+> ⚠️ All six properties (Claims, Department, DisplayName, Email, JobTitle, Picture) are required, even if some are empty strings.
 
 ---
 
@@ -3086,9 +3113,12 @@ To show unread inbound message count on job cards:
 
 ```powerfx
 {
-    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
     Claims: "i:0#.f|membership|" & email,
+    Department: "",
     DisplayName: name,
+    Email: email,
+    JobTitle: "",
+    Picture: ""
     Email: email
 }
 ```
@@ -3102,15 +3132,12 @@ Max(3.00, weight * If(method = "Resin", 0.20, 0.10))
 ## Flow C Call Pattern
 
 ```powerfx
-'Flow C (PR-Action)'.Run(
+'Flow-(C)-Action-LogAction'.Run(
     Text(ThisItem.ID),      // RequestID
-    "Status Change",         // Action
+    "Status Change",        // Action
     "Status",               // FieldName
-    ThisItem.Status,        // OldValue
     "NewStatus",            // NewValue
-    varMeEmail,             // ActorEmail
-    "Power Apps",           // ClientApp
-    "Notes here"            // Notes
+    varMeEmail              // ActorEmail
 )
 ```
 
@@ -3249,22 +3276,9 @@ Filter(colStaff, Lower(Member.Email) = varMeEmail)
 ["Member"]
 ```
 
-## Expand/Collapse Toggle
+## Expand/Collapse Toggle — REMOVED
 
-```powerfx
-// OnSelect for expand icon
-With(
-    {isCurrentlyExpanded: ThisItem.ID in colExpanded.ID},
-    If(
-        isCurrentlyExpanded,
-        RemoveIf(colExpanded, ID = ThisItem.ID),
-        Collect(colExpanded, {ID: ThisItem.ID})
-    )
-)
-
-// Dynamic TemplateSize
-If(ThisItem.ID in colExpanded.ID || varExpandAll, 480, 380)
-```
+> ⚠️ **No longer used:** All card details are always visible. The expand/collapse functionality has been removed for a cleaner layout.
 
 ## Button Visibility by Status
 
