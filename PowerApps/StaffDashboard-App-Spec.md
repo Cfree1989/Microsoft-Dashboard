@@ -1467,116 +1467,235 @@ Notify("Marked as picked up!", NotificationType.Success)
 
 **What you're doing:** Creating a popup dialog that appears when staff click "Reject" to capture rejection reasons.
 
-### Instructions
+### Modal Structure
 
-Build this on **scrDashboard**, outside of the gallery (at the screen level).
+All controls are added to **scrDashboard** (screen level, outside the gallery). They float above everything else when visible.
 
-### Modal Overlay (Dark Background)
+```
+scrDashboard
+├── recRejectOverlay          ← Dark semi-transparent background
+├── recRejectModal            ← White modal box (container)
+├── lblRejectTitle            ← "Reject Request - REQ-00042"
+├── lblRejectStudent          ← Student name and email
+├── lblRejectStaffLabel       ← "Performing Action As: *"
+├── ddRejectStaff             ← Staff dropdown
+├── lblRejectReasonsLabel     ← "Rejection Reasons..."
+├── chkIncomplete             ← Checkbox: Incomplete description
+├── chkSafety                 ← Checkbox: Safety concerns
+├── chkDetail                 ← Checkbox: Insufficient detail
+├── chkCopyright              ← Checkbox: Copyright concerns
+├── chkComplexity             ← Checkbox: Too complex
+├── lblRejectCommentsLabel    ← "Additional Comments..."
+├── txtRejectComments         ← Multi-line text input
+├── btnRejectCancel           ← Cancel button
+└── btnRejectConfirm          ← Confirm Rejection button
+```
+
+---
+
+### Modal Overlay (recRejectOverlay)
 
 1. Click on **scrDashboard** in Tree view.
 2. Click **+ Insert** → **Rectangle**.
-3. Rename to `recRejectOverlay`.
+3. **Rename it:** `recRejectOverlay`
 4. Set properties:
-   - **X:** `0`
-   - **Y:** `0`
-   - **Width:** `1366`
-   - **Height:** `768`
-   - **Fill:** `RGBA(0, 0, 0, 0.7)`
-   - **Visible:** `varShowRejectModal > 0`
 
-### Modal Content Box
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowRejectModal > 0` |
 
-5. Add another **Rectangle**.
-6. Rename to `recRejectModal`.
+---
+
+### Modal Content Box (recRejectModal)
+
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recRejectModal`
 7. Set properties:
-   - **X:** `(Parent.Width - 600) / 2`
-   - **Y:** `(Parent.Height - 550) / 2`
-   - **Width:** `600`
-   - **Height:** `550`
-   - **Fill:** `Color.White`
-   - **BorderRadius:** `8` (all corners)
-   - **Visible:** `varShowRejectModal > 0`
 
-### Modal Title
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 550) / 2` |
+| Width | `600` |
+| Height | `550` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowRejectModal > 0` |
 
-8. Add **Text label**:
-   - **Text:** `"Reject Request - " & varSelectedItem.ReqKey`
-   - **X:** `recRejectModal.X + 20`
-   - **Y:** `recRejectModal.Y + 20`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Size:** `20`
-   - **Color:** `RGBA(209, 52, 56, 1)`
-   - **Visible:** `varShowRejectModal > 0`
+---
 
-### Student Info
+### Modal Title (lblRejectTitle)
 
-9. Add label:
-   - **Text:** `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"`
-   - **X:** `recRejectModal.X + 20`
-   - **Y:** `recRejectModal.Y + 55`
-   - **Visible:** `varShowRejectModal > 0`
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblRejectTitle`
+10. Set properties:
 
-### Staff Attribution Dropdown
+| Property | Value |
+|----------|-------|
+| Text | `"Reject Request - " & varSelectedItem.ReqKey` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 20` |
+| Width | `560` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(209, 52, 56, 1)` |
+| Visible | `varShowRejectModal > 0` |
 
-10. Add **Text label**:
-   - **Text:** `"Performing Action As: *"`
-   - **X:** `recRejectModal.X + 20`
-   - **Y:** `recRejectModal.Y + 90`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Visible:** `varShowRejectModal > 0`
+---
 
-11. Click **+ Insert** → **Combo box** (or Dropdown).
-12. Rename to `ddRejectStaff`.
+### Student Info (lblRejectStudent)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblRejectStudent`
 13. Set properties:
-   - **Items:** `colStaff`
-   - **X:** `recRejectModal.X + 20`
-   - **Y:** `recRejectModal.Y + 115`
-   - **Width:** `300`
-   - **DisplayFields:** `["Member"]`
-   - **SearchFields:** `["Member"]`
-   - **DefaultSelectedItems:** `Filter(colStaff, Lower(Member.Email) = varMeEmail)`
-   - **Visible:** `varShowRejectModal > 0`
 
-### Rejection Reasons Checkboxes
+| Property | Value |
+|----------|-------|
+| Text | `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 55` |
+| Width | `560` |
+| Height | `25` |
+| Size | `12` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Visible | `varShowRejectModal > 0` |
 
-14. Add label: `"Rejection Reasons (select all that apply):"`
+---
 
-15. Add **Checkbox** controls for each reason. For each:
-   - Name them: `chkIncomplete`, `chkSafety`, `chkDetail`, `chkCopyright`, `chkComplexity`
-   - Set **Visible:** `varShowRejectModal > 0`
+### Staff Label (lblRejectStaffLabel)
 
-| Checkbox Name | Text Property |
-|--------------|---------------|
-| chkIncomplete | `"Incomplete project description"` |
-| chkSafety | `"Safety concerns with design"` |
-| chkDetail | `"Insufficient detail/resolution"` |
-| chkCopyright | `"Copyright/IP concerns"` |
-| chkComplexity | `"Too complex for equipment"` |
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblRejectStaffLabel`
+16. Set properties:
 
-Position them vertically starting at `recRejectModal.Y + 170` with 30px spacing.
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 90` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowRejectModal > 0` |
 
-### Custom Comments
+---
 
-16. Add label: `"Additional Comments (optional):"`
-17. Add **Text input**:
-   - Rename to `txtRejectComments`
-   - **Mode:** `TextMode.MultiLine`
-   - **HintText:** `"Provide specific feedback..."`
-   - **Width:** `540`
-   - **Height:** `80`
-   - **Visible:** `varShowRejectModal > 0`
+### Staff Dropdown (ddRejectStaff)
 
-### Cancel Button
+17. Click **+ Insert** → **Combo box**.
+18. **Rename it:** `ddRejectStaff`
+19. Set properties:
 
-18. Add **Button**:
-   - **Text:** `"Cancel"`
-   - **X:** `recRejectModal.X + 300`
-   - **Y:** `recRejectModal.Y + 490`
-   - **Width:** `120`
-   - **Fill:** `RGBA(150, 150, 150, 1)`
-   - **Visible:** `varShowRejectModal > 0`
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 115` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["Member"]` |
+| SearchFields | `["Member"]` |
+| DefaultSelectedItems | `Filter(colStaff, Lower(Member.Email) = varMeEmail)` |
+| Visible | `varShowRejectModal > 0` |
 
-19. Set **OnSelect:**
+---
+
+### Rejection Reasons Label (lblRejectReasonsLabel)
+
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblRejectReasonsLabel`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Rejection Reasons (select all that apply):"` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 160` |
+| Width | `400` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowRejectModal > 0` |
+
+---
+
+### Rejection Reason Checkboxes
+
+Add 5 checkboxes. For each, click **+ Insert** → **Checkbox**:
+
+| # | Control Name | Text | X | Y |
+|---|--------------|------|---|---|
+| 23 | `chkIncomplete` | `"Incomplete project description"` | `recRejectModal.X + 20` | `recRejectModal.Y + 185` |
+| 24 | `chkSafety` | `"Safety concerns with design"` | `recRejectModal.X + 20` | `recRejectModal.Y + 215` |
+| 25 | `chkDetail` | `"Insufficient detail/resolution"` | `recRejectModal.X + 20` | `recRejectModal.Y + 245` |
+| 26 | `chkCopyright` | `"Copyright/IP concerns"` | `recRejectModal.X + 20` | `recRejectModal.Y + 275` |
+| 27 | `chkComplexity` | `"Too complex for equipment"` | `recRejectModal.X + 20` | `recRejectModal.Y + 305` |
+
+Set **Visible** for all: `varShowRejectModal > 0`
+
+---
+
+### Comments Label (lblRejectCommentsLabel)
+
+28. Click **+ Insert** → **Text label**.
+29. **Rename it:** `lblRejectCommentsLabel`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Additional Comments (optional):"` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 340` |
+| Width | `300` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowRejectModal > 0` |
+
+---
+
+### Comments Text Input (txtRejectComments)
+
+31. Click **+ Insert** → **Text input**.
+32. **Rename it:** `txtRejectComments`
+33. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recRejectModal.X + 20` |
+| Y | `recRejectModal.Y + 365` |
+| Width | `560` |
+| Height | `80` |
+| HintText | `"Provide specific feedback for the student..."` |
+| Visible | `varShowRejectModal > 0` |
+
+---
+
+### Cancel Button (btnRejectCancel)
+
+34. Click **+ Insert** → **Button**.
+35. **Rename it:** `btnRejectCancel`
+36. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recRejectModal.X + 300` |
+| Y | `recRejectModal.Y + 490` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowRejectModal > 0` |
+
+37. Set **OnSelect:**
 
 ```powerfx
 Set(varShowRejectModal, 0);
@@ -1590,26 +1709,27 @@ Reset(chkCopyright);
 Reset(chkComplexity)
 ```
 
-### Confirm Rejection Button
+---
 
-20. Add **Button**:
-   - **Text:** `"✗ Confirm Rejection"`
-   - **X:** `recRejectModal.X + 430`
-   - **Y:** `recRejectModal.Y + 490`
-   - **Width:** `150`
-   - **Fill:** `RGBA(209, 52, 56, 1)`
-   - **Color:** `Color.White`
-   - **Visible:** `varShowRejectModal > 0`
+### Confirm Rejection Button (btnRejectConfirm)
 
-21. Set **DisplayMode:**
+38. Click **+ Insert** → **Button**.
+39. **Rename it:** `btnRejectConfirm`
+40. Set properties:
 
-```powerfx
-If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
-```
+| Property | Value |
+|----------|-------|
+| Text | `"✗ Confirm Rejection"` |
+| X | `recRejectModal.X + 430` |
+| Y | `recRejectModal.Y + 490` |
+| Width | `150` |
+| Height | `36` |
+| Fill | `RGBA(209, 52, 56, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowRejectModal > 0` |
+| DisplayMode | `If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
-22. Set **OnSelect:**
-
-**⬇️ FORMULA: Complete rejection logic with audit logging**
+41. Set **OnSelect:**
 
 ```powerfx
 // Build rejection reasons string
