@@ -187,6 +187,13 @@ These fields can be completely removed (they're not required):
 | NeedsAttention     | Staff attention flag                |
 | RejectionReason    | Staff rejection reasons             |
 | StudentConfirmed   | Handled separately (see below)      |
+| TransactionNumber  | Payment field - staff only          |
+| FinalWeight        | Payment field - staff only          |
+| FinalCost          | Payment field - staff only          |
+| PaymentDate        | Payment field - staff only          |
+| PaymentNotes       | Payment field - staff only          |
+
+> ⚠️ **DO NOT REMOVE:** TigerCardNumber - This is a required student field!
 
 ### How to Remove a Field
 
@@ -219,6 +226,21 @@ SharePointForm1.Mode <> FormMode.New
 
 ---
 
+## Adding TigerCardNumber Field (If Not Already Present)
+
+If you added the TigerCardNumber column to SharePoint after creating the form, you need to add it manually:
+
+1. Click on **SharePointForm1** in the Tree View.
+2. In the right-side **Properties** pane, click **Edit fields**.
+3. Click **+ Add field**.
+4. Check **TigerCardNumber** from the list.
+5. Click **Add**.
+6. **Drag** the TigerCardNumber field to appear **after StudentEmail** in the form order.
+
+> 💡 **Tip:** After adding, the field should appear in the form. Students will be required to enter their 16-digit POS number (with validation enforced by SharePoint).
+
+---
+
 ## Final Field Checklist
 
 After completing this step, students should see these fields:
@@ -228,6 +250,7 @@ After completing this step, students should see these fields:
 | Title | ✅ Yes |
 | Student | ✅ Yes (auto-filled) |
 | StudentEmail | ✅ Yes (auto-filled) |
+| TigerCardNumber | ✅ Yes (student enters manually) |
 | Course Number | ✅ Yes |
 | Discipline | ✅ Yes |
 | ProjectType | ✅ Yes |
@@ -240,6 +263,19 @@ After completing this step, students should see these fields:
 | Status | ❌ Hidden (but present) |
 | ReqKey | ❌ Hidden or removed |
 | All staff fields | ❌ Removed |
+
+> ⚠️ **TigerCardNumber - IMPORTANT:** Students must enter the **16-digit POS number** from their Tiger Card, NOT their LSUID (the 89-number they usually memorize).
+> 
+> **On the card, it looks like:**
+> ```
+> LSUID: 899903556          ← NOT this one
+> 6272100454327897-5        ← Use first part only
+> ```
+> **Enter:** `6272100454327897` (16 digits, NO dash or number after it)
+> 
+> The `-5` is just the card replacement count and is not needed.
+> 
+> This is the number staff use for manual TigerCASH entry when cards won't swipe.
 
 ---
 

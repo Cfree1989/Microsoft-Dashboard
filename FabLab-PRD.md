@@ -459,13 +459,14 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 #### PrintRequests List Schema
 
-**Total Fields:** 31 (12 student-facing + 14 staff processing + 5 payment recording)
+**Total Fields:** 32 (13 student-facing + 14 staff processing + 5 payment recording)
 
-**Student-Facing Fields (12):**
+**Student-Facing Fields (13):**
 - **Title** (Single line text) - Request title
 - **ReqKey** (Single line text) - Auto-generated unique ID (format: REQ-00042)
 - **Student** (Person) - Requester identification
 - **StudentEmail** (Single line text) - Contact information
+- **TigerCardNumber** (Single line text) - 16-digit POS number from Tiger Card (NOT the LSUID) for manual payment entry
 - **Course Number** (Number) - Optional class number (e.g., 1001, 2050)
 - **Discipline** (Choice) - Architecture; Engineering; Art & Design; Business; Liberal Arts; Sciences; Other
 - **ProjectType** (Choice) - Class Project; Research; Personal; Other

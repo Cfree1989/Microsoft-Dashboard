@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 31 total fields (12 student-facing + 14 staff processing + 5 payment recording)
+- 32 total fields (13 student-facing + 14 staff processing + 5 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -46,7 +46,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 ---
 
-## Step 3: Add Student-Facing Columns (12)
+## Step 3: Add Student-Facing Columns (13)
 
 ### Column 1: ReqKey (Single line of text)
 
@@ -72,7 +72,55 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Require that this column contains information:** Yes
 5. Click **Save**
 
-### Column 4: Course Number (Number)
+### Column 4: TigerCardNumber (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `TigerCardNumber`
+3. **Description:** `16-digit POS number from Tiger Card (NOT the LSUID) - used for manual payment entry`
+4. **Require that this column contains information:** Yes
+5. Click **Save**
+
+#### Add Column Validation
+
+6. After creating the column, go to **List Settings** (gear icon → List settings)
+7. Under **Columns**, click on **TigerCardNumber**
+8. Scroll down to **Column Validation**
+9. In the **Formula** box, paste:
+
+```
+=LEN([TigerCardNumber])=16
+```
+
+10. In **User message**, enter:
+
+```
+Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the longer number on your card. Do not include the dash or the number after it.
+```
+
+11. Click **OK**
+
+> 💡 **What the validation checks:**
+> - Total length is exactly 16 digits
+> - Format: `XXXXXXXXXXXXXXXX`
+
+> ⚠️ **IMPORTANT - Which Number to Enter:**
+> 
+> On the Tiger Card, there are TWO numbers:
+> - **LSUID** (starts with 89, ~9 digits) - This is NOT what we need
+> - **POS Number** (16 digits) - **THIS is what we need**
+> 
+> **Example:**
+> ```
+> LSUID: 899903556          ← NOT this one (9 digits - will FAIL)
+> 6272100454327897-5        ← Use the first part only
+> 6272100454327897          ← ENTER THIS (16 digits - will PASS)
+> ```
+> 
+> **Do NOT include:** The dash and number after it (e.g., `-5`). That's just the card replacement count.
+> 
+> This number is used when cards won't swipe and staff need to manually enter the number into the TigerCASH POS system.
+
+### Column 5: Course Number (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `Course Number`
@@ -81,7 +129,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Number of decimal places:** 0
 6. Click **Save**
 
-### Column 5: Discipline (Choice)
+### Column 6: Discipline (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Discipline`
@@ -96,7 +144,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
    - Other
 5. Click **Save**
 
-### Column 6: ProjectType (Choice)
+### Column 7: ProjectType (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `ProjectType`
@@ -108,7 +156,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
    - Other
 5. Click **Save**
 
-### Column 7: Color (Choice)
+### Column 8: Color (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Color`
@@ -126,7 +174,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
-### Column 8: Method (Choice)
+### Column 9: Method (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Method`
@@ -137,7 +185,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
-### Column 9: Printer (Choice)
+### Column 10: Printer (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Printer`
@@ -150,7 +198,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
-### Column 10: DueDate (Date)
+### Column 11: DueDate (Date)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `DueDate`
@@ -158,7 +206,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Include time:** No
 5. Click **Save**
 
-### Column 11: Notes (Multiple lines of text)
+### Column 12: Notes (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `Notes`
@@ -170,7 +218,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 ## Step 4: Add Staff-Only Columns (10+)
 
-### Column 12: Status (Choice)
+### Column 13: Status (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Status`
@@ -188,7 +236,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 6. **Require that this column contains information:** Yes
 7. Click **Save**
 
-### Column 13: Priority (Choice)
+### Column 14: Priority (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Priority`
@@ -201,7 +249,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Default value:** Normal
 6. Click **Save**
 
-### Column 14: AssignedTo (Person)
+### Column 15: AssignedTo (Person)
 
 1. Click **+ Add column** → **Person**
 2. **Name:** `AssignedTo`
@@ -210,7 +258,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Allow multiple selections:** No
 6. Click **Save**
 
-### Column 15: EstHours (Number)
+### Column 16: EstHours (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `EstHours`
@@ -218,7 +266,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Number of decimal places:** 1
 5. Click **Save**
 
-### Column 16: EstWeight (Number)
+### Column 17: EstWeight (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `EstWeight`
@@ -226,7 +274,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Number of decimal places:** 0
 5. Click **Save**
 
-### Column 17: EstimatedCost (Currency)
+### Column 18: EstimatedCost (Currency)
 
 1. Click **+ Add column** → **Currency**
 2. **Name:** `EstimatedCost`
@@ -235,7 +283,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Number of decimal places:** 2
 6. Click **Save**
 
-### Column 18: StaffNotes (Multiple lines of text)
+### Column 19: StaffNotes (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `StaffNotes`
@@ -243,7 +291,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Type of text:** Plain text
 5. Click **Save**
 
-### Column 19: RejectionReason (Choice)
+### Column 20: RejectionReason (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `RejectionReason`
@@ -260,7 +308,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Can add values manually:** Yes (fill-in)
 6. Click **Save**
 
-### Column 20: StudentConfirmed (Yes/No)
+### Column 21: StudentConfirmed (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentConfirmed`
@@ -268,7 +316,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Default value:** No
 5. Click **Save**
 
-### Column 21: NeedsAttention (Yes/No)
+### Column 22: NeedsAttention (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `NeedsAttention`
@@ -276,7 +324,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Default value:** No
 5. Click **Save**
 
-### Column 22: Expanded (Yes/No)
+### Column 23: Expanded (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `Expanded`
@@ -284,7 +332,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Default value:** No
 5. Click **Save**
 
-### Column 23: LastAction (Choice)
+### Column 24: LastAction (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `LastAction`
@@ -301,7 +349,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
    - System
 5. Click **Save**
 
-### Column 24: LastActionBy (Single line of text)
+### Column 25: LastActionBy (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `LastActionBy`
@@ -310,7 +358,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 **Note:** This is Single line text (not Person) to allow "System" value for infinite loop prevention.
 
-### Column 25: LastActionAt (Date and time)
+### Column 26: LastActionAt (Date and time)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `LastActionAt`
@@ -324,14 +372,14 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 These columns capture actual payment details when a print is picked up.
 
-### Column 26: TransactionNumber (Single line of text)
+### Column 27: TransactionNumber (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `TransactionNumber`
 3. **Description:** `TigerCASH transaction/receipt number`
 4. Click **Save**
 
-### Column 27: FinalWeight (Number)
+### Column 28: FinalWeight (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `FinalWeight`
@@ -339,7 +387,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Number of decimal places:** 0
 5. Click **Save**
 
-### Column 28: FinalCost (Currency)
+### Column 29: FinalCost (Currency)
 
 1. Click **+ Add column** → **Currency**
 2. **Name:** `FinalCost`
@@ -348,7 +396,7 @@ These columns capture actual payment details when a print is picked up.
 5. **Number of decimal places:** 2
 6. Click **Save**
 
-### Column 29: PaymentDate (Date)
+### Column 30: PaymentDate (Date)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `PaymentDate`
@@ -356,7 +404,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Include time:** No
 5. Click **Save**
 
-### Column 30: PaymentNotes (Multiple lines of text)
+### Column 31: PaymentNotes (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `PaymentNotes`
@@ -421,7 +469,7 @@ These columns capture actual payment details when a print is picked up.
 
 ## Column Summary
 
-### Student-Facing Fields (12)
+### Student-Facing Fields (13)
 
 | Column | Type | Required | Default | Purpose |
 |--------|------|----------|---------|---------|
@@ -429,6 +477,7 @@ These columns capture actual payment details when a print is picked up.
 | ReqKey | Single line | No | - | Auto-generated unique ID (REQ-00042) |
 | Student | Person | Yes | - | Requester identification |
 | StudentEmail | Single line | Yes | - | Contact information |
+| TigerCardNumber | Single line | Yes | - | 16-digit POS number (NOT LSUID) for manual payment entry |
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |
 | ProjectType | Choice | No | - | Class Project; Research; Personal; Other |
@@ -475,7 +524,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] Attachments enabled in Advanced settings
 - [ ] Item-level permissions configured (students see only their own)
 - [ ] Version history enabled
-- [ ] All 12 student-facing columns added
+- [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 14 staff processing columns added
 - [ ] All 5 payment recording columns added
 - [ ] Status has all 8 choices with default "Uploaded"

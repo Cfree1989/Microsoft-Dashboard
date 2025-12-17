@@ -8,7 +8,7 @@
 ### ✅ COMPLETED - Core MVP Infrastructure
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **PrintRequests List** | ✅ DONE | 31 columns (12 student + 14 staff + 5 payment), views, formatting |
+| **PrintRequests List** | ✅ DONE | 32 columns (13 student + 14 staff + 5 payment), views, formatting |
 | **AuditLog List** | ✅ DONE | 14 audit columns |
 | **Staff List** | ✅ DONE | Team members populated |
 | **Flow A (PR-Create)** | ✅ DONE | ReqKey generation, filename validation, confirmation emails |
