@@ -368,7 +368,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 ---
 
-## Step 4B: Add Payment Recording Columns (4)
+## Step 4B: Add Payment Recording Columns (5)
 
 These columns capture actual payment details when a print is picked up.
 

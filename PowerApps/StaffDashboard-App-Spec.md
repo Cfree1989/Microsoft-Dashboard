@@ -23,19 +23,20 @@
 12. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
 13. [Building the Approval Modal](#step-11-building-the-approval-modal)
 14. [Building the Archive Modal](#step-12-building-the-archive-modal)
-15. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal) ← **💳 NEW: Records transaction details at pickup**
-16. [Adding Search and Filters](#step-14-adding-search-and-filters)
-17. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
-18. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
-19. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
+15. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
+16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
+17. [Adding Search and Filters](#step-14-adding-search-and-filters)
+18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
+19. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
+20. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
     - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
     - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
     - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
-20. [Publishing the App](#step-18-publishing-the-app)
-21. [Testing the App](#step-19-testing-the-app)
-22. [Troubleshooting](#troubleshooting)
-23. [Quick Reference Card](#quick-reference-card)
-24. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
+21. [Publishing the App](#step-18-publishing-the-app)
+22. [Testing the App](#step-19-testing-the-app)
+23. [Troubleshooting](#troubleshooting)
+24. [Quick Reference Card](#quick-reference-card)
+25. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
 
 ---
 
@@ -1198,7 +1199,7 @@ First, let's ensure varActor is set up. We'll create it on the screen's OnVisibl
 ```powerfx
 Set(varActor, {
     Claims: "i:0#.f|membership|" & varMeEmail,
-    Department: "",
+    Discipline: "",
     DisplayName: varMeName,
     Email: varMeEmail,
     JobTitle: "",
@@ -1330,7 +1331,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & User().Email,
-        Department: "",
+        Discipline: "",
         DisplayName: User().FullName,
         Email: User().Email,
         JobTitle: "",
@@ -1377,7 +1378,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & User().Email,
-        Department: "",
+        Discipline: "",
         DisplayName: User().FullName,
         Email: User().Email,
         JobTitle: "",
@@ -1422,7 +1423,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & User().Email,
-        Department: "",
+        Discipline: "",
         DisplayName: User().FullName,
         Email: User().Email,
         JobTitle: "",
@@ -1798,7 +1799,7 @@ Patch(PrintRequests, varSelectedItem, {
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
-        Department: "",
+        Discipline: "",
         DisplayName: ddRejectStaff.Selected.MemberName,
         Email: ddRejectStaff.Selected.MemberEmail,
         JobTitle: "",
@@ -2268,22 +2269,22 @@ Set(varCalculatedCost,
 );
 
 // Update SharePoint item
-// ⚠️ IMPORTANT: Use internal column names (EstWeight, EstHours) not display names
+// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names
 Patch(PrintRequests, varSelectedItem, {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
-        Department: "",
+        Discipline: "",
         DisplayName: ddApprovalStaff.Selected.MemberName,
         Email: ddApprovalStaff.Selected.MemberEmail,
         JobTitle: "",
         Picture: ""
     },
     LastActionAt: Now(),
-    EstWeight: Value(txtEstimatedWeight.Text),
-    EstHours: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
+    EstimatedWeight: Value(txtEstimatedWeight.Text),
+    EstimatedTime: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
     EstimatedCost: varCalculatedCost,
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
@@ -2549,7 +2550,7 @@ Patch(PrintRequests, varSelectedItem, {
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.MemberEmail,
-        Department: "",
+        Discipline: "",
         DisplayName: ddArchiveStaff.Selected.MemberName,
         Email: ddArchiveStaff.Selected.MemberEmail,
         JobTitle: "",
@@ -2723,7 +2724,7 @@ scrDashboard
 varSelectedItem.Method.Value & " | " & 
 Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & " | " &
 varSelectedItem.Color.Value & " | " &
-If(IsBlank(varSelectedItem.EstWeight), "No weight", Text(varSelectedItem.EstWeight) & "g") & " | " &
+If(IsBlank(varSelectedItem.EstimatedWeight), "No weight", Text(varSelectedItem.EstimatedWeight) & "g") & " | " &
 If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00"))
 ```
 
@@ -2934,7 +2935,7 @@ Filter(
 | Height | `36` |
 | Format | `TextFormat.Number` |
 | HintText | `"e.g., 25"` |
-| Default | `If(IsBlank(varSelectedItem.EstWeight), "", Text(varSelectedItem.EstWeight))` |
+| Default | `If(IsBlank(varSelectedItem.EstimatedWeight), "", Text(varSelectedItem.EstimatedWeight))` |
 | Visible | `varShowDetailsModal > 0` |
 
 ---
@@ -2971,7 +2972,7 @@ Filter(
 | Height | `36` |
 | Format | `TextFormat.Number` |
 | HintText | `"e.g., 2.5"` |
-| Default | `If(IsBlank(varSelectedItem.EstHours), "", Text(varSelectedItem.EstHours))` |
+| Default | `If(IsBlank(varSelectedItem.EstimatedTime), "", Text(varSelectedItem.EstimatedTime))` |
 | Visible | `varShowDetailsModal > 0` |
 
 ---
@@ -3018,7 +3019,7 @@ With(
     {
         weight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, 
                    Value(txtDetailsWeight.Text), 
-                   varSelectedItem.EstWeight),
+                   varSelectedItem.EstimatedWeight),
         method: If(!IsBlank(ddDetailsMethod.Selected), 
                    ddDetailsMethod.Selected.Value, 
                    varSelectedItem.Method.Value)
@@ -3095,8 +3096,8 @@ If(
         (!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value) ||
         (!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value) ||
         (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value) ||
-        (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstWeight, 0)) ||
-        (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstHours, 0))
+        (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0)) ||
+        (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0))
     ),
     DisplayMode.Edit,
     DisplayMode.Disabled
@@ -3110,7 +3111,7 @@ If(
 ```powerfx
 // Calculate new cost based on weight and method
 Set(varNewMethod, If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value));
-Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstWeight));
+Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
 Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(3.00, varNewWeight * If(varNewMethod = "Resin", 0.20, 0.10))));
 
 // Build change description for audit
@@ -3121,10 +3122,10 @@ If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> var
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value));
 If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
-If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstWeight, 0),
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Weight: " & Coalesce(varSelectedItem.EstWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
-If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstHours, 0),
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Hours: " & Coalesce(varSelectedItem.EstHours, 0) & " → " & txtDetailsHours.Text));
+If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
+If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
 
 // Update SharePoint item
 Patch(
@@ -3134,13 +3135,13 @@ Patch(
         Method: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected, varSelectedItem.Method),
         Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
         Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
-        EstWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstWeight),
-        EstHours: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstHours),
+        EstimatedWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight),
+        EstimatedTime: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstimatedTime),
         EstimatedCost: varNewCost,
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
         LastActionBy: {
             Claims: "i:0#.f|membership|" & ddDetailsStaff.Selected.MemberEmail,
-            Department: "",
+            Discipline: "",
             DisplayName: ddDetailsStaff.Selected.MemberName,
             Email: ddDetailsStaff.Selected.MemberEmail,
             JobTitle: "",
@@ -3194,7 +3195,7 @@ Reset(txtDetailsHours)
 
 | Stage | Weight Field | Cost Field | When Set |
 |-------|--------------|------------|----------|
-| **Estimate** | EstWeight | EstimatedCost | At approval (slicer prediction) |
+| **Estimate** | EstimatedWeight | EstimatedCost | At approval (slicer prediction) |
 | **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
 
 ### Control Hierarchy
@@ -3210,15 +3211,16 @@ scrDashboard
 ├── lblPaymentTransLabel      ← "Transaction Number: *"
 ├── txtPaymentTransaction     ← Transaction number input (required)
 ├── lblPaymentWeightLabel     ← "Final Weight (grams): *"
-├── txtPaymentWeight          ← Weight input (pre-filled with EstWeight)
+├── txtPaymentWeight          ← Weight input (pre-filled with EstimatedWeight)
 ├── lblPaymentCostLabel       ← "Final Cost:"
 ├── lblPaymentCostValue       ← Auto-calculated cost display
 ├── lblPaymentDateLabel       ← "Payment Date: *"
 ├── dpPaymentDate             ← Date picker (default: Today())
 ├── lblPaymentNotesLabel      ← "Payment Notes (optional):"
 ├── txtPaymentNotes           ← Multi-line text input
+├── chkPartialPickup          ← Partial pickup checkbox (keeps status as Completed)
 ├── btnPaymentCancel          ← Cancel button
-└── btnPaymentConfirm         ← Record Payment button
+└── btnPaymentConfirm         ← Record Payment button (changes color based on partial)
 ```
 
 ---
@@ -3250,9 +3252,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - 580) / 2` |
+| Y | `(Parent.Height - 630) / 2` |
 | Width | `550` |
-| Height | `580` |
+| Height | `630` |
 | Fill | `Color.White` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -3303,7 +3305,7 @@ scrDashboard
 
 ```powerfx
 "Student: " & varSelectedItem.Student.DisplayName & Char(10) &
-"Estimated: " & Text(varSelectedItem.EstWeight) & "g → $" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
+"Estimated: " & Text(varSelectedItem.EstimatedWeight) & "g → $" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 ```
 
 ---
@@ -3416,14 +3418,7 @@ scrDashboard
 | Visible | `varShowPaymentModal > 0` |
 
 33. Set **Default:**
-
-```powerfx
-If(
-    varShowPaymentModal > 0 && !IsBlank(varSelectedItem.EstWeight),
-    Text(varSelectedItem.EstWeight),
-    ""
-)
-```
+- none.
 
 > 💡 **Pre-fill:** The weight input pre-fills with the estimated weight. Staff should update this with the actual measured weight of the finished print.
 
@@ -3560,24 +3555,47 @@ If(
 
 ---
 
+### Partial Pickup Checkbox (chkPartialPickup)
+
+> 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later.
+
+53. Click **+ Insert** → **Checkbox**.
+54. **Rename it:** `chkPartialPickup`
+55. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Partial Pickup — Student will return for remaining items"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 505` |
+| Width | `510` |
+| Height | `32` |
+| FontItalic | `true` |
+| Color | `RGBA(150, 100, 0, 1)` |
+| Visible | `varShowPaymentModal > 0` |
+
+> ⚠️ **Behavior:** When checked, the status stays "Completed" instead of changing to "Paid & Picked Up". Payment details are recorded in PaymentNotes, and staff can process additional payments when the student returns.
+
+---
+
 ### Cancel Button (btnPaymentCancel)
 
-53. Click **+ Insert** → **Button**.
-54. **Rename it:** `btnPaymentCancel`
-55. Set properties:
+56. Click **+ Insert** → **Button**.
+57. **Rename it:** `btnPaymentCancel`
+58. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recPaymentModal.X + 250` |
-| Y | `recPaymentModal.Y + 520` |
+| Y | `recPaymentModal.Y + 570` |
 | Width | `120` |
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
 | Visible | `varShowPaymentModal > 0` |
 
-56. Set **OnSelect:**
+59. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -3586,29 +3604,32 @@ Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
-Reset(ddPaymentStaff)
+Reset(ddPaymentStaff);
+Reset(chkPartialPickup)
 ```
 
 ---
 
 ### Confirm Payment Button (btnPaymentConfirm)
 
-57. Click **+ Insert** → **Button**.
-58. **Rename it:** `btnPaymentConfirm`
-59. Set properties:
+60. Click **+ Insert** → **Button**.
+61. **Rename it:** `btnPaymentConfirm`
+62. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"✓ Record Payment"` |
+| Text | `If(chkPartialPickup.Value, "✓ Record Partial Payment", "✓ Record Payment")` |
 | X | `recPaymentModal.X + 380` |
-| Y | `recPaymentModal.Y + 520` |
+| Y | `recPaymentModal.Y + 570` |
 | Width | `150` |
 | Height | `36` |
-| Fill | `RGBA(0, 158, 73, 1)` |
+| Fill | `If(chkPartialPickup.Value, RGBA(255, 140, 0, 1), RGBA(0, 158, 73, 1))` |
 | Color | `Color.White` |
 | Visible | `varShowPaymentModal > 0` |
 
-60. Set **DisplayMode:**
+> 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
+
+63. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -3622,10 +3643,10 @@ If(
 )
 ```
 
-61. Set **OnSelect:**
+64. Set **OnSelect:**
 
 ```powerfx
-// Calculate final cost from actual weight
+// Calculate cost from weight picked up
 Set(varFinalCost, 
     Max(
         3.00,
@@ -3637,46 +3658,85 @@ Set(varFinalCost,
     )
 );
 
-// Update SharePoint item with payment details
-Patch(PrintRequests, varSelectedItem, {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-    TransactionNumber: txtPaymentTransaction.Text,
-    FinalWeight: Value(txtPaymentWeight.Text),
-    FinalCost: varFinalCost,
-    PaymentDate: dpPaymentDate.SelectedDate,
-    PaymentNotes: txtPaymentNotes.Text,
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-        Department: "",
-        DisplayName: ddPaymentStaff.Selected.MemberName,
-        Email: ddPaymentStaff.Selected.MemberEmail,
-        JobTitle: "",
-        Picture: ""
-    },
-    LastActionAt: Now(),
-    StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "PAYMENT by " & ddPaymentStaff.Selected.MemberName &
-        ": Trans#=" & txtPaymentTransaction.Text & 
-        ", Weight=" & txtPaymentWeight.Text & "g" &
-        ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
-        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
-        " - " & Text(Now(), "mm/dd/yyyy")
-    )
-});
+// Build payment record string (used for both partial and full)
+Set(varPaymentRecord,
+    "PAYMENT by " & ddPaymentStaff.Selected.MemberName &
+    ": Trans#=" & txtPaymentTransaction.Text & 
+    ", Weight=" & txtPaymentWeight.Text & "g" &
+    ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
+    If(chkPartialPickup.Value, " (PARTIAL)", "") &
+    If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
+    " - " & Text(Now(), "mm/dd/yyyy")
+);
+
+// Update SharePoint item - conditional on partial pickup
+If(
+    chkPartialPickup.Value,
+    // PARTIAL PICKUP: Keep status as Completed, append to PaymentNotes
+    Patch(PrintRequests, varSelectedItem, {
+        // Status stays "Completed" - don't change it
+        PaymentNotes: Concatenate(
+            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
+            varPaymentRecord
+        ),
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
+        LastActionBy: {
+            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+            Discipline: "",
+            DisplayName: ddPaymentStaff.Selected.MemberName,
+            Email: ddPaymentStaff.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
+        LastActionAt: Now(),
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            varPaymentRecord
+        )
+    }),
+    // FULL PICKUP: Change status to Paid & Picked Up, record final details
+    Patch(PrintRequests, varSelectedItem, {
+        Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+        TransactionNumber: txtPaymentTransaction.Text,
+        FinalWeight: Value(txtPaymentWeight.Text),
+        FinalCost: varFinalCost,
+        PaymentDate: dpPaymentDate.SelectedDate,
+        PaymentNotes: Concatenate(
+            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
+            varPaymentRecord
+        ),
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+        LastActionBy: {
+            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+            Discipline: "",
+            DisplayName: ddPaymentStaff.Selected.MemberName,
+            Email: ddPaymentStaff.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
+        LastActionAt: Now(),
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            varPaymentRecord
+        )
+    })
+);
 
 // Log action via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
-        "Status Change",
-        "Status",
-        "Paid & Picked Up",
+        If(chkPartialPickup.Value, "Partial Payment", "Status Change"),
+        If(chkPartialPickup.Value, "Payment", "Status"),
+        If(chkPartialPickup.Value, "Partial: $" & Text(varFinalCost, "[$-en-US]#,##0.00"), "Paid & Picked Up"),
         ddPaymentStaff.Selected.MemberEmail
     ),
     Notify("Could not log payment.", NotificationType.Error),
-    Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
+    If(
+        chkPartialPickup.Value,
+        Notify("Partial payment recorded! Job stays in Completed for remaining items.", NotificationType.Warning),
+        Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
+    )
 );
 
 // Close modal and reset
@@ -3686,8 +3746,15 @@ Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
-Reset(ddPaymentStaff)
+Reset(ddPaymentStaff);
+Reset(chkPartialPickup)
 ```
+
+> 💡 **Partial Pickup Behavior:**
+> - Status remains "Completed" (job stays visible in queue)
+> - Payment details appended to PaymentNotes (creates a log)
+> - Staff can process another pickup later
+> - Final pickup (unchecked) records to FinalWeight/FinalCost fields
 
 ---
 
@@ -3705,7 +3772,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & User().Email,
-        Department: "",
+        Discipline: "",
         DisplayName: User().FullName,
         Email: User().Email,
         JobTitle: "",
@@ -3936,7 +4003,7 @@ Set(varSelectedActor, LookUp(Staff, false))
 ```powerfx
 Set(varSelectedActor, {
     Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
-    Department: "",
+    Discipline: "",
     DisplayName: ddFileActor.Selected.MemberName,
     Email: ddFileActor.Selected.MemberEmail,
     JobTitle: "",
@@ -4408,7 +4475,7 @@ Patch(
         Message: txtMessageBody.Text,
         Author: {
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Department: "",
+            Discipline: "",
             DisplayName: ddMessageStaff.Selected.MemberName,
             Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
@@ -4431,7 +4498,7 @@ Patch(
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
         LastActionBy: {
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Department: "",
+            Discipline: "",
             DisplayName: ddMessageStaff.Selected.MemberName,
             Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
@@ -4641,7 +4708,7 @@ To show unread inbound message count on job cards:
 ```powerfx
 {
     Claims: "i:0#.f|membership|" & Lower(userEmail),
-    Department: "",
+    Discipline: "",
     DisplayName: userName,
     Email: Lower(userEmail),
     JobTitle: "",
@@ -4717,7 +4784,7 @@ To show unread inbound message count on job cards:
 ```powerfx
 {
     Claims: "i:0#.f|membership|" & email,
-    Department: "",
+    Discipline: "",
     DisplayName: name,
     Email: email,
     JobTitle: "",
@@ -4730,8 +4797,8 @@ To show unread inbound message count on job cards:
 
 **For Estimates (Approval Modal):**
 ```powerfx
-// EstimatedCost from EstWeight
-Max(3.00, EstWeight * If(Method = "Resin", 0.20, 0.10))
+// EstimatedCost from EstimatedWeight
+Max(3.00, EstimatedWeight * If(Method = "Resin", 0.20, 0.10))
 ```
 
 **For Finals (Payment Modal):**
@@ -4740,7 +4807,7 @@ Max(3.00, EstWeight * If(Method = "Resin", 0.20, 0.10))
 Max(3.00, FinalWeight * If(Method = "Resin", 0.20, 0.10))
 ```
 
-> 💡 **Estimate vs Actual:** EstWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
+> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
 
 ## Flow C Call Pattern
 

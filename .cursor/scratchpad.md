@@ -20,13 +20,9 @@
 | Component | Purpose | Documentation |
 |-----------|---------|---------------|
 | **Payment Recording Modal** | Record transaction #, amount, date, notes at pickup | `PowerApps/StaffDashboard-App-Spec.md` (Step 13) |
-| **FileUploads List** | Staging area for student file updates | `SharePoint/FileUploads-List-Setup.md` |
 | **RequestComments List** | Bi-directional staff/student messaging with email threading | `SharePoint/RequestComments-List-Setup.md` |
 | **Flow D (PR-Message)** | Send threaded email notifications to students | `PowerAutomate/Flow-(D)-Message-Notifications.md` |
 | **Flow E (PR-Mailbox)** | Process inbound student email replies | `PowerAutomate/Flow-(E)-Mailbox-InboundReplies.md` |
-| **Flow F (PR-ValidateUpload)** | Validate student upload requests (instant flow) | `PowerAutomate/Flow-(F)-ValidateUpload.md` |
-| **Flow G (PR-ProcessUpload)** | Process validated uploads, move files to PrintRequest | `PowerAutomate/Flow-(G)-ProcessUpload.md` |
-| **Student Upload Portal** | Separate app for replacement/additional file uploads | `PowerApps/StudentUploadPortal-App-Spec.md` |
 
 ---
 
@@ -48,6 +44,7 @@ When staff clicks "💰 Picked Up", a modal opens requiring:
 3. **Final Weight** (required) - Actual weight of finished print in grams
 4. **Final Cost** (auto-calculated) - From FinalWeight using pricing formula
 5. **Payment Date** (required) - Defaults to today, adjustable
+6. **Partial Pickup** (checkbox) - If checked, status stays "Completed" for remaining items
 6. **Payment Notes** (optional) - Discrepancies, special circumstances
 
 ### Key Concept: Estimates vs Actuals
@@ -536,6 +533,10 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 ### 🔴 Critical - SharePoint Field Names
 - **Internal vs Display Names**: ALWAYS verify internal names in List Settings → Column URL. Examples: EstimatedWeight → `EstWeight`, EstimatedTime → `EstHours`
 - **Multi-Choice Fields**: Return arrays of objects with `Id` and `Value` properties. Use Select action with **text mode** Map field (`@item()?['Value']`), then `join()` to format for display
+
+### 🟢 Payment & Pickup Workflow
+- **Partial Pickups**: Students may pick up only some items from a multi-file submission. Use "Partial Pickup" checkbox to keep job in "Completed" status while recording payment details to PaymentNotes. Multiple payments logged sequentially.
+- **Estimates vs Actuals**: EstWeight/EstimatedCost set at approval (slicer prediction). FinalWeight/FinalCost recorded at final pickup (physical measurement).
 
 ### 🟠 Power Automate Expressions
 - **Null Handling**: Use `if(equals(value, null), fallback, function(value))` before `int()`, `length()`, or type conversions

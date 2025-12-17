@@ -65,12 +65,9 @@ This guide explains how to safely manage changes to the FabLab system without br
      - `PR-Create (Flow A)`
      - `PR-Audit (Flow B)`
      - `PR-Action (Flow C)`
-     - `PR-Message (Flow D)` *(when built)*
-     - `PR-Mailbox (Flow E)` *(when built)*
-     - `PR-ValidateUpload (Flow F)` *(when built)*
-     - `PR-ProcessUpload (Flow G)` *(when built)*
+     - `PR-Message (Flow D)`
+     - `PR-Mailbox (Flow E)`
    - Click **Add**
-4. Repeat for Student Upload Portal app *(when built)*
 
 ---
 

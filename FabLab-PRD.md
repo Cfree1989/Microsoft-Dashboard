@@ -134,7 +134,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 #### PrintRequests List (P0 - Critical)
 - **Description:** Central repository for all 3D print requests
 - **Acceptance Criteria:**
-  - 26 total fields (12 student-facing, 14 staff-only)
+  - 32 total fields (13 student-facing, 14 staff processing, 5 payment recording)
   - Item-level security ensuring students see only their requests
   - Attachment support for 3D model files
   - Version history enabled for change tracking
@@ -162,7 +162,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Description:** Streamlined interface for project specification
 - **User Benefit:** Easy submission without technical complexity
 - **Acceptance Criteria:**
-  - 12 student-facing fields focused on project definition
+  - 13 student-facing fields focused on project definition
   - Auto-populated user information (Student, StudentEmail)
   - Default status assignment ("Uploaded")
   - File attachment capability with validation guidance
@@ -374,7 +374,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - SharePoint site with Owner-level permissions
 - Power Platform environment configured
 - Fabrication Lab staff accounts and role assignments
-- Email service (coad-Fabrication Lab@lsu.edu) configured
+- Email service (coad-fablab@lsu.edu) configured
 
 ### Risk Factors
 - Microsoft 365 service availability and limitations
@@ -441,7 +441,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - LSU Microsoft 365 environment has necessary licensing and permissions
 - Staff will have Site Owner access for implementation and maintenance
 - Current 3D printer inventory (4 printers) remains stable for MVP
-- Email service (coad-Fabrication Lab@lsu.edu) is available and properly configured
+- Email service (coad-fablab@lsu.edu) is available and properly configured
 - Student and staff adoption will be supported by change management process
 - File storage requirements will remain within SharePoint attachment limits
 
@@ -923,6 +923,35 @@ This enables:
 - Identifying calibration issues
 - Revenue reconciliation with TigerCASH system
 - Monthly payment reporting
+
+#### Partial Pickups
+
+**Scenario:** Students sometimes submit multiple files in a single request. They may want to pick up and pay for some completed items while others are still printing, or pick up a portion to work on while waiting for the rest.
+
+**Solution:** The Payment Modal includes a "Partial Pickup" checkbox option.
+
+**Partial Pickup Workflow:**
+1. Student arrives to pick up some (not all) items
+2. Staff clicks "Picked Up" button → Payment Modal opens
+3. Staff enters transaction details for items being taken
+4. Staff **checks "Partial Pickup"** checkbox
+5. Staff confirms → Payment recorded, but **status stays "Completed"**
+6. Job remains visible in queue for remaining items
+7. Student returns later, staff processes another payment
+8. On final pickup, staff leaves checkbox **unchecked** → Status changes to "Paid & Picked Up"
+
+**Behavior Comparison:**
+
+| Checkbox | Status After | Fields Updated | Use When |
+|----------|--------------|----------------|----------|
+| ☐ Unchecked | Paid & Picked Up | FinalWeight, FinalCost, TransactionNumber, PaymentDate, PaymentNotes | Student takes everything |
+| ☑ Checked | Completed (no change) | PaymentNotes (appended) | Student takes partial order |
+
+**Notes:**
+- Multiple partial payments are logged sequentially in PaymentNotes field
+- Each payment entry is tagged with "(PARTIAL)" in the audit log
+- FinalWeight/FinalCost only recorded on final (non-partial) pickup
+- Staff can view payment history in PaymentNotes or StaffNotes fields
 
 #### Notes on Pricing
 

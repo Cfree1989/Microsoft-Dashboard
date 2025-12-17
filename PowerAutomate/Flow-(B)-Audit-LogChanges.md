@@ -1059,8 +1059,8 @@ To customize the email templates:
 
 ### Email Template Customization Points
 Update these sections in the email templates for your lab:
-- **Lab hours**: Currently set to "Monday-Friday 9AM-5PM, Saturday 10AM-2PM"
-- **Lab location**: Currently "Design Building, Room 101"
+- **Lab hours**: Currently set to "Monday-Friday 8:30 AM - 4:30 PM"
+- **Lab location**: Currently "Room 145 Atkinson Hall"
 - **Contact information**: Update any phone numbers or additional contact methods
 - **Pickup procedures**: Modify payment and ID verification requirements
 
