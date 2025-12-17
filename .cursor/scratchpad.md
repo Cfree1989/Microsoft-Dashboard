@@ -8,7 +8,7 @@
 ### ✅ COMPLETED - Core MVP Infrastructure
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **PrintRequests List** | ✅ DONE | 22 columns, views, status formatting |
+| **PrintRequests List** | ✅ DONE | 31 columns (12 student + 14 staff + 5 payment), views, formatting |
 | **AuditLog List** | ✅ DONE | 14 audit columns |
 | **Staff List** | ✅ DONE | Team members populated |
 | **Flow A (PR-Create)** | ✅ DONE | ReqKey generation, filename validation, confirmation emails |
@@ -19,6 +19,7 @@
 ### 🆕 NEW FEATURES DOCUMENTED (Not Yet Built)
 | Component | Purpose | Documentation |
 |-----------|---------|---------------|
+| **Payment Recording Modal** | Record transaction #, amount, date, notes at pickup | `PowerApps/StaffDashboard-App-Spec.md` (Step 13) |
 | **FileUploads List** | Staging area for student file updates | `SharePoint/FileUploads-List-Setup.md` |
 | **RequestComments List** | Bi-directional staff/student messaging with email threading | `SharePoint/RequestComments-List-Setup.md` |
 | **Flow D (PR-Message)** | Send threaded email notifications to students | `PowerAutomate/Flow-(D)-Message-Notifications.md` |
@@ -26,6 +27,71 @@
 | **Flow F (PR-ValidateUpload)** | Validate student upload requests (instant flow) | `PowerAutomate/Flow-(F)-ValidateUpload.md` |
 | **Flow G (PR-ProcessUpload)** | Process validated uploads, move files to PrintRequest | `PowerAutomate/Flow-(G)-ProcessUpload.md` |
 | **Student Upload Portal** | Separate app for replacement/additional file uploads | `PowerApps/StudentUploadPortal-App-Spec.md` |
+
+---
+
+## 💳 PAYMENT RECORDING FEATURE (IMPLEMENTED)
+
+**Status:** ✅ DOCUMENTED | **Priority:** High | **Estimated Time:** 2 hours to build
+
+### Background & Motivation
+Staff currently marks items as "Paid & Picked Up" with a single button click. No payment details are recorded, making it impossible to:
+- Reconcile payments with TigerCASH system
+- Generate monthly payment reports
+- Track actual vs estimated revenue (estimate accuracy)
+- Audit payment discrepancies
+
+### Solution: Payment Recording Modal
+When staff clicks "💰 Picked Up", a modal opens requiring:
+1. **Staff Selection** (required) - Who is recording the payment
+2. **Transaction Number** (required) - TigerCASH receipt reference
+3. **Final Weight** (required) - Actual weight of finished print in grams
+4. **Final Cost** (auto-calculated) - From FinalWeight using pricing formula
+5. **Payment Date** (required) - Defaults to today, adjustable
+6. **Payment Notes** (optional) - Discrepancies, special circumstances
+
+### Key Concept: Estimates vs Actuals
+
+| Stage | Weight Field | Cost Field | When Set |
+|-------|--------------|------------|----------|
+| **Estimate** | EstWeight | EstimatedCost | At approval (slicer prediction) |
+| **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
+
+### Implementation Status
+
+| Component | Status | Documentation |
+|-----------|--------|---------------|
+| SharePoint Columns (5 new) | ✅ Documented | `SharePoint/PrintRequests-List-Setup.md` |
+| PRD Data Model Update | ✅ Documented | `FabLab-PRD.md` Appendix A & D |
+| Payment Modal (Step 12C) | ✅ Documented | `PowerApps/StaffDashboard-App-Spec.md` |
+| btnPickedUp Update | ✅ Documented | Opens modal instead of direct Patch |
+
+### New SharePoint Columns (PrintRequests)
+
+| Column | Internal Name | Type | Purpose |
+|--------|---------------|------|---------|
+| TransactionNumber | `TransactionNumber` | Single line text | TigerCASH receipt number |
+| FinalWeight | `FinalWeight` | Number | Actual print weight (grams) |
+| FinalCost | `FinalCost` | Currency | Calculated from FinalWeight |
+| PaymentDate | `PaymentDate` | Date | When payment was recorded |
+| PaymentNotes | `PaymentNotes` | Multi-line text | Discrepancies/notes |
+
+### Benefits
+- ✅ **Accountability:** Every payment has recorded transaction number
+- ✅ **Accuracy Tracking:** Compare EstWeight vs FinalWeight over time
+- ✅ **Revenue Reconciliation:** FinalCost provides actual charges for reports
+- ✅ **Monthly Reports:** PaymentDate enables date-filtered exports
+- ✅ **Audit Trail:** StaffNotes capture payment details
+
+### Future Enhancement: Monthly Report Flow
+**Option A:** Power Automate scheduled flow (1st of month)
+- Query "Paid & Picked Up" from previous month
+- Export to Excel in SharePoint
+- Email to lab manager
+
+**Option B:** SharePoint View + Manual Export
+- Create "Monthly Payments" view filtered by PaymentDate
+- Staff exports to Excel when needed
 
 ---
 
@@ -453,7 +519,7 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 | RequestComments List | `SharePoint/RequestComments-List-Setup.md` | 13 columns for threaded conversations |
 | Flow D (PR-Message) | `PowerAutomate/Flow-(D)-Message-Notifications.md` | Send threaded emails with `[REQ-00001]` format |
 | Flow E (PR-Mailbox) | `PowerAutomate/Flow-(E)-Mailbox-InboundReplies.md` | Parse inbound replies, validate sender |
-| Power Apps Message Modal | `PowerApps/StaffDashboard-App-Spec.md` Step 16 | Staff sends messages from dashboard |
+| Power Apps Message Modal | `PowerApps/StaffDashboard-App-Spec.md` Step 17 | Staff sends messages from dashboard |
 
 **Phase 3C: File Upload System** (Student file replacement/addition)
 | Component | Documentation | Purpose |
@@ -510,11 +576,26 @@ Building a **comprehensive 3D Print Request Queue Management System** for LSU's 
 | **Flow G (PR-ProcessUpload)** | File processing and transfer | 📄 Documented |
 
 ### SharePoint Internal Field Names (Critical)
+
+**Estimate Fields (set at approval):**
 | Display Name | Internal Name | Type |
 |--------------|---------------|------|
 | EstimatedWeight | `EstWeight` | Number |
 | EstimatedTime | `EstHours` | Number |
 | EstimatedCost | `EstimatedCost` | Currency |
+
+**Payment Fields (set at pickup):**
+| Display Name | Internal Name | Type |
+|--------------|---------------|------|
+| TransactionNumber | `TransactionNumber` | Text |
+| FinalWeight | `FinalWeight` | Number |
+| FinalCost | `FinalCost` | Currency |
+| PaymentDate | `PaymentDate` | Date |
+| PaymentNotes | `PaymentNotes` | Multi-line |
+
+**Other Key Fields:**
+| Display Name | Internal Name | Type |
+|--------------|---------------|------|
 | Status | `Status` | Choice |
 | Student | `Student` | Person |
 | ReqKey | `ReqKey` | Text |
@@ -528,7 +609,9 @@ Uploaded → Pending → Ready to Print → Printing → Completed → Paid & Pi
 
 ### Pricing Formula
 ```
-Cost = Max($3.00, Weight × Rate)
+Estimate: EstimatedCost = Max($3.00, EstWeight × Rate)
+Actual:   FinalCost = Max($3.00, FinalWeight × Rate)
+
   - Filament: $0.10/gram
   - Resin: $0.20/gram
   - Minimum: $3.00

@@ -23,18 +23,19 @@
 12. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
 13. [Building the Approval Modal](#step-11-building-the-approval-modal)
 14. [Building the Archive Modal](#step-12-building-the-archive-modal)
-15. [Adding Search and Filters](#step-13-adding-search-and-filters)
-16. [Adding the Lightbulb Attention System](#step-14-adding-the-lightbulb-attention-system)
-17. [Adding the Attachments Modal](#step-15-adding-the-attachments-modal)
-18. [Adding the Messaging System](#step-16-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
-    - [Step 16A: Adding the Data Connection](#step-16a-adding-the-data-connection)
-    - [Step 16B: Adding Messages Display to Job Cards](#step-16b-adding-messages-display-to-job-cards)
-    - [Step 16C: Building the Message Modal](#step-16c-building-the-message-modal)
-19. [Publishing the App](#step-17-publishing-the-app)
-20. [Testing the App](#step-18-testing-the-app)
-21. [Troubleshooting](#troubleshooting)
-22. [Quick Reference Card](#quick-reference-card)
-23. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
+15. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal) ← **💳 NEW: Records transaction details at pickup**
+16. [Adding Search and Filters](#step-14-adding-search-and-filters)
+17. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
+18. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
+19. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
+    - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
+    - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
+    - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
+20. [Publishing the App](#step-18-publishing-the-app)
+21. [Testing the App](#step-19-testing-the-app)
+22. [Troubleshooting](#troubleshooting)
+23. [Quick Reference Card](#quick-reference-card)
+24. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
 
 ---
 
@@ -181,10 +182,11 @@ Set(varMeName, User().FullName);
 
 // === STAFF DATA ===
 // Load active staff members into a collection for dropdowns
-ClearCollect(colStaff, Filter(Staff, Active = true));
+// Note: ForAll flattens the Person column so dropdowns can display names
+ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active}));
 
 // Check if current user is a staff member
-Set(varIsStaff, CountRows(Filter(colStaff, Lower(Member.Email) = varMeEmail)) > 0);
+Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
 
 // === STATUS DEFINITIONS ===
 // All possible statuses in the system
@@ -248,7 +250,7 @@ RemoveIf(colExpanded, true);  // Start with empty collection
 |----------|---------|------|
 | `varMeEmail` | Current user's email (lowercase) | Text |
 | `varMeName` | Current user's display name | Text |
-| `colStaff` | Collection of active staff members | Table |
+| `colStaff` | Collection of active staff (flattened: MemberName, MemberEmail, Role, Active) | Table |
 | `varIsStaff` | Is current user a staff member? | Boolean |
 | `varStatuses` | All status options | Table |
 | `varQuickQueue` | Active queue statuses | Table |
@@ -373,11 +375,13 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     btnRejectCancel                   ← Step 10
     txtRejectComments                 ← Step 10
     lblRejectCommentsLabel            ← Step 10
-    chkComplexity                     ← Step 10
-    chkCopyright                      ← Step 10
-    chkDetail                         ← Step 10
-    chkSafety                         ← Step 10
-    chkIncomplete                     ← Step 10
+    chkNotJoined                      ← Step 10
+    chkOverhangs                      ← Step 10
+    chkMessy                          ← Step 10
+    chkScale                          ← Step 10
+    chkNotSolid                       ← Step 10
+    chkGeometry                       ← Step 10
+    chkTooSmall                       ← Step 10
     lblRejectReasonsLabel             ← Step 10
     ddRejectStaff                     ← Step 10
     lblRejectStaffLabel               ← Step 10
@@ -1437,6 +1441,41 @@ Patch(PrintRequests, ThisItem, {
 Notify("Marked as picked up!", NotificationType.Success)
 ```
 
+### Edit Details Button (btnEditDetails)
+
+25. Click **+ Insert** → **Button**.
+26. **Rename it:** `btnEditDetails`
+27. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✏️ Edit"` |
+| X | `Parent.TemplateWidth - 75` |
+| Y | `162` |
+| Width | `65` |
+| Height | `26` |
+| Fill | `Color.White` |
+| Color | `RGBA(0, 120, 212, 1)` |
+| BorderColor | `RGBA(0, 120, 212, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Size | `9` |
+| Visible | `ThisItem.Status.Value <> "Pending"` |
+
+28. Set **OnSelect:**
+
+```powerfx
+Set(varShowDetailsModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
+
+> 💡 **Visibility:** Available on ALL status tabs except Pending. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
+
+---
+
 ### Empty State Label (lblEmptyState)
 
 **What this does:** Shows a friendly message when no requests match the current filter, instead of showing a blank area.
@@ -1480,11 +1519,13 @@ scrDashboard
 ├── lblRejectStaffLabel       ← "Performing Action As: *"
 ├── ddRejectStaff             ← Staff dropdown
 ├── lblRejectReasonsLabel     ← "Rejection Reasons..."
-├── chkIncomplete             ← Checkbox: Incomplete description
-├── chkSafety                 ← Checkbox: Safety concerns
-├── chkDetail                 ← Checkbox: Insufficient detail
-├── chkCopyright              ← Checkbox: Copyright concerns
-├── chkComplexity             ← Checkbox: Too complex
+├── chkTooSmall               ← Checkbox: Features too small/thin
+├── chkGeometry               ← Checkbox: Geometry is problematic
+├── chkNotSolid               ← Checkbox: Open model/not solid
+├── chkScale                  ← Checkbox: Scale is wrong
+├── chkMessy                  ← Checkbox: Model is messy
+├── chkOverhangs              ← Checkbox: Excessive overhangs
+├── chkNotJoined              ← Checkbox: Parts not joined
 ├── lblRejectCommentsLabel    ← "Additional Comments..."
 ├── txtRejectComments         ← Multi-line text input
 ├── btnRejectCancel           ← Cancel button
@@ -1520,9 +1561,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 550) / 2` |
+| Y | `(Parent.Height - 610) / 2` |
 | Width | `600` |
-| Height | `550` |
+| Height | `610` |
 | Fill | `Color.White` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -1603,10 +1644,12 @@ scrDashboard
 | Y | `recRejectModal.Y + 115` |
 | Width | `300` |
 | Height | `36` |
-| DisplayFields | `["Member"]` |
-| SearchFields | `["Member"]` |
-| DefaultSelectedItems | `Filter(colStaff, Lower(Member.Email) = varMeEmail)` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
 | Visible | `varShowRejectModal > 0` |
+
+> ⚠️ **Important:** You must **Run OnStart** first before setting DisplayFields. Otherwise Power Apps will auto-change it to `["ComplianceAssetId"]` because it doesn't recognize the collection columns yet.
 
 ---
 
@@ -1622,6 +1665,7 @@ scrDashboard
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 160` |
 | Width | `400` |
+| Height | `32` |
 | FontWeight | `FontWeight.Semibold` |
 | Visible | `varShowRejectModal > 0` |
 
@@ -1629,15 +1673,17 @@ scrDashboard
 
 ### Rejection Reason Checkboxes
 
-Add 5 checkboxes. For each, click **+ Insert** → **Checkbox**:
+Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 
 | # | Control Name | Text | X | Y |
 |---|--------------|------|---|---|
-| 23 | `chkIncomplete` | `"Incomplete project description"` | `recRejectModal.X + 20` | `recRejectModal.Y + 185` |
-| 24 | `chkSafety` | `"Safety concerns with design"` | `recRejectModal.X + 20` | `recRejectModal.Y + 215` |
-| 25 | `chkDetail` | `"Insufficient detail/resolution"` | `recRejectModal.X + 20` | `recRejectModal.Y + 245` |
-| 26 | `chkCopyright` | `"Copyright/IP concerns"` | `recRejectModal.X + 20` | `recRejectModal.Y + 275` |
-| 27 | `chkComplexity` | `"Too complex for equipment"` | `recRejectModal.X + 20` | `recRejectModal.Y + 305` |
+| 23 | `chkTooSmall` | `"Features are too small or too thin"` | `recRejectModal.X + 20` | `recRejectModal.Y + 185` |
+| 24 | `chkGeometry` | `"The geometry is problematic"` | `recRejectModal.X + 20` | `recRejectModal.Y + 215` |
+| 25 | `chkNotSolid` | `"Open model/not solid geometry"` | `recRejectModal.X + 20` | `recRejectModal.Y + 245` |
+| 26 | `chkScale` | `"The scale is wrong"` | `recRejectModal.X + 20` | `recRejectModal.Y + 275` |
+| 27 | `chkMessy` | `"The model is messy"` | `recRejectModal.X + 20` | `recRejectModal.Y + 305` |
+| 28 | `chkOverhangs` | `"Excessive overhangs requiring too much support"` | `recRejectModal.X + 20` | `recRejectModal.Y + 335` |
+| 29 | `chkNotJoined` | `"Model parts are not joined together"` | `recRejectModal.X + 20` | `recRejectModal.Y + 365` |
 
 Set **Visible** for all: `varShowRejectModal > 0`
 
@@ -1645,15 +1691,15 @@ Set **Visible** for all: `varShowRejectModal > 0`
 
 ### Comments Label (lblRejectCommentsLabel)
 
-28. Click **+ Insert** → **Text label**.
-29. **Rename it:** `lblRejectCommentsLabel`
-30. Set properties:
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblRejectCommentsLabel`
+32. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Additional Comments (optional):"` |
 | X | `recRejectModal.X + 20` |
-| Y | `recRejectModal.Y + 340` |
+| Y | `recRejectModal.Y + 400` |
 | Width | `300` |
 | FontWeight | `FontWeight.Semibold` |
 | Visible | `varShowRejectModal > 0` |
@@ -1662,15 +1708,15 @@ Set **Visible** for all: `varShowRejectModal > 0`
 
 ### Comments Text Input (txtRejectComments)
 
-31. Click **+ Insert** → **Text input**.
-32. **Rename it:** `txtRejectComments`
-33. Set properties:
+33. Click **+ Insert** → **Text input**.
+34. **Rename it:** `txtRejectComments`
+35. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recRejectModal.X + 20` |
-| Y | `recRejectModal.Y + 365` |
+| Y | `recRejectModal.Y + 425` |
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Provide specific feedback for the student..."` |
@@ -1680,48 +1726,50 @@ Set **Visible** for all: `varShowRejectModal > 0`
 
 ### Cancel Button (btnRejectCancel)
 
-34. Click **+ Insert** → **Button**.
-35. **Rename it:** `btnRejectCancel`
-36. Set properties:
+36. Click **+ Insert** → **Button**.
+37. **Rename it:** `btnRejectCancel`
+38. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recRejectModal.X + 300` |
-| Y | `recRejectModal.Y + 490` |
+| Y | `recRejectModal.Y + 550` |
 | Width | `120` |
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
 | Visible | `varShowRejectModal > 0` |
 
-37. Set **OnSelect:**
+39. Set **OnSelect:**
 
 ```powerfx
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
-Reset(chkIncomplete);
-Reset(chkSafety);
-Reset(chkDetail);
-Reset(chkCopyright);
-Reset(chkComplexity)
+Reset(chkTooSmall);
+Reset(chkGeometry);
+Reset(chkNotSolid);
+Reset(chkScale);
+Reset(chkMessy);
+Reset(chkOverhangs);
+Reset(chkNotJoined)
 ```
 
 ---
 
 ### Confirm Rejection Button (btnRejectConfirm)
 
-38. Click **+ Insert** → **Button**.
-39. **Rename it:** `btnRejectConfirm`
-40. Set properties:
+40. Click **+ Insert** → **Button**.
+41. **Rename it:** `btnRejectConfirm`
+42. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"✗ Confirm Rejection"` |
 | X | `recRejectModal.X + 430` |
-| Y | `recRejectModal.Y + 490` |
+| Y | `recRejectModal.Y + 550` |
 | Width | `150` |
 | Height | `36` |
 | Fill | `RGBA(209, 52, 56, 1)` |
@@ -1729,16 +1777,18 @@ Reset(chkComplexity)
 | Visible | `varShowRejectModal > 0` |
 | DisplayMode | `If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
-41. Set **OnSelect:**
+43. Set **OnSelect:**
 
 ```powerfx
 // Build rejection reasons string
 Set(varRejectionReasons, 
-    If(chkIncomplete.Value, "Incomplete description; ", "") &
-    If(chkSafety.Value, "Safety concerns; ", "") &
-    If(chkDetail.Value, "Insufficient detail; ", "") &
-    If(chkCopyright.Value, "Copyright concerns; ", "") &
-    If(chkComplexity.Value, "Too complex; ", "")
+    If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
+    If(chkGeometry.Value, "The geometry is problematic; ", "") &
+    If(chkNotSolid.Value, "Open model/not solid geometry; ", "") &
+    If(chkScale.Value, "The scale is wrong; ", "") &
+    If(chkMessy.Value, "The model is messy; ", "") &
+    If(chkOverhangs.Value, "Excessive overhangs requiring too much support; ", "") &
+    If(chkNotJoined.Value, "Model parts are not joined together; ", "")
 );
 
 // Update the SharePoint item
@@ -1747,17 +1797,17 @@ Patch(PrintRequests, varSelectedItem, {
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
     LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.Member.Email,
+        Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
         Department: "",
-        DisplayName: ddRejectStaff.Selected.Member.DisplayName,
-        Email: ddRejectStaff.Selected.Member.Email,
+        DisplayName: ddRejectStaff.Selected.MemberName,
+        Email: ddRejectStaff.Selected.MemberEmail,
         JobTitle: "",
         Picture: ""
     },
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "REJECTED by " & ddRejectStaff.Selected.Member.DisplayName & ": " & 
+        "REJECTED by " & ddRejectStaff.Selected.MemberName & ": " & 
         varRejectionReasons & txtRejectComments.Text & " - " & Text(Now(), "mm/dd/yyyy")
     )
 });
@@ -1769,7 +1819,7 @@ IfError(
         "Rejected",
         "Status",
         "Rejected",
-        ddRejectStaff.Selected.Member.Email
+        ddRejectStaff.Selected.MemberEmail
     ),
     Notify("Could not log rejection.", NotificationType.Error),
     Notify("Request rejected. Student will be notified.", NotificationType.Success)
@@ -1780,11 +1830,13 @@ Set(varShowRejectModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
-Reset(chkIncomplete);
-Reset(chkSafety);
-Reset(chkDetail);
-Reset(chkCopyright);
-Reset(chkComplexity)
+Reset(chkTooSmall);
+Reset(chkGeometry);
+Reset(chkNotSolid);
+Reset(chkScale);
+Reset(chkMessy);
+Reset(chkOverhangs);
+Reset(chkNotJoined)
 ```
 
 ---
@@ -1793,70 +1845,294 @@ Reset(chkComplexity)
 
 **What you're doing:** Creating a dialog for staff to enter weight/time estimates before approving a request.
 
-### Instructions
+### Control Hierarchy
 
-Similar to the rejection modal, build on scrDashboard:
+```
+scrDashboard
+├── recApprovalOverlay        ← Dark semi-transparent background
+├── recApprovalModal          ← White modal box (container)
+├── lblApprovalTitle          ← "Approve Request - REQ-00042"
+├── lblApprovalStudent        ← Student name and email
+├── lblApprovalStaffLabel     ← "Performing Action As: *"
+├── ddApprovalStaff           ← Staff dropdown
+├── lblApprovalWeightLabel    ← "Estimated Weight (grams): *"
+├── txtEstimatedWeight        ← Weight input field
+├── lblWeightValidation       ← Validation error message
+├── lblApprovalTimeLabel      ← "Estimated Print Time (hours):"
+├── txtEstimatedTime          ← Time input field (optional)
+├── lblApprovalCostLabel      ← "Estimated Cost:"
+├── lblApprovalCostValue      ← Auto-calculated cost display
+├── lblApprovalCommentsLabel  ← "Additional Comments:"
+├── txtApprovalComments       ← Multi-line text input
+├── btnApprovalCancel         ← Cancel button
+└── btnApprovalConfirm        ← Confirm Approval button
+```
 
-### Modal Overlay
+---
 
-1. Add **Rectangle** named `recApprovalOverlay`:
-   - Same size as screen, `Fill: RGBA(0, 0, 0, 0.7)`
-   - **Visible:** `varShowApprovalModal > 0`
+### Modal Overlay (recApprovalOverlay)
 
-### Modal Content Box
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recApprovalOverlay`
+4. Set properties:
 
-2. Add **Rectangle** named `recApprovalModal`:
-   - **Width:** `600`, **Height:** `650`
-   - Centered like the reject modal
-   - **Visible:** `varShowApprovalModal > 0`
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowApprovalModal > 0` |
 
-### Modal Title
+---
 
-3. Add label:
-   - **Text:** `"Approve Request - " & varSelectedItem.ReqKey`
-   - **Color:** `RGBA(16, 124, 16, 1)` (green)
+### Modal Content Box (recApprovalModal)
 
-### Staff Dropdown
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recApprovalModal`
+7. Set properties:
 
-4. Add **Combo box** named `ddApprovalStaff`:
-   - Same setup as rejection modal
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 650) / 2` |
+| Width | `600` |
+| Height | `650` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowApprovalModal > 0` |
 
-### Estimated Weight Input
+---
 
-5. Add label: `"Estimated Weight (grams): *"`
-6. Add **Text input** named `txtEstimatedWeight`:
-   - **Format:** `TextFormat.Number`
-   - **HintText:** `"Enter weight in grams (e.g., 25)"`
-   - **Width:** `200`
-   - **Visible:** `varShowApprovalModal > 0`
+### Modal Title (lblApprovalTitle)
 
-7. Add validation label:
-   - **Text:**
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblApprovalTitle`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Approve Request - " & varSelectedItem.ReqKey` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 20` |
+| Width | `560` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(16, 124, 16, 1)` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Student Info (lblApprovalStudent)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblApprovalStudent`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 55` |
+| Width | `560` |
+| Height | `25` |
+| Size | `12` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Staff Label (lblApprovalStaffLabel)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblApprovalStaffLabel`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 90` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Staff Dropdown (ddApprovalStaff)
+
+17. Click **+ Insert** → **Combo box**.
+18. **Rename it:** `ddApprovalStaff`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 115` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowApprovalModal > 0` |
+
+> ⚠️ **Important:** You must **Run OnStart** first before setting DisplayFields. Otherwise Power Apps will auto-change it to `["ComplianceAssetId"]` because it doesn't recognize the collection columns yet.
+
+---
+
+### Weight Label (lblApprovalWeightLabel)
+
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblApprovalWeightLabel`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Estimated Weight (grams): *"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 165` |
+| Width | `250` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Weight Input (txtEstimatedWeight)
+
+23. Click **+ Insert** → **Text input**.
+24. **Rename it:** `txtEstimatedWeight`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Format | `TextFormat.Number` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 190` |
+| Width | `200` |
+| Height | `36` |
+| HintText | `"Enter weight in grams (e.g., 25)"` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Weight Validation Label (lblWeightValidation)
+
+26. Click **+ Insert** → **Text label**.
+27. **Rename it:** `lblWeightValidation`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recApprovalModal.X + 230` |
+| Y | `recApprovalModal.Y + 195` |
+| Width | `200` |
+| Height | `25` |
+| Size | `11` |
+| Color | `RGBA(209, 52, 56, 1)` |
+
+29. Set **Text:**
 
 ```powerfx
 If(
     IsBlank(txtEstimatedWeight.Text), 
-    "Weight is required",
+    "⚠️ Weight is required",
     !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0,
-    "Enter a valid weight > 0",
+    "⚠️ Enter a valid weight > 0",
     ""
 )
 ```
-   - **Color:** `RGBA(209, 52, 56, 1)`
-   - **Visible:** `varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0)`
 
-### Estimated Time Input (Optional)
+30. Set **Visible:**
 
-8. Add label: `"Estimated Print Time (hours): (Optional)"`
-9. Add **Text input** named `txtEstimatedTime`:
-   - Same setup but optional
+```powerfx
+varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0)
+```
 
-### Cost Calculation Display
+---
 
-10. Add label: `"Estimated Cost:"`
-11. Add label for the calculated cost:
+### Time Label (lblApprovalTimeLabel)
 
-**⬇️ FORMULA: Auto-calculates cost based on weight and method**
+31. Click **+ Insert** → **Text label**.
+32. **Rename it:** `lblApprovalTimeLabel`
+33. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Estimated Print Time (hours): (Optional)"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 240` |
+| Width | `300` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Time Input (txtEstimatedTime)
+
+34. Click **+ Insert** → **Text input**.
+35. **Rename it:** `txtEstimatedTime`
+36. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Format | `TextFormat.Number` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 265` |
+| Width | `200` |
+| Height | `36` |
+| HintText | `"Enter hours (e.g., 2.5)"` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Cost Label (lblApprovalCostLabel)
+
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblApprovalCostLabel`
+39. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Estimated Cost:"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 320` |
+| Width | `150` |
+| Height | `25` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Cost Value Display (lblApprovalCostValue)
+
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblApprovalCostValue`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 345` |
+| Width | `200` |
+| Height | `40` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `24` |
+| Color | `RGBA(16, 124, 16, 1)` |
+| Visible | `varShowApprovalModal > 0` |
+
+43. Set **Text:**
 
 ```powerfx
 If(
@@ -1865,7 +2141,7 @@ If(
         Max(
             3.00,
             Value(txtEstimatedWeight.Text) * If(
-                varSelectedItem.Method = "Resin",
+                varSelectedItem.Method.Value = "Resin",
                 0.20,
                 0.10
             )
@@ -1876,26 +2152,94 @@ If(
 )
 ```
 
-12. Style this label with green color and larger font.
+> 💰 **Pricing:** Filament = $0.10/gram, Resin = $0.20/gram, $3.00 minimum
 
-### Comments Input
+---
 
-13. Add **Text input** named `txtApprovalComments`:
-   - **Mode:** `TextMode.MultiLine`
-   - **HintText:** `"Add any special instructions..."`
+### Comments Label (lblApprovalCommentsLabel)
 
-### Cancel Button
+44. Click **+ Insert** → **Text label**.
+45. **Rename it:** `lblApprovalCommentsLabel`
+46. Set properties:
 
-14. Same pattern as rejection modal
+| Property | Value |
+|----------|-------|
+| Text | `"Additional Comments (optional):"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 400` |
+| Width | `300` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowApprovalModal > 0` |
 
-### Confirm Approval Button
+---
 
-15. Add **Button**:
-   - **Text:** `"✓ Confirm Approval"`
-   - **Fill:** `RGBA(16, 124, 16, 1)`
-   - **Color:** `Color.White`
+### Comments Text Input (txtApprovalComments)
 
-16. Set **DisplayMode:**
+47. Click **+ Insert** → **Text input**.
+48. **Rename it:** `txtApprovalComments`
+49. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 425` |
+| Width | `560` |
+| Height | `80` |
+| HintText | `"Add any special instructions for this job..."` |
+| Visible | `varShowApprovalModal > 0` |
+
+---
+
+### Cancel Button (btnApprovalCancel)
+
+50. Click **+ Insert** → **Button**.
+51. **Rename it:** `btnApprovalCancel`
+52. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recApprovalModal.X + 300` |
+| Y | `recApprovalModal.Y + 560` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowApprovalModal > 0` |
+
+53. Set **OnSelect:**
+
+```powerfx
+Set(varShowApprovalModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(txtEstimatedWeight);
+Reset(txtEstimatedTime);
+Reset(txtApprovalComments);
+Reset(ddApprovalStaff)
+```
+
+---
+
+### Confirm Approval Button (btnApprovalConfirm)
+
+54. Click **+ Insert** → **Button**.
+55. **Rename it:** `btnApprovalConfirm`
+56. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Confirm Approval"` |
+| X | `recApprovalModal.X + 430` |
+| Y | `recApprovalModal.Y + 560` |
+| Width | `150` |
+| Height | `36` |
+| Fill | `RGBA(16, 124, 16, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowApprovalModal > 0` |
+
+57. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -1908,9 +2252,7 @@ If(
 )
 ```
 
-17. Set **OnSelect:**
-
-**⬇️ FORMULA: Complete approval logic with cost calculation**
+58. Set **OnSelect:**
 
 ```powerfx
 // Calculate cost
@@ -1918,7 +2260,7 @@ Set(varCalculatedCost,
     Max(
         3.00,
         Value(txtEstimatedWeight.Text) * If(
-            varSelectedItem.Method = "Resin",
+            varSelectedItem.Method.Value = "Resin",
             0.20,
             0.10
         )
@@ -1932,40 +2274,40 @@ Patch(PrintRequests, varSelectedItem, {
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.Member.Email,
+        Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
         Department: "",
-        DisplayName: ddApprovalStaff.Selected.Member.DisplayName,
-        Email: ddApprovalStaff.Selected.Member.Email,
+        DisplayName: ddApprovalStaff.Selected.MemberName,
+        Email: ddApprovalStaff.Selected.MemberEmail,
         JobTitle: "",
         Picture: ""
     },
     LastActionAt: Now(),
-    EstWeight: Value(txtEstimatedWeight.Text),           // Internal name (not EstimatedWeight)
-    EstHours: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),  // Internal name (not EstimatedTime)
+    EstWeight: Value(txtEstimatedWeight.Text),
+    EstHours: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
     EstimatedCost: varCalculatedCost,
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "APPROVED by " & ddApprovalStaff.Selected.Member.DisplayName &
+        "APPROVED by " & ddApprovalStaff.Selected.MemberName &
         ": Weight=" & txtEstimatedWeight.Text & "g, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
         If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
         " - " & Text(Now(), "mm/dd/yyyy")
     )
 });
 
-// Log action
+// Log action via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
         "Approved",
         "Status",
         "Pending",
-        ddApprovalStaff.Selected.Member.Email
+        ddApprovalStaff.Selected.MemberEmail
     ),
     Notify("Could not log approval.", NotificationType.Error),
     Notify("Approved! Student will receive estimate email.", NotificationType.Success)
 );
 
-// Close and reset
+// Close modal and reset
 Set(varShowApprovalModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtEstimatedWeight);
@@ -1974,69 +2316,268 @@ Reset(txtApprovalComments);
 Reset(ddApprovalStaff)
 ```
 
-> 💰 **Pricing:** Filament = $0.10/gram, Resin = $0.20/gram, $3.00 minimum
-
 ---
 
 # STEP 12: Building the Archive Modal
 
 **What you're doing:** Creating a confirmation dialog for archiving completed/rejected requests.
 
-### Instructions
+### Control Hierarchy
 
-Follow the same modal pattern:
+```
+scrDashboard
+├── recArchiveOverlay         ← Dark semi-transparent background
+├── recArchiveModal           ← White modal box (container)
+├── lblArchiveTitle           ← "Archive Request - REQ-00042"
+├── lblArchiveWarning         ← Warning message
+├── lblArchiveStaffLabel      ← "Performing Action As: *"
+├── ddArchiveStaff            ← Staff dropdown
+├── lblArchiveReasonLabel     ← "Reason (optional):"
+├── txtArchiveReason          ← Reason text input
+├── btnArchiveCancel          ← Cancel button
+└── btnArchiveConfirm         ← Confirm Archive button
+```
 
-### Modal Structure
+---
 
-1. Create `recArchiveOverlay` and `recArchiveModal`
-2. **Visible:** `varShowArchiveModal > 0`
-3. **Modal size:** 500×450
+### Modal Overlay (recArchiveOverlay)
 
-### Content
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recArchiveOverlay`
+4. Set properties:
 
-4. Title: `"Archive Request - " & varSelectedItem.ReqKey`
-5. Warning icon and text: `"This will remove the request from active views."`
-6. Staff dropdown: `ddArchiveStaff`
-7. Optional reason: `txtArchiveReason`
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowArchiveModal > 0` |
 
-### Confirm Archive OnSelect
+---
 
-**⬇️ FORMULA: Archive logic**
+### Modal Content Box (recArchiveModal)
+
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recArchiveModal`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 500) / 2` |
+| Y | `(Parent.Height - 400) / 2` |
+| Width | `500` |
+| Height | `400` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Modal Title (lblArchiveTitle)
+
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblArchiveTitle`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Archive Request - " & varSelectedItem.ReqKey` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 20` |
+| Width | `460` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Warning Message (lblArchiveWarning)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblArchiveWarning`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"⚠️ This will remove the request from active views. Archived requests can still be viewed in the Archived filter."` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 60` |
+| Width | `460` |
+| Height | `50` |
+| Size | `12` |
+| Color | `RGBA(150, 100, 0, 1)` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Staff Label (lblArchiveStaffLabel)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblArchiveStaffLabel`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 120` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Staff Dropdown (ddArchiveStaff)
+
+17. Click **+ Insert** → **Combo box**.
+18. **Rename it:** `ddArchiveStaff`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 145` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Reason Label (lblArchiveReasonLabel)
+
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblArchiveReasonLabel`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Reason (optional):"` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 195` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Reason Text Input (txtArchiveReason)
+
+23. Click **+ Insert** → **Text input**.
+24. **Rename it:** `txtArchiveReason`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recArchiveModal.X + 20` |
+| Y | `recArchiveModal.Y + 220` |
+| Width | `460` |
+| Height | `80` |
+| HintText | `"Why is this request being archived?"` |
+| Visible | `varShowArchiveModal > 0` |
+
+---
+
+### Cancel Button (btnArchiveCancel)
+
+26. Click **+ Insert** → **Button**.
+27. **Rename it:** `btnArchiveCancel`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recArchiveModal.X + 200` |
+| Y | `recArchiveModal.Y + 340` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowArchiveModal > 0` |
+
+29. Set **OnSelect:**
 
 ```powerfx
+Set(varShowArchiveModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(txtArchiveReason);
+Reset(ddArchiveStaff)
+```
+
+---
+
+### Confirm Archive Button (btnArchiveConfirm)
+
+30. Click **+ Insert** → **Button**.
+31. **Rename it:** `btnArchiveConfirm`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"📦 Confirm Archive"` |
+| X | `recArchiveModal.X + 330` |
+| Y | `recArchiveModal.Y + 340` |
+| Width | `150` |
+| Height | `36` |
+| Fill | `RGBA(100, 100, 100, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowArchiveModal > 0` |
+| DisplayMode | `If(IsBlank(ddArchiveStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+33. Set **OnSelect:**
+
+```powerfx
+// Update SharePoint item
 Patch(PrintRequests, varSelectedItem, {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.Member.Email,
+        Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.MemberEmail,
         Department: "",
-        DisplayName: ddArchiveStaff.Selected.Member.DisplayName,
-        Email: ddArchiveStaff.Selected.Member.Email,
+        DisplayName: ddArchiveStaff.Selected.MemberName,
+        Email: ddArchiveStaff.Selected.MemberEmail,
         JobTitle: "",
         Picture: ""
     },
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "ARCHIVED by " & ddArchiveStaff.Selected.Member.DisplayName &
+        "ARCHIVED by " & ddArchiveStaff.Selected.MemberName &
         If(!IsBlank(txtArchiveReason.Text), ": " & txtArchiveReason.Text, "") &
         " - " & Text(Now(), "mm/dd/yyyy")
     )
 });
 
+// Log action via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
         "Archived",
         "Status",
         "Archived",
-        ddArchiveStaff.Selected.Member.Email
+        ddArchiveStaff.Selected.MemberEmail
     ),
     Notify("Could not log archive.", NotificationType.Error),
-    Notify("Request archived.", NotificationType.Success)
+    Notify("Request archived successfully.", NotificationType.Success)
 );
 
+// Close modal and reset
 Set(varShowArchiveModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtArchiveReason);
@@ -2047,116 +2588,515 @@ Reset(ddArchiveStaff)
 
 # STEP 12B: Building the Change Print Details Modal
 
-**What you're doing:** Creating a modal that allows staff to change printer and/or color for a job. All changes are optional — staff can update one, both, or neither field.
+**What you're doing:** Creating a modal that allows staff to change Method, Printer, Color, Weight, Hours, and recalculate Cost for a job. All changes are optional — staff can update any combination of fields.
 
-> 💡 **Why this matters:** Provides flexibility while still preventing printer/method mismatches via filtered dropdown.
+> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). Changing Method automatically resets the Printer dropdown to show compatible printers only.
 
-### Instructions
+> ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
 
-### Modal Overlay and Box
+### Control Hierarchy
 
-1. Create `recDetailsOverlay` and `recDetailsModal` following the same pattern as previous modals.
-2. **Visible:** `varShowDetailsModal > 0`
-3. **Modal size:** 500×520
-
-### Modal Title
-
-4. Add label `lblDetailsTitle`:
-   - **Text:** `"Change Print Details - " & varSelectedItem.ReqKey`
-   - **Color:** `RGBA(0, 120, 212, 1)` (blue)
-
-### Current Settings Display
-
-5. Add label `lblDetailsCurrentLabel`:
-   - **Text:** `"Current Settings:"`
-
-6. Add label `lblDetailsCurrent`:
-   - **Text:**
-
-```powerfx
-"Method: " & varSelectedItem.Method.Value & "  |  Printer: " & varSelectedItem.Printer.Value & "  |  Color: " & varSelectedItem.Color.Value
+```
+scrDashboard
+├── recDetailsOverlay         ← Dark semi-transparent background
+├── recDetailsModal           ← White modal box (container)
+├── lblDetailsTitle           ← "Change Print Details - REQ-00042"
+├── lblDetailsCurrentLabel    ← "Current Settings:"
+├── lblDetailsCurrent         ← Shows current settings summary
+├── lblDetailsStaffLabel      ← "Performing Action As: *"
+├── ddDetailsStaff            ← Staff dropdown
+├── lblDetailsMethodLabel     ← "Method:"
+├── ddDetailsMethod           ← Method dropdown (Filament/Resin)
+├── lblDetailsPrinterLabel    ← "Printer:"
+├── ddDetailsPrinter          ← Printer dropdown (filtered by method)
+├── lblDetailsColorLabel      ← "Color:"
+├── ddDetailsColor            ← Color dropdown
+├── lblDetailsWeightLabel     ← "Est. Weight (grams):"
+├── txtDetailsWeight          ← Weight number input
+├── lblDetailsHoursLabel      ← "Est. Hours:"
+├── txtDetailsHours           ← Hours number input
+├── lblDetailsCostLabel       ← "Calculated Cost:"
+├── lblDetailsCostValue       ← Auto-calculated cost display
+├── btnDetailsCancel          ← Cancel button
+└── btnDetailsConfirm         ← Save Changes button
 ```
 
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Color:** `RGBA(80, 80, 80, 1)`
+---
 
-### Staff Dropdown
+### Modal Overlay (recDetailsOverlay)
 
-7. Add **Combo box** named `ddDetailsStaff`:
-   - Same setup as other modals (Items = colStaff, etc.)
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recDetailsOverlay`
+4. Set properties:
 
-### Printer Dropdown (METHOD-FILTERED, OPTIONAL)
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowDetailsModal > 0` |
 
-8. Add label: `"Printer: (leave blank to keep current)"`
+---
 
-9. Add **Combo box** named `ddDetailsPrinter`:
-   - **Width:** `350`
-   - **Height:** `40`
+### Modal Content Box (recDetailsModal)
 
-10. Set **Items** property (filtered by Method):
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recDetailsModal`
+7. Set properties:
 
-**⬇️ FORMULA: Filters printers based on job's Method**
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 550) / 2` |
+| Y | `(Parent.Height - 620) / 2` |
+| Width | `550` |
+| Height | `620` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Modal Title (lblDetailsTitle)
+
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblDetailsTitle`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Change Print Details - " & varSelectedItem.ReqKey` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 20` |
+| Width | `460` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(0, 120, 212, 1)` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Current Settings Label (lblDetailsCurrentLabel)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblDetailsCurrentLabel`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Current Settings:"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 55` |
+| Width | `150` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Current Settings Display (lblDetailsCurrent)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblDetailsCurrent`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 75` |
+| Width | `510` |
+| Height | `30` |
+| Size | `10` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Visible | `varShowDetailsModal > 0` |
+
+17. Set **Text:**
+
+```powerfx
+varSelectedItem.Method.Value & " | " & 
+Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & " | " &
+varSelectedItem.Color.Value & " | " &
+If(IsBlank(varSelectedItem.EstWeight), "No weight", Text(varSelectedItem.EstWeight) & "g") & " | " &
+If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00"))
+```
+
+---
+
+### Staff Label (lblDetailsStaffLabel)
+
+18. Click **+ Insert** → **Text label**.
+19. **Rename it:** `lblDetailsStaffLabel`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 115` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Staff Dropdown (ddDetailsStaff)
+
+21. Click **+ Insert** → **Combo box**.
+22. **Rename it:** `ddDetailsStaff`
+23. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 138` |
+| Width | `250` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Method Label (lblDetailsMethodLabel)
+
+24. Click **+ Insert** → **Text label**.
+25. **Rename it:** `lblDetailsMethodLabel`
+26. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Method:"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 185` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Method Dropdown (ddDetailsMethod)
+
+27. Click **+ Insert** → **Combo box**.
+28. **Rename it:** `ddDetailsMethod`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Choices([@PrintRequests].Method)` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 208` |
+| Width | `150` |
+| Height | `36` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowDetailsModal > 0` |
+
+> 💡 **Leaving empty:** `DefaultSelectedItems: Blank()` means no pre-selection. Staff can leave it empty to keep the current method.
+
+> ⚠️ **Important:** Changing Method resets the Printer dropdown to show only compatible printers.
+
+---
+
+### Printer Label (lblDetailsPrinterLabel)
+
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblDetailsPrinterLabel`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Printer:"` |
+| X | `recDetailsModal.X + 190` |
+| Y | `recDetailsModal.Y + 185` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Printer Dropdown (ddDetailsPrinter)
+
+33. Click **+ Insert** → **Combo box**.
+34. **Rename it:** `ddDetailsPrinter`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 190` |
+| Y | `recDetailsModal.Y + 208` |
+| Width | `340` |
+| Height | `36` |
+| DisplayFields | `["Value"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowDetailsModal > 0` |
+
+36. Set **Items** (filtered by Method — uses new method if selected, otherwise current):
 
 ```powerfx
 Filter(
     Choices([@PrintRequests].Printer),
-    If(
-        // Filament jobs → show only FDM printers
-        varSelectedItem.Method.Value = "Filament",
-        Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
-        // Resin jobs → show only resin printers
-        varSelectedItem.Method.Value = "Resin",
-        Value = "Form 3 (5.7×5.7×7.3in)",
-        // Fallback: show all
-        true
+    With(
+        {selectedMethod: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
+        If(
+            selectedMethod = "Filament",
+            Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
+            selectedMethod = "Resin",
+            Value = "Form 3 (5.7×5.7×7.3in)",
+            true
+        )
     )
 )
 ```
 
-11. Set **DisplayFields:** `["Value"]`
-12. Set **SelectMultiple:** `false`
-13. Set **AllowEmptySelection:** `true`
+> 💡 **Dynamic filtering:** If staff selects a new Method, the Printer dropdown immediately updates to show only compatible printers.
 
-### Color Dropdown (OPTIONAL)
+---
 
-14. Add label: `"Color: (leave blank to keep current)"`
+### Color Label (lblDetailsColorLabel)
 
-15. Add **Combo box** named `ddDetailsColor`:
-   - **Width:** `350`
-   - **Height:** `40`
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblDetailsColorLabel`
+39. Set properties:
 
-16. Set **Items:**
+| Property | Value |
+|----------|-------|
+| Text | `"Color:"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 255` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Color Dropdown (ddDetailsColor)
+
+40. Click **+ Insert** → **Combo box**.
+41. **Rename it:** `ddDetailsColor`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Choices([@PrintRequests].Color)` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 278` |
+| Width | `200` |
+| Height | `36` |
+| DisplayFields | `["Value"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Weight Label (lblDetailsWeightLabel)
+
+43. Click **+ Insert** → **Text label**.
+44. **Rename it:** `lblDetailsWeightLabel`
+45. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Est. Weight (g):"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 325` |
+| Width | `130` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Weight Input (txtDetailsWeight)
+
+46. Click **+ Insert** → **Text input**.
+47. **Rename it:** `txtDetailsWeight`
+48. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 348` |
+| Width | `120` |
+| Height | `36` |
+| Format | `TextFormat.Number` |
+| HintText | `"e.g., 25"` |
+| Default | `If(IsBlank(varSelectedItem.EstWeight), "", Text(varSelectedItem.EstWeight))` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Hours Label (lblDetailsHoursLabel)
+
+49. Click **+ Insert** → **Text label**.
+50. **Rename it:** `lblDetailsHoursLabel`
+51. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Est. Hours:"` |
+| X | `recDetailsModal.X + 160` |
+| Y | `recDetailsModal.Y + 325` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Hours Input (txtDetailsHours)
+
+52. Click **+ Insert** → **Text input**.
+53. **Rename it:** `txtDetailsHours`
+54. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 160` |
+| Y | `recDetailsModal.Y + 348` |
+| Width | `100` |
+| Height | `36` |
+| Format | `TextFormat.Number` |
+| HintText | `"e.g., 2.5"` |
+| Default | `If(IsBlank(varSelectedItem.EstHours), "", Text(varSelectedItem.EstHours))` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Cost Label (lblDetailsCostLabel)
+
+55. Click **+ Insert** → **Text label**.
+56. **Rename it:** `lblDetailsCostLabel`
+57. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Calculated Cost:"` |
+| X | `recDetailsModal.X + 280` |
+| Y | `recDetailsModal.Y + 325` |
+| Width | `130` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowDetailsModal > 0` |
+
+---
+
+### Cost Value Display (lblDetailsCostValue)
+
+58. Click **+ Insert** → **Text label**.
+59. **Rename it:** `lblDetailsCostValue`
+60. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 280` |
+| Y | `recDetailsModal.Y + 348` |
+| Width | `150` |
+| Height | `36` |
+| Size | `18` |
+| FontWeight | `FontWeight.Bold` |
+| Color | `RGBA(16, 124, 16, 1)` |
+| Visible | `varShowDetailsModal > 0` |
+
+61. Set **Text** (auto-calculates based on weight and method):
 
 ```powerfx
-Choices([@PrintRequests].Color)
+With(
+    {
+        weight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, 
+                   Value(txtDetailsWeight.Text), 
+                   varSelectedItem.EstWeight),
+        method: If(!IsBlank(ddDetailsMethod.Selected), 
+                   ddDetailsMethod.Selected.Value, 
+                   varSelectedItem.Method.Value)
+    },
+    If(
+        IsBlank(weight) || weight <= 0,
+        "$3.00 (min)",
+        "$" & Text(
+            Max(3.00, weight * If(method = "Resin", 0.20, 0.10)),
+            "[$-en-US]#,##0.00"
+        )
+    )
+)
 ```
 
-17. Set **DisplayFields:** `["Value"]`
-18. Set **SelectMultiple:** `false`
-19. Set **AllowEmptySelection:** `true`
+---
 
-### Cancel Button
+### Cancel Button (btnDetailsCancel)
 
-20. Add cancel button `btnDetailsCancel`:
-   - **Text:** `"Cancel"`
-   - **OnSelect:** `Set(varShowDetailsModal, 0); Reset(ddDetailsPrinter); Reset(ddDetailsColor); Reset(ddDetailsStaff)`
+62. Click **+ Insert** → **Button**.
+63. **Rename it:** `btnDetailsCancel`
+64. Set properties:
 
-### Save Changes Button
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recDetailsModal.X + 230` |
+| Y | `recDetailsModal.Y + 560` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowDetailsModal > 0` |
 
-21. Add **Button** `btnDetailsConfirm`:
-   - **Text:** `"✓ Save Changes"`
-   - **Fill:** `RGBA(0, 120, 212, 1)` (blue)
-   - **Color:** `Color.White`
+65. Set **OnSelect:**
 
-22. Set **DisplayMode:**
+```powerfx
+Set(varShowDetailsModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(ddDetailsStaff);
+Reset(ddDetailsMethod);
+Reset(ddDetailsPrinter);
+Reset(ddDetailsColor);
+Reset(txtDetailsWeight);
+Reset(txtDetailsHours)
+```
+
+---
+
+### Save Changes Button (btnDetailsConfirm)
+
+66. Click **+ Insert** → **Button**.
+67. **Rename it:** `btnDetailsConfirm`
+68. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Save Changes"` |
+| X | `recDetailsModal.X + 360` |
+| Y | `recDetailsModal.Y + 560` |
+| Width | `170` |
+| Height | `36` |
+| Fill | `RGBA(0, 120, 212, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowDetailsModal > 0` |
+
+69. Set **DisplayMode:**
 
 ```powerfx
 If(
     !IsBlank(ddDetailsStaff.Selected) && 
     (
         // At least one field must be changed
+        (!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value) ||
         (!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value) ||
-        (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value)
+        (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value) ||
+        (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstWeight, 0)) ||
+        (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstHours, 0))
     ),
     DisplayMode.Edit,
     DisplayMode.Disabled
@@ -2165,98 +3105,636 @@ If(
 
 > 💡 Button is enabled only when staff is selected AND at least one field is being changed.
 
-23. Set **OnSelect:**
-
-**⬇️ FORMULA: Complete change logic with audit logging**
+70. Set **OnSelect:**
 
 ```powerfx
+// Calculate new cost based on weight and method
+Set(varNewMethod, If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value));
+Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstWeight));
+Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(3.00, varNewWeight * If(varNewMethod = "Resin", 0.20, 0.10))));
+
 // Build change description for audit
 Set(varChangeDesc, "");
-
-// Track what changed
+If(!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value,
+    Set(varChangeDesc, "Method: " & varSelectedItem.Method.Value & " → " & ddDetailsMethod.Selected.Value));
 If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value,
-    Set(varChangeDesc, "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value)
-);
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value));
 If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
-    Set(varChangeDesc, 
-        If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & 
-        "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value
-    )
-);
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
+If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstWeight, 0),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Weight: " & Coalesce(varSelectedItem.EstWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
+If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstHours, 0),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Hours: " & Coalesce(varSelectedItem.EstHours, 0) & " → " & txtDetailsHours.Text));
 
-// Update SharePoint item (only changed fields)
+// Update SharePoint item
 Patch(
     PrintRequests,
     varSelectedItem,
     {
+        Method: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected, varSelectedItem.Method),
         Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
         Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
+        EstWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstWeight),
+        EstHours: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstHours),
+        EstimatedCost: varNewCost,
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
         LastActionBy: {
-            Claims: "i:0#.f|membership|" & Lower(LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email),
+            Claims: "i:0#.f|membership|" & ddDetailsStaff.Selected.MemberEmail,
             Department: "",
-            DisplayName: ddDetailsStaff.Selected.DisplayName,
-            Email: LookUp(colStaff, DisplayName = ddDetailsStaff.Selected.DisplayName).Email,
+            DisplayName: ddDetailsStaff.Selected.MemberName,
+            Email: ddDetailsStaff.Selected.MemberEmail,
             JobTitle: "",
             Picture: ""
         },
-        LastActionAt: Now()
+        LastActionAt: Now(),
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            "UPDATED by " & ddDetailsStaff.Selected.MemberName & ": " & varChangeDesc & " - " & Text(Now(), "mm/dd/yyyy")
+        )
     }
 );
 
 // Log to audit via Flow C
-'PR-Action'.Run(
-    varSelectedItem.ID,
-    "Details Changed",
-    ddDetailsStaff.Selected.DisplayName,
-    "Power Apps",
-    varChangeDesc
+IfError(
+    'Flow-(C)-Action-LogAction'.Run(
+        Text(varSelectedItem.ID),
+        "Details Changed",
+        "Details",
+        varChangeDesc,
+        ddDetailsStaff.Selected.MemberEmail
+    ),
+    Notify("Could not log changes.", NotificationType.Error),
+    Notify("Print details updated successfully!", NotificationType.Success)
 );
 
 // Close modal and reset
 Set(varShowDetailsModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(ddDetailsStaff);
+Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
-Reset(ddDetailsStaff);
-Notify("Print details updated.", NotificationType.Success)
+Reset(txtDetailsWeight);
+Reset(txtDetailsHours)
+```
+
+> 💡 **Cost recalculation:** When weight or method changes, cost is automatically recalculated using the formula: `Max($3.00, weight × rate)` where rate is $0.10/g for Filament and $0.20/g for Resin
+
+---
+
+# STEP 12C: Building the Payment Recording Modal
+
+**What you're doing:** Creating a modal that captures payment details when staff marks an item as "Picked Up". This ensures transaction numbers, actual weights, and final costs are recorded for accounting and reconciliation.
+
+> 💡 **Why this matters:** Previously, clicking "Picked Up" immediately changed the status without recording any payment details. This modal requires staff to enter the actual weight (measured from the finished print), which auto-calculates the final cost, plus the TigerCASH transaction number for reconciliation.
+
+> ⚠️ **Trigger:** This modal opens when staff clicks the "💰 Picked Up" button on items with Status = "Completed".
+
+### Key Concept: Estimates vs Actuals
+
+| Stage | Weight Field | Cost Field | When Set |
+|-------|--------------|------------|----------|
+| **Estimate** | EstWeight | EstimatedCost | At approval (slicer prediction) |
+| **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
+
+### Control Hierarchy
+
+```
+scrDashboard
+├── recPaymentOverlay         ← Dark semi-transparent background
+├── recPaymentModal           ← White modal box (container)
+├── lblPaymentTitle           ← "Record Payment - REQ-00042"
+├── lblPaymentStudent         ← Student name and estimated vs final info
+├── lblPaymentStaffLabel      ← "Performing Action As: *"
+├── ddPaymentStaff            ← Staff dropdown
+├── lblPaymentTransLabel      ← "Transaction Number: *"
+├── txtPaymentTransaction     ← Transaction number input (required)
+├── lblPaymentWeightLabel     ← "Final Weight (grams): *"
+├── txtPaymentWeight          ← Weight input (pre-filled with EstWeight)
+├── lblPaymentCostLabel       ← "Final Cost:"
+├── lblPaymentCostValue       ← Auto-calculated cost display
+├── lblPaymentDateLabel       ← "Payment Date: *"
+├── dpPaymentDate             ← Date picker (default: Today())
+├── lblPaymentNotesLabel      ← "Payment Notes (optional):"
+├── txtPaymentNotes           ← Multi-line text input
+├── btnPaymentCancel          ← Cancel button
+└── btnPaymentConfirm         ← Record Payment button
 ```
 
 ---
 
-### Adding the Change Details Button to Job Cards
+### Modal Overlay (recPaymentOverlay)
 
-Go back to `galJobCards` and add the button:
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recPaymentOverlay`
+4. Set properties:
 
-24. Click **+ Insert** → **Button**.
-25. **Rename it:** `btnChangeDetails`
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Modal Content Box (recPaymentModal)
+
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recPaymentModal`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 550) / 2` |
+| Y | `(Parent.Height - 580) / 2` |
+| Width | `550` |
+| Height | `580` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Modal Title (lblPaymentTitle)
+
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblPaymentTitle`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"💳 Record Payment - " & varSelectedItem.ReqKey` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 20` |
+| Width | `510` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(0, 158, 73, 1)` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Student Info (lblPaymentStudent)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblPaymentStudent`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 55` |
+| Width | `510` |
+| Height | `40` |
+| Size | `12` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Visible | `varShowPaymentModal > 0` |
+
+14. Set **Text:**
+
+```powerfx
+"Student: " & varSelectedItem.Student.DisplayName & Char(10) &
+"Estimated: " & Text(varSelectedItem.EstWeight) & "g → $" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
+```
+
+---
+
+### Staff Label (lblPaymentStaffLabel)
+
+15. Click **+ Insert** → **Text label**.
+16. **Rename it:** `lblPaymentStaffLabel`
+17. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 105` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Staff Dropdown (ddPaymentStaff)
+
+18. Click **+ Insert** → **Combo box**.
+19. **Rename it:** `ddPaymentStaff`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 130` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Transaction Label (lblPaymentTransLabel)
+
+21. Click **+ Insert** → **Text label**.
+22. **Rename it:** `lblPaymentTransLabel`
+23. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Transaction Number: *"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 180` |
+| Width | `250` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Transaction Input (txtPaymentTransaction)
+
+24. Click **+ Insert** → **Text input**.
+25. **Rename it:** `txtPaymentTransaction`
 26. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"✏️ Details"` |
-| X | Position after other action buttons |
-| Y | `Parent.TemplateHeight - 50` |
-| Width | `90` |
-| Height | `32` |
-| Fill | `Color.White` |
-| Color | `RGBA(0, 120, 212, 1)` |
-| BorderColor | `RGBA(0, 120, 212, 1)` |
-| BorderThickness | `1` |
-| Visible | `ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]` |
-
-27. Set **OnSelect:**
-
-```powerfx
-Set(varShowDetailsModal, ThisItem.ID);
-Set(varSelectedItem, ThisItem)
-```
-
-> 💡 **When visible:** The Details button appears for jobs that haven't started printing yet (Uploaded, Pending, Ready to Print). Once printing starts, details are locked.
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 205` |
+| Width | `250` |
+| Height | `36` |
+| HintText | `"TigerCASH receipt number"` |
+| Visible | `varShowPaymentModal > 0` |
 
 ---
 
-# STEP 13: Adding Search and Filters
+### Weight Label (lblPaymentWeightLabel)
+
+27. Click **+ Insert** → **Text label**.
+28. **Rename it:** `lblPaymentWeightLabel`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Final Weight (grams): *"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 255` |
+| Width | `250` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Weight Input (txtPaymentWeight)
+
+30. Click **+ Insert** → **Text input**.
+31. **Rename it:** `txtPaymentWeight`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Format | `TextFormat.Number` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 280` |
+| Width | `150` |
+| Height | `36` |
+| HintText | `"Weight in grams"` |
+| Visible | `varShowPaymentModal > 0` |
+
+33. Set **Default:**
+
+```powerfx
+If(
+    varShowPaymentModal > 0 && !IsBlank(varSelectedItem.EstWeight),
+    Text(varSelectedItem.EstWeight),
+    ""
+)
+```
+
+> 💡 **Pre-fill:** The weight input pre-fills with the estimated weight. Staff should update this with the actual measured weight of the finished print.
+
+---
+
+### Cost Label (lblPaymentCostLabel)
+
+34. Click **+ Insert** → **Text label**.
+35. **Rename it:** `lblPaymentCostLabel`
+36. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Final Cost:"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 330` |
+| Width | `150` |
+| Height | `25` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Cost Value Display (lblPaymentCostValue)
+
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblPaymentCostValue`
+39. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 355` |
+| Width | `200` |
+| Height | `40` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `24` |
+| Color | `RGBA(0, 158, 73, 1)` |
+| Visible | `varShowPaymentModal > 0` |
+
+40. Set **Text:**
+
+```powerfx
+If(
+    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
+    "$" & Text(
+        Max(
+            3.00,
+            Value(txtPaymentWeight.Text) * If(
+                varSelectedItem.Method.Value = "Resin",
+                0.20,
+                0.10
+            )
+        ),
+        "[$-en-US]#,##0.00"
+    ),
+    "$3.00 (minimum)"
+)
+```
+
+> 💰 **Pricing:** Same formula as estimates: Filament = $0.10/gram, Resin = $0.20/gram, $3.00 minimum
+
+---
+
+### Date Label (lblPaymentDateLabel)
+
+41. Click **+ Insert** → **Text label**.
+42. **Rename it:** `lblPaymentDateLabel`
+43. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payment Date: *"` |
+| X | `recPaymentModal.X + 300` |
+| Y | `recPaymentModal.Y + 180` |
+| Width | `150` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Date Picker (dpPaymentDate)
+
+44. Click **+ Insert** → **Date picker**.
+45. **Rename it:** `dpPaymentDate`
+46. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 300` |
+| Y | `recPaymentModal.Y + 205` |
+| Width | `200` |
+| Height | `36` |
+| DefaultDate | `Today()` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Notes Label (lblPaymentNotesLabel)
+
+47. Click **+ Insert** → **Text label**.
+48. **Rename it:** `lblPaymentNotesLabel`
+49. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payment Notes (optional):"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 410` |
+| Width | `300` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Notes Text Input (txtPaymentNotes)
+
+50. Click **+ Insert** → **Text input**.
+51. **Rename it:** `txtPaymentNotes`
+52. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 435` |
+| Width | `510` |
+| Height | `60` |
+| HintText | `"Any discrepancies, special circumstances..."` |
+| Visible | `varShowPaymentModal > 0` |
+
+---
+
+### Cancel Button (btnPaymentCancel)
+
+53. Click **+ Insert** → **Button**.
+54. **Rename it:** `btnPaymentCancel`
+55. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recPaymentModal.X + 250` |
+| Y | `recPaymentModal.Y + 520` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowPaymentModal > 0` |
+
+56. Set **OnSelect:**
+
+```powerfx
+Set(varShowPaymentModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(txtPaymentTransaction);
+Reset(txtPaymentWeight);
+Reset(dpPaymentDate);
+Reset(txtPaymentNotes);
+Reset(ddPaymentStaff)
+```
+
+---
+
+### Confirm Payment Button (btnPaymentConfirm)
+
+57. Click **+ Insert** → **Button**.
+58. **Rename it:** `btnPaymentConfirm`
+59. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Record Payment"` |
+| X | `recPaymentModal.X + 380` |
+| Y | `recPaymentModal.Y + 520` |
+| Width | `150` |
+| Height | `36` |
+| Fill | `RGBA(0, 158, 73, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowPaymentModal > 0` |
+
+60. Set **DisplayMode:**
+
+```powerfx
+If(
+    !IsBlank(ddPaymentStaff.Selected) && 
+    !IsBlank(txtPaymentTransaction.Text) &&
+    !IsBlank(txtPaymentWeight.Text) && 
+    IsNumeric(txtPaymentWeight.Text) && 
+    Value(txtPaymentWeight.Text) > 0,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+61. Set **OnSelect:**
+
+```powerfx
+// Calculate final cost from actual weight
+Set(varFinalCost, 
+    Max(
+        3.00,
+        Value(txtPaymentWeight.Text) * If(
+            varSelectedItem.Method.Value = "Resin",
+            0.20,
+            0.10
+        )
+    )
+);
+
+// Update SharePoint item with payment details
+Patch(PrintRequests, varSelectedItem, {
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+    TransactionNumber: txtPaymentTransaction.Text,
+    FinalWeight: Value(txtPaymentWeight.Text),
+    FinalCost: varFinalCost,
+    PaymentDate: dpPaymentDate.SelectedDate,
+    PaymentNotes: txtPaymentNotes.Text,
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+        Department: "",
+        DisplayName: ddPaymentStaff.Selected.MemberName,
+        Email: ddPaymentStaff.Selected.MemberEmail,
+        JobTitle: "",
+        Picture: ""
+    },
+    LastActionAt: Now(),
+    StaffNotes: Concatenate(
+        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        "PAYMENT by " & ddPaymentStaff.Selected.MemberName &
+        ": Trans#=" & txtPaymentTransaction.Text & 
+        ", Weight=" & txtPaymentWeight.Text & "g" &
+        ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
+        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
+        " - " & Text(Now(), "mm/dd/yyyy")
+    )
+});
+
+// Log action via Flow C
+IfError(
+    'Flow-(C)-Action-LogAction'.Run(
+        Text(varSelectedItem.ID),
+        "Status Change",
+        "Status",
+        "Paid & Picked Up",
+        ddPaymentStaff.Selected.MemberEmail
+    ),
+    Notify("Could not log payment.", NotificationType.Error),
+    Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
+);
+
+// Close modal and reset
+Set(varShowPaymentModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(txtPaymentTransaction);
+Reset(txtPaymentWeight);
+Reset(dpPaymentDate);
+Reset(txtPaymentNotes);
+Reset(ddPaymentStaff)
+```
+
+---
+
+### Update btnPickedUp to Open Payment Modal
+
+⚠️ **IMPORTANT:** You must update the existing `btnPickedUp` button (from Step 10) to open the Payment Modal instead of directly updating the status.
+
+Find the `btnPickedUp` button in your gallery and **replace its OnSelect** formula:
+
+**OLD OnSelect (remove this):**
+```powerfx
+Patch(PrintRequests, ThisItem, {
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionAt: Now(),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & User().Email,
+        Department: "",
+        DisplayName: User().FullName,
+        Email: User().Email,
+        JobTitle: "",
+        Picture: ""
+    }
+});
+
+'Flow-(C)-Action-LogAction'.Run(
+    Text(ThisItem.ID),
+    "Status Change",
+    "Status",
+    "Paid & Picked Up",
+    varMeEmail
+);
+
+Notify("Marked as picked up!", NotificationType.Success)
+```
+
+**NEW OnSelect (use this):**
+```powerfx
+Set(varShowPaymentModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
+
+> 💡 **Change Summary:** Instead of immediately marking the item as "Paid & Picked Up", the button now opens the Payment Modal where staff must enter transaction details before the status change occurs.
+
+---
+
+# STEP 14: Adding Search and Filters
 
 **What you're doing:** Adding a search box and filter controls above the job cards gallery.
 
@@ -2308,7 +3786,7 @@ Reset(chkNeedsAttention)
 
 ---
 
-# STEP 14: Adding the Lightbulb Attention System
+# STEP 15: Adding the Lightbulb Attention System
 
 **What you're doing:** Adding a toggleable lightbulb icon to each card that marks items as needing attention.
 
@@ -2393,7 +3871,7 @@ If(varPlayNotificationSound,
 
 ---
 
-# STEP 15: Adding the Attachments Modal
+# STEP 16: Adding the Attachments Modal
 
 **What you're doing:** Creating a modal for staff to add/remove file attachments from requests.
 
@@ -2448,16 +3926,19 @@ Set(varSelectedActor, LookUp(Staff, false))
 
 8. Add combo box `ddFileActor`:
    - **Items:** `colStaff`
-   - **DefaultSelectedItems:** `Filter(colStaff, Lower(Member.Email) = varMeEmail)`
+   - **DisplayFields:** `["MemberName"]`
+   - **SearchFields:** `["MemberName"]`
+   - **DefaultSelectedItems:** `Blank()`
+   - **Visible:** `varShowAddFileModal`
 
 9. Set **OnChange:**
 
 ```powerfx
 Set(varSelectedActor, {
-    Claims: "i:0#.f|membership|" & ddFileActor.Selected.Member.Email,
+    Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
     Department: "",
-    DisplayName: ddFileActor.Selected.Member.DisplayName,
-    Email: ddFileActor.Selected.Member.Email,
+    DisplayName: ddFileActor.Selected.MemberName,
+    Email: ddFileActor.Selected.MemberEmail,
     JobTitle: "",
     Picture: ""
 })
@@ -2525,7 +4006,7 @@ Notify("Attachments updated", NotificationType.Success)
 
 ---
 
-# STEP 16: Adding the Messaging System
+# STEP 17: Adding the Messaging System
 
 **What you're doing:** Building the complete messaging system — including the modal for sending messages AND the message display on job cards.
 
@@ -2539,7 +4020,7 @@ Notify("Attachments updated", NotificationType.Success)
 
 ---
 
-## Step 16A: Adding the Data Connection
+## Step 17A: Adding the Data Connection
 
 **What you're doing:** Connecting your app to the RequestComments list.
 
@@ -2560,7 +4041,7 @@ In the Data panel, you should now see:
 
 ---
 
-## Step 16B: Adding Messages Display to Job Cards
+## Step 17B: Adding Messages Display to Job Cards
 
 **What you're doing:** Adding a message history section to each job card that shows the conversation between staff and students.
 
@@ -2706,7 +4187,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 ---
 
-## Step 16C: Building the Message Modal
+## Step 17C: Building the Message Modal
 
 **What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
 
@@ -2809,9 +4290,9 @@ Set(varMessageText, "");
     - **X:** `recMessageModal.X + 20`
     - **Y:** `recMessageModal.Y + 115`
     - **Width:** `300`
-    - **DisplayFields:** `["Member"]`
-    - **SearchFields:** `["Member"]`
-    - **DefaultSelectedItems:** `Filter(colStaff, Lower(Member.Email) = varMeEmail)`
+    - **DisplayFields:** `["MemberName"]`
+    - **SearchFields:** `["MemberName"]`
+    - **DefaultSelectedItems:** `Blank()`
     - **Visible:** `varShowMessageModal`
 
 #### Subject Input
@@ -2926,10 +4407,10 @@ Patch(
         ReqKey: varSelectedItem.ReqKey,
         Message: txtMessageBody.Text,
         Author: {
-            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
             Department: "",
-            DisplayName: ddMessageStaff.Selected.Member.DisplayName,
-            Email: ddMessageStaff.Selected.Member.Email,
+            DisplayName: ddMessageStaff.Selected.MemberName,
+            Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
             Picture: ""
         },
@@ -2949,10 +4430,10 @@ Patch(
     {
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
         LastActionBy: {
-            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.Member.Email,
+            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
             Department: "",
-            DisplayName: ddMessageStaff.Selected.Member.DisplayName,
-            Email: ddMessageStaff.Selected.Member.Email,
+            DisplayName: ddMessageStaff.Selected.MemberName,
+            Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
             Picture: ""
         },
@@ -3026,7 +4507,7 @@ To show unread inbound message count on job cards:
 
 ---
 
-# STEP 17: Publishing the App
+# STEP 18: Publishing the App
 
 **What you're doing:** Saving and publishing your app so staff can use it.
 
@@ -3051,7 +4532,7 @@ To show unread inbound message count on job cards:
 
 ---
 
-# STEP 18: Testing the App
+# STEP 19: Testing the App
 
 **What you're doing:** Verifying everything works correctly.
 
@@ -3228,6 +4709,8 @@ To show unread inbound message count on job cards:
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
 | `varActor` | Screen.OnVisible | Person record for Patch |
+| `varShowPaymentModal` | btnPickedUp click | Controls payment modal visibility |
+| `varFinalCost` | Payment modal confirm | Calculated from FinalWeight |
 
 ## Person Field Format
 
@@ -3245,9 +4728,19 @@ To show unread inbound message count on job cards:
 
 ## Pricing Formula
 
+**For Estimates (Approval Modal):**
 ```powerfx
-Max(3.00, weight * If(method = "Resin", 0.20, 0.10))
+// EstimatedCost from EstWeight
+Max(3.00, EstWeight * If(Method = "Resin", 0.20, 0.10))
 ```
+
+**For Finals (Payment Modal):**
+```powerfx
+// FinalCost from FinalWeight (actual measured weight)
+Max(3.00, FinalWeight * If(Method = "Resin", 0.20, 0.10))
+```
+
+> 💡 **Estimate vs Actual:** EstWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
 
 ## Flow C Call Pattern
 
@@ -3390,11 +4883,16 @@ Set(varSelectedItem, LookUp(PrintRequests, false))
 colStaff
 
 // DefaultSelectedItems
-Filter(colStaff, Lower(Member.Email) = varMeEmail)
+Blank()
 
 // DisplayFields
-["Member"]
+["MemberName"]
+
+// SearchFields
+["MemberName"]
 ```
+
+> ⚠️ **Important:** The `colStaff` collection uses flattened columns (`MemberName`, `MemberEmail`) instead of the SharePoint Person column (`Member`). This is because Person columns are complex types that can't be directly displayed in dropdowns. The `ForAll` function in App.OnStart extracts the display name and email into simple text columns.
 
 ## Expand/Collapse Toggle — REMOVED
 

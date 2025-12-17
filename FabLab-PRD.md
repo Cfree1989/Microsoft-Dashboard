@@ -459,7 +459,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 #### PrintRequests List Schema
 
-**Total Fields:** 26 (12 student-facing + 14 staff-only)
+**Total Fields:** 31 (12 student-facing + 14 staff processing + 5 payment recording)
 
 **Student-Facing Fields (12):**
 - **Title** (Single line text) - Request title
@@ -475,13 +475,13 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **DueDate** (Date) - Timeline planning
 - **Notes** (Multiple lines text) - Additional instructions
 
-**Staff-Only Fields (14):**
+**Staff-Only Fields - Estimates & Processing (14):**
 - **Status** (Choice) - Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived
 - **Priority** (Choice) - Low; Normal; High; Rush
 - **AssignedTo** (Person) - Optional field for manual assignment if needed (not used in automated workflows)
 - **EstimatedTime** (Number, Display: EstHours) - Time estimation in hours
-- **EstimatedWeight** (Number, Display: EstWeight) - Material weight in grams
-- **EstimatedCost** (Currency) - Calculated cost estimation (see Appendix D for formula)
+- **EstimatedWeight** (Number, Display: EstWeight) - Estimated material weight in grams
+- **EstimatedCost** (Currency) - Calculated estimated cost (see Appendix D for formula)
 - **StaffNotes** (Multiple lines text) - Internal communication
 - **RejectionReason** (Choice with fill-in) - File format not supported; Design not printable; Excessive material usage; Incomplete request information; Size limitations; Material not available; Quality concerns; Other
 - **StudentConfirmed** (Yes/No, Default: No) - Student approval of cost estimate
@@ -491,9 +491,18 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **LastActionBy** (Single line text) - High-level action attribution (stores "System" or staff name)
 - **LastActionAt** (Date and Time) - Audit timestamp
 
+**Payment Recording Fields - Actuals at Pickup (5):**
+- **TransactionNumber** (Single line text) - TigerCASH transaction/receipt number
+- **FinalWeight** (Number) - Actual weight of finished print in grams
+- **FinalCost** (Currency) - Actual cost charged (calculated from FinalWeight)
+- **PaymentDate** (Date) - Date payment was recorded
+- **PaymentNotes** (Multiple lines text) - Payment discrepancies or special circumstances
+
 **Note on Field Types:**
 - **EstimatedTime** internal name is `EstHours` in SharePoint
 - **EstimatedWeight** internal name is `EstWeight` in SharePoint
+- **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
+- **FinalWeight** captures actual material used; enables estimate accuracy tracking
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
 - For detailed audit attribution with person fields, see AuditLog.Actor
 
@@ -816,14 +825,21 @@ Covers:
 
 #### Cost Calculation Formula
 
+**For Estimates (at Approval):**
 ```
 EstimatedCost = Max($3.00, EstimatedWeight × Material_Rate)
-
-Where:
-- EstimatedWeight: grams of material (from slicer software)
-- Material_Rate: $0.10/g (Filament) or $0.20/g (Resin)
-- $3.00: Minimum charge applied if calculated cost is lower
 ```
+
+**For Final Payment (at Pickup):**
+```
+FinalCost = Max($3.00, FinalWeight × Material_Rate)
+```
+
+**Where:**
+- **EstimatedWeight:** Predicted grams of material (from slicer software)
+- **FinalWeight:** Actual grams of finished print (weighed at pickup)
+- **Material_Rate:** $0.10/g (Filament) or $0.20/g (Resin)
+- **$3.00:** Minimum charge applied if calculated cost is lower
 
 #### Calculation Examples
 
@@ -869,16 +885,48 @@ Where:
 **When:** At pickup (Status: Completed)  
 **Requirements:** Student ID for verification
 
-**Payment Workflow:**
+**Payment Recording Workflow:**
 1. Student receives pickup notification email
 2. Student visits Fabrication Lab with ID and TigerCASH
-3. Staff verifies print quality
-4. Student pays with TigerCASH card
-5. Staff marks Status: Paid & Picked Up
+3. Staff weighs the finished print on scale
+4. Staff clicks "Picked Up" button → Payment Modal opens
+5. Staff enters:
+   - **Transaction Number:** TigerCASH receipt/transaction ID
+   - **Final Weight:** Actual weight in grams (auto-calculates FinalCost)
+   - **Payment Date:** Defaults to today (adjustable)
+   - **Notes:** Any discrepancies or special circumstances
+6. Student pays with TigerCASH card
+7. Staff confirms payment → Status: Paid & Picked Up
+
+**Payment Recording Fields:**
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| TransactionNumber | TigerCASH receipt ID | "TC-2024-12345" |
+| FinalWeight | Actual print weight (grams) | 82 |
+| FinalCost | Auto-calculated from FinalWeight | $8.20 |
+| PaymentDate | Date recorded | 12/17/2024 |
+| PaymentNotes | Special circumstances | "Student paid cash, manager approved" |
+
+#### Estimate vs Actual Tracking
+
+The system captures both estimated and actual values to enable accuracy analysis:
+
+| Stage | Weight Field | Cost Field | When Set |
+|-------|--------------|------------|----------|
+| **Estimate** | EstWeight | EstimatedCost | At approval (slicer prediction) |
+| **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
+
+This enables:
+- Tracking estimate accuracy over time
+- Identifying calibration issues
+- Revenue reconciliation with TigerCASH system
+- Monthly payment reporting
 
 #### Notes on Pricing
 
-- **Estimates are estimates:** Final cost may differ slightly based on actual material used
+- **Estimates vs Actuals:** EstimatedCost is a prediction; FinalCost is what's actually charged
+- **Weight variance:** Final weight may differ due to support removal, failed sections, etc.
 - **Time not a factor:** EstimatedTime field is for scheduling only, not pricing
 - **No refunds:** Once printing begins (Status: Printing), cost is committed
 - **Bulk discounts:** Not currently offered (future consideration)
@@ -888,6 +936,6 @@ Where:
 
 **Document Control:**
 - Created: January 2024
-- Last Modified: October 2025
-- Next Review: December 2025
+- Last Modified: December 2025
+- Next Review: March 2026
 - Approvers: Fabrication Lab Manager, IT Governance, Student Services

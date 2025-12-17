@@ -10,11 +10,12 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 26 total fields (12 student-facing + 14 staff-only)
+- 31 total fields (12 student-facing + 14 staff processing + 5 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
 - Status formatting with color-coded visual indicators
+- Payment recording with estimate vs actual tracking
 
 ---
 
@@ -319,6 +320,52 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 ---
 
+## Step 4B: Add Payment Recording Columns (4)
+
+These columns capture actual payment details when a print is picked up.
+
+### Column 26: TransactionNumber (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `TransactionNumber`
+3. **Description:** `TigerCASH transaction/receipt number`
+4. Click **Save**
+
+### Column 27: FinalWeight (Number)
+
+1. Click **+ Add column** → **Number**
+2. **Name:** `FinalWeight`
+3. **Description:** `Actual weight of finished print in grams`
+4. **Number of decimal places:** 0
+5. Click **Save**
+
+### Column 28: FinalCost (Currency)
+
+1. Click **+ Add column** → **Currency**
+2. **Name:** `FinalCost`
+3. **Description:** `Actual cost charged (calculated from FinalWeight)`
+4. **Currency format:** $ English (United States)
+5. **Number of decimal places:** 2
+6. Click **Save**
+
+### Column 29: PaymentDate (Date)
+
+1. Click **+ Add column** → **Date and time**
+2. **Name:** `PaymentDate`
+3. **Description:** `Date payment was recorded`
+4. **Include time:** No
+5. Click **Save**
+
+### Column 30: PaymentNotes (Multiple lines of text)
+
+1. Click **+ Add column** → **Multiple lines of text**
+2. **Name:** `PaymentNotes`
+3. **Description:** `Staff notes about payment (discrepancies, special circumstances)`
+4. **Type of text:** Plain text
+5. Click **Save**
+
+---
+
 ## Step 5: Add Status Color Formatting
 
 1. Go to the default view
@@ -391,16 +438,16 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 | DueDate | Date | No | - | Timeline planning |
 | Notes | Multi-line | No | - | Additional instructions |
 
-### Staff-Only Fields
+### Staff-Only Fields (Estimates & Processing)
 
 | Column | Type | Required | Default | Purpose |
 |--------|------|----------|---------|---------|
 | Status | Choice | Yes | Uploaded | Current status |
 | Priority | Choice | No | Normal | Processing priority |
 | AssignedTo | Person | No | - | Manual assignment (optional) |
-| EstHours | Number | No | - | Time estimation in hours |
-| EstWeight | Number | No | - | Material weight in grams |
-| EstimatedCost | Currency | No | - | Calculated cost |
+| EstHours | Number | No | - | Estimated time in hours |
+| EstWeight | Number | No | - | Estimated material weight in grams |
+| EstimatedCost | Currency | No | - | Calculated estimated cost |
 | StaffNotes | Multi-line | No | - | Internal communication |
 | RejectionReason | Choice (fill-in) | No | - | Rejection reason |
 | StudentConfirmed | Yes/No | No | No | Student approval of estimate |
@@ -409,6 +456,16 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 | LastAction | Choice | No | - | Most recent action type |
 | LastActionBy | Single line | No | - | Action attribution |
 | LastActionAt | DateTime | No | - | Audit timestamp |
+
+### Payment Recording Fields (Actuals at Pickup)
+
+| Column | Type | Required | Default | Purpose |
+|--------|------|----------|---------|---------|
+| TransactionNumber | Single line | No | - | TigerCASH transaction/receipt number |
+| FinalWeight | Number | No | - | Actual weight of finished print (grams) |
+| FinalCost | Currency | No | - | Actual cost charged (from FinalWeight) |
+| PaymentDate | Date | No | - | Date payment was recorded |
+| PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
 
 ---
 
@@ -419,7 +476,8 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 - [ ] Item-level permissions configured (students see only their own)
 - [ ] Version history enabled
 - [ ] All 12 student-facing columns added
-- [ ] All staff-only columns added
+- [ ] All 14 staff processing columns added
+- [ ] All 5 payment recording columns added
 - [ ] Status has all 8 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin
@@ -434,6 +492,8 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 
 - **EstHours** internal name is `EstHours` in SharePoint (Display: EstimatedTime)
 - **EstWeight** internal name is `EstWeight` in SharePoint (Display: EstimatedWeight)
+- **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
+- **FinalWeight** captures actual material used; enables estimate accuracy tracking
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
 - For detailed audit attribution with person fields, see AuditLog.Actor
 
