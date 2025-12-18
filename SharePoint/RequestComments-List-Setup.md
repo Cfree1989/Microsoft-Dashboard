@@ -179,32 +179,72 @@ This approach is simpler and supports bi-directional messaging.
 
 ## Step 4: Create Views
 
+> 💡 **Modern SharePoint:** Click **"+ Add view"** next to the "All Items" dropdown (not through Settings).
+
 ### View 1: All Messages (Staff View)
 
-1. Click **Settings** → **Create view** → **Standard view**
-2. **Name:** `All Messages`
-3. **Columns:** ReqKey, Title, Message, Author, AuthorRole, Direction, SentAt, ThreadID, ReadByStaff
-4. **Sort:** SentAt (Descending)
-5. Click **Save**
+1. Click **+ Add view** → Name: `All Messages` → **Create**
+2. Click the view dropdown → **Edit current view**
+3. **Check these columns:**
+   - ☑ ReqKey
+   - ☑ Message
+   - ☑ Author
+   - ☑ AuthorRole
+   - ☑ Direction
+   - ☑ SentAt
+   - ☑ ThreadID
+   - ☑ ReadByStaff
+4. **Sort section:**
+   - First sort by: `SentAt`
+   - Select: "Show items in descending order"
+5. Click **OK**
+
+---
 
 ### View 2: Unread from Students
 
-1. Click **Settings** → **Create view** → **Standard view**
-2. **Name:** `Unread from Students`
-3. **Filter:** AuthorRole = Student AND ReadByStaff = No
-4. **Sort:** SentAt (Descending)
-5. Click **Save**
+1. Click **+ Add view** → Name: `Unread from Students` → **Create**
+2. Click the view dropdown → **Edit current view**
+3. **Check these columns:** (same as View 1)
+   - ☑ ReqKey
+   - ☑ Message
+   - ☑ Author
+   - ☑ AuthorRole
+   - ☑ Direction
+   - ☑ SentAt
+   - ☑ ThreadID
+   - ☑ ReadByStaff
+4. **Sort section:**
+   - First sort by: `SentAt`
+   - Select: "Show items in descending order"
+5. **Filter section:**
+   - Select: "Show items only when the following is true"
+   - Show the items when column: `AuthorRole`
+   - is equal to: `Student`
+   - Select: **And**
+   - When column: `ReadByStaff`
+   - is equal to: `No`
+6. Click **OK**
+
+---
 
 ### View 3: Threads by Request
 
-1. Click **Settings** → **Create view** → **Standard view**
-2. **Name:** `Threads by Request`
-3. **Columns:** ReqKey, Direction, Title, Author, SentAt, ThreadID
-4. **Sort:** 
-   - First: ReqKey (Ascending)
-   - Then: SentAt (Ascending)
-5. **Group By:** ThreadID
-6. Click **Save**
+1. Click **+ Add view** → Name: `Threads by Request` → **Create**
+2. Click the view dropdown → **Edit current view**
+3. **Check these columns:**
+   - ☑ ReqKey
+   - ☑ Message
+   - ☑ Author
+   - ☑ Direction
+   - ☑ SentAt
+   - ☑ ThreadID
+4. **Sort section:**
+   - First sort by: `ReqKey` → Ascending
+   - Then sort by: `SentAt` → Ascending
+5. **Group By section:** (expand it)
+   - First group by: `ThreadID`
+6. Click **OK**
 
 ---
 
