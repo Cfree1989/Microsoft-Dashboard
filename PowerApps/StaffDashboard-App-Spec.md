@@ -214,25 +214,12 @@ Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varShowArchiveModal, 0);
 Set(varShowDetailsModal, 0);
-Set(varShowAddFileModal, false);
-Set(varShowMessageModal, false);
+Set(varShowPaymentModal, 0);
+Set(varShowAddFileModal, 0);
+Set(varShowMessageModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
-Set(varSelectedItem, LookUp(PrintRequests, false));
-
-// === FORM VALIDATION ===
-Set(varApprovalFormValid, false);
-
-// === ATTACHMENT TRACKING ===
-// Typed to Staff record schema
-Set(varSelectedActor, LookUp(Staff, false));
-Set(varAttachmentChangeType, "");
-Set(varAttachmentChangedName, "");
-
-// === EXPANDED CARDS TRACKING ===
-// Track which cards are expanded (local state, not saved to SharePoint)
-ClearCollect(colExpanded, {ID: -1});
-RemoveIf(colExpanded, true);  // Start with empty collection
+Set(varSelectedItem, LookUp(PrintRequests, false))
 ```
 
 5. Press **Enter** or click away to confirm.
@@ -262,13 +249,10 @@ RemoveIf(colExpanded, true);  // Start with empty collection
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varShowArchiveModal` | ID of item being archived (0=hidden) | Number |
 | `varShowDetailsModal` | ID of item for detail changes (0=hidden) | Number |
-| `varShowAddFileModal` | Show attachment modal | Boolean |
-| `varShowMessageModal` | Show message modal | Boolean |
+| `varShowPaymentModal` | ID of item for payment (0=hidden) | Number |
+| `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
+| `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
-| `varSelectedActor` | Staff member for attribution | Staff Record |
-| `varAttachmentChangeType` | Type of attachment change | Text |
-| `varAttachmentChangedName` | Name of changed attachment | Text |
-| `colExpanded` | ~~IDs of expanded job cards~~ (no longer used - details always visible) | Table |
 
 > ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
@@ -324,14 +308,14 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     lblMessageTitle                   ← Step 16C
     recMessageModal                   ← Step 16C
     recMessageOverlay                 ← Step 16C
-    btnFileCancel                     ← Step 15
-    btnFileSave                       ← Step 15
-    frmAttachmentsEdit                ← Step 15
-    ddFileActor                       ← Step 15
-    lblFileStaffLabel                 ← Step 15
-    lblFileTitle                      ← Step 15
-    recFileModal                      ← Step 15
-    recFileOverlay                    ← Step 15
+    btnFileCancel                     ← Step 16
+    btnFileSave                       ← Step 16
+    frmAttachmentsEdit                ← Step 16
+    ddFileActor                       ← Step 16
+    lblFileStaffLabel                 ← Step 16
+    lblFileTitle                      ← Step 16
+    recFileModal                      ← Step 16
+    recFileOverlay                    ← Step 16
     btnDetailsConfirm                 ← Step 12B
     btnDetailsCancel                  ← Step 12B
     ddDetailsColor                    ← Step 12B
@@ -392,7 +376,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     recRejectOverlay                  ← Step 10
     ▼ galJobCards                     ← Step 6
         btnSendMessage                ← Step 16C
-        btnFiles                      ← Step 15
+        btnFiles                      ← Step 16
         btnChangeDetails              ← Step 12B
         btnPickedUp                   ← Step 9
         btnComplete                   ← Step 9
@@ -400,7 +384,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnArchive                    ← Step 9
         btnReject                     ← Step 9
         btnApprove                    ← Step 9
-        icoLightbulb                  ← Step 14
+        icoLightbulb                  ← Step 15
         // icoExpandCollapse removed (details always visible)
         lblUnreadBadge                ← Step 16B
         ▼ galMessages                 ← Step 16B
@@ -693,13 +677,15 @@ Your Tree view should now include:
 | Property | Value |
 |----------|-------|
 | X | `0` |
-| Y | `115` |
+| Y | `160` |
 | Width | `1366` |
-| Height | `653` |
+| Height | `608` |
 | **WrapCount** | `4` |
 | TemplatePadding | `8` |
 
 > 💡 **WrapCount = 4** creates a grid layout with 4 cards per row! Each card will be approximately 330px wide.
+> 
+> ⚠️ **Note:** Y=160 leaves room for the Filter Bar (built in Step 14) between the status tabs and job cards.
 
 5. Set the **Items** property:
 
@@ -765,7 +751,6 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-> 📝 **Note:** The attention icon (`icoLightbulb`) is added in **Step 14** with toggle functionality.
 
 ### Student Name (lblStudentName)
 
@@ -1161,7 +1146,6 @@ Each card displays:
 - Staff notes section
 - Expandable additional details
 
-> 📝 **Added in later steps:** `icoLightbulb` (Step 14), `icoExpandCollapse` (Step 8), action buttons (Step 9), message display (Step 16B)
 
 ---
 
@@ -1417,30 +1401,11 @@ Notify("Marked as completed!", NotificationType.Success)
 24. Set **OnSelect:**
 
 ```powerfx
-Patch(PrintRequests, ThisItem, {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionAt: Now(),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & User().Email,
-        Discipline: "",
-        DisplayName: User().FullName,
-        Email: User().Email,
-        JobTitle: "",
-        Picture: ""
-    }
-});
-
-'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    "Paid & Picked Up",
-    varMeEmail
-);
-
-Notify("Marked as picked up!", NotificationType.Success)
+Set(varShowPaymentModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
 ```
+
+> 💡 **Note:** This opens the Payment Modal (built in Step 12C) where staff enters the transaction number, final weight, and payment details before marking as picked up.
 
 ### Edit Details Button (btnEditDetails)
 
@@ -1490,7 +1455,7 @@ Set(varSelectedItem, ThisItem)
 |----------|-------|
 | Text | `"No " & varSelectedStatus & " requests found"` |
 | X | `(1366 - 400) / 2` |
-| Y | `300` |
+| Y | `350` |
 | Width | `400` |
 | Height | `100` |
 | Size | `14` |
@@ -3758,91 +3723,117 @@ Reset(chkPartialPickup)
 
 ---
 
-### Update btnPickedUp to Open Payment Modal
+# STEP 14: Adding the Filter Bar
 
-⚠️ **IMPORTANT:** You must update the existing `btnPickedUp` button (from Step 10) to open the Payment Modal instead of directly updating the status.
+**What you're doing:** Creating a dedicated filter bar between the status tabs and job cards gallery with search and filter controls.
 
-Find the `btnPickedUp` button in your gallery and **replace its OnSelect** formula:
+> ⚠️ **IMPORTANT:** You must create **ALL 4 controls** in this section. The filter bar won't look right if you only create some of them. The background rectangle (`recFilterBar`) provides the visual container for the other controls.
 
-**OLD OnSelect (remove this):**
-```powerfx
-Patch(PrintRequests, ThisItem, {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionAt: Now(),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & User().Email,
-        Discipline: "",
-        DisplayName: User().FullName,
-        Email: User().Email,
-        JobTitle: "",
-        Picture: ""
-    }
-});
+> 💡 **Design:** A clean horizontal bar with a subtle background containing search input, attention filter checkbox, and clear button.
 
-'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    "Paid & Picked Up",
-    varMeEmail
-);
+### Control Hierarchy
 
-Notify("Marked as picked up!", NotificationType.Success)
+```
+scrDashboard
+├── recFilterBar              ← Background bar (CREATE THIS FIRST!)
+├── txtSearch                 ← Search input
+├── chkNeedsAttention         ← Checkbox filter
+└── btnClearFilters           ← Reset button
 ```
 
-**NEW OnSelect (use this):**
-```powerfx
-Set(varShowPaymentModal, ThisItem.ID);
-Set(varSelectedItem, ThisItem)
-```
-
-> 💡 **Change Summary:** Instead of immediately marking the item as "Paid & Picked Up", the button now opens the Payment Modal where staff must enter transaction details before the status change occurs.
+> 📐 **Positioning:** The filter bar sits at Y=110 (right below the status tabs which end at Y=110). The job cards gallery starts at Y=160 (after the 50px tall filter bar).
 
 ---
 
-# STEP 14: Adding Search and Filters
+### Filter Bar Background (recFilterBar)
 
-**What you're doing:** Adding a search box and filter controls above the job cards gallery.
+> ⚠️ **Create this FIRST!** This rectangle provides the visual background for the filter bar. Without it, the other controls will float awkwardly.
 
-### Instructions
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recFilterBar`
+4. Set properties:
 
-### Search Text Input
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `110` |
+| Width | `1366` |
+| Height | `50` |
+| Fill | `RGBA(248, 248, 248, 1)` |
+| BorderColor | `RGBA(230, 230, 230, 1)` |
+| BorderThickness | `1` |
 
-1. Click **+ Insert** → **Text input**.
-2. Rename to `txtSearch`.
-3. Set properties:
-   - **X:** `20`
-   - **Y:** `120`
-   - **Width:** `300`
-   - **Height:** `40`
-   - **HintText:** `"Search by name, email, or ReqKey..."`
-   - **OnChange:** `Set(varSearchText, txtSearch.Text)`
+---
 
-### Needs Attention Checkbox
+### Search Text Input (txtSearch)
 
-4. Click **+ Insert** → **Checkbox**.
-5. Rename to `chkNeedsAttention`.
-6. Set properties:
-   - **Text:** `"Needs Attention Only"`
-   - **X:** `340`
-   - **Y:** `125`
-   - **OnCheck:** `Set(varNeedsAttention, true)`
-   - **OnUncheck:** `Set(varNeedsAttention, false)`
+5. Click **+ Insert** → **Text input**.
+6. **Rename it:** `txtSearch`
+7. Set properties:
 
-### Expand All Button — REMOVED
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `117` |
+| Width | `350` |
+| Height | `36` |
+| BorderRadius | `4` |
+| HintText | `"🔍 Search by name, email, or ReqKey..."` |
+| BorderColor | `RGBA(200, 200, 200, 1)` |
 
-> ⚠️ **No longer needed:** Since all details are always visible, this button has been removed.
+8. Set **OnChange:**
 
-### Clear Filters Button
+```powerfx
+Set(varSearchText, Self.Text)
+```
 
-8. Add **Button**:
-   - **Text:** `"Clear Filters"`
-   - **X:** `680`
-   - **Y:** `120`
-   - **Width:** `100`
-   - **Fill:** `RGBA(150, 150, 150, 1)`
-   - **OnSelect:**
+---
+
+### Needs Attention Checkbox (chkNeedsAttention)
+
+9. Click **+ Insert** → **Checkbox**.
+10. **Rename it:** `chkNeedsAttention`
+11. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"⚡ Needs Attention Only"` |
+| X | `400` |
+| Y | `122` |
+| Width | `200` |
+| Height | `26` |
+| Size | `11` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+12. Set **OnCheck:** `Set(varNeedsAttention, true)`
+13. Set **OnUncheck:** `Set(varNeedsAttention, false)`
+
+---
+
+### Clear Filters Button (btnClearFilters)
+
+14. Click **+ Insert** → **Button**.
+15. **Rename it:** `btnClearFilters`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕ Clear"` |
+| X | `1280` |
+| Y | `117` |
+| Width | `70` |
+| Height | `36` |
+| Fill | `RGBA(240, 240, 240, 1)` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| BorderColor | `RGBA(200, 200, 200, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+
+17. Set **OnSelect:**
 
 ```powerfx
 Reset(txtSearch);
@@ -3857,30 +3848,23 @@ Reset(chkNeedsAttention)
 
 **What you're doing:** Adding a toggleable lightbulb icon to each card that marks items as needing attention.
 
-### Instructions
+### Lightbulb Icon (icoLightbulb)
 
-Inside `galJobCards` gallery template:
+1. In the Tree view, click on **galJobCards** to select the gallery.
+2. Click **+ Insert** → **Icon**.
+3. **Rename it:** `icoLightbulb`
+4. Set properties:
 
-### Lightbulb Icon
-
-1. Click **+ Insert** → **Icon**.
-2. Set **Icon:**
-
-```powerfx
-If(ThisItem.NeedsAttention, Icon.Lightbulb, Icon.LightbulbSolid)
-```
-
-3. Position in top right corner of card:
-   - **X:** `Parent.TemplateWidth - 90`
-   - **Y:** `12`
-   - **Width:** `28`
-   - **Height:** `28`
-
-4. Set **Color:**
-
-```powerfx
-If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), RGBA(180, 180, 180, 1))
-```
+| Property | Value |
+|----------|-------|
+| Icon | `Icon.Lightbulb` |
+| X | `Parent.TemplateWidth - 30` |
+| Y | `16` |
+| Width | `24` |
+| Height | `24` |
+| Color | `If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), RGBA(180, 180, 180, 1))` |
+| Tooltip | `If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")` |
+| Visible | `true` |
 
 5. Set **OnSelect:**
 
@@ -3888,24 +3872,23 @@ If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), RGBA(180, 180, 180, 1))
 Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention})
 ```
 
-6. Set **Tooltip:**
+---
 
-```powerfx
-If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")
-```
+### Optional: Animated Glow Timer (tmrGlow)
 
-### Optional: Animated Glow Effect
+6. Click on **scrDashboard** in Tree view (outside the gallery).
+7. Click **+ Insert** → **Input** → **Timer**.
+8. **Rename it:** `tmrGlow`
+9. Set properties:
 
-For a pulsing glow on cards needing attention:
+| Property | Value |
+|----------|-------|
+| Duration | `1500` |
+| Repeat | `true` |
+| AutoStart | `true` |
+| Visible | `false` |
 
-7. Add a **Timer** control to scrDashboard (not in gallery):
-   - **Duration:** `1500`
-   - **Repeat:** `true`
-   - **AutoStart:** `true`
-   - **Visible:** `false`
-   - Rename to `tmrGlow`
-
-8. Update the card background rectangle's **Fill:**
+10. Update `recCardBackground` (inside galJobCards). Set **Fill:**
 
 ```powerfx
 If(
@@ -3919,157 +3902,272 @@ If(
 )
 ```
 
-### Optional: Sound Notifications
-
-For audible alerts when new jobs arrive or actions are needed:
-
-```powerfx
-// Add to App.OnStart
-Set(varPlayNotificationSound, false);
-
-// Trigger sound on new job or status change (in relevant OnSelect or Timer)
-If(varPlayNotificationSound,
-    PlaySound(SoundType.Notification);
-    Set(varPlayNotificationSound, false)
-)
-```
-
-> 💡 **Note:** Sound notifications can be triggered via a Timer that periodically checks for new items, or through Power Automate push notifications.
-
 ---
 
 # STEP 16: Adding the Attachments Modal
 
 **What you're doing:** Creating a modal for staff to add/remove file attachments from requests.
 
-### Overview
+### Control Hierarchy
 
-This uses a Display Form (read-only) and Edit Form (for modifications).
-
-### Variables (Already Added in OnStart)
-
-```powerfx
-Set(varShowAddFileModal, false);
-Set(varSelectedActor, LookUp(Staff, false));
+```
+scrDashboard
+├── recFileOverlay               ← Dark semi-transparent background
+├── recFileModal                 ← White modal box (container)
+├── lblFileTitle                 ← "Manage Attachments - REQ-00042"
+├── lblFileStaffLabel            ← "Performing Action As: *"
+├── ddFileActor                  ← Staff dropdown
+├── frmAttachmentsEdit           ← Edit form for attachments
+├── btnFileSave                  ← Save Changes button
+└── btnFileCancel                ← Cancel button
 ```
 
-### Add Files Button (In Job Card)
+---
 
-1. Add button in gallery template:
-   - **Text:** `"📎 Files"`
-   - **OnSelect:**
+### Files Button in Job Card (btnFiles)
+
+1. In the Tree view, click on **galJobCards** to select the gallery.
+2. Click **+ Insert** → **Button**.
+3. **Rename it:** `btnFiles`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"📎 Files"` |
+| X | `12` |
+| Y | `Parent.TemplateHeight - 85` |
+| Width | `80` |
+| Height | `28` |
+| Fill | `Color.White` |
+| Color | `RGBA(0, 120, 212, 1)` |
+| BorderColor | `RGBA(0, 120, 212, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Size | `10` |
+
+5. Set **OnSelect:**
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
-Set(varShowAddFileModal, true);
-Set(varSelectedActor, LookUp(Staff, false))
+Set(varShowAddFileModal, ThisItem.ID)
 ```
 
-### Modal Overlay
+---
 
-2. Add rectangle `recFileOverlay`:
-   - **Visible:** `varShowAddFileModal`
-   - Full screen dark overlay
+### Modal Overlay (recFileOverlay)
 
-### Modal Content
+6. Click on **scrDashboard** in Tree view.
+7. Click **+ Insert** → **Rectangle**.
+8. **Rename it:** `recFileOverlay`
+9. Set properties:
 
-3. Add rectangle `recFileModal`:
-   - **Visible:** `varShowAddFileModal`
-   - **Width:** `500`, **Height:** `500`
-   - Centered
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `1366` |
+| Height | `768` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowAddFileModal > 0` |
 
-### Edit Form for Attachments
+---
 
-4. Click **+ Insert** → **Edit form**.
-5. Rename to `frmAttachmentsEdit`.
-6. Set properties:
-   - **DataSource:** `PrintRequests`
-   - **Item:** `varSelectedItem`
-   - **Visible:** `varShowAddFileModal`
+### Modal Content Box (recFileModal)
 
-7. In the form's Fields panel, remove all fields except **Attachments**.
+10. Click **+ Insert** → **Rectangle**.
+11. **Rename it:** `recFileModal`
+12. Set properties:
 
-### Staff Selector
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 500) / 2` |
+| Y | `(Parent.Height - 450) / 2` |
+| Width | `500` |
+| Height | `450` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowAddFileModal > 0` |
 
-8. Add combo box `ddFileActor`:
-   - **Items:** `colStaff`
-   - **DisplayFields:** `["MemberName"]`
-   - **SearchFields:** `["MemberName"]`
-   - **DefaultSelectedItems:** `Blank()`
-   - **Visible:** `varShowAddFileModal`
+---
 
-9. Set **OnChange:**
+### Modal Title (lblFileTitle)
+
+13. Click **+ Insert** → **Text label**.
+14. **Rename it:** `lblFileTitle`
+15. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Manage Attachments - " & varSelectedItem.ReqKey` |
+| X | `recFileModal.X + 20` |
+| Y | `recFileModal.Y + 20` |
+| Width | `460` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(0, 120, 212, 1)` |
+| Visible | `varShowAddFileModal > 0` |
+
+---
+
+### Staff Label (lblFileStaffLabel)
+
+16. Click **+ Insert** → **Text label**.
+17. **Rename it:** `lblFileStaffLabel`
+18. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recFileModal.X + 20` |
+| Y | `recFileModal.Y + 55` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varShowAddFileModal > 0` |
+
+---
+
+### Staff Dropdown (ddFileActor)
+
+19. Click **+ Insert** → **Combo box**.
+20. **Rename it:** `ddFileActor`
+21. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recFileModal.X + 20` |
+| Y | `recFileModal.Y + 80` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowAddFileModal > 0` |
+
+---
+
+### Edit Form for Attachments (frmAttachmentsEdit)
+
+22. Click **+ Insert** → **Edit form**.
+23. **Rename it:** `frmAttachmentsEdit`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| DataSource | `PrintRequests` |
+| Item | `varSelectedItem` |
+| X | `recFileModal.X + 20` |
+| Y | `recFileModal.Y + 130` |
+| Width | `460` |
+| Height | `200` |
+| Visible | `varShowAddFileModal > 0` |
+
+25. In the **Fields** panel (right side), click **Edit fields**.
+26. Remove all fields except **Attachments**.
+
+#### Resizing the Attachments Data Card
+
+27. In Tree view, expand `frmAttachmentsEdit` → click on **Attachments_DataCard1**.
+28. In the **Properties panel** (right side), click **Advanced** tab.
+29. Click **Unlock to change properties** (lock icon).
+30. Set these properties on **Attachments_DataCard1**:
+
+| Property | Value |
+|----------|-------|
+| Height | `180` |
+| Width | `460` |
+
+31. Inside the data card, click on the **DataCardValue** control (the actual attachments control).
+32. Set its **Height** to `100`.
+
+27. Set **OnSuccess:**
 
 ```powerfx
-Set(varSelectedActor, {
-    Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
-    Discipline: "",
-    DisplayName: ddFileActor.Selected.MemberName,
-    Email: ddFileActor.Selected.MemberEmail,
-    JobTitle: "",
-    Picture: ""
-})
-```
-
-### Save Button
-
-10. Add button:
-   - **Text:** `"Save Changes"`
-   - **DisplayMode:** `If(IsBlank(varSelectedActor), DisplayMode.Disabled, DisplayMode.Edit)`
-   - **OnSelect:** `SubmitForm(frmAttachmentsEdit)`
-
-### Tracking File Changes (Optional Enhancement)
-
-Inside the Attachments data card, you can optionally track what type of change occurred:
-
-```powerfx
-// Inside Attachments control - OnAddFile event
-Set(varAttachmentChangeType, "Added")
-
-// Inside Attachments control - OnRemoveFile event  
-Set(varAttachmentChangeType, "Removed")
-```
-
-### Form OnSuccess
-
-11. Set `frmAttachmentsEdit.OnSuccess`:
-
-```powerfx
-// Update the record with action tracking
 Patch(
     PrintRequests,
     frmAttachmentsEdit.LastSubmit,
     {
-        LastAction: If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
-        LastActionBy: varSelectedActor,
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "File Added"),
+        LastActionBy: {
+            Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
+            Discipline: "",
+            DisplayName: ddFileActor.Selected.MemberName,
+            Email: ddFileActor.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
         LastActionAt: Now()
     }
 );
 
-// Optional: Log to AuditLog via Flow C for detailed tracking
-IfError(
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(frmAttachmentsEdit.LastSubmit.ID),
-        If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
-        "Attachments",
-        Coalesce(varAttachmentChangedName, ""),
-        varMeEmail
-    ),
-    Notify("Could not log attachment action.", NotificationType.Error)
-);
-
-Set(varShowAddFileModal, false);
-Set(varAttachmentChangeType, "");
-Set(varAttachmentChangedName, "");
+Set(varShowAddFileModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(ddFileActor);
 Notify("Attachments updated", NotificationType.Success)
 ```
 
-> 💡 **Note:** The existing Flow B (PR-Audit) automatically logs file additions when they're detected. The explicit Flow C call above is optional but provides more granular control over audit entries.
+---
 
-### Cancel Button
+### Save Button (btnFileSave)
 
-12. Add button:
-   - **OnSelect:** `Set(varShowAddFileModal, false); Set(varSelectedItem, LookUp(PrintRequests, false))`
+28. Click **+ Insert** → **Button**.
+29. **Rename it:** `btnFileSave`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"💾 Save Changes"` |
+| X | `recFileModal.X + 350` |
+| Y | `recFileModal.Y + 390` |
+| Width | `130` |
+| Height | `36` |
+| Fill | `RGBA(0, 120, 212, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowAddFileModal > 0` |
+| DisplayMode | `If(IsBlank(ddFileActor.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+31. Set **OnSelect:**
+
+```powerfx
+SubmitForm(frmAttachmentsEdit)
+```
+
+---
+
+### Cancel Button (btnFileCancel)
+
+32. Click **+ Insert** → **Button**.
+33. **Rename it:** `btnFileCancel`
+34. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recFileModal.X + 220` |
+| Y | `recFileModal.Y + 390` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| Visible | `varShowAddFileModal > 0` |
+
+35. Set **OnSelect:**
+
+```powerfx
+ResetForm(frmAttachmentsEdit);
+Set(varShowAddFileModal, 0);
+Set(varSelectedItem, LookUp(PrintRequests, false));
+Reset(ddFileActor)
+```
 
 ---
 
@@ -4268,7 +4366,7 @@ Add these variables to your existing `App.OnStart`:
 
 ```powerfx
 // === MESSAGE MODAL CONTROLS ===
-Set(varShowMessageModal, false);
+Set(varShowMessageModal, 0);
 Set(varMessageSubject, "");
 Set(varMessageText, "");
 ```
@@ -4305,7 +4403,7 @@ Set(varMessageText, "");
    - **Width:** `1366`
    - **Height:** `768`
    - **Fill:** `RGBA(0, 0, 0, 0.7)`
-   - **Visible:** `varShowMessageModal`
+   - **Visible:** `varShowMessageModal > 0`
 
 #### Modal Content Box
 
@@ -4318,7 +4416,7 @@ Set(varMessageText, "");
    - **Height:** `500`
    - **Fill:** `Color.White`
    - **BorderRadius:** `8` (all corners)
-   - **Visible:** `varShowMessageModal`
+   - **Visible:** `varShowMessageModal > 0`
 
 #### Modal Title
 
@@ -4330,7 +4428,7 @@ Set(varMessageText, "");
    - **Font:** `Font.'Segoe UI Semibold'`
    - **Size:** `20`
    - **Color:** `RGBA(70, 130, 220, 1)`
-   - **Visible:** `varShowMessageModal`
+   - **Visible:** `varShowMessageModal > 0`
 
 #### Student Info
 
@@ -4339,7 +4437,7 @@ Set(varMessageText, "");
    - **Text:** `"To: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"`
    - **X:** `recMessageModal.X + 20`
    - **Y:** `recMessageModal.Y + 55`
-   - **Visible:** `varShowMessageModal`
+   - **Visible:** `varShowMessageModal > 0`
 
 #### Staff Attribution Dropdown
 
@@ -4348,7 +4446,7 @@ Set(varMessageText, "");
     - **X:** `recMessageModal.X + 20`
     - **Y:** `recMessageModal.Y + 90`
     - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 11. Click **+ Insert** → **Combo box**.
 12. Rename to `ddMessageStaff`.
@@ -4360,7 +4458,7 @@ Set(varMessageText, "");
     - **DisplayFields:** `["MemberName"]`
     - **SearchFields:** `["MemberName"]`
     - **DefaultSelectedItems:** `Blank()`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 #### Subject Input
 
@@ -4369,7 +4467,7 @@ Set(varMessageText, "");
     - **X:** `recMessageModal.X + 20`
     - **Y:** `recMessageModal.Y + 165`
     - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 15. Click **+ Insert** → **Text input**.
 16. Rename to `txtMessageSubject`.
@@ -4380,7 +4478,7 @@ Set(varMessageText, "");
     - **Height:** `40`
     - **HintText:** `"Brief subject (e.g., Question about your file)"`
     - **Default:** `""`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 #### Message Body Input
 
@@ -4389,7 +4487,7 @@ Set(varMessageText, "");
     - **X:** `recMessageModal.X + 20`
     - **Y:** `recMessageModal.Y + 240`
     - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 19. Click **+ Insert** → **Text input**.
 20. Rename to `txtMessageBody`.
@@ -4401,7 +4499,7 @@ Set(varMessageText, "");
     - **Height:** `140`
     - **HintText:** `"Type your message to the student..."`
     - **Default:** `""`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 #### Character Count
 
@@ -4412,7 +4510,7 @@ Set(varMessageText, "");
     - **Y:** `recMessageModal.Y + 408`
     - **Color:** `If(Len(txtMessageBody.Text) > 1000, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))`
     - **Size:** `10`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 #### Cancel Button
 
@@ -4423,12 +4521,12 @@ Set(varMessageText, "");
     - **Y:** `recMessageModal.Y + 440`
     - **Width:** `100`
     - **Fill:** `RGBA(150, 150, 150, 1)`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 24. Set **OnSelect:**
 
 ```powerfx
-Set(varShowMessageModal, false);
+Set(varShowMessageModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
@@ -4445,7 +4543,7 @@ Reset(ddMessageStaff)
     - **Width:** `130`
     - **Fill:** `RGBA(70, 130, 220, 1)`
     - **Color:** `Color.White`
-    - **Visible:** `varShowMessageModal`
+    - **Visible:** `varShowMessageModal > 0`
 
 26. Set **DisplayMode:**
 
@@ -4509,7 +4607,7 @@ Patch(
 );
 
 // Close modal and notify
-Set(varShowMessageModal, false);
+Set(varShowMessageModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
@@ -4539,7 +4637,7 @@ Add a "Send Message" button to each job card in the gallery:
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
-Set(varShowMessageModal, true)
+Set(varShowMessageModal, ThisItem.ID)
 ```
 
 ### Message Count Badge (Optional)
