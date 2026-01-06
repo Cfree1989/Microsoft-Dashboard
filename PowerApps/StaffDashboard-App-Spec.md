@@ -4424,138 +4424,260 @@ Set(varMessageText, "");
 
 ### Building the Modal
 
-#### Modal Overlay
+### Modal Overlay (recMessageOverlay)
 
 1. Click on **scrDashboard** in Tree view.
 2. Click **+ Insert** → **Rectangle**.
-3. Rename to `recMessageOverlay`.
+3. **Rename it:** `recMessageOverlay`
 4. Set properties:
-   - **X:** `0`
-   - **Y:** `0`
-   - **Width:** `1366`
-   - **Height:** `768`
-   - **Fill:** `RGBA(0, 0, 0, 0.7)`
-   - **Visible:** `varShowMessageModal > 0`
 
-#### Modal Content Box
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Visible | `varShowMessageModal > 0` |
 
-5. Add another **Rectangle**.
-6. Rename to `recMessageModal`.
+---
+
+### Modal Content Box (recMessageModal)
+
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recMessageModal`
 7. Set properties:
-   - **X:** `(Parent.Width - 600) / 2`
-   - **Y:** `(Parent.Height - 500) / 2`
-   - **Width:** `600`
-   - **Height:** `500`
-   - **Fill:** `Color.White`
-   - **BorderRadius:** `8` (all corners)
-   - **Visible:** `varShowMessageModal > 0`
 
-#### Modal Title
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 500) / 2` |
+| Width | `600` |
+| Height | `500` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+| Visible | `varShowMessageModal > 0` |
 
-8. Add **Text label**:
-   - **Name:** `lblMessageTitle`
-   - **Text:** `"Send Message - " & varSelectedItem.ReqKey`
-   - **X:** `recMessageModal.X + 20`
-   - **Y:** `recMessageModal.Y + 20`
-   - **Font:** `Font.'Segoe UI Semibold'`
-   - **Size:** `20`
-   - **Color:** `RGBA(70, 130, 220, 1)`
-   - **Visible:** `varShowMessageModal > 0`
+---
 
-#### Student Info
+### Modal Title (lblMessageTitle)
 
-9. Add label:
-   - **Name:** `lblMessageStudent`
-   - **Text:** `"To: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"`
-   - **X:** `recMessageModal.X + 20`
-   - **Y:** `recMessageModal.Y + 55`
-   - **Visible:** `varShowMessageModal > 0`
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblMessageTitle`
+10. Set properties:
 
-#### Staff Attribution Dropdown
+| Property | Value |
+|----------|-------|
+| Text | `"Send Message - " & varSelectedItem.ReqKey` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 20` |
+| Width | `400` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `RGBA(70, 130, 220, 1)` |
+| Visible | `varShowMessageModal > 0` |
 
-10. Add **Text label**:
-    - **Text:** `"Performing Action As: *"`
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 90`
-    - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal > 0`
+---
 
-11. Click **+ Insert** → **Combo box**.
-12. Rename to `ddMessageStaff`.
+### Student Info Label (lblMessageStudent)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblMessageStudent`
 13. Set properties:
-    - **Items:** `colStaff`
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 115`
-    - **Width:** `300`
-    - **DisplayFields:** `["MemberName"]`
-    - **SearchFields:** `["MemberName"]`
-    - **DefaultSelectedItems:** `Blank()`
-    - **Visible:** `varShowMessageModal > 0`
 
-#### Subject Input
+| Property | Value |
+|----------|-------|
+| Text | `"To: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 55` |
+| Width | `560` |
+| Height | `25` |
+| Font | `Font.'Segoe UI'` |
+| Size | `12` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `varShowMessageModal > 0` |
 
-14. Add **Text label**:
-    - **Text:** `"Subject:"`
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 165`
-    - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal > 0`
+---
 
-15. Click **+ Insert** → **Text input**.
-16. Rename to `txtMessageSubject`.
-17. Set properties:
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 190`
-    - **Width:** `540`
-    - **Height:** `40`
-    - **HintText:** `"Brief subject (e.g., Question about your file)"`
-    - **Default:** `""`
-    - **Visible:** `varShowMessageModal > 0`
+### Staff Attribution Label (lblMessageStaffLabel)
 
-#### Message Body Input
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblMessageStaffLabel`
+16. Set properties:
 
-18. Add **Text label**:
-    - **Text:** `"Message:"`
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 240`
-    - **Font:** `Font.'Segoe UI Semibold'`
-    - **Visible:** `varShowMessageModal > 0`
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 90` |
+| Width | `200` |
+| Height | `20` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `varShowMessageModal > 0` |
 
-19. Click **+ Insert** → **Text input**.
-20. Rename to `txtMessageBody`.
-21. Set properties:
-    - **Mode:** `TextMode.MultiLine`
-    - **X:** `recMessageModal.X + 20`
-    - **Y:** `recMessageModal.Y + 265`
-    - **Width:** `540`
-    - **Height:** `140`
-    - **HintText:** `"Type your message to the student..."`
-    - **Default:** `""`
-    - **Visible:** `varShowMessageModal > 0`
+---
 
-#### Character Count
+### Staff Attribution Dropdown (ddMessageStaff)
 
-22. Add label:
-    - **Name:** `lblMessageCount`
-    - **Text:** `Len(txtMessageBody.Text) & " characters"`
-    - **X:** `recMessageModal.X + 460`
-    - **Y:** `recMessageModal.Y + 408`
-    - **Color:** `If(Len(txtMessageBody.Text) > 1000, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))`
-    - **Size:** `10`
-    - **Visible:** `varShowMessageModal > 0`
+17. Click **+ Insert** → **Combo box**.
+18. **Rename it:** `ddMessageStaff`
+19. Set properties:
 
-#### Cancel Button
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 115` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Visible | `varShowMessageModal > 0` |
 
-23. Add **Button**:
-    - **Name:** `btnMessageCancel`
-    - **Text:** `"Cancel"`
-    - **X:** `recMessageModal.X + 340`
-    - **Y:** `recMessageModal.Y + 440`
-    - **Width:** `100`
-    - **Fill:** `RGBA(150, 150, 150, 1)`
-    - **Visible:** `varShowMessageModal > 0`
+---
 
-24. Set **OnSelect:**
+### Subject Label (lblMessageSubjectLabel)
+
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblMessageSubjectLabel`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Subject: *"` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 165` |
+| Width | `150` |
+| Height | `20` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `varShowMessageModal > 0` |
+
+---
+
+### Subject Input (txtMessageSubject)
+
+23. Click **+ Insert** → **Text input**.
+24. **Rename it:** `txtMessageSubject`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 190` |
+| Width | `540` |
+| Height | `40` |
+| HintText | `"Brief subject (e.g., Question about your file)"` |
+| Default | `""` |
+| MaxLength | `200` |
+| Visible | `varShowMessageModal > 0` |
+
+---
+
+### Message Body Label (lblMessageBodyLabel)
+
+26. Click **+ Insert** → **Text label**.
+27. **Rename it:** `lblMessageBodyLabel`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Message: *"` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 240` |
+| Width | `150` |
+| Height | `20` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `varShowMessageModal > 0` |
+
+---
+
+### Message Body Input (txtMessageBody)
+
+29. Click **+ Insert** → **Text input**.
+30. **Rename it:** `txtMessageBody`
+31. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recMessageModal.X + 20` |
+| Y | `recMessageModal.Y + 265` |
+| Width | `540` |
+| Height | `140` |
+| HintText | `"Type your message to the student..."` |
+| Default | `""` |
+| MaxLength | `2000` |
+| Visible | `varShowMessageModal > 0` |
+
+---
+
+### Character Count Label (lblMessageCharCount)
+
+32. Click **+ Insert** → **Text label**.
+33. **Rename it:** `lblMessageCharCount`
+34. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recMessageModal.X + 460` |
+| Y | `recMessageModal.Y + 408` |
+| Width | `100` |
+| Height | `20` |
+| Size | `10` |
+| Align | `Align.Right` |
+| Visible | `varShowMessageModal > 0` |
+
+35. Set **Text:**
+
+```powerfx
+Len(txtMessageBody.Text) & " / 2000 characters"
+```
+
+36. Set **Color:**
+
+```powerfx
+If(Len(txtMessageBody.Text) > 1800, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))
+```
+
+---
+
+### Cancel Button (btnMessageCancel)
+
+37. Click **+ Insert** → **Button**.
+38. **Rename it:** `btnMessageCancel`
+39. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recMessageModal.X + 340` |
+| Y | `recMessageModal.Y + 440` |
+| Width | `100` |
+| Height | `40` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
+| Visible | `varShowMessageModal > 0` |
+
+40. Set **OnSelect:**
 
 ```powerfx
 Set(varShowMessageModal, 0);
@@ -4565,19 +4687,30 @@ Reset(txtMessageBody);
 Reset(ddMessageStaff)
 ```
 
-#### Send Message Button
+---
 
-25. Add **Button**:
-    - **Name:** `btnMessageSend`
-    - **Text:** `"📧 Send Message"`
-    - **X:** `recMessageModal.X + 450`
-    - **Y:** `recMessageModal.Y + 440`
-    - **Width:** `130`
-    - **Fill:** `RGBA(70, 130, 220, 1)`
-    - **Color:** `Color.White`
-    - **Visible:** `varShowMessageModal > 0`
+### Send Message Button (btnMessageSend)
 
-26. Set **DisplayMode:**
+41. Click **+ Insert** → **Button**.
+42. **Rename it:** `btnMessageSend`
+43. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"📧 Send Message"` |
+| X | `recMessageModal.X + 450` |
+| Y | `recMessageModal.Y + 440` |
+| Width | `130` |
+| Height | `40` |
+| Fill | `RGBA(70, 130, 220, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
+| Visible | `varShowMessageModal > 0` |
+
+44. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -4591,7 +4724,7 @@ If(
 )
 ```
 
-27. Set **OnSelect:**
+45. Set **OnSelect:**
 
 ```powerfx
 // Create the message in RequestComments with Direction field
@@ -4604,8 +4737,9 @@ Patch(
         ReqKey: varSelectedItem.ReqKey,
         Message: txtMessageBody.Text,
         Author: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Discipline: "",
+            Department: "",
             DisplayName: ddMessageStaff.Selected.MemberName,
             Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
@@ -4627,8 +4761,9 @@ Patch(
     {
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
         LastActionBy: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Discipline: "",
+            Department: "",
             DisplayName: ddMessageStaff.Selected.MemberName,
             Email: ddMessageStaff.Selected.MemberEmail,
             JobTitle: "",
@@ -4650,43 +4785,83 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 
 > **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow D will detect this and send the email with threading headers. See `PowerAutomate/Flow-(D)-Message-Notifications.md` for details.
 
+---
+
 ### Adding the Send Message Button to Job Cards
 
-Add a "Send Message" button to each job card in the gallery:
+Add a "Send Message" button to each job card in the gallery.
 
-1. Inside `galJobCards`, add a **Button**:
-   - **Name:** `btnSendMessage`
-   - **Text:** `"💬 Message"`
-   - **X:** `Parent.TemplateWidth - 470`
-   - **Y:** `100`
-   - **Width:** `110`
-   - **Height:** `40`
-   - **Fill:** `RGBA(70, 130, 220, 1)`
-   - **Color:** `Color.White`
-   - **BorderRadius:** `6`
+---
 
-2. Set **OnSelect:**
+### Gallery Message Button (btnCardSendMessage)
+
+1. Inside `galJobCards`, click **+ Insert** → **Button**.
+2. **Rename it:** `btnCardSendMessage`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"💬 Message"` |
+| X | `100` |
+| Y | `100` |
+| Width | `110` |
+| Height | `40` |
+| Fill | `RGBA(70, 130, 220, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
+
+4. Set **OnSelect:**
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
 Set(varShowMessageModal, ThisItem.ID)
 ```
 
+---
+
 ### Message Count Badge (Optional)
 
-To show unread inbound message count on job cards:
+To show unread inbound message count on job cards.
 
-1. Add a label inside the gallery:
-   - **Name:** `lblMessageCount`
-   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))`
-   - **X:** `Parent.TemplateWidth - 365`
-   - **Y:** `95`
-   - **Width:** `24`
-   - **Height:** `24`
-   - **Fill:** `RGBA(209, 52, 56, 1)`
-   - **Color:** `Color.White`
-   - **Align:** `Align.Center`
-   - **Visible:** `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))`
+---
+
+### Unread Message Badge (lblCardMessageBadge)
+
+1. Inside `galJobCards`, click **+ Insert** → **Text label**.
+2. **Rename it:** `lblCardMessageBadge`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `Parent.TemplateWidth - 365` |
+| Y | `95` |
+| Width | `24` |
+| Height | `24` |
+| Fill | `RGBA(209, 52, 56, 1)` |
+| Color | `Color.White` |
+| Align | `Align.Center` |
+| VerticalAlign | `VerticalAlign.Middle` |
+| Size | `10` |
+| FontWeight | `FontWeight.Bold` |
+| RadiusTopLeft | `12` |
+| RadiusTopRight | `12` |
+| RadiusBottomLeft | `12` |
+| RadiusBottomRight | `12` |
+
+4. Set **Text:**
+
+```powerfx
+Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))
+```
+
+5. Set **Visible:**
+
+```powerfx
+!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
+```
 
 > **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow E when students reply to emails.
 
