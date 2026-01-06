@@ -713,7 +713,7 @@ SortByColumns(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint.
 
-6. Set **TemplateSize:** `380` (fixed card height - accommodates both collapsed and expanded content)
+6. Set **TemplateSize:** `450` (fixed card height - accommodates messages section and action buttons)
 
 > ⚠️ **Power Apps Limitation:** The `TemplateSize` property cannot use `ThisItem` because it's evaluated at the gallery level, not per-item. All cards must have the same height. The expand/collapse feature works by showing/hiding the "Additional Details" section within this fixed space.
 
@@ -4228,7 +4228,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 |----------|-------|
 | Text | `"Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"` |
 | X | `12` |
-| Y | `230` |
+| Y | `260` |
 | Width | `200` |
 | Height | `20` |
 | Font | `Font.'Segoe UI Semibold'` |
@@ -4246,12 +4246,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 |----------|-------|
 | Items | `Sort(Filter(RequestComments, RequestID = ThisItem.ID), SentAt, SortOrder.Descending)` |
 | X | `12` |
-| Y | `250` |
+| Y | `280` |
 | Width | `Parent.TemplateWidth - 24` |
 | Height | `120` |
 | TemplateSize | `70` |
 | TemplatePadding | `2` |
-| Visible | `true` |
+| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID))` |
 | ShowScrollbar | `true` |
 
 > **Note:** TemplateSize is 70 to accommodate Direction indicator.
@@ -4265,7 +4265,6 @@ Go back inside `galJobCards` gallery template to add the messages display.
    - **Width:** `Parent.TemplateWidth * 0.7 - 10`
    - **Height:** `Parent.TemplateHeight - 4`
    - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
-   - **BorderRadius:** `8`
 
 > **Direction-based styling:**
 > - **Outbound (staff → student):** Blue tint, aligned right
@@ -4273,82 +4272,115 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 #### Inside galMessages — Direction Icon
 
-8. Add direction indicator icon:
-   - **Name:** `icoMsgDirection`
-   - **Icon:** `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)`
-   - **X:** `recMessageBg.X + 8`
-   - **Y:** `4`
-   - **Width:** `14`
-   - **Height:** `14`
-   - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))`
+8. Make sure you're inside `galMessages` (click on it in the Tree View).
+9. Click **+ Insert** → **Icons** → select any icon (we'll change it dynamically).
+10. **Rename it:** `icoMsgDirection`
+11. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Icon | `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)` |
+| X | `recMessageBg.X + 8` |
+| Y | `4` |
+| Width | `14` |
+| Height | `14` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))` |
+
+> **Icon behavior:** Shows "Send" arrow for staff messages (Outbound), "Mail" envelope for student replies (Inbound).
 
 #### Inside galMessages — Author Label
 
-9. Add message author label:
-   - **Name:** `lblMsgAuthor`
-   - **Text:** `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")`
-   - **X:** `recMessageBg.X + 26`
-   - **Y:** `4`
-   - **Size:** `9`
-   - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
-   - **FontItalic:** `false`
-   - **Font:** `Font.'Segoe UI Semibold'`
+12. Still inside `galMessages`, click **+ Insert** → **Text label**.
+13. **Rename it:** `lblMsgAuthor`
+14. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")` |
+| X | `recMessageBg.X + 26` |
+| Y | `4` |
+| Width | `180` |
+| Height | `16` |
+| Size | `9` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
+| FontItalic | `false` |
+| Font | `Font.'Segoe UI Semibold'` |
 
 #### Inside galMessages — Direction Badge
 
-10. Add direction badge label:
-    - **Name:** `lblMsgDirectionBadge`
-    - **Text:** `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")`
-    - **X:** `recMessageBg.X + recMessageBg.Width - 50`
-    - **Y:** `4`
-    - **Width:** `40`
-    - **Height:** `14`
-    - **Size:** `8`
-    - **Align:** `Align.Right`
-    - **Color:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))`
-    - **FontItalic:** `true`
+15. Still inside `galMessages`, click **+ Insert** → **Text label**.
+16. **Rename it:** `lblMsgDirectionBadge`
+17. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")` |
+| X | `recMessageBg.X + recMessageBg.Width - 50` |
+| Y | `4` |
+| Width | `40` |
+| Height | `14` |
+| Size | `8` |
+| Align | `Align.Right` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
+| FontItalic | `true` |
 
 #### Inside galMessages — Message Content
 
-11. Add message content label:
-    - **Name:** `lblMsgContent`
-    - **Text:** `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)`
-    - **X:** `recMessageBg.X + 8`
-    - **Y:** `22`
-    - **Width:** `recMessageBg.Width - 16`
-    - **Height:** `40`
-    - **Size:** `10`
-    - **Color:** `RGBA(50, 50, 50, 1)`
+18. Still inside `galMessages`, click **+ Insert** → **Text label**.
+19. **Rename it:** `lblMsgContent`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)` |
+| X | `recMessageBg.X + 8` |
+| Y | `22` |
+| Width | `recMessageBg.Width - 16` |
+| Height | `40` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
 
 #### No Messages Placeholder (Outside galMessages)
 
-12. Click on `galJobCards` (not galMessages) to add at the job card level.
-13. Add **Text label**:
-    - **Name:** `lblNoMessages`
-    - **Text:** `"No messages yet"`
-    - **X:** `12`
-    - **Y:** `260`
-    - **Color:** `RGBA(150, 150, 150, 1)`
-    - **FontItalic:** `true`
-    - **Size:** `10`
-    - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) = 0`
+21. Click on `galJobCards` in the Tree View (NOT galMessages — go up one level to the job card).
+22. Click **+ Insert** → **Text label**.
+23. **Rename it:** `lblNoMessages`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"No messages yet"` |
+| X | `12` |
+| Y | `280` |
+| Width | `200` |
+| Height | `20` |
+| Color | `RGBA(150, 150, 150, 1)` |
+| FontItalic | `true` |
+| Size | `10` |
+| Visible | `IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID))` |
+
+> **Note:** This label only shows when there are no messages for this request. It sits where the galMessages gallery would be.
 
 #### Unread Badge (Outside galMessages)
 
-14. Add unread badge for inbound (student) messages:
-    - **Name:** `lblUnreadBadge`
-    - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
-    - **X:** `120`
-    - **Y:** `228`
-    - **Width:** `20`
-    - **Height:** `20`
-    - **Fill:** `RGBA(209, 52, 56, 1)`
-    - **Color:** `Color.White`
-    - **Align:** `Align.Center`
-    - **BorderRadius:** `10`
-    - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)) > 0`
+25. Still in `galJobCards` (not galMessages), click **+ Insert** → **Text label**.
+26. **Rename it:** `lblUnreadBadge`
+27. Set properties:
 
-> **Note:** The unread badge filters on `Direction.Value = "Inbound"` to count student email replies.
+| Property | Value |
+|----------|-------|
+| Text | `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))` |
+| X | `120` |
+| Y | `258` |
+| Width | `20` |
+| Height | `20` |
+| Size | `10` |
+| Fill | `RGBA(209, 52, 56, 1)` |
+| Color | `Color.White` |
+| Align | `Align.Center` |
+| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+
+> **Note:** The unread badge shows a red circle with the count of student replies that staff haven't read yet. It only appears when there are unread inbound messages.
 
 ---
 
@@ -4646,7 +4678,7 @@ To show unread inbound message count on job cards:
 
 1. Add a label inside the gallery:
    - **Name:** `lblMessageCount`
-   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)))`
+   - **Text:** `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))`
    - **X:** `Parent.TemplateWidth - 365`
    - **Y:** `95`
    - **Width:** `24`
@@ -4654,8 +4686,7 @@ To show unread inbound message count on job cards:
    - **Fill:** `RGBA(209, 52, 56, 1)`
    - **Color:** `Color.White`
    - **Align:** `Align.Center`
-   - **BorderRadius:** `12`
-   - **Visible:** `CountRows(Filter(RequestComments, RequestID = ThisItem.ID && Direction.Value = "Inbound" && ReadByStaff = false)) > 0`
+   - **Visible:** `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))`
 
 > **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow E when students reply to emails.
 
