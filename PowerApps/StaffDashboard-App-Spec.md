@@ -4803,9 +4803,9 @@ Add a "Send Message" button to each job card in the gallery.
 |----------|-------|
 | Text | `"💬 Message"` |
 | X | `100` |
-| Y | `100` |
-| Width | `110` |
-| Height | `40` |
+| Y | `Parent.TemplateHeight - 85` |
+| Width | `100` |
+| Height | `28` |
 | Fill | `RGBA(70, 130, 220, 1)` |
 | Color | `Color.White` |
 | RadiusTopLeft | `6` |
