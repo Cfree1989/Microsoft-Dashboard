@@ -117,6 +117,23 @@ This app follows consistent design patterns for a professional appearance:
 | Navigation (Active) | `RGBA(70, 130, 220, 1)` | White | None |
 | Navigation (Inactive) | `RGBA(60, 60, 65, 1)` | White | None |
 
+### Corner Radius Standards
+
+| Element Type | Radius | Examples |
+|--------------|--------|----------|
+| Cards & Modals | `8` | `recCardBackground`, `recApprovalModal` |
+| Primary Buttons | `6` | `btnMessageSend`, `btnCardSendMessage` |
+| Action Buttons | `4` | `btnApprove`, `btnReject`, `btnEditDetails` |
+| Text Inputs | `4` | `txtSearch` |
+
+> 💡 **Consistency Tip:** Apply all four radius properties together:
+> ```powerfx
+> RadiusTopLeft: 4
+> RadiusTopRight: 4
+> RadiusBottomLeft: 4
+> RadiusBottomRight: 4
+> ```
+
 ### Layout Dimensions (Dynamic Sizing)
 
 Use **Parent-relative sizing** for responsive layouts:
@@ -126,8 +143,28 @@ Use **Parent-relative sizing** for responsive layouts:
 | Full-width bars | 100% | Fixed | `Parent.Width` / `60` |
 | Galleries | 100% | Fill remaining | `Parent.Width` / `Parent.Height - 160` |
 | Modal overlay | 100% | 100% | `Parent.Width` / `Parent.Height` |
-| Modal box | Centered | Centered | `(Parent.Width - 600) / 2` for X |
+| Modal box | Centered | Centered | `(Parent.Width - Self.Width) / 2` for X |
 | Cards in gallery | Auto | Fixed | Controlled by `WrapCount` and `TemplateSize` |
+
+#### Modal Dimensions Reference
+
+| Modal | Width | Height | Notes |
+|-------|-------|--------|-------|
+| Approval | 600 | 650 | Includes cost calculator |
+| Rejection | 600 | 610 | Multiple checkboxes |
+| Archive | 500 | 400 | Simple confirmation |
+| Details | 550 | 620 | Multiple dropdowns |
+| Payment | 550 | 630 | Includes partial pickup |
+| Files | 500 | 450 | Attachment form |
+| Message | 600 | 500 | Text input area |
+
+> ⚡ **Responsive Modal Sizing:** For better responsiveness on smaller screens, use `Min()`:
+> ```powerfx
+> Width: Min(600, Parent.Width - 40)
+> Height: Min(650, Parent.Height - 40)
+> X: (Parent.Width - Min(600, Parent.Width - 40)) / 2
+> Y: (Parent.Height - Min(650, Parent.Height - 40)) / 2
+> ```
 
 #### Common Dynamic Formulas
 
@@ -300,11 +337,17 @@ Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 
 // === LOADING STATE ===
 // Controls loading overlay visibility during async operations
 Set(varIsLoading, false);
+
+// === PRICING CONFIGURATION ===
+// Centralized pricing rates - change here to update all cost calculations
+Set(varFilamentRate, 0.10);    // $ per gram for filament printing
+Set(varResinRate, 0.20);       // $ per gram for resin printing  
+Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 Set(varLoadingMessage, "")
 ```
 
@@ -1273,7 +1316,7 @@ Before adding buttons, you need to understand how to update Person fields in Sha
 
 ### Setting Up varActor
 
-First, let's ensure varActor is set up. We'll create it on the screen's OnVisible event.
+The `varActor` variable creates a Person record for the **current logged-in user**. This can be used for quick Patch operations that don't require a staff dropdown selection.
 
 1. Click on **scrDashboard** in Tree view.
 2. Set the **OnVisible** property:
@@ -1282,6 +1325,7 @@ First, let's ensure varActor is set up. We'll create it on the screen's OnVisibl
 
 ```powerfx
 Set(varActor, {
+    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
     Claims: "i:0#.f|membership|" & varMeEmail,
     Discipline: "",
     DisplayName: varMeName,
@@ -1290,6 +1334,8 @@ Set(varActor, {
     Picture: ""
 })
 ```
+
+> 💡 **`varActor` vs Staff Dropdowns:** Modal actions use staff dropdowns so staff can process actions on behalf of others. Use `varActor` only when you need a quick Patch with the current user and don't need dropdown selection.
 
 > 💡 **SharePoint Person fields** require all six properties (Claims, Department, DisplayName, Email, JobTitle, Picture) even if some are empty strings.
 
@@ -1811,7 +1857,7 @@ Set **Visible** for all: `varShowRejectModal > 0`
 
 ```powerfx
 Set(varShowRejectModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
@@ -1846,6 +1892,10 @@ Reset(chkNotJoined)
 43. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Rejecting request...");
+
 // Build rejection reasons string
 Set(varRejectionReasons, 
     If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
@@ -1893,7 +1943,7 @@ IfError(
 
 // Close modal and reset
 Set(varShowRejectModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
@@ -1902,7 +1952,11 @@ Reset(chkNotSolid);
 Reset(chkScale);
 Reset(chkMessy);
 Reset(chkOverhangs);
-Reset(chkNotJoined)
+Reset(chkNotJoined);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 ---
@@ -2205,20 +2259,20 @@ If(
     IsNumeric(txtEstimatedWeight.Text) && Value(txtEstimatedWeight.Text) > 0,
     "$" & Text(
         Max(
-            3.00,
+            varMinimumCost,
             Value(txtEstimatedWeight.Text) * If(
                 varSelectedItem.Method.Value = "Resin",
-                0.20,
-                0.10
+                varResinRate,
+                varFilamentRate
             )
         ),
         "[$-en-US]#,##0.00"
     ),
-    "$3.00 (minimum)"
+    "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
 )
 ```
 
-> 💰 **Pricing:** Filament = $0.10/gram, Resin = $0.20/gram, $3.00 minimum
+> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart
 
 ---
 
@@ -2279,7 +2333,7 @@ If(
 
 ```powerfx
 Set(varShowApprovalModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtEstimatedWeight);
 Reset(txtEstimatedTime);
 Reset(txtApprovalComments);
@@ -2328,11 +2382,11 @@ Set(varLoadingMessage, "Approving request...");
 // Calculate cost
 Set(varCalculatedCost, 
     Max(
-        3.00,
+        varMinimumCost,
         Value(txtEstimatedWeight.Text) * If(
             varSelectedItem.Method.Value = "Resin",
-            0.20,
-            0.10
+            varResinRate,
+            varFilamentRate
         )
     )
 );
@@ -2381,7 +2435,7 @@ IfError(
     );
     // Close modal and reset
     Set(varShowApprovalModal, 0);
-    Set(varSelectedItem, LookUp(PrintRequests, false));
+    Set(varSelectedItem, Blank());
     Reset(txtEstimatedWeight);
     Reset(txtEstimatedTime);
     Reset(txtApprovalComments);
@@ -2596,7 +2650,7 @@ scrDashboard
 
 ```powerfx
 Set(varShowArchiveModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtArchiveReason);
 Reset(ddArchiveStaff)
 ```
@@ -2624,6 +2678,10 @@ Reset(ddArchiveStaff)
 33. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Archiving request...");
+
 // Update SharePoint item
 Patch(PrintRequests, varSelectedItem, {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
@@ -2661,9 +2719,13 @@ IfError(
 
 // Close modal and reset
 Set(varShowArchiveModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtArchiveReason);
-Reset(ddArchiveStaff)
+Reset(ddArchiveStaff);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 ---
@@ -3107,9 +3169,9 @@ With(
     },
     If(
         IsBlank(weight) || weight <= 0,
-        "$3.00 (min)",
+        "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (min)",
         "$" & Text(
-            Max(3.00, weight * If(method = "Resin", 0.20, 0.10)),
+            Max(varMinimumCost, weight * If(method = "Resin", varResinRate, varFilamentRate)),
             "[$-en-US]#,##0.00"
         )
     )
@@ -3139,7 +3201,7 @@ With(
 
 ```powerfx
 Set(varShowDetailsModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(ddDetailsStaff);
 Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
@@ -3190,10 +3252,14 @@ If(
 70. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Saving changes...");
+
 // Calculate new cost based on weight and method
 Set(varNewMethod, If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value));
 Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
-Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(3.00, varNewWeight * If(varNewMethod = "Resin", 0.20, 0.10))));
+Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate))));
 
 // Build change description for audit
 Set(varChangeDesc, "");
@@ -3251,16 +3317,20 @@ IfError(
 
 // Close modal and reset
 Set(varShowDetailsModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(ddDetailsStaff);
 Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
-Reset(txtDetailsHours)
+Reset(txtDetailsHours);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
-> 💡 **Cost recalculation:** When weight or method changes, cost is automatically recalculated using the formula: `Max($3.00, weight × rate)` where rate is $0.10/g for Filament and $0.20/g for Resin
+> 💡 **Cost recalculation:** When weight or method changes, cost is automatically recalculated using: `Max(varMinimumCost, weight × rate)` where rate is `varFilamentRate` for Filament and `varResinRate` for Resin (configured in App.OnStart)
 
 ---
 
@@ -3548,20 +3618,20 @@ If(
     IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
     "$" & Text(
         Max(
-            3.00,
+            varMinimumCost,
             Value(txtPaymentWeight.Text) * If(
                 varSelectedItem.Method.Value = "Resin",
-                0.20,
-                0.10
+                varResinRate,
+                varFilamentRate
             )
         ),
         "[$-en-US]#,##0.00"
     ),
-    "$3.00 (minimum)"
+    "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
 )
 ```
 
-> 💰 **Pricing:** Same formula as estimates: Filament = $0.10/gram, Resin = $0.20/gram, $3.00 minimum
+> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart
 
 ---
 
@@ -3680,7 +3750,7 @@ If(
 
 ```powerfx
 Set(varShowPaymentModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
@@ -3727,14 +3797,18 @@ If(
 64. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Recording payment...");
+
 // Calculate cost from weight picked up
 Set(varFinalCost, 
     Max(
-        3.00,
+        varMinimumCost,
         Value(txtPaymentWeight.Text) * If(
             varSelectedItem.Method.Value = "Resin",
-            0.20,
-            0.10
+            varResinRate,
+            varFilamentRate
         )
     )
 );
@@ -3822,13 +3896,17 @@ IfError(
 
 // Close modal and reset
 Set(varShowPaymentModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
-Reset(chkPartialPickup)
+Reset(chkPartialPickup);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 > 💡 **Partial Pickup Behavior:**
@@ -3988,6 +4066,8 @@ Reset(chkNeedsAttention)
 Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention})
 ```
 
+> 💡 **Simple Toggle:** This is a quick flag toggle for staff to mark items needing attention. It doesn't log to the audit trail since it's a temporary visual indicator, not a workflow action.
+
 ---
 
 ### Optional: Animated Glow Timer (tmrGlow)
@@ -4001,8 +4081,10 @@ Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention})
 |----------|-------|
 | Duration | `1500` |
 | Repeat | `true` |
-| AutoStart | `true` |
+| AutoStart | `!IsEmpty(Filter(PrintRequests, NeedsAttention = true))` |
 | Visible | `false` |
+
+> ⚡ **Performance Optimization:** The `AutoStart` formula only runs the timer when there are items that need attention. This prevents unnecessary CPU cycles when no items are flagged.
 
 10. Update `recCardBackground` (inside galJobCards). Set **Fill:**
 
@@ -4226,7 +4308,7 @@ Patch(
 );
 
 Set(varShowAddFileModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(ddFileActor);
 Notify("Attachments updated", NotificationType.Success)
 ```
@@ -4281,7 +4363,7 @@ SubmitForm(frmAttachmentsEdit)
 ```powerfx
 ResetForm(frmAttachmentsEdit);
 Set(varShowAddFileModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(ddFileActor)
 ```
 
@@ -4813,7 +4895,7 @@ If(
 
 ```powerfx
 Set(varShowMessageModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
 Reset(ddMessageStaff)
@@ -4859,6 +4941,10 @@ If(
 45. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Sending message...");
+
 // Create the message in RequestComments with Direction field
 Patch(
     RequestComments,
@@ -4907,10 +4993,14 @@ Patch(
 
 // Close modal and notify
 Set(varShowMessageModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
+Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
 Reset(txtMessageBody);
 Reset(ddMessageStaff);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
 
 Notify("Message sent! Student will receive email notification.", NotificationType.Success)
 ```
@@ -4953,49 +5043,6 @@ Set(varShowMessageModal, ThisItem.ID)
 ```
 
 ---
-
-### Message Count Badge (Optional)
-
-To show unread inbound message count on job cards.
-
----
-
-### Unread Message Badge (lblCardMessageBadge)
-
-1. Inside `galJobCards`, click **+ Insert** → **Text label**.
-2. **Rename it:** `lblCardMessageBadge`
-3. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `Parent.TemplateWidth - 365` |
-| Y | `95` |
-| Width | `24` |
-| Height | `24` |
-| Fill | `RGBA(209, 52, 56, 1)` |
-| Color | `Color.White` |
-| Align | `Align.Center` |
-| VerticalAlign | `VerticalAlign.Middle` |
-| Size | `10` |
-| FontWeight | `FontWeight.Bold` |
-| RadiusTopLeft | `12` |
-| RadiusTopRight | `12` |
-| RadiusBottomLeft | `12` |
-| RadiusBottomRight | `12` |
-
-4. Set **Text:**
-
-```powerfx
-Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))
-```
-
-5. Set **Visible:**
-
-```powerfx
-!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
-```
-
-> **Note:** Uses `Direction.Value = "Inbound"` to count student email replies. Inbound messages are created by Flow E when students reply to emails.
 
 ### Testing the Message Modal
 
@@ -5351,41 +5398,68 @@ Notify("Changes saved!", NotificationType.Success)
 | `varMeEmail` | App.OnStart | Current user email |
 | `varIsStaff` | App.OnStart | Staff member check |
 | `colStaff` | App.OnStart | Active staff collection |
+| `varFilamentRate` | App.OnStart | Filament price per gram ($0.10) |
+| `varResinRate` | App.OnStart | Resin price per gram ($0.20) |
+| `varMinimumCost` | App.OnStart | Minimum charge ($3.00) |
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
-| `varActor` | Screen.OnVisible | Person record for Patch |
+| `varActor` | Screen.OnVisible | Current user Person record (available for quick Patch operations) |
 | `varShowPaymentModal` | btnPickedUp click | Controls payment modal visibility |
 | `varFinalCost` | Payment modal confirm | Calculated from FinalWeight |
 
 ## Person Field Format
 
+SharePoint Person fields require a specific structure. This pattern is repeated across all modals because each uses a **different staff dropdown** (e.g., `ddApprovalStaff`, `ddRejectStaff`, etc.).
+
+**Standard Pattern:**
 ```powerfx
-{
-    Claims: "i:0#.f|membership|" & email,
+LastActionBy: {
+    Claims: "i:0#.f|membership|" & ddXXXStaff.Selected.MemberEmail,
     Discipline: "",
-    DisplayName: name,
-    Email: email,
+    DisplayName: ddXXXStaff.Selected.MemberName,
+    Email: ddXXXStaff.Selected.MemberEmail,
     JobTitle: "",
     Picture: ""
-    Email: email
 }
 ```
 
+> 💡 **Why the repetition?** Each modal has its own staff dropdown to allow processing actions on behalf of different staff members. The `Claims` field format (`i:0#.f|membership|email`) is required by SharePoint for Person field resolution.
+
+**Dropdown Reference:**
+| Modal | Dropdown Control |
+|-------|-----------------|
+| Approval | `ddApprovalStaff` |
+| Rejection | `ddRejectStaff` |
+| Archive | `ddArchiveStaff` |
+| Details | `ddDetailsStaff` |
+| Payment | `ddPaymentStaff` |
+| Files | `ddFileActor` |
+| Message | `ddMessageStaff` |
+
 ## Pricing Formula
+
+**Pricing Variables (set in App.OnStart):**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `varFilamentRate` | `0.10` | $ per gram for filament |
+| `varResinRate` | `0.20` | $ per gram for resin |
+| `varMinimumCost` | `3.00` | Minimum charge |
 
 **For Estimates (Approval Modal):**
 ```powerfx
 // EstimatedCost from EstimatedWeight
-Max(3.00, EstimatedWeight * If(Method = "Resin", 0.20, 0.10))
+Max(varMinimumCost, EstimatedWeight * If(Method = "Resin", varResinRate, varFilamentRate))
 ```
 
 **For Finals (Payment Modal):**
 ```powerfx
 // FinalCost from FinalWeight (actual measured weight)
-Max(3.00, FinalWeight * If(Method = "Resin", 0.20, 0.10))
+Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilamentRate))
 ```
 
 > 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
+
+> 💡 **Changing Prices:** To update pricing, only change the values in `App.OnStart`. All modals reference these variables automatically.
 
 ## Flow C Call Pattern
 
@@ -5497,15 +5571,15 @@ Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
 ## Cost Calculation
 
 ```powerfx
-// Auto-calculate with $3.00 minimum
+// Auto-calculate using pricing variables from App.OnStart
 If(
     IsNumeric(txtEstimatedWeight.Text) && Value(txtEstimatedWeight.Text) > 0,
     "$" & Text(
-        Max(3.00, Value(txtEstimatedWeight.Text) * 
-            If(varSelectedItem.Method.Value = "Resin", 0.20, 0.10)),
+        Max(varMinimumCost, Value(txtEstimatedWeight.Text) * 
+            If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)),
         "[$-en-US]#,##0.00"
     ),
-    "$3.00 (minimum)"
+    "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
 )
 ```
 
@@ -5518,7 +5592,7 @@ Set(varSelectedItem, ThisItem)
 
 // Hide modal (on cancel/confirm)
 Set(varShowRejectModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false))
+Set(varSelectedItem, Blank())
 ```
 
 ## Staff Dropdown Default
