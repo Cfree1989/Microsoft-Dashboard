@@ -10,7 +10,8 @@
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Creating the Canvas App](#step-1-creating-the-canvas-app)
+2. [Design Standards](#design-standards) ← **Font & Color Reference**
+3. [Creating the Canvas App](#step-1-creating-the-canvas-app)
 3. [Adding Data Connections](#step-2-adding-data-connections)
 4. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
 5. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
@@ -32,6 +33,7 @@
     - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
     - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
     - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
+    - [Step 17D: Adding the Loading Overlay](#step-17d-adding-the-loading-overlay) ← **UX Enhancement**
 21. [Publishing the App](#step-18-publishing-the-app)
 22. [Testing the App](#step-19-testing-the-app)
 23. [Troubleshooting](#troubleshooting)
@@ -71,6 +73,85 @@ Before you start, make sure you have:
 | `'text'` | `'text'` |
 
 > 💡 **Tip:** If a formula shows red errors after pasting, the quotes are usually the culprit!
+
+---
+
+## Design Standards
+
+This app follows consistent design patterns for a professional appearance:
+
+### Typography
+
+| Element | Font | Size | Weight |
+|---------|------|------|--------|
+| App Title | `Font.'Segoe UI'` | 18 | Semibold |
+| Modal Titles | `Font.'Segoe UI'` | 20 | Semibold |
+| Section Headers | `Font.'Segoe UI'` | 11-12 | Semibold |
+| Body Text | `Font.'Segoe UI'` | 10-11 | Normal |
+| Labels/Hints | `Font.'Segoe UI'` | 8-10 | Normal |
+| Buttons | `Font.'Segoe UI'` | 10-13 | Normal |
+
+> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the app. Avoid mixing fonts like `Font.'Open Sans'` — stick to the Microsoft design language.
+
+### Color Palette
+
+| Purpose | Color | RGBA |
+|---------|-------|------|
+| Primary (Active) | Blue | `RGBA(56, 96, 178, 1)` |
+| Success | Green | `RGBA(16, 124, 16, 1)` |
+| Warning | Amber | `RGBA(255, 185, 0, 1)` |
+| Error/Reject | Red | `RGBA(209, 52, 56, 1)` |
+| Info | Light Blue | `RGBA(70, 130, 220, 1)` |
+| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` |
+| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` |
+| Card Background | White | `Color.White` |
+| Muted Text | Gray | `RGBA(100, 100, 100, 1)` |
+
+### Button Styles
+
+| Type | Fill | Color | Border |
+|------|------|-------|--------|
+| Primary Action | Solid color | White | None |
+| Secondary/Outline | White | Colored | Colored, 1px |
+| Danger | White | Red | Red, 1px |
+| Navigation (Active) | `RGBA(70, 130, 220, 1)` | White | None |
+| Navigation (Inactive) | `RGBA(60, 60, 65, 1)` | White | None |
+
+### Layout Dimensions (Dynamic Sizing)
+
+Use **Parent-relative sizing** for responsive layouts:
+
+| Element | Width | Height | Formula |
+|---------|-------|--------|---------|
+| Full-width bars | 100% | Fixed | `Parent.Width` / `60` |
+| Galleries | 100% | Fill remaining | `Parent.Width` / `Parent.Height - 160` |
+| Modal overlay | 100% | 100% | `Parent.Width` / `Parent.Height` |
+| Modal box | Centered | Centered | `(Parent.Width - 600) / 2` for X |
+| Cards in gallery | Auto | Fixed | Controlled by `WrapCount` and `TemplateSize` |
+
+#### Common Dynamic Formulas
+
+```powerfx
+// Full-width element
+Width: Parent.Width
+
+// Centered horizontally (for 600px wide modal)
+X: (Parent.Width - 600) / 2
+
+// Centered vertically (for 500px tall modal)  
+Y: (Parent.Height - 500) / 2
+
+// Fill remaining height (below 160px of header/tabs/filters)
+Height: Parent.Height - 160
+
+// Percentage-based width
+Width: Parent.Width * 0.8
+
+// Right-aligned element
+X: Parent.Width - Self.Width - 20
+```
+
+> 💡 **Best Practice:** Always use `Parent.Width` and `Parent.Height` instead of hard-coded values like `1366` or `768`. This ensures the app adapts to different screen sizes and orientations.
 
 ---
 
@@ -219,7 +300,12 @@ Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
-Set(varSelectedItem, LookUp(PrintRequests, false))
+Set(varSelectedItem, LookUp(PrintRequests, false));
+
+// === LOADING STATE ===
+// Controls loading overlay visibility during async operations
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 5. Press **Enter** or click away to confirm.
@@ -253,6 +339,8 @@ Set(varSelectedItem, LookUp(PrintRequests, false))
 | `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
 | `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
+| `varIsLoading` | Shows loading overlay during operations | Boolean |
+| `varLoadingMessage` | Custom message shown during loading | Text |
 
 > ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
@@ -289,12 +377,17 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 
 > 📝 **Build Order Notes:**
 > - Controls are listed in Z-order (top = front), not build order
-> - Message Modal controls (btnMessageSend through recMessageOverlay) are added in **Step 16C**
-> - Message display controls in galJobCards (galMessages, lblNoMessages, lblUnreadBadge, btnSendMessage) are added in **Step 16B**
+> - Loading Overlay controls (lblLoadingMessage through recLoadingOverlay) are added in **Step 17D** — must be at top for highest Z-order
+> - Message Modal controls (btnMessageSend through recMessageOverlay) are added in **Step 17C**
+> - Message display controls in galJobCards (galMessages, lblNoMessages, lblUnreadBadge, btnSendMessage) are added in **Step 17B**
 
 ```
 ▼ App
 ▼ scrDashboard
+    lblLoadingMessage                 ← Step 17D (Loading Overlay)
+    lblLoadingSpinner                 ← Step 17D (Loading Overlay)
+    recLoadingBox                     ← Step 17D (Loading Overlay)
+    recLoadingOverlay                 ← Step 17D (Loading Overlay)
     btnMessageSend                    ← Step 16C
     btnMessageCancel                  ← Step 16C
     lblMessageCharCount               ← Step 16C
@@ -471,7 +564,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
+| Width | `Parent.Width` |
 | Height | `60` |
 | Fill | `RGBA(45, 45, 48, 1)` |
 
@@ -540,7 +633,7 @@ Set(varCurrentPage, "Dashboard")
 19. **Rename it:** `lblUserName`
 20. Set these properties:
    - **Text:** `varMeName`
-   - **X:** `1150`
+   - **X:** `Parent.Width - 216`
    - **Y:** `18`
    - **Width:** `200`
    - **Height:** `24`
@@ -576,7 +669,7 @@ After completing this step, your Tree view should look like:
 3. Position and size:
    - **X:** `0`
    - **Y:** `60`
-   - **Width:** `1366`
+   - **Width:** `Parent.Width`
    - **Height:** `50`
 
 4. Set the **Items** property:
@@ -616,7 +709,7 @@ Table(
 | Size | `11` |
 | BorderRadius | `20` |
 
-> 💡 **Why these sizes?** 8 tabs × 165px = 1320px fits the 1366px screen width. Font size 11 ensures "Paid & Picked Up" fits.
+> 💡 **Why these sizes?** 8 tabs × 165px = 1320px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits.
 
 14. Set the button's **Text** property (type directly to avoid quote issues):
 
@@ -678,8 +771,8 @@ Your Tree view should now include:
 |----------|-------|
 | X | `0` |
 | Y | `160` |
-| Width | `1366` |
-| Height | `608` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height - 160` |
 | **WrapCount** | `4` |
 | TemplatePadding | `8` |
 
@@ -787,24 +880,31 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 
 10. Set **Text:**
 
-**⬇️ FORMULA: Shows relative time since submission**
+**⬇️ FORMULA: Shows relative time since submission (with "Just now" for recent items)**
 
 ```powerfx
-"Submitted " & 
 If(
-    DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 0,
-    Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & "d ",
-    ""
-) &
-If(
-    Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24) > 0,
-    Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24)) & "h ",
-    ""
-) &
-Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
+    DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes) < 1,
+    "Just now",
+    "Submitted " &
+    If(
+        DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 0,
+        Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & "d ",
+        ""
+    ) &
+    If(
+        Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24) > 0,
+        Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24)) & "h ",
+        ""
+    ) &
+    Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
+)
 ```
 
-> 💡 Items older than 2 days show in red to indicate urgency.
+> 💡 **Time Display:**
+> - "Just now" for items less than 1 minute old
+> - "Submitted Xd Xh Xm ago" for older items
+> - Red color indicates urgency
 
 ### File Name / Request Info (lblReqKey)
 
@@ -1454,7 +1554,7 @@ Set(varSelectedItem, ThisItem)
 | Property | Value |
 |----------|-------|
 | Text | `"No " & varSelectedStatus & " requests found"` |
-| X | `(1366 - 400) / 2` |
+| X | `(Parent.Width - 400) / 2` |
 | Y | `350` |
 | Width | `400` |
 | Height | `100` |
@@ -1511,8 +1611,8 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowRejectModal > 0` |
 
@@ -1847,8 +1947,8 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowApprovalModal > 0` |
 
@@ -2221,6 +2321,10 @@ If(
 58. Set **OnSelect:**
 
 ```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Approving request...");
+
 // Calculate cost
 Set(varCalculatedCost, 
     Max(
@@ -2233,54 +2337,66 @@ Set(varCalculatedCost,
     )
 );
 
-// Update SharePoint item
+// Update SharePoint item with error handling
 // ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names
-Patch(PrintRequests, varSelectedItem, {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
-    NeedsAttention: false,
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
-        Discipline: "",
-        DisplayName: ddApprovalStaff.Selected.MemberName,
-        Email: ddApprovalStaff.Selected.MemberEmail,
-        JobTitle: "",
-        Picture: ""
-    },
-    LastActionAt: Now(),
-    EstimatedWeight: Value(txtEstimatedWeight.Text),
-    EstimatedTime: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
-    EstimatedCost: varCalculatedCost,
-    StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "APPROVED by " & ddApprovalStaff.Selected.MemberName &
-        ": Weight=" & txtEstimatedWeight.Text & "g, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
-        If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
-        " - " & Text(Now(), "mm/dd/yyyy")
-    )
-});
-
-// Log action via Flow C
 IfError(
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),
-        "Approved",
-        "Status",
-        "Pending",
-        ddApprovalStaff.Selected.MemberEmail
-    ),
-    Notify("Could not log approval.", NotificationType.Error),
-    Notify("Approved! Student will receive estimate email.", NotificationType.Success)
+    Patch(PrintRequests, varSelectedItem, {
+        Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
+        NeedsAttention: false,
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+        LastActionBy: {
+            Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
+            Discipline: "",
+            DisplayName: ddApprovalStaff.Selected.MemberName,
+            Email: ddApprovalStaff.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
+        LastActionAt: Now(),
+        EstimatedWeight: Value(txtEstimatedWeight.Text),
+        EstimatedTime: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
+        EstimatedCost: varCalculatedCost,
+        StaffNotes: Concatenate(
+            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            "APPROVED by " & ddApprovalStaff.Selected.MemberName &
+            ": Weight=" & txtEstimatedWeight.Text & "g, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+            If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
+            " - " & Text(Now(), "mm/dd/yyyy")
+        )
+    }),
+    // ERROR: Patch failed
+    Set(varIsLoading, false);
+    Notify("Failed to save approval. Please try again.", NotificationType.Error),
+    // SUCCESS: Continue with Flow logging
+    IfError(
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(varSelectedItem.ID),
+            "Approved",
+            "Status",
+            "Pending",
+            ddApprovalStaff.Selected.MemberEmail
+        ),
+        Notify("Approved, but could not log to audit.", NotificationType.Warning),
+        Notify("Approved! Student will receive estimate email.", NotificationType.Success)
+    );
+    // Close modal and reset
+    Set(varShowApprovalModal, 0);
+    Set(varSelectedItem, LookUp(PrintRequests, false));
+    Reset(txtEstimatedWeight);
+    Reset(txtEstimatedTime);
+    Reset(txtApprovalComments);
+    Reset(ddApprovalStaff)
 );
 
-// Close modal and reset
-Set(varShowApprovalModal, 0);
-Set(varSelectedItem, LookUp(PrintRequests, false));
-Reset(txtEstimatedWeight);
-Reset(txtEstimatedTime);
-Reset(txtApprovalComments);
-Reset(ddApprovalStaff)
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
+
+> 💡 **Error Handling Pattern:**
+> - The outer `IfError` catches Patch failures
+> - The inner `IfError` catches Flow failures (approval still saved even if logging fails)
+> - Loading overlay prevents double-clicks during operation
 
 ---
 
@@ -2317,8 +2433,8 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowArchiveModal > 0` |
 
@@ -2600,8 +2716,8 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowDetailsModal > 0` |
 
@@ -3201,8 +3317,8 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowPaymentModal > 0` |
 
@@ -3758,7 +3874,7 @@ scrDashboard
 |----------|-------|
 | X | `0` |
 | Y | `110` |
-| Width | `1366` |
+| Width | `Parent.Width` |
 | Height | `50` |
 | Fill | `RGBA(248, 248, 248, 1)` |
 | BorderColor | `RGBA(230, 230, 230, 1)` |
@@ -3820,7 +3936,7 @@ Set(varSearchText, Self.Text)
 | Property | Value |
 |----------|-------|
 | Text | `"✕ Clear"` |
-| X | `1280` |
+| X | `Parent.Width - 86` |
 | Y | `117` |
 | Width | `70` |
 | Height | `36` |
@@ -3968,8 +4084,8 @@ Set(varShowAddFileModal, ThisItem.ID)
 |----------|-------|
 | X | `0` |
 | Y | `0` |
-| Width | `1366` |
-| Height | `768` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
 | Visible | `varShowAddFileModal > 0` |
 
@@ -4255,6 +4371,11 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | ShowScrollbar | `true` |
 
 > **Note:** TemplateSize is 70 to accommodate Direction indicator.
+
+> ⚠️ **Performance Consideration:** This gallery-inside-gallery pattern works well for typical usage (5-20 messages per request). However, if your lab expects:
+> - **Many messages per request (50+):** Consider limiting to recent messages: `FirstN(Sort(...), 10)`
+> - **Many concurrent requests (100+):** The nested Filter may hit delegation limits
+> - **Slow performance:** Add an index on RequestID in SharePoint or cache messages in a collection
 
 #### Inside galMessages — Message Background
 
@@ -4634,25 +4755,36 @@ Set(varMessageText, "");
 
 | Property | Value |
 |----------|-------|
-| X | `recMessageModal.X + 460` |
+| X | `recMessageModal.X + 430` |
 | Y | `recMessageModal.Y + 408` |
-| Width | `100` |
-| Height | `20` |
-| Size | `10` |
-| Align | `Align.Right` |
+| Width | `130` |
+| Height | `22` |
+| Size | `8` |
+| Align | `Align.Center` |
 | Visible | `varShowMessageModal > 0` |
 
 35. Set **Text:**
 
 ```powerfx
-Len(txtMessageBody.Text) & " / 2000 characters"
+Len(txtMessageBody.Text) & " / 2000" & If(Len(txtMessageBody.Text) > 1900, " ⚠️ Near limit!", "")
 ```
 
 36. Set **Color:**
 
 ```powerfx
-If(Len(txtMessageBody.Text) > 1800, RGBA(209, 52, 56, 1), RGBA(100, 100, 100, 1))
+If(
+    Len(txtMessageBody.Text) > 1900, 
+    RGBA(209, 52, 56, 1),
+    Len(txtMessageBody.Text) > 1800, 
+    RGBA(255, 140, 0, 1),
+    RGBA(100, 100, 100, 1)
+)
 ```
+
+> 💡 **Character Feedback:**
+> - Gray (0-1800): Normal
+> - Orange (1800-1900): Warning
+> - Red (1900+): Near limit with "⚠️ Near limit!" text
 
 ---
 
@@ -4875,6 +5007,148 @@ Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value 
 - [ ] Success notification appears
 - [ ] Modal closes and resets after sending
 - [ ] Flow D sends threaded email to student with [REQ-00001] in subject
+
+---
+
+# STEP 17D: Adding the Loading Overlay
+
+**What you're doing:** Adding a loading indicator that shows during async operations (Patch, Flow calls) to prevent user confusion and double-clicks.
+
+### Control Hierarchy
+
+```
+scrDashboard
+├── recLoadingOverlay            ← Semi-transparent dark overlay
+├── recLoadingBox                ← White box with spinner
+├── lblLoadingSpinner            ← Animated spinner emoji
+└── lblLoadingMessage            ← Custom loading message
+```
+
+> 💡 **Why this matters:** Without visual feedback, users may click buttons multiple times or think the app is frozen during database operations.
+
+---
+
+### Loading Overlay Background (recLoadingOverlay)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Rectangle**.
+3. **Rename it:** `recLoadingOverlay`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.5)` |
+| Visible | `varIsLoading` |
+
+> ⚠️ **Important:** This control should be near the bottom of the Tree view (high Z-order) so it appears on top of everything.
+
+---
+
+### Loading Box (recLoadingBox)
+
+5. Click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recLoadingBox`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 200) / 2` |
+| Y | `(Parent.Height - 100) / 2` |
+| Width | `200` |
+| Height | `100` |
+| Fill | `Color.White` |
+| BorderColor | `RGBA(56, 96, 178, 1)` |
+| BorderThickness | `2` |
+| Visible | `varIsLoading` |
+
+---
+
+### Loading Spinner (lblLoadingSpinner)
+
+8. Click **+ Insert** → **Text label**.
+9. **Rename it:** `lblLoadingSpinner`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"⏳"` |
+| X | `(Parent.Width - 50) / 2` |
+| Y | `(Parent.Height - 100) / 2 + 15` |
+| Width | `50` |
+| Height | `40` |
+| Size | `24` |
+| Align | `Align.Center` |
+| Visible | `varIsLoading` |
+
+---
+
+### Loading Message (lblLoadingMessage)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblLoadingMessage`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 200) / 2` |
+| Y | `(Parent.Height - 100) / 2 + 55` |
+| Width | `200` |
+| Height | `30` |
+| Size | `12` |
+| Align | `Align.Center` |
+| Color | `RGBA(80, 80, 80, 1)` |
+| Visible | `varIsLoading` |
+
+14. Set **Text:**
+
+```powerfx
+If(IsBlank(varLoadingMessage), "Processing...", varLoadingMessage)
+```
+
+---
+
+### Using the Loading Overlay
+
+To show the loading overlay during an operation, wrap your button's `OnSelect` like this:
+
+**Example Pattern:**
+
+```powerfx
+// Show loading
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Saving changes...");
+
+// Do the work
+Patch(PrintRequests, varSelectedItem, { ... });
+
+// Call flow (if needed)
+'Flow-(C)-Action-LogAction'.Run(...);
+
+// Hide loading
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
+
+// Show result
+Notify("Changes saved!", NotificationType.Success)
+```
+
+> 💡 **Tip:** You can customize `varLoadingMessage` for each operation:
+> - `"Approving request..."` for approval
+> - `"Recording payment..."` for payment
+> - `"Sending message..."` for messaging
+
+---
+
+### Testing Checklist
+
+- [ ] Loading overlay appears during operations
+- [ ] User cannot click other buttons while loading is visible
+- [ ] Loading message displays correctly
+- [ ] Overlay dismisses after operation completes
 
 ---
 
