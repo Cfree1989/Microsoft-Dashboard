@@ -348,6 +348,11 @@ Set(varIsLoading, false);
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
 Set(varResinRate, 0.20);       // $ per gram for resin printing  
 Set(varMinimumCost, 3.00);     // Minimum charge for any print job
+
+// === STYLING / THEMING ===
+// Centralized font setting - use varAppFont in controls for easy bulk updates
+Set(varAppFont, Font.'Segoe UI');
+
 Set(varLoadingMessage, "")
 ```
 
@@ -384,6 +389,12 @@ Set(varLoadingMessage, "")
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
+| `varFilamentRate` | Cost per gram for filament printing | Number |
+| `varResinRate` | Cost per gram for resin printing | Number |
+| `varMinimumCost` | Minimum charge for any print job | Number |
+| `varAppFont` | Global font for consistent styling | Font |
+
+> 💡 **Styling Tip:** Use `varAppFont` in control Font properties instead of hardcoding `Font.'Segoe UI'`. This lets you change the app-wide font with a single edit in OnStart.
 
 > ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
