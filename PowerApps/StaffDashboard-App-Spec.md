@@ -539,13 +539,13 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnApprovalCancel
         txtApprovalComments
         lblApprovalCommentsLabel
-        lblCalculatedCost
-        lblCostLabel
+        lblApprovalCostValue
+        lblApprovalCostLabel
         txtEstimatedTime
-        lblTimeLabel
-        lblWeightError
+        lblApprovalTimeLabel
+        lblWeightValidation
         txtEstimatedWeight
-        lblWeightLabel
+        lblApprovalWeightLabel
         ddApprovalStaff
         lblApprovalStaffLabel
         lblApprovalStudent
@@ -571,10 +571,10 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblRejectTitle
         recRejectModal
         recRejectOverlay
-    recFilterBar                      ← Step 14 (filter bar BELOW modal containers)
-    txtSearch                         ← Step 14
-    chkNeedsAttention                 ← Step 14
     btnClearFilters                   ← Step 14
+    chkNeedsAttention                 ← Step 14
+    txtSearch                         ← Step 14
+    recFilterBar                      ← Step 14 (filter bar background)
     ▼ galJobCards                     ← Step 6
         btnSendMessage                ← Step 16C
         btnFiles                      ← Step 16
@@ -1906,10 +1906,12 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recRejectModal.X + 20` |
-| Y | `recRejectModal.Y + 425` |
+| Y | `recRejectModal.Y + 442` |
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Provide specific feedback for the student..."` |
+
+> 💡 **Note:** The Y position of `442` provides adequate spacing below the "Additional Comments" label to prevent overlap.
 
 ---
 
