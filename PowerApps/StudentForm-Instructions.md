@@ -183,6 +183,14 @@ We use **prefixes** to identify control types at a glance:
 
 > ⚠️ **CRITICAL:** When setting properties in Power Apps, you must select the **control inside the card** (like `DataCardValue3`), NOT the card itself (like `Student_DataCard1`). The card is just a container—the control inside is what actually displays and stores data.
 
+## Z-Order (Layering) Rule
+
+> 💡 **Z-ORDER:** In Power Apps, controls **higher in the Tree View appear IN FRONT** of controls lower in the list. This means:
+> - **Labels and content** should be listed **FIRST** (they render on top/in front)
+> - **Background rectangles** should be listed **AFTER** (they render behind/at the back)
+>
+> If a rectangle appears before a label in the Tree View, the rectangle will cover the label and hide it!
+
 ---
 
 # Complete Form Tree View
@@ -193,98 +201,49 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
 
 ```
 ▼ App
-▼ scrFormScreen                      ← Main screen (auto-created)
+▼ scrFormScreen                      ← Main screen
     ▼ SharePointForm1                ← Main form control
         
-        // === HEADER SECTION ===
-        lblFormTitle                 ← Step 3 (Form header label)
-        recFormHeader               ← Step 3 (Header background)
+        // === HEADER (Step 3) ===
+        lblFormTitle                 ← IN FRONT
+        recFormHeader                ← BEHIND
         
-        // === STUDENT INFO SECTION ===
-        lblStudentSectionHeader      ← Step 4 (Section title)
-        recStudentSection           ← Step 4 (Section background)
-        ▼ Student_DataCard1          ← Auto-filled student name
-            DataCardKey
-            DataCardValue (ComboBox)
-            ErrorMessage
-            StarVisible
-        ▼ StudentEmail_DataCard1     ← Auto-filled email
-            DataCardKey
-            DataCardValue (TextInput)
-            ErrorMessage
-        ▼ TigerCardNumber_DataCard1  ← Student enters manually
-            DataCardKey
-            DataCardValue (TextInput)
-            ErrorMessage
-            StarVisible
+        // === STUDENT INFO (Step 4) ===
+        lblStudentSectionHeader      ← IN FRONT
+        recStudentSection            ← BEHIND
+        Student_DataCard1            ← Auto-filled
+        StudentEmail_DataCard1       ← Auto-filled
+        TigerCardNumber_DataCard1    ← Required
         
-        // === PROJECT DETAILS SECTION ===
-        lblProjectSectionHeader      ← Step 5 (Section title)
-        recProjectSection           ← Step 5 (Section background)
-        ▼ Title_DataCard1            ← Project title
-            DataCardKey
-            DataCardValue (TextInput)
-            ErrorMessage
-            StarVisible
-        ▼ CourseNumber_DataCard1     ← Course info
-            DataCardKey
-            DataCardValue (TextInput)
-            ErrorMessage
-        ▼ Discipline_DataCard1       ← Academic discipline
-            DataCardKey
-            DataCardValue (ComboBox)
-            ErrorMessage
-        ▼ ProjectType_DataCard1      ← Project type
-            DataCardKey
-            DataCardValue (ComboBox)
-            ErrorMessage
-        ▼ DueDate_DataCard1          ← When needed
-            DataCardKey
-            DataCardValue (DatePicker)
-            ErrorMessage
-        ▼ Notes_DataCard1            ← Additional notes
-            DataCardKey
-            DataCardValue (TextInput - multiline)
-            ErrorMessage
+        // === PROJECT DETAILS (Step 5) ===
+        lblProjectSectionHeader      ← IN FRONT
+        recProjectSection            ← BEHIND
+        Title_DataCard1
+        CourseNumber_DataCard1
+        Discipline_DataCard1
+        ProjectType_DataCard1
+        DueDate_DataCard1
+        Notes_DataCard1
         
-        // === PRINT CONFIG SECTION ===
-        lblPrintSectionHeader        ← Step 6 (Section title)
-        recPrintSection             ← Step 6 (Section background)
-        ▼ Method_DataCard1           ← Filament or Resin
-            DataCardKey
-            DataCardValue (ComboBox)  ← Controls Printer filtering
-            ErrorMessage
-            StarVisible
-        ▼ Printer_DataCard1          ← Filtered by Method
-            DataCardKey
-            DataCardValue (ComboBox)  ← Has cascading filter
-            ErrorMessage
-            StarVisible
-        ▼ Color_DataCard1            ← Print color
-            DataCardKey
-            DataCardValue (ComboBox)
-            ErrorMessage
-            StarVisible
+        // === PRINT CONFIG (Step 6) ===
+        lblPrintSectionHeader        ← IN FRONT
+        recPrintSection              ← BEHIND
+        Method_DataCard1             ← Controls Printer filter
+        Printer_DataCard1            ← Cascading dropdown
+        Color_DataCard1
         
-        // === ATTACHMENTS SECTION ===
-        lblFileSectionHeader         ← Step 7 (Section title)
-        recFileSection              ← Step 7 (Section background)
-        lblFileWarning              ← Step 7 (File naming instructions)
-        ▼ Attachments_DataCard1      ← File upload control
-            DataCardKey
-            DataCardValue (AttachmentControl)
-            ErrorMessage
+        // === ATTACHMENTS (Step 7) ===
+        lblFileSectionHeader         ← IN FRONT
+        lblFileWarning               ← File naming instructions
+        recFileSection               ← BEHIND
+        Attachments_DataCard1
         
-        // === HIDDEN FIELDS (Required but invisible) ===
-        ▼ Status_DataCard1           ← Step 8 (Visible: false)
-            DataCardValue (ComboBox) ← DefaultSelectedItems: [{Value:"Uploaded"}]
-        ▼ ReqKey_DataCard1           ← Step 8 (Visible: false, OR removed)
-            // Auto-generated by Flow A
+        // === HIDDEN (Step 8) ===
+        Status_DataCard1             ← Visible: false
+        ReqKey_DataCard1             ← Visible: false (or removed)
         
-        // === CONDITIONAL FIELDS ===
-        ▼ StudentConfirmed_DataCard1 ← Step 8 (Visible in Edit mode only)
-            DataCardKey
-            DataCardValue (Toggle/Checkbox)
+        // === CONDITIONAL (Step 8) ===
+        StudentConfirmed_DataCard1   ← Visible in Edit mode only
 ```
 
 ### Fields NOT in Form (Staff-Only)
@@ -1173,7 +1132,33 @@ After completing this step:
 
 **Time:** 15 minutes
 
-## 9A. Adjust Form Padding
+## 9A. Set Form Height (Dynamic)
+
+The form height should dynamically adjust based on your content. Since `ContentHeight` is not available in SharePoint form customization, use a formula based on your last visible DataCard.
+
+### Instructions
+
+1. Click on **SharePointForm1**
+2. In the **Advanced** tab, find the **Height** property
+3. Set it to:
+
+```powerfx
+Attachments_DataCard1.Y + Attachments_DataCard1.Height + 100
+```
+
+### Understanding the Formula
+
+| Part | What It Does |
+|------|--------------|
+| `Attachments_DataCard1.Y` | Distance from top to where the attachments card starts |
+| `Attachments_DataCard1.Height` | How tall the attachments card is |
+| `+ 100` | Extra padding at the bottom |
+
+> ⚠️ **Note:** `Attachments_DataCard1` should be your last visible DataCard. If you reorder fields, update this formula to reference whichever DataCard appears last.
+
+> 💡 **Tip:** SharePoint handles the scrolling panel around your form automatically. This formula ensures all content fits within the form container.
+
+## 9B. Adjust Form Padding
 
 ### Instructions
 
@@ -1187,7 +1172,7 @@ After completing this step:
 | PaddingRight | `20` |
 | PaddingBottom | `20` |
 
-## 9B. Adjust DataCard Spacing
+## 9C. Adjust DataCard Spacing
 
 For better visual separation between fields:
 
@@ -1201,7 +1186,7 @@ For better visual separation between fields:
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 
-## 9C. Style Required Field Indicators
+## 9D. Style Required Field Indicators
 
 Required fields show a red asterisk. You can customize this:
 
@@ -1213,7 +1198,7 @@ Required fields show a red asterisk. You can customize this:
 | Color | `RGBA(209, 52, 56, 1)` |
 | Size | `10` |
 
-## 9D. Style Error Messages
+## 9E. Style Error Messages
 
 For validation error display:
 
@@ -1226,7 +1211,7 @@ For validation error display:
 | Size | `9` |
 | Font | `Font.'Segoe UI'` |
 
-## 9E. Ensure Consistent Font Usage
+## 9F. Ensure Consistent Font Usage
 
 Go through each label and input control to verify:
 
@@ -1559,6 +1544,7 @@ Ensure DefaultSelectedItems includes all three properties:
 
 | Task | Control | Property | Value |
 |------|---------|----------|-------|
+| Dynamic form height | SharePointForm1 | Height | `Attachments_DataCard1.Y + Attachments_DataCard1.Height + 100` |
 | Auto-fill Student name | ComboBox in Student_DataCard | DefaultSelectedItems | See formula above |
 | Show student name correctly | ComboBox in Student_DataCard | DisplayFields | `["DisplayName"]` |
 | Auto-fill StudentEmail | Input in StudentEmail_DataCard | Default | `Lower(User().Email)` |
@@ -1640,6 +1626,14 @@ If you need global variables:
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 ```
+
+## SharePointForm1 — Height (Dynamic)
+
+```powerfx
+Attachments_DataCard1.Y + Attachments_DataCard1.Height + 100
+```
+
+> ⚠️ Replace `Attachments_DataCard1` with your last visible DataCard if different.
 
 ## Student_DataCard ComboBox — DefaultSelectedItems
 
