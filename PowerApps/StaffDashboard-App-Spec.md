@@ -431,98 +431,147 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 
 > 📝 **Build Order Notes:**
 > - Controls are listed in Z-order (top = front), not build order
-> - Loading Overlay controls (lblLoadingMessage through recLoadingOverlay) are added in **Step 17D** — must be at top for highest Z-order
-> - Message Modal controls (btnMessageSend through recMessageOverlay) are added in **Step 17C**
-> - Message display controls in galJobCards (galMessages, lblNoMessages, lblUnreadBadge, btnSendMessage) are added in **Step 17B**
+> - **Modals use Containers** — each modal is wrapped in a Container control for easier management
+> - Loading Overlay container must be at top for highest Z-order
+> - Setting `Visible` on a container automatically hides/shows ALL child controls
+
+### 🎯 Why Containers for Modals?
+
+| Before (Flat) | After (Container) |
+|--------------|-------------------|
+| Set `Visible` on 15+ individual controls | Set `Visible` on 1 container |
+| Drag 15+ controls to reorder z-index | Drag 1 container to reorder |
+| Complex positioning (relative to screen) | Simple positioning (relative to container) |
+| Risk of forgetting visibility on some controls | All children automatically inherit visibility |
+
+> 💡 **Container Benefits:**
+> - **Single Visibility Control** — Set `Visible` on the container, all children inherit it
+> - **Easy Repositioning** — Move or resize the entire modal as one unit
+> - **Better Organization** — All modal controls grouped in Tree view under one parent
+> - **Cleaner Code** — No need to set `Visible` formula on every child control
 
 ```
 ▼ App
 ▼ scrDashboard
-    lblLoadingMessage                 ← Step 17D (Loading Overlay)
-    lblLoadingSpinner                 ← Step 17D (Loading Overlay)
-    recLoadingBox                     ← Step 17D (Loading Overlay)
-    recLoadingOverlay                 ← Step 17D (Loading Overlay)
-    btnMessageSend                    ← Step 16C
-    btnMessageCancel                  ← Step 16C
-    lblMessageCharCount               ← Step 16C
-    txtMessageBody                    ← Step 16C
-    lblMessageBodyLabel               ← Step 16C
-    txtMessageSubject                 ← Step 16C
-    lblMessageSubjectLabel            ← Step 16C
-    ddMessageStaff                    ← Step 16C
-    lblMessageStaffLabel              ← Step 16C
-    lblMessageStudent                 ← Step 16C
-    lblMessageTitle                   ← Step 16C
-    recMessageModal                   ← Step 16C
-    recMessageOverlay                 ← Step 16C
-    btnFileCancel                     ← Step 16
-    btnFileSave                       ← Step 16
-    frmAttachmentsEdit                ← Step 16
-    ddFileActor                       ← Step 16
-    lblFileStaffLabel                 ← Step 16
-    lblFileTitle                      ← Step 16
-    recFileModal                      ← Step 16
-    recFileOverlay                    ← Step 16
-    btnDetailsConfirm                 ← Step 12B
-    btnDetailsCancel                  ← Step 12B
-    ddDetailsColor                    ← Step 12B
-    lblDetailsColorLabel              ← Step 12B
-    ddDetailsPrinter                  ← Step 12B
-    lblDetailsPrinterLabel            ← Step 12B
-    ddDetailsStaff                    ← Step 12B
-    lblDetailsStaffLabel              ← Step 12B
-    lblDetailsCurrent                 ← Step 12B
-    lblDetailsCurrentLabel            ← Step 12B
-    lblDetailsTitle                   ← Step 12B
-    recDetailsModal                   ← Step 12B
-    recDetailsOverlay                 ← Step 12B
-    btnArchiveConfirm                 ← Step 12
-    btnArchiveCancel                  ← Step 12
-    txtArchiveReason                  ← Step 12
-    lblArchiveReasonLabel             ← Step 12
-    ddArchiveStaff                    ← Step 12
-    lblArchiveStaffLabel              ← Step 12
-    lblArchiveWarning                 ← Step 12
-    lblArchiveTitle                   ← Step 12
-    recArchiveModal                   ← Step 12
-    recArchiveOverlay                 ← Step 12
-    btnApprovalConfirm                ← Step 11
-    recApprovalOverlay                ← Step 11 (MUST BE AT TOP - renders on top of everything)
-    recApprovalModal                  ← Step 11
-    lblApprovalTitle                  ← Step 11
-    lblApprovalStudent                ← Step 11
-    lblApprovalStaffLabel             ← Step 11
-    ddApprovalStaff                   ← Step 11
-    lblWeightLabel                    ← Step 11
-    txtEstimatedWeight                ← Step 11
-    lblWeightError                    ← Step 11
-    lblTimeLabel                      ← Step 11
-    txtEstimatedTime                  ← Step 11
-    lblCostLabel                      ← Step 11
-    lblCalculatedCost                 ← Step 11
-    lblApprovalCommentsLabel          ← Step 11
-    txtApprovalComments               ← Step 11
-    btnApprovalCancel                 ← Step 11
-    btnApprovalConfirm                ← Step 11
-    recRejectOverlay                  ← Step 10
-    recRejectModal                    ← Step 10
-    lblRejectTitle                    ← Step 10
-    lblRejectStudent                  ← Step 10
-    lblRejectStaffLabel               ← Step 10
-    ddRejectStaff                     ← Step 10
-    lblRejectReasonsLabel             ← Step 10
-    chkTooSmall                       ← Step 10
-    chkGeometry                       ← Step 10
-    chkNotSolid                       ← Step 10
-    chkScale                          ← Step 10
-    chkMessy                          ← Step 10
-    chkOverhangs                      ← Step 10
-    chkNotJoined                      ← Step 10
-    lblRejectCommentsLabel            ← Step 10
-    txtRejectComments                 ← Step 10
-    btnRejectCancel                   ← Step 10
-    btnRejectConfirm                  ← Step 10
-    recFilterBar                      ← Step 14 (filter bar BELOW modals)
+    ▼ conLoadingOverlay               ← Step 17D (Loading — TOP for highest z-order)
+        lblLoadingMessage
+        lblLoadingSpinner
+        recLoadingBox
+        recLoadingOverlay
+    ▼ conMessageModal                 ← Step 17C (Message Modal Container)
+        btnMessageSend
+        btnMessageCancel
+        lblMessageCharCount
+        txtMessageBody
+        lblMessageBodyLabel
+        txtMessageSubject
+        lblMessageSubjectLabel
+        ddMessageStaff
+        lblMessageStaffLabel
+        lblMessageStudent
+        lblMessageTitle
+        recMessageModal
+        recMessageOverlay
+    ▼ conFileModal                    ← Step 16 (Files Modal Container)
+        btnFileCancel
+        btnFileSave
+        frmAttachmentsEdit
+        ddFileActor
+        lblFileStaffLabel
+        lblFileTitle
+        recFileModal
+        recFileOverlay
+    ▼ conPaymentModal                 ← Step 12C (Payment Modal Container)
+        btnPaymentConfirm
+        btnPaymentCancel
+        chkPartialPickup
+        txtPaymentNotes
+        lblPaymentNotesLabel
+        dpPaymentDate
+        lblPaymentDateLabel
+        lblPaymentCostValue
+        lblPaymentCostLabel
+        txtPaymentWeight
+        lblPaymentWeightLabel
+        txtPaymentTransaction
+        lblPaymentTransLabel
+        ddPaymentStaff
+        lblPaymentStaffLabel
+        lblPaymentStudent
+        lblPaymentTitle
+        recPaymentModal
+        recPaymentOverlay
+    ▼ conDetailsModal                 ← Step 12B (Details Modal Container)
+        btnDetailsConfirm
+        btnDetailsCancel
+        lblDetailsCostValue
+        lblDetailsCostLabel
+        txtDetailsHours
+        lblDetailsHoursLabel
+        txtDetailsWeight
+        lblDetailsWeightLabel
+        ddDetailsColor
+        lblDetailsColorLabel
+        ddDetailsPrinter
+        lblDetailsPrinterLabel
+        ddDetailsMethod
+        lblDetailsMethodLabel
+        ddDetailsStaff
+        lblDetailsStaffLabel
+        lblDetailsCurrent
+        lblDetailsCurrentLabel
+        lblDetailsTitle
+        recDetailsModal
+        recDetailsOverlay
+    ▼ conArchiveModal                 ← Step 12 (Archive Modal Container)
+        btnArchiveConfirm
+        btnArchiveCancel
+        txtArchiveReason
+        lblArchiveReasonLabel
+        ddArchiveStaff
+        lblArchiveStaffLabel
+        lblArchiveWarning
+        lblArchiveTitle
+        recArchiveModal
+        recArchiveOverlay
+    ▼ conApprovalModal                ← Step 11 (Approval Modal Container)
+        btnApprovalConfirm
+        btnApprovalCancel
+        txtApprovalComments
+        lblApprovalCommentsLabel
+        lblCalculatedCost
+        lblCostLabel
+        txtEstimatedTime
+        lblTimeLabel
+        lblWeightError
+        txtEstimatedWeight
+        lblWeightLabel
+        ddApprovalStaff
+        lblApprovalStaffLabel
+        lblApprovalStudent
+        lblApprovalTitle
+        recApprovalModal
+        recApprovalOverlay
+    ▼ conRejectModal                  ← Step 10 (Reject Modal Container)
+        btnRejectConfirm
+        btnRejectCancel
+        txtRejectComments
+        lblRejectCommentsLabel
+        chkNotJoined
+        chkOverhangs
+        chkMessy
+        chkScale
+        chkNotSolid
+        chkGeometry
+        chkTooSmall
+        lblRejectReasonsLabel
+        ddRejectStaff
+        lblRejectStaffLabel
+        lblRejectStudent
+        lblRejectTitle
+        recRejectModal
+        recRejectOverlay
+    recFilterBar                      ← Step 14 (filter bar BELOW modal containers)
     txtSearch                         ← Step 14
     chkNeedsAttention                 ← Step 14
     btnClearFilters                   ← Step 14
@@ -582,8 +631,9 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 |------|-------------|
 | **App = formulas only** | Only put formulas like `OnStart` here. Never visual elements. |
 | **scrDashboard = all visuals** | All rectangles, labels, buttons, galleries go here. |
-| **Elements are siblings** | They sit side-by-side in Tree view, NOT nested inside each other. |
+| **Modals use Containers** | Each modal is wrapped in a Container control — set Visible on container only! |
 | **Galleries are special** | If you select a gallery and then Insert, the new control goes INSIDE that gallery's template. |
+| **Containers are special** | If you select a container and then Insert, the new control goes INSIDE that container. |
 | **Rename immediately** | After adding a control, rename it right away (click name in Tree view). |
 
 > 💡 **How to rename:** In the Tree view, double-click the control name (or click once and press F2) to edit it.
@@ -1630,39 +1680,42 @@ Set(varSelectedItem, ThisItem)
 
 **What you're doing:** Creating a popup dialog that appears when staff click "Reject" to capture rejection reasons.
 
-### Modal Structure
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls — no need to set visibility on each individual control!
 
-All controls are added to **scrDashboard** (screen level, outside the gallery). They float above everything else when visible.
+### Modal Structure (Container-Based)
+
+All controls are added **INSIDE** the `conRejectModal` container. The container handles visibility for all children.
 
 ```
 scrDashboard
-├── recRejectOverlay          ← Dark semi-transparent background
-├── recRejectModal            ← White modal box (container)
-├── lblRejectTitle            ← "Reject Request - REQ-00042"
-├── lblRejectStudent          ← Student name and email
-├── lblRejectStaffLabel       ← "Performing Action As: *"
-├── ddRejectStaff             ← Staff dropdown
-├── lblRejectReasonsLabel     ← "Rejection Reasons..."
-├── chkTooSmall               ← Checkbox: Features too small/thin
-├── chkGeometry               ← Checkbox: Geometry is problematic
-├── chkNotSolid               ← Checkbox: Open model/not solid
-├── chkScale                  ← Checkbox: Scale is wrong
-├── chkMessy                  ← Checkbox: Model is messy
-├── chkOverhangs              ← Checkbox: Excessive overhangs
-├── chkNotJoined              ← Checkbox: Parts not joined
-├── lblRejectCommentsLabel    ← "Additional Comments..."
-├── txtRejectComments         ← Multi-line text input
-├── btnRejectCancel           ← Cancel button
-└── btnRejectConfirm          ← Confirm Rejection button
+└── conRejectModal             ← CONTAINER (set Visible here only!)
+    ├── btnRejectConfirm       ← Confirm Rejection button
+    ├── btnRejectCancel        ← Cancel button
+    ├── txtRejectComments      ← Multi-line text input
+    ├── lblRejectCommentsLabel ← "Additional Comments:"
+    ├── chkNotJoined           ← Checkbox: Parts not joined
+    ├── chkOverhangs           ← Checkbox: Excessive overhangs
+    ├── chkMessy               ← Checkbox: Model is messy
+    ├── chkScale               ← Checkbox: Scale is wrong
+    ├── chkNotSolid            ← Checkbox: Open model/not solid
+    ├── chkGeometry            ← Checkbox: Geometry is problematic
+    ├── chkTooSmall            ← Checkbox: Features too small/thin
+    ├── lblRejectReasonsLabel  ← "Rejection Reasons..."
+    ├── ddRejectStaff          ← Staff dropdown
+    ├── lblRejectStaffLabel    ← "Performing Action As: *"
+    ├── lblRejectStudent       ← Student name and email
+    ├── lblRejectTitle         ← "Reject Request - REQ-00042"
+    ├── recRejectModal         ← White modal box
+    └── recRejectOverlay       ← Dark semi-transparent background
 ```
 
 ---
 
-### Modal Overlay (recRejectOverlay)
+### Modal Container (conRejectModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recRejectOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conRejectModal`
 4. Set properties:
 
 | Property | Value |
@@ -1671,16 +1724,36 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowRejectModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls will automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
+
+---
+
+### Modal Overlay (recRejectOverlay)
+
+5. With `conRejectModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recRejectOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowRejectModal > 0` |
+
+> ⚠️ **No Visible property needed!** The container handles visibility for all children.
 
 ---
 
 ### Modal Content Box (recRejectModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recRejectModal`
-7. Set properties:
+8. With `conRejectModal` selected, click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recRejectModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1693,15 +1766,14 @@ scrDashboard
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Modal Title (lblRejectTitle)
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblRejectTitle`
-10. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblRejectTitle`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1714,15 +1786,14 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(209, 52, 56, 1)` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Student Info (lblRejectStudent)
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblRejectStudent`
-13. Set properties:
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblRejectStudent`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1733,15 +1804,14 @@ scrDashboard
 | Height | `25` |
 | Size | `12` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Staff Label (lblRejectStaffLabel)
 
-14. Click **+ Insert** → **Text label**.
-15. **Rename it:** `lblRejectStaffLabel`
-16. Set properties:
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblRejectStaffLabel`
+19. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1751,15 +1821,14 @@ scrDashboard
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Staff Dropdown (ddRejectStaff)
 
-17. Click **+ Insert** → **Combo box**.
-18. **Rename it:** `ddRejectStaff`
-19. Set properties:
+20. Click **+ Insert** → **Combo box**.
+21. **Rename it:** `ddRejectStaff`
+22. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1771,7 +1840,6 @@ scrDashboard
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowRejectModal > 0` |
 
 > ⚠️ **Important:** You must **Run OnStart** first before setting DisplayFields. Otherwise Power Apps will auto-change it to `["ComplianceAssetId"]` because it doesn't recognize the collection columns yet.
 
@@ -1779,9 +1847,9 @@ scrDashboard
 
 ### Rejection Reasons Label (lblRejectReasonsLabel)
 
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblRejectReasonsLabel`
-22. Set properties:
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblRejectReasonsLabel`
+25. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1791,7 +1859,6 @@ scrDashboard
 | Width | `400` |
 | Height | `32` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
@@ -1801,23 +1868,23 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 
 | # | Control Name | Text | X | Y |
 |---|--------------|------|---|---|
-| 23 | `chkTooSmall` | `"Features are too small or too thin"` | `recRejectModal.X + 20` | `recRejectModal.Y + 185` |
-| 24 | `chkGeometry` | `"The geometry is problematic"` | `recRejectModal.X + 20` | `recRejectModal.Y + 215` |
-| 25 | `chkNotSolid` | `"Open model/not solid geometry"` | `recRejectModal.X + 20` | `recRejectModal.Y + 245` |
-| 26 | `chkScale` | `"The scale is wrong"` | `recRejectModal.X + 20` | `recRejectModal.Y + 275` |
-| 27 | `chkMessy` | `"The model is messy"` | `recRejectModal.X + 20` | `recRejectModal.Y + 305` |
-| 28 | `chkOverhangs` | `"Excessive overhangs requiring too much support"` | `recRejectModal.X + 20` | `recRejectModal.Y + 335` |
-| 29 | `chkNotJoined` | `"Model parts are not joined together"` | `recRejectModal.X + 20` | `recRejectModal.Y + 365` |
+| 26 | `chkTooSmall` | `"Features are too small or too thin"` | `recRejectModal.X + 20` | `recRejectModal.Y + 185` |
+| 27 | `chkGeometry` | `"The geometry is problematic"` | `recRejectModal.X + 20` | `recRejectModal.Y + 215` |
+| 28 | `chkNotSolid` | `"Open model/not solid geometry"` | `recRejectModal.X + 20` | `recRejectModal.Y + 245` |
+| 29 | `chkScale` | `"The scale is wrong"` | `recRejectModal.X + 20` | `recRejectModal.Y + 275` |
+| 30 | `chkMessy` | `"The model is messy"` | `recRejectModal.X + 20` | `recRejectModal.Y + 305` |
+| 31 | `chkOverhangs` | `"Excessive overhangs requiring too much support"` | `recRejectModal.X + 20` | `recRejectModal.Y + 335` |
+| 32 | `chkNotJoined` | `"Model parts are not joined together"` | `recRejectModal.X + 20` | `recRejectModal.Y + 365` |
 
-Set **Visible** for all: `varShowRejectModal > 0`
+> ⚠️ **No Visible property needed!** The container handles visibility for all children.
 
 ---
 
 ### Comments Label (lblRejectCommentsLabel)
 
-30. Click **+ Insert** → **Text label**.
-31. **Rename it:** `lblRejectCommentsLabel`
-32. Set properties:
+33. Click **+ Insert** → **Text label**.
+34. **Rename it:** `lblRejectCommentsLabel`
+35. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1826,15 +1893,14 @@ Set **Visible** for all: `varShowRejectModal > 0`
 | Y | `recRejectModal.Y + 400` |
 | Width | `300` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Comments Text Input (txtRejectComments)
 
-33. Click **+ Insert** → **Text input**.
-34. **Rename it:** `txtRejectComments`
-35. Set properties:
+36. Click **+ Insert** → **Text input**.
+37. **Rename it:** `txtRejectComments`
+38. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1844,15 +1910,14 @@ Set **Visible** for all: `varShowRejectModal > 0`
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Provide specific feedback for the student..."` |
-| Visible | `varShowRejectModal > 0` |
 
 ---
 
 ### Cancel Button (btnRejectCancel)
 
-36. Click **+ Insert** → **Button**.
-37. **Rename it:** `btnRejectCancel`
-38. Set properties:
+39. Click **+ Insert** → **Button**.
+40. **Rename it:** `btnRejectCancel`
+41. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1863,9 +1928,8 @@ Set **Visible** for all: `varShowRejectModal > 0`
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowRejectModal > 0` |
 
-39. Set **OnSelect:**
+42. Set **OnSelect:**
 
 ```powerfx
 Set(varShowRejectModal, 0);
@@ -1885,9 +1949,9 @@ Reset(chkNotJoined)
 
 ### Confirm Rejection Button (btnRejectConfirm)
 
-40. Click **+ Insert** → **Button**.
-41. **Rename it:** `btnRejectConfirm`
-42. Set properties:
+43. Click **+ Insert** → **Button**.
+44. **Rename it:** `btnRejectConfirm`
+45. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1898,10 +1962,9 @@ Reset(chkNotJoined)
 | Height | `36` |
 | Fill | `RGBA(209, 52, 56, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowRejectModal > 0` |
 | DisplayMode | `If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
-43. Set **OnSelect:**
+46. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -1977,36 +2040,39 @@ Set(varLoadingMessage, "")
 
 **What you're doing:** Creating a dialog for staff to enter weight/time estimates before approving a request.
 
-### Control Hierarchy
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recApprovalOverlay        ← Dark semi-transparent background
-├── recApprovalModal          ← White modal box (container)
-├── lblApprovalTitle          ← "Approve Request - REQ-00042"
-├── lblApprovalStudent        ← Student name and email
-├── lblApprovalStaffLabel     ← "Performing Action As: *"
-├── ddApprovalStaff           ← Staff dropdown
-├── lblApprovalWeightLabel    ← "Estimated Weight (grams): *"
-├── txtEstimatedWeight        ← Weight input field
-├── lblWeightValidation       ← Validation error message
-├── lblApprovalTimeLabel      ← "Estimated Print Time (hours):"
-├── txtEstimatedTime          ← Time input field (optional)
-├── lblApprovalCostLabel      ← "Estimated Cost:"
-├── lblApprovalCostValue      ← Auto-calculated cost display
-├── lblApprovalCommentsLabel  ← "Additional Comments:"
-├── txtApprovalComments       ← Multi-line text input
-├── btnApprovalCancel         ← Cancel button
-└── btnApprovalConfirm        ← Confirm Approval button
+└── conApprovalModal             ← CONTAINER (set Visible here only!)
+    ├── btnApprovalConfirm       ← Confirm Approval button
+    ├── btnApprovalCancel        ← Cancel button
+    ├── txtApprovalComments      ← Multi-line text input
+    ├── lblApprovalCommentsLabel ← "Additional Comments:"
+    ├── lblApprovalCostValue     ← Auto-calculated cost display
+    ├── lblApprovalCostLabel     ← "Estimated Cost:"
+    ├── txtEstimatedTime         ← Time input field (optional)
+    ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours):"
+    ├── lblWeightValidation      ← Validation error message
+    ├── txtEstimatedWeight       ← Weight input field
+    ├── lblApprovalWeightLabel   ← "Estimated Weight (grams): *"
+    ├── ddApprovalStaff          ← Staff dropdown
+    ├── lblApprovalStaffLabel    ← "Performing Action As: *"
+    ├── lblApprovalStudent       ← Student name and email
+    ├── lblApprovalTitle         ← "Approve Request - REQ-00042"
+    ├── recApprovalModal         ← White modal box
+    └── recApprovalOverlay       ← Dark semi-transparent background
 ```
 
 ---
 
-### Modal Overlay (recApprovalOverlay)
+### Modal Container (conApprovalModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recApprovalOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conApprovalModal`
 4. Set properties:
 
 | Property | Value |
@@ -2015,16 +2081,34 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowApprovalModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recApprovalOverlay)
+
+5. With `conApprovalModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recApprovalOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Modal Content Box (recApprovalModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recApprovalModal`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recApprovalModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2037,15 +2121,14 @@ scrDashboard
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Modal Title (lblApprovalTitle)
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblApprovalTitle`
-10. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblApprovalTitle`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2058,15 +2141,14 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(16, 124, 16, 1)` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Student Info (lblApprovalStudent)
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblApprovalStudent`
-13. Set properties:
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblApprovalStudent`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2077,15 +2159,14 @@ scrDashboard
 | Height | `25` |
 | Size | `12` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Staff Label (lblApprovalStaffLabel)
 
-14. Click **+ Insert** → **Text label**.
-15. **Rename it:** `lblApprovalStaffLabel`
-16. Set properties:
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblApprovalStaffLabel`
+19. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2095,15 +2176,14 @@ scrDashboard
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Staff Dropdown (ddApprovalStaff)
 
-17. Click **+ Insert** → **Combo box**.
-18. **Rename it:** `ddApprovalStaff`
-19. Set properties:
+20. Click **+ Insert** → **Combo box**.
+21. **Rename it:** `ddApprovalStaff`
+22. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2115,7 +2195,6 @@ scrDashboard
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowApprovalModal > 0` |
 
 > ⚠️ **Important:** You must **Run OnStart** first before setting DisplayFields. Otherwise Power Apps will auto-change it to `["ComplianceAssetId"]` because it doesn't recognize the collection columns yet.
 
@@ -2123,9 +2202,9 @@ scrDashboard
 
 ### Weight Label (lblApprovalWeightLabel)
 
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblApprovalWeightLabel`
-22. Set properties:
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblApprovalWeightLabel`
+25. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2135,15 +2214,14 @@ scrDashboard
 | Width | `250` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Weight Input (txtEstimatedWeight)
 
-23. Click **+ Insert** → **Text input**.
-24. **Rename it:** `txtEstimatedWeight`
-25. Set properties:
+26. Click **+ Insert** → **Text input**.
+27. **Rename it:** `txtEstimatedWeight`
+28. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2153,15 +2231,14 @@ scrDashboard
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter weight in grams (e.g., 25)"` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Weight Validation Label (lblWeightValidation)
 
-26. Click **+ Insert** → **Text label**.
-27. **Rename it:** `lblWeightValidation`
-28. Set properties:
+29. Click **+ Insert** → **Text label**.
+30. **Rename it:** `lblWeightValidation`
+31. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2172,7 +2249,7 @@ scrDashboard
 | Size | `11` |
 | Color | `RGBA(209, 52, 56, 1)` |
 
-29. Set **Text:**
+32. Set **Text:**
 
 ```powerfx
 If(
@@ -2184,19 +2261,21 @@ If(
 )
 ```
 
-30. Set **Visible:**
+33. Set **Visible** (this is an exception - conditional visibility within the container):
 
 ```powerfx
-varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0)
+IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0
 ```
+
+> 💡 **Note:** This validation label has its OWN Visible formula because it should only appear when validation fails, even when the container is visible.
 
 ---
 
 ### Time Label (lblApprovalTimeLabel)
 
-31. Click **+ Insert** → **Text label**.
-32. **Rename it:** `lblApprovalTimeLabel`
-33. Set properties:
+34. Click **+ Insert** → **Text label**.
+35. **Rename it:** `lblApprovalTimeLabel`
+36. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2206,15 +2285,14 @@ varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtE
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Time Input (txtEstimatedTime)
 
-34. Click **+ Insert** → **Text input**.
-35. **Rename it:** `txtEstimatedTime`
-36. Set properties:
+37. Click **+ Insert** → **Text input**.
+38. **Rename it:** `txtEstimatedTime`
+39. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2224,15 +2302,14 @@ varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtE
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter hours (e.g., 2.5)"` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Cost Label (lblApprovalCostLabel)
 
-37. Click **+ Insert** → **Text label**.
-38. **Rename it:** `lblApprovalCostLabel`
-39. Set properties:
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblApprovalCostLabel`
+42. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2243,15 +2320,14 @@ varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtE
 | Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Cost Value Display (lblApprovalCostValue)
 
-40. Click **+ Insert** → **Text label**.
-41. **Rename it:** `lblApprovalCostValue`
-42. Set properties:
+43. Click **+ Insert** → **Text label**.
+44. **Rename it:** `lblApprovalCostValue`
+45. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2262,9 +2338,8 @@ varShowApprovalModal > 0 && (IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtE
 | FontWeight | `FontWeight.Bold` |
 | Size | `24` |
 | Color | `RGBA(16, 124, 16, 1)` |
-| Visible | `varShowApprovalModal > 0` |
 
-43. Set **Text:**
+46. Set **Text:**
 
 ```powerfx
 If(
@@ -2290,9 +2365,9 @@ If(
 
 ### Comments Label (lblApprovalCommentsLabel)
 
-44. Click **+ Insert** → **Text label**.
-45. **Rename it:** `lblApprovalCommentsLabel`
-46. Set properties:
+47. Click **+ Insert** → **Text label**.
+48. **Rename it:** `lblApprovalCommentsLabel`
+49. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2302,15 +2377,14 @@ If(
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Comments Text Input (txtApprovalComments)
 
-47. Click **+ Insert** → **Text input**.
-48. **Rename it:** `txtApprovalComments`
-49. Set properties:
+50. Click **+ Insert** → **Text input**.
+51. **Rename it:** `txtApprovalComments`
+52. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2320,15 +2394,14 @@ If(
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Add any special instructions for this job..."` |
-| Visible | `varShowApprovalModal > 0` |
 
 ---
 
 ### Cancel Button (btnApprovalCancel)
 
-50. Click **+ Insert** → **Button**.
-51. **Rename it:** `btnApprovalCancel`
-52. Set properties:
+53. Click **+ Insert** → **Button**.
+54. **Rename it:** `btnApprovalCancel`
+55. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2339,9 +2412,8 @@ If(
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowApprovalModal > 0` |
 
-53. Set **OnSelect:**
+56. Set **OnSelect:**
 
 ```powerfx
 Set(varShowApprovalModal, 0);
@@ -2356,9 +2428,9 @@ Reset(ddApprovalStaff)
 
 ### Confirm Approval Button (btnApprovalConfirm)
 
-54. Click **+ Insert** → **Button**.
-55. **Rename it:** `btnApprovalConfirm`
-56. Set properties:
+57. Click **+ Insert** → **Button**.
+58. **Rename it:** `btnApprovalConfirm`
+59. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2369,7 +2441,6 @@ Reset(ddApprovalStaff)
 | Height | `36` |
 | Fill | `RGBA(16, 124, 16, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowApprovalModal > 0` |
 
 57. Set **DisplayMode:**
 
@@ -2470,29 +2541,32 @@ Set(varLoadingMessage, "")
 
 **What you're doing:** Creating a confirmation dialog for archiving completed/rejected requests.
 
-### Control Hierarchy
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recArchiveOverlay         ← Dark semi-transparent background
-├── recArchiveModal           ← White modal box (container)
-├── lblArchiveTitle           ← "Archive Request - REQ-00042"
-├── lblArchiveWarning         ← Warning message
-├── lblArchiveStaffLabel      ← "Performing Action As: *"
-├── ddArchiveStaff            ← Staff dropdown
-├── lblArchiveReasonLabel     ← "Reason (optional):"
-├── txtArchiveReason          ← Reason text input
-├── btnArchiveCancel          ← Cancel button
-└── btnArchiveConfirm         ← Confirm Archive button
+└── conArchiveModal           ← CONTAINER (set Visible here only!)
+    ├── btnArchiveConfirm     ← Confirm Archive button
+    ├── btnArchiveCancel      ← Cancel button
+    ├── txtArchiveReason      ← Reason text input
+    ├── lblArchiveReasonLabel ← "Reason (optional):"
+    ├── ddArchiveStaff        ← Staff dropdown
+    ├── lblArchiveStaffLabel  ← "Performing Action As: *"
+    ├── lblArchiveWarning     ← Warning message
+    ├── lblArchiveTitle       ← "Archive Request - REQ-00042"
+    ├── recArchiveModal       ← White modal box
+    └── recArchiveOverlay     ← Dark semi-transparent background
 ```
 
 ---
 
-### Modal Overlay (recArchiveOverlay)
+### Modal Container (conArchiveModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recArchiveOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conArchiveModal`
 4. Set properties:
 
 | Property | Value |
@@ -2501,16 +2575,34 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowArchiveModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recArchiveOverlay)
+
+5. With `conArchiveModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recArchiveOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Modal Content Box (recArchiveModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recArchiveModal`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recArchiveModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2523,15 +2615,14 @@ scrDashboard
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Modal Title (lblArchiveTitle)
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblArchiveTitle`
-10. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblArchiveTitle`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2544,15 +2635,14 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Warning Message (lblArchiveWarning)
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblArchiveWarning`
-13. Set properties:
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblArchiveWarning`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2563,15 +2653,14 @@ scrDashboard
 | Height | `50` |
 | Size | `12` |
 | Color | `RGBA(150, 100, 0, 1)` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Staff Label (lblArchiveStaffLabel)
 
-14. Click **+ Insert** → **Text label**.
-15. **Rename it:** `lblArchiveStaffLabel`
-16. Set properties:
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblArchiveStaffLabel`
+19. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2581,15 +2670,14 @@ scrDashboard
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Staff Dropdown (ddArchiveStaff)
 
-17. Click **+ Insert** → **Combo box**.
-18. **Rename it:** `ddArchiveStaff`
-19. Set properties:
+20. Click **+ Insert** → **Combo box**.
+21. **Rename it:** `ddArchiveStaff`
+22. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2601,15 +2689,14 @@ scrDashboard
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Reason Label (lblArchiveReasonLabel)
 
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblArchiveReasonLabel`
-22. Set properties:
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblArchiveReasonLabel`
+25. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2619,15 +2706,14 @@ scrDashboard
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Reason Text Input (txtArchiveReason)
 
-23. Click **+ Insert** → **Text input**.
-24. **Rename it:** `txtArchiveReason`
-25. Set properties:
+26. Click **+ Insert** → **Text input**.
+27. **Rename it:** `txtArchiveReason`
+28. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2637,15 +2723,14 @@ scrDashboard
 | Width | `460` |
 | Height | `80` |
 | HintText | `"Why is this request being archived?"` |
-| Visible | `varShowArchiveModal > 0` |
 
 ---
 
 ### Cancel Button (btnArchiveCancel)
 
-26. Click **+ Insert** → **Button**.
-27. **Rename it:** `btnArchiveCancel`
-28. Set properties:
+29. Click **+ Insert** → **Button**.
+30. **Rename it:** `btnArchiveCancel`
+31. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2656,9 +2741,8 @@ scrDashboard
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowArchiveModal > 0` |
 
-29. Set **OnSelect:**
+32. Set **OnSelect:**
 
 ```powerfx
 Set(varShowArchiveModal, 0);
@@ -2671,9 +2755,9 @@ Reset(ddArchiveStaff)
 
 ### Confirm Archive Button (btnArchiveConfirm)
 
-30. Click **+ Insert** → **Button**.
-31. **Rename it:** `btnArchiveConfirm`
-32. Set properties:
+33. Click **+ Insert** → **Button**.
+34. **Rename it:** `btnArchiveConfirm`
+35. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2684,7 +2768,6 @@ Reset(ddArchiveStaff)
 | Height | `36` |
 | Fill | `RGBA(100, 100, 100, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowArchiveModal > 0` |
 | DisplayMode | `If(IsBlank(ddArchiveStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
 33. Set **OnSelect:**
@@ -2746,44 +2829,47 @@ Set(varLoadingMessage, "")
 
 **What you're doing:** Creating a modal that allows staff to change Method, Printer, Color, Weight, Hours, and recalculate Cost for a job. All changes are optional — staff can update any combination of fields.
 
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
 > 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). Changing Method automatically resets the Printer dropdown to show compatible printers only.
 
 > ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
 
-### Control Hierarchy
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recDetailsOverlay         ← Dark semi-transparent background
-├── recDetailsModal           ← White modal box (container)
-├── lblDetailsTitle           ← "Change Print Details - REQ-00042"
-├── lblDetailsCurrentLabel    ← "Current Settings:"
-├── lblDetailsCurrent         ← Shows current settings summary
-├── lblDetailsStaffLabel      ← "Performing Action As: *"
-├── ddDetailsStaff            ← Staff dropdown
-├── lblDetailsMethodLabel     ← "Method:"
-├── ddDetailsMethod           ← Method dropdown (Filament/Resin)
-├── lblDetailsPrinterLabel    ← "Printer:"
-├── ddDetailsPrinter          ← Printer dropdown (filtered by method)
-├── lblDetailsColorLabel      ← "Color:"
-├── ddDetailsColor            ← Color dropdown
-├── lblDetailsWeightLabel     ← "Est. Weight (grams):"
-├── txtDetailsWeight          ← Weight number input
-├── lblDetailsHoursLabel      ← "Est. Hours:"
-├── txtDetailsHours           ← Hours number input
-├── lblDetailsCostLabel       ← "Calculated Cost:"
-├── lblDetailsCostValue       ← Auto-calculated cost display
-├── btnDetailsCancel          ← Cancel button
-└── btnDetailsConfirm         ← Save Changes button
+└── conDetailsModal            ← CONTAINER (set Visible here only!)
+    ├── btnDetailsConfirm      ← Save Changes button
+    ├── btnDetailsCancel       ← Cancel button
+    ├── lblDetailsCostValue    ← Auto-calculated cost display
+    ├── lblDetailsCostLabel    ← "Calculated Cost:"
+    ├── txtDetailsHours        ← Hours number input
+    ├── lblDetailsHoursLabel   ← "Est. Hours:"
+    ├── txtDetailsWeight       ← Weight number input
+    ├── lblDetailsWeightLabel  ← "Est. Weight (grams):"
+    ├── ddDetailsColor         ← Color dropdown
+    ├── lblDetailsColorLabel   ← "Color:"
+    ├── ddDetailsPrinter       ← Printer dropdown (filtered by method)
+    ├── lblDetailsPrinterLabel ← "Printer:"
+    ├── ddDetailsMethod        ← Method dropdown (Filament/Resin)
+    ├── lblDetailsMethodLabel  ← "Method:"
+    ├── ddDetailsStaff         ← Staff dropdown
+    ├── lblDetailsStaffLabel   ← "Performing Action As: *"
+    ├── lblDetailsCurrent      ← Shows current settings summary
+    ├── lblDetailsCurrentLabel ← "Current Settings:"
+    ├── lblDetailsTitle        ← "Change Print Details - REQ-00042"
+    ├── recDetailsModal        ← White modal box
+    └── recDetailsOverlay      ← Dark semi-transparent background
 ```
 
 ---
 
-### Modal Overlay (recDetailsOverlay)
+### Modal Container (conDetailsModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recDetailsOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conDetailsModal`
 4. Set properties:
 
 | Property | Value |
@@ -2792,16 +2878,34 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowDetailsModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recDetailsOverlay)
+
+5. With `conDetailsModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recDetailsOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
 ### Modal Content Box (recDetailsModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recDetailsModal`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recDetailsModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2814,7 +2918,6 @@ scrDashboard
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2835,7 +2938,6 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 120, 212, 1)` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2853,7 +2955,6 @@ scrDashboard
 | Width | `150` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2871,7 +2972,6 @@ scrDashboard
 | Height | `30` |
 | Size | `10` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `varShowDetailsModal > 0` |
 
 17. Set **Text:**
 
@@ -2899,7 +2999,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2919,7 +3018,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2937,7 +3035,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2957,7 +3054,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowDetailsModal > 0` |
 
 > 💡 **Leaving empty:** `DefaultSelectedItems: Blank()` means no pre-selection. Staff can leave it empty to keep the current method.
 
@@ -2979,7 +3075,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -2997,7 +3092,6 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Height | `36` |
 | DisplayFields | `["Value"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowDetailsModal > 0` |
 
 36. Set **Items** (filtered by Method — uses new method if selected, otherwise current):
 
@@ -3035,7 +3129,6 @@ Filter(
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3054,7 +3147,6 @@ Filter(
 | Height | `36` |
 | DisplayFields | `["Value"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3072,7 +3164,6 @@ Filter(
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3091,7 +3182,6 @@ Filter(
 | Format | `TextFormat.Number` |
 | HintText | `"e.g., 25"` |
 | Default | `If(IsBlank(varSelectedItem.EstimatedWeight), "", Text(varSelectedItem.EstimatedWeight))` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3109,7 +3199,6 @@ Filter(
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3128,7 +3217,6 @@ Filter(
 | Format | `TextFormat.Number` |
 | HintText | `"e.g., 2.5"` |
 | Default | `If(IsBlank(varSelectedItem.EstimatedTime), "", Text(varSelectedItem.EstimatedTime))` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3146,7 +3234,6 @@ Filter(
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowDetailsModal > 0` |
 
 ---
 
@@ -3165,7 +3252,6 @@ Filter(
 | Size | `18` |
 | FontWeight | `FontWeight.Bold` |
 | Color | `RGBA(16, 124, 16, 1)` |
-| Visible | `varShowDetailsModal > 0` |
 
 61. Set **Text** (auto-calculates based on weight and method):
 
@@ -3207,7 +3293,6 @@ With(
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowDetailsModal > 0` |
 
 65. Set **OnSelect:**
 
@@ -3239,7 +3324,6 @@ Reset(txtDetailsHours)
 | Height | `36` |
 | Fill | `RGBA(0, 120, 212, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowDetailsModal > 0` |
 
 69. Set **DisplayMode:**
 
@@ -3350,6 +3434,8 @@ Set(varLoadingMessage, "")
 
 **What you're doing:** Creating a modal that captures payment details when staff marks an item as "Picked Up". This ensures transaction numbers, actual weights, and final costs are recorded for accounting and reconciliation.
 
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
 > 💡 **Why this matters:** Previously, clicking "Picked Up" immediately changed the status without recording any payment details. This modal requires staff to enter the actual weight (measured from the finished print), which auto-calculates the final cost, plus the TigerCASH transaction number for reconciliation.
 
 > ⚠️ **Trigger:** This modal opens when staff clicks the "💰 Picked Up" button on items with Status = "Completed".
@@ -3361,38 +3447,39 @@ Set(varLoadingMessage, "")
 | **Estimate** | EstimatedWeight | EstimatedCost | At approval (slicer prediction) |
 | **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
 
-### Control Hierarchy
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recPaymentOverlay         ← Dark semi-transparent background
-├── recPaymentModal           ← White modal box (container)
-├── lblPaymentTitle           ← "Record Payment - REQ-00042"
-├── lblPaymentStudent         ← Student name and estimated vs final info
-├── lblPaymentStaffLabel      ← "Performing Action As: *"
-├── ddPaymentStaff            ← Staff dropdown
-├── lblPaymentTransLabel      ← "Transaction Number: *"
-├── txtPaymentTransaction     ← Transaction number input (required)
-├── lblPaymentWeightLabel     ← "Final Weight (grams): *"
-├── txtPaymentWeight          ← Weight input (pre-filled with EstimatedWeight)
-├── lblPaymentCostLabel       ← "Final Cost:"
-├── lblPaymentCostValue       ← Auto-calculated cost display
-├── lblPaymentDateLabel       ← "Payment Date: *"
-├── dpPaymentDate             ← Date picker (default: Today())
-├── lblPaymentNotesLabel      ← "Payment Notes (optional):"
-├── txtPaymentNotes           ← Multi-line text input
-├── chkPartialPickup          ← Partial pickup checkbox (keeps status as Completed)
-├── btnPaymentCancel          ← Cancel button
-└── btnPaymentConfirm         ← Record Payment button (changes color based on partial)
+└── conPaymentModal           ← CONTAINER (set Visible here only!)
+    ├── btnPaymentConfirm     ← Record Payment button (changes color based on partial)
+    ├── btnPaymentCancel      ← Cancel button
+    ├── chkPartialPickup      ← Partial pickup checkbox (keeps status as Completed)
+    ├── txtPaymentNotes       ← Multi-line text input
+    ├── lblPaymentNotesLabel  ← "Payment Notes (optional):"
+    ├── dpPaymentDate         ← Date picker (default: Today())
+    ├── lblPaymentDateLabel   ← "Payment Date: *"
+    ├── lblPaymentCostValue   ← Auto-calculated cost display
+    ├── lblPaymentCostLabel   ← "Final Cost:"
+    ├── txtPaymentWeight      ← Weight input (pre-filled with EstimatedWeight)
+    ├── lblPaymentWeightLabel ← "Final Weight (grams): *"
+    ├── txtPaymentTransaction ← Transaction number input (required)
+    ├── lblPaymentTransLabel  ← "Transaction Number: *"
+    ├── ddPaymentStaff        ← Staff dropdown
+    ├── lblPaymentStaffLabel  ← "Performing Action As: *"
+    ├── lblPaymentStudent     ← Student name and estimated vs final info
+    ├── lblPaymentTitle       ← "Record Payment - REQ-00042"
+    ├── recPaymentModal       ← White modal box
+    └── recPaymentOverlay     ← Dark semi-transparent background
 ```
 
 ---
 
-### Modal Overlay (recPaymentOverlay)
+### Modal Container (conPaymentModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recPaymentOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conPaymentModal`
 4. Set properties:
 
 | Property | Value |
@@ -3401,16 +3488,34 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowPaymentModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
+
+---
+
+### Modal Overlay (recPaymentOverlay)
+
+5. With `conPaymentModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recPaymentOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
 ### Modal Content Box (recPaymentModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recPaymentModal`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recPaymentModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3423,7 +3528,6 @@ scrDashboard
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3444,7 +3548,6 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 158, 73, 1)` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3462,7 +3565,6 @@ scrDashboard
 | Height | `40` |
 | Size | `12` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `varShowPaymentModal > 0` |
 
 14. Set **Text:**
 
@@ -3487,7 +3589,6 @@ scrDashboard
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3507,7 +3608,6 @@ scrDashboard
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3525,7 +3625,6 @@ scrDashboard
 | Width | `250` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3542,7 +3641,6 @@ scrDashboard
 | Width | `250` |
 | Height | `36` |
 | HintText | `"TigerCASH receipt number"` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3560,7 +3658,6 @@ scrDashboard
 | Width | `250` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3578,7 +3675,6 @@ scrDashboard
 | Width | `150` |
 | Height | `36` |
 | HintText | `"Weight in grams"` |
-| Visible | `varShowPaymentModal > 0` |
 
 33. Set **Default:**
 - none.
@@ -3602,7 +3698,6 @@ scrDashboard
 | Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3621,7 +3716,6 @@ scrDashboard
 | FontWeight | `FontWeight.Bold` |
 | Size | `24` |
 | Color | `RGBA(0, 158, 73, 1)` |
-| Visible | `varShowPaymentModal > 0` |
 
 40. Set **Text:**
 
@@ -3661,7 +3755,6 @@ If(
 | Width | `150` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3678,7 +3771,6 @@ If(
 | Width | `200` |
 | Height | `36` |
 | DefaultDate | `Today()` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3696,7 +3788,6 @@ If(
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3714,7 +3805,6 @@ If(
 | Width | `510` |
 | Height | `60` |
 | HintText | `"Any discrepancies, special circumstances..."` |
-| Visible | `varShowPaymentModal > 0` |
 
 ---
 
@@ -3735,7 +3825,6 @@ If(
 | Height | `32` |
 | FontItalic | `true` |
 | Color | `RGBA(150, 100, 0, 1)` |
-| Visible | `varShowPaymentModal > 0` |
 
 > ⚠️ **Behavior:** When checked, the status stays "Completed" instead of changing to "Paid & Picked Up". Payment details are recorded in PaymentNotes, and staff can process additional payments when the student returns.
 
@@ -3756,7 +3845,6 @@ If(
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowPaymentModal > 0` |
 
 59. Set **OnSelect:**
 
@@ -3788,7 +3876,6 @@ Reset(chkPartialPickup)
 | Height | `36` |
 | Fill | `If(chkPartialPickup.Value, RGBA(255, 140, 0, 1), RGBA(0, 158, 73, 1))` |
 | Color | `Color.White` |
-| Visible | `varShowPaymentModal > 0` |
 
 > 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
 
@@ -4050,35 +4137,34 @@ Reset(chkNeedsAttention)
 
 ---
 
-### ⚠️ CRITICAL: Reorder Controls for Proper Z-Index (Modal Layering Fix)
+### ⚠️ CRITICAL: Reorder Modal Containers for Proper Z-Index
 
-**After creating the filter bar controls, you MUST reorder the modal elements so they appear ON TOP of the filter bar when visible.**
+**After creating the filter bar controls, you MUST reorder the modal CONTAINERS so they appear ON TOP of the filter bar when visible.**
 
-In Power Apps, controls that are **higher in the Tree view** (closer to the top) render **on top of** controls that are lower. Since you created the modals before the filter bar, they currently render BEHIND the filter bar.
+In Power Apps, controls that are **higher in the Tree view** (closer to the top) render **on top of** controls that are lower. 
+
+> 🎯 **With Containers:** You only need to move ONE container per modal instead of 15+ individual controls! This is much easier.
 
 **How to fix:**
 
-1. In the **Tree view** (left panel), locate these controls:
-   - `recApprovalOverlay` and all approval modal controls
-   - `recRejectOverlay` and all reject modal controls  
-   - `recArchiveOverlay` and all archive modal controls
-   - `recDetailsOverlay` and all details modal controls
+1. In the **Tree view** (left panel), locate these containers:
+   - `conPaymentModal`
+   - `conDetailsModal`
+   - `conArchiveModal`
+   - `conApprovalModal`
+   - `conRejectModal`
 
-2. **Drag each modal overlay and its related controls** to the **TOP** of the Tree view (just under `scrDashboard`).
+2. **Drag each container** to the **TOP** of the Tree view (just under `scrDashboard`).
 
 3. The correct order from top to bottom should be:
    ```
    scrDashboard
-   ├── recApprovalOverlay        ← MUST be at TOP
-   ├── recApprovalModal          
-   ├── (all approval modal controls...)
-   ├── recRejectOverlay
-   ├── (all reject modal controls...)
-   ├── recArchiveOverlay
-   ├── (all archive modal controls...)
-   ├── recDetailsOverlay
-   ├── (all details modal controls...)
-   ├── recFilterBar              ← Filter bar BELOW modals
+   ├── conPaymentModal           ← Modal containers at TOP
+   ├── conDetailsModal
+   ├── conArchiveModal
+   ├── conApprovalModal
+   ├── conRejectModal            ← ...all above filter bar
+   ├── recFilterBar              ← Filter bar BELOW modal containers
    ├── txtSearch
    ├── chkNeedsAttention
    ├── btnClearFilters
@@ -4086,7 +4172,11 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
    └── (remaining controls...)
    ```
 
+> 💡 **Container Advantage:** With containers, you only need to drag **5 containers** instead of **50+ individual controls**! Each container groups all related modal controls together.
+
 > 💡 **Quick Test:** After reordering, click a card's Approve button. The modal should appear fully visible, covering the filter bar and search controls completely.
+
+> ⚠️ **Note:** Later steps will add more modals (File Modal, Message Modal, Loading Overlay). Each time you add a new modal, drag its container to the TOP of the Tree view. The Loading Overlay (STEP 17D) must always be the topmost container.
 
 ---
 
@@ -4158,18 +4248,21 @@ If(
 
 **What you're doing:** Creating a modal for staff to add/remove file attachments from requests.
 
-### Control Hierarchy
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recFileOverlay               ← Dark semi-transparent background
-├── recFileModal                 ← White modal box (container)
-├── lblFileTitle                 ← "Manage Attachments - REQ-00042"
-├── lblFileStaffLabel            ← "Performing Action As: *"
-├── ddFileActor                  ← Staff dropdown
-├── frmAttachmentsEdit           ← Edit form for attachments
-├── btnFileSave                  ← Save Changes button
-└── btnFileCancel                ← Cancel button
+└── conFileModal                 ← CONTAINER (set Visible here only!)
+    ├── btnFileCancel            ← Cancel button
+    ├── btnFileSave              ← Save Changes button
+    ├── frmAttachmentsEdit       ← Edit form for attachments
+    ├── ddFileActor              ← Staff dropdown
+    ├── lblFileStaffLabel        ← "Performing Action As: *"
+    ├── lblFileTitle             ← "Manage Attachments - REQ-00042"
+    ├── recFileModal             ← White modal box
+    └── recFileOverlay           ← Dark semi-transparent background
 ```
 
 ---
@@ -4207,11 +4300,11 @@ Set(varShowAddFileModal, ThisItem.ID)
 
 ---
 
-### Modal Overlay (recFileOverlay)
+### Modal Container (conFileModal)
 
 6. Click on **scrDashboard** in Tree view.
-7. Click **+ Insert** → **Rectangle**.
-8. **Rename it:** `recFileOverlay`
+7. Click **+ Insert** → **Layout** → **Container**.
+8. **Rename it:** `conFileModal`
 9. Set properties:
 
 | Property | Value |
@@ -4220,16 +4313,34 @@ Set(varShowAddFileModal, ThisItem.ID)
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowAddFileModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recFileOverlay)
+
+10. With `conFileModal` selected, click **+ Insert** → **Rectangle**.
+11. **Rename it:** `recFileOverlay`
+12. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowAddFileModal > 0` |
 
 ---
 
 ### Modal Content Box (recFileModal)
 
-10. Click **+ Insert** → **Rectangle**.
-11. **Rename it:** `recFileModal`
-12. Set properties:
+13. Click **+ Insert** → **Rectangle**.
+14. **Rename it:** `recFileModal`
+15. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -4242,7 +4353,6 @@ Set(varShowAddFileModal, ThisItem.ID)
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowAddFileModal > 0` |
 
 ---
 
@@ -4263,7 +4373,6 @@ Set(varShowAddFileModal, ThisItem.ID)
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 120, 212, 1)` |
-| Visible | `varShowAddFileModal > 0` |
 
 ---
 
@@ -4281,7 +4390,6 @@ Set(varShowAddFileModal, ThisItem.ID)
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varShowAddFileModal > 0` |
 
 ---
 
@@ -4301,7 +4409,6 @@ Set(varShowAddFileModal, ThisItem.ID)
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowAddFileModal > 0` |
 
 ---
 
@@ -4319,7 +4426,6 @@ Set(varShowAddFileModal, ThisItem.ID)
 | Y | `recFileModal.Y + 130` |
 | Width | `460` |
 | Height | `200` |
-| Visible | `varShowAddFileModal > 0` |
 
 25. In the **Fields** panel (right side), click **Edit fields**.
 26. Remove all fields except **Attachments**.
@@ -4382,7 +4488,6 @@ Notify("Attachments updated", NotificationType.Success)
 | Height | `36` |
 | Fill | `RGBA(0, 120, 212, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowAddFileModal > 0` |
 | DisplayMode | `If(IsBlank(ddFileActor.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
 31. Set **OnSelect:**
@@ -4408,7 +4513,6 @@ SubmitForm(frmAttachmentsEdit)
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
-| Visible | `varShowAddFileModal > 0` |
 
 35. Set **OnSelect:**
 
@@ -4643,6 +4747,8 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 **What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
 
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
 ### Overview
 
 This modal allows bi-directional communication between staff and students. Messages are stored in the `RequestComments` list and trigger email notifications to students via Flow D.
@@ -4658,32 +4764,32 @@ Set(varMessageSubject, "");
 Set(varMessageText, "");
 ```
 
-### Controls to Create
+### Controls to Create (Container-Based)
 
 ```
-├── MESSAGE MODAL ─────────────────────────────────────────
-│   recMessageOverlay               ← Dark semi-transparent overlay
-│   recMessageModal                 ← White modal box
-│   lblMessageTitle                 ← "Send Message - REQ-00001"
-│   lblMessageStudent               ← Student info display
-│   lblMessageStaffLabel            ← "Performing Action As:"
-│   ddMessageStaff                  ← Staff dropdown
-│   lblMessageSubjectLabel          ← "Subject:"
-│   txtMessageSubject               ← Subject input
-│   lblMessageBodyLabel             ← "Message:"
-│   txtMessageBody                  ← Message text input (multiline)
-│   lblMessageCount                 ← Character count display
-│   btnMessageCancel                ← "Cancel" button
-│   btnMessageSend                  ← "Send Message" button
+└── conMessageModal                  ← CONTAINER (set Visible here only!)
+    ├── btnMessageSend               ← "Send Message" button
+    ├── btnMessageCancel             ← "Cancel" button
+    ├── lblMessageCharCount          ← Character count display
+    ├── txtMessageBody               ← Message text input (multiline)
+    ├── lblMessageBodyLabel          ← "Message:"
+    ├── txtMessageSubject            ← Subject input
+    ├── lblMessageSubjectLabel       ← "Subject:"
+    ├── ddMessageStaff               ← Staff dropdown
+    ├── lblMessageStaffLabel         ← "Performing Action As:"
+    ├── lblMessageStudent            ← Student info display
+    ├── lblMessageTitle              ← "Send Message - REQ-00001"
+    ├── recMessageModal              ← White modal box
+    └── recMessageOverlay            ← Dark semi-transparent overlay
 ```
 
 ### Building the Modal
 
-### Modal Overlay (recMessageOverlay)
+### Modal Container (conMessageModal)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recMessageOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conMessageModal`
 4. Set properties:
 
 | Property | Value |
@@ -4692,16 +4798,34 @@ Set(varMessageText, "");
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowMessageModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recMessageOverlay)
+
+5. With `conMessageModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recMessageOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0.7)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
 ### Modal Content Box (recMessageModal)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recMessageModal`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recMessageModal`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -4714,7 +4838,6 @@ Set(varMessageText, "");
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4735,7 +4858,6 @@ Set(varMessageText, "");
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(70, 130, 220, 1)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4755,7 +4877,6 @@ Set(varMessageText, "");
 | Font | `Font.'Segoe UI'` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4776,7 +4897,6 @@ Set(varMessageText, "");
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4796,7 +4916,6 @@ Set(varMessageText, "");
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
 | DefaultSelectedItems | `Blank()` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4817,7 +4936,6 @@ Set(varMessageText, "");
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4836,7 +4954,6 @@ Set(varMessageText, "");
 | HintText | `"Brief subject (e.g., Question about your file)"` |
 | Default | `""` |
 | MaxLength | `200` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4857,7 +4974,6 @@ Set(varMessageText, "");
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4877,7 +4993,6 @@ Set(varMessageText, "");
 | HintText | `"Type your message to the student..."` |
 | Default | `""` |
 | MaxLength | `2000` |
-| Visible | `varShowMessageModal > 0` |
 
 ---
 
@@ -4895,7 +5010,6 @@ Set(varMessageText, "");
 | Height | `22` |
 | Size | `8` |
 | Align | `Align.Center` |
-| Visible | `varShowMessageModal > 0` |
 
 35. Set **Text:**
 
@@ -4941,7 +5055,6 @@ If(
 | RadiusTopRight | `6` |
 | RadiusBottomLeft | `6` |
 | RadiusBottomRight | `6` |
-| Visible | `varShowMessageModal > 0` |
 
 40. Set **OnSelect:**
 
@@ -4974,7 +5087,6 @@ Reset(ddMessageStaff)
 | RadiusTopRight | `6` |
 | RadiusBottomLeft | `6` |
 | RadiusBottomRight | `6` |
-| Visible | `varShowMessageModal > 0` |
 
 44. Set **DisplayMode:**
 
@@ -5113,25 +5225,30 @@ Set(varShowMessageModal, ThisItem.ID)
 
 **What you're doing:** Adding a loading indicator that shows during async operations (Patch, Flow calls) to prevent user confusion and double-clicks.
 
-### Control Hierarchy
+> 🎯 **Using Containers:** This overlay uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
 
 ```
 scrDashboard
-├── recLoadingOverlay            ← Semi-transparent dark overlay
-├── recLoadingBox                ← White box with spinner
-├── lblLoadingSpinner            ← Animated spinner emoji
-└── lblLoadingMessage            ← Custom loading message
+└── conLoadingOverlay            ← CONTAINER (set Visible here only!)
+    ├── lblLoadingMessage        ← Custom loading message
+    ├── lblLoadingSpinner        ← Animated spinner emoji
+    ├── recLoadingBox            ← White box with spinner
+    └── recLoadingOverlay        ← Semi-transparent dark overlay
 ```
 
 > 💡 **Why this matters:** Without visual feedback, users may click buttons multiple times or think the app is frozen during database operations.
 
+> ⚠️ **Z-Order:** This container must be at the TOP of the Tree view (highest Z-order) so it appears on top of everything, including other modals.
+
 ---
 
-### Loading Overlay Background (recLoadingOverlay)
+### Loading Container (conLoadingOverlay)
 
 1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Rectangle**.
-3. **Rename it:** `recLoadingOverlay`
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conLoadingOverlay`
 4. Set properties:
 
 | Property | Value |
@@ -5140,18 +5257,34 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
-| Fill | `RGBA(0, 0, 0, 0.5)` |
-| Visible | `varIsLoading` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varIsLoading` |
 
-> ⚠️ **Important:** This control should be near the bottom of the Tree view (high Z-order) so it appears on top of everything.
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Loading Overlay Background (recLoadingOverlay)
+
+5. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recLoadingOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.5)` |
 
 ---
 
 ### Loading Box (recLoadingBox)
 
-5. Click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recLoadingBox`
-7. Set properties:
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recLoadingBox`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5162,15 +5295,14 @@ scrDashboard
 | Fill | `Color.White` |
 | BorderColor | `RGBA(56, 96, 178, 1)` |
 | BorderThickness | `2` |
-| Visible | `varIsLoading` |
 
 ---
 
 ### Loading Spinner (lblLoadingSpinner)
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblLoadingSpinner`
-10. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblLoadingSpinner`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5181,15 +5313,14 @@ scrDashboard
 | Height | `40` |
 | Size | `24` |
 | Align | `Align.Center` |
-| Visible | `varIsLoading` |
 
 ---
 
 ### Loading Message (lblLoadingMessage)
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblLoadingMessage`
-13. Set properties:
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblLoadingMessage`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5200,7 +5331,6 @@ scrDashboard
 | Size | `12` |
 | Align | `Align.Center` |
 | Color | `RGBA(80, 80, 80, 1)` |
-| Visible | `varIsLoading` |
 
 14. Set **Text:**
 
