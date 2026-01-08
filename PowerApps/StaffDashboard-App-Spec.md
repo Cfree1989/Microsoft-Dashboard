@@ -487,40 +487,45 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     recArchiveModal                   ← Step 12
     recArchiveOverlay                 ← Step 12
     btnApprovalConfirm                ← Step 11
-    btnApprovalCancel                 ← Step 11
-    txtApprovalComments               ← Step 11
-    lblApprovalCommentsLabel          ← Step 11
-    lblCalculatedCost                 ← Step 11
-    lblCostLabel                      ← Step 11
-    txtEstimatedTime                  ← Step 11
-    lblTimeLabel                      ← Step 11
-    lblWeightError                    ← Step 11
-    txtEstimatedWeight                ← Step 11
-    lblWeightLabel                    ← Step 11
-    ddApprovalStaff                   ← Step 11
-    lblApprovalStaffLabel             ← Step 11
-    lblApprovalStudent                ← Step 11
-    lblApprovalTitle                  ← Step 11
+    recApprovalOverlay                ← Step 11 (MUST BE AT TOP - renders on top of everything)
     recApprovalModal                  ← Step 11
-    recApprovalOverlay                ← Step 11
-    btnRejectConfirm                  ← Step 10
-    btnRejectCancel                   ← Step 10
-    txtRejectComments                 ← Step 10
-    lblRejectCommentsLabel            ← Step 10
-    chkNotJoined                      ← Step 10
-    chkOverhangs                      ← Step 10
-    chkMessy                          ← Step 10
-    chkScale                          ← Step 10
-    chkNotSolid                       ← Step 10
-    chkGeometry                       ← Step 10
-    chkTooSmall                       ← Step 10
-    lblRejectReasonsLabel             ← Step 10
-    ddRejectStaff                     ← Step 10
-    lblRejectStaffLabel               ← Step 10
-    lblRejectStudent                  ← Step 10
-    lblRejectTitle                    ← Step 10
-    recRejectModal                    ← Step 10
+    lblApprovalTitle                  ← Step 11
+    lblApprovalStudent                ← Step 11
+    lblApprovalStaffLabel             ← Step 11
+    ddApprovalStaff                   ← Step 11
+    lblWeightLabel                    ← Step 11
+    txtEstimatedWeight                ← Step 11
+    lblWeightError                    ← Step 11
+    lblTimeLabel                      ← Step 11
+    txtEstimatedTime                  ← Step 11
+    lblCostLabel                      ← Step 11
+    lblCalculatedCost                 ← Step 11
+    lblApprovalCommentsLabel          ← Step 11
+    txtApprovalComments               ← Step 11
+    btnApprovalCancel                 ← Step 11
+    btnApprovalConfirm                ← Step 11
     recRejectOverlay                  ← Step 10
+    recRejectModal                    ← Step 10
+    lblRejectTitle                    ← Step 10
+    lblRejectStudent                  ← Step 10
+    lblRejectStaffLabel               ← Step 10
+    ddRejectStaff                     ← Step 10
+    lblRejectReasonsLabel             ← Step 10
+    chkTooSmall                       ← Step 10
+    chkGeometry                       ← Step 10
+    chkNotSolid                       ← Step 10
+    chkScale                          ← Step 10
+    chkMessy                          ← Step 10
+    chkOverhangs                      ← Step 10
+    chkNotJoined                      ← Step 10
+    lblRejectCommentsLabel            ← Step 10
+    txtRejectComments                 ← Step 10
+    btnRejectCancel                   ← Step 10
+    btnRejectConfirm                  ← Step 10
+    recFilterBar                      ← Step 14 (filter bar BELOW modals)
+    txtSearch                         ← Step 14
+    chkNeedsAttention                 ← Step 14
+    btnClearFilters                   ← Step 14
     ▼ galJobCards                     ← Step 6
         btnSendMessage                ← Step 16C
         btnFiles                      ← Step 16
@@ -560,10 +565,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblStudentName                ← Step 7
         recCardBackground             ← Step 7
     lblEmptyState                     ← Step 9
-    btnClearFilters                   ← Step 13
-    btnExpandAll                      ← Step 13
-    chkNeedsAttention                 ← Step 13
-    txtSearch                         ← Step 13
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
     lblUserName                       ← Step 4
@@ -4046,6 +4047,46 @@ Set(varSearchText, "");
 Set(varNeedsAttention, false);
 Reset(chkNeedsAttention)
 ```
+
+---
+
+### ⚠️ CRITICAL: Reorder Controls for Proper Z-Index (Modal Layering Fix)
+
+**After creating the filter bar controls, you MUST reorder the modal elements so they appear ON TOP of the filter bar when visible.**
+
+In Power Apps, controls that are **higher in the Tree view** (closer to the top) render **on top of** controls that are lower. Since you created the modals before the filter bar, they currently render BEHIND the filter bar.
+
+**How to fix:**
+
+1. In the **Tree view** (left panel), locate these controls:
+   - `recApprovalOverlay` and all approval modal controls
+   - `recRejectOverlay` and all reject modal controls  
+   - `recArchiveOverlay` and all archive modal controls
+   - `recDetailsOverlay` and all details modal controls
+
+2. **Drag each modal overlay and its related controls** to the **TOP** of the Tree view (just under `scrDashboard`).
+
+3. The correct order from top to bottom should be:
+   ```
+   scrDashboard
+   ├── recApprovalOverlay        ← MUST be at TOP
+   ├── recApprovalModal          
+   ├── (all approval modal controls...)
+   ├── recRejectOverlay
+   ├── (all reject modal controls...)
+   ├── recArchiveOverlay
+   ├── (all archive modal controls...)
+   ├── recDetailsOverlay
+   ├── (all details modal controls...)
+   ├── recFilterBar              ← Filter bar BELOW modals
+   ├── txtSearch
+   ├── chkNeedsAttention
+   ├── btnClearFilters
+   ├── galJobCards               ← Gallery BELOW filter bar
+   └── (remaining controls...)
+   ```
+
+> 💡 **Quick Test:** After reordering, click a card's Approve button. The modal should appear fully visible, covering the filter bar and search controls completely.
 
 ---
 
