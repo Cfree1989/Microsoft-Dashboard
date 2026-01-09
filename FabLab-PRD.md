@@ -265,8 +265,8 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **User Benefit:** Prevents surprise costs, ensures informed consent
 - **Acceptance Criteria:**
   - Status change to "Pending" triggers estimate email
-  - Email contains cost, time, color, and confirmation instructions
-  - Student confirms via StudentConfirmed field toggle in "My Requests" view
+  - Email contains cost, time, color, and direct link to their request
+  - Student clicks link → sees confirmation panel → clicks "I CONFIRM" button
   - Confirmation auto-updates Status to "Ready to Print"
   - Circular loop prevention (only processes when Status = Pending)
   - Complete audit trail with student attribution
@@ -622,10 +622,11 @@ Uploaded → Pending → **[STUDENT CONFIRMS]** → Ready to Print → Printing 
 **Student Confirmation Process:**
 1. Staff review request and set estimates (EstimatedCost, EstimatedTime, EstimatedWeight)
 2. Staff change Status to "Pending"
-3. Flow B automatically sends estimate email to student
-4. Student opens "My Requests" view in SharePoint
-5. Student toggles StudentConfirmed from "No" to "Yes"
-6. Flow B detects change and automatically updates Status to "Ready to Print"
+3. Flow B automatically sends estimate email to student with direct link
+4. Student clicks link → opens their specific request in Edit mode
+5. Confirmation panel appears with cost details and "I CONFIRM" button
+6. Student clicks button → StudentConfirmed set to Yes → Form closes
+7. Flow B detects change and automatically updates Status to "Ready to Print"
 7. Staff proceed with printing
 
 **Circular Loop Prevention:** Flow B only processes StudentConfirmed changes when Status = "Pending". After update to "Ready to Print", subsequent toggles are ignored.
@@ -689,9 +690,10 @@ TO CONFIRM THIS ESTIMATE:
 4. Click "Save" at the top
 
 View and Confirm Your Request:
-[My Requests View: /Lists/PrintRequests/My%20Requests.aspx]
+[Direct Item Link: /Lists/PrintRequests/EditForm.aspx?ID={ItemID}]
 
-TIP: The link will open your requests in SharePoint. Your request should be at the top of the list.
+When the form opens, you'll see a green confirmation panel at the top.
+Just click "I CONFIRM THIS ESTIMATE" and you're done!
 
 If you have any questions or concerns about the estimate, please contact us before confirming.
 

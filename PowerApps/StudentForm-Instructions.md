@@ -204,21 +204,17 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
 ▼ scrFormScreen                      ← Main screen
     ▼ SharePointForm1                ← Main form control
         
-        // === HEADER (Step 3) ===
-        lblFormTitle                 ← IN FRONT
-        recFormHeader                ← BEHIND
+        // === HEADER INSIDE DATACARD (Step 3) ===
+        ▼ Title_DataCard1            ← Repurposed as header container
+            lblFormTitle             ← IN FRONT (must be above rectangle)
+            recFormHeader            ← BEHIND
         
         // === STUDENT INFO (Step 4) ===
-        lblStudentSectionHeader      ← IN FRONT
-        recStudentSection            ← BEHIND
         Student_DataCard1            ← Auto-filled
         StudentEmail_DataCard1       ← Auto-filled
         TigerCardNumber_DataCard1    ← Required
         
         // === PROJECT DETAILS (Step 5) ===
-        lblProjectSectionHeader      ← IN FRONT
-        recProjectSection            ← BEHIND
-        Title_DataCard1
         CourseNumber_DataCard1
         Discipline_DataCard1
         ProjectType_DataCard1
@@ -226,24 +222,18 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
         Notes_DataCard1
         
         // === PRINT CONFIG (Step 6) ===
-        lblPrintSectionHeader        ← IN FRONT
-        recPrintSection              ← BEHIND
         Method_DataCard1             ← Controls Printer filter
         Printer_DataCard1            ← Cascading dropdown
         Color_DataCard1
         
         // === ATTACHMENTS (Step 7) ===
-        lblFileSectionHeader         ← IN FRONT
-        lblFileWarning               ← File naming instructions
-        recFileSection               ← BEHIND
-        Attachments_DataCard1
+        Attachments_DataCard1        ← Contains lblFileWarning
         
         // === HIDDEN (Step 8) ===
         Status_DataCard1             ← Visible: false
-        ReqKey_DataCard1             ← Visible: false (or removed)
         
-        // === CONDITIONAL (Step 8) ===
-        StudentConfirmed_DataCard1   ← Visible in Edit mode only
+        // === CONFIRMATION PANEL (Step 8) ===
+        StudentConfirmed_DataCard1   ← Visible only when Status = "Pending"
 ```
 
 ### Fields NOT in Form (Staff-Only)
@@ -363,7 +353,7 @@ For each field in this list, do the following:
 > ⚠️ **DO NOT REMOVE these fields:**
 > - **Status** — Required by SharePoint (we'll hide it in Step 8)
 > - **TigerCardNumber** — Students need to enter this
-> - **StudentConfirmed** — Shown conditionally when editing
+> - **StudentConfirmed** — Used for confirmation panel (shown when Status = "Pending")
 
 ## 2B. Add Missing Fields
 
@@ -390,7 +380,7 @@ If any student-facing fields are missing, add them now.
 | Notes | ✅ Yes |
 | Attachments | ✅ Yes |
 | Status | ✅ Yes (will hide) |
-| StudentConfirmed | ✅ Yes (conditional) |
+| StudentConfirmed | ✅ Yes (confirmation panel) |
 
 3. Click **Add** to add any missing fields
 
@@ -415,7 +405,7 @@ Drag fields in the Edit fields panel to arrange them in logical order:
 12. Notes
 13. Attachments
 14. Status (will hide)
-15. StudentConfirmed (conditional)
+15. StudentConfirmed (confirmation panel)
 ```
 
 > 💡 **Tip:** Click and drag a field to move it up or down in the list.
@@ -432,26 +422,39 @@ After completing this step:
 
 # STEP 3: Building the Form Header
 
-**What you're doing:** Adding a professional header to the form with the lab name and instructions.
+**What you're doing:** Adding a professional header to the form with the lab name. The header will scroll with the form content.
 
 **Time:** 15 minutes
 
-## 3A. Add Header Background Rectangle
+> 💡 **Why use a DataCard?** Adding controls directly to SharePointForm1 causes z-order issues with DataCards. By placing the header inside an existing DataCard (Title_DataCard1), it integrates properly with the form's layout and scrolls with the content.
+
+## 3A. Prepare Title_DataCard1 as Header Container
+
+We'll repurpose the Title field's DataCard to hold our header elements.
 
 ### Instructions
 
-1. **Select the screen (not the form)**
-   - In the Tree view, click on the screen name (e.g., `FormScreen1` or `Screen1`)
+1. **In Tree View**, expand `SharePointForm1`
+2. **Find and expand `Title_DataCard1`**
+3. **Select `Title_DataCard1`** (the card itself)
+4. **Set the card's Height** to accommodate the header:
 
-2. **Insert a rectangle**
-   - Click **+ Insert** in the toolbar
-   - Search for and click **Rectangle**
+| Property | Value |
+|----------|-------|
+| Height | `100` |
 
-3. **Rename the rectangle**
-   - In the Tree view, double-click `Rectangle1`
+## 3B. Add Header Background Rectangle
+
+### Instructions
+
+1. **With `Title_DataCard1` selected**, click **+ Insert** → **Rectangle**
+   - The rectangle will be added inside the DataCard
+
+2. **Rename the rectangle**
+   - In Tree view, double-click `Rectangle1`
    - Type `recFormHeader` and press Enter
 
-4. **Set rectangle properties**
+3. **Set rectangle properties**
 
 | Property | Value |
 |----------|-------|
@@ -460,14 +463,17 @@ After completing this step:
 | Width | `Parent.Width` |
 | Height | `80` |
 | Fill | `RGBA(70, 29, 124, 1)` |
+| HoverFill | `RGBA(70, 29, 124, 1)` |
+| PressedFill | `RGBA(70, 29, 124, 1)` |
+| DisabledFill | `RGBA(70, 29, 124, 1)` |
 
-> This creates an LSU Purple header bar at the top of the form.
+> ⚠️ **Important:** Setting HoverFill, PressedFill, and DisabledFill to the same purple prevents the rectangle from turning blue on mouseover.
 
-## 3B. Add Form Title Label
+## 3C. Add Form Title Label
 
 ### Instructions
 
-1. **With the screen selected** (not the form), click **+ Insert** → **Text label**
+1. **With `Title_DataCard1` selected**, click **+ Insert** → **Text label**
 
 2. **Rename it:** `lblFormTitle`
 
@@ -478,40 +484,54 @@ After completing this step:
 | Text | `"3D Print Request Form"` |
 | X | `20` |
 | Y | `20` |
-| Width | `400` |
+| Width | `Parent.Width - 40` |
 | Height | `40` |
 | Font | `Font.'Segoe UI'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `22` |
 | Color | `Color.White` |
 
-## 3C. Add Subtitle Label (Optional)
+## 3D. Arrange Z-Order (Critical!)
+
+The label must appear IN FRONT of the rectangle. In Power Apps, controls **higher in the Tree View appear in front**.
 
 ### Instructions
 
-1. Insert another **Text label**
+1. **In Tree View**, look at the children of `Title_DataCard1`
+2. **Drag `lblFormTitle` ABOVE `recFormHeader`** in the list
+3. The order should be:
 
-2. **Rename it:** `lblFormSubtitle`
+```
+▼ Title_DataCard1
+    lblFormTitle         ← IN FRONT (top of list)
+    recFormHeader        ← BEHIND (below label)
+    StarVisible1
+    ErrorMessage1
+    DataCardValue1
+    DataCardKey1
+```
 
-3. **Set properties**
+> If the label is below the rectangle in the Tree View, the rectangle will cover the text!
 
-| Property | Value |
-|----------|-------|
-| Text | `"LSU Fabrication Lab"` |
-| X | `20` |
-| Y | `50` |
-| Width | `400` |
-| Height | `25` |
-| Font | `Font.'Segoe UI'` |
-| Size | `12` |
-| Color | `RGBA(255, 255, 255, 0.8)` |
+## 3E. Hide the Title Field Elements (Optional)
+
+If you don't want the Title text input visible (since we're using this card for the header):
+
+1. **Select `DataCardKey1`** inside Title_DataCard1
+2. Set **Visible** to `false`
+
+3. **Select `DataCardValue1`** inside Title_DataCard1
+4. Set **Visible** to `false`
+
+> 💡 **Alternative:** You can keep the Title field visible below the header if you want students to name their project. Just position it below the header by adjusting its Y value.
 
 ### Verification
 
-- [ ] Purple header bar appears at the top
-- [ ] "3D Print Request Form" is visible in white
-- [ ] Subtitle appears below the title
-- [ ] Header looks professional
+- [ ] Purple header bar appears at the top of the form
+- [ ] "3D Print Request Form" is visible in white text
+- [ ] Header does NOT turn blue on mouseover
+- [ ] Header scrolls with the form content (not fixed)
+- [ ] Z-order is correct: label in front, rectangle behind
 
 ---
 
@@ -674,34 +694,13 @@ After completing this step:
 
 # STEP 5: Project Details Section
 
-**What you're doing:** Configuring the Title, Course Number, Discipline, ProjectType, DueDate, and Notes fields.
+**What you're doing:** Configuring the Course Number, Discipline, ProjectType, DueDate, and Notes fields.
 
-**Time:** 20 minutes
+**Time:** 15 minutes
 
-## 5A. Configure Title Field
+> 💡 **Note:** `Title_DataCard1` is now used as the header container (Step 3), so there's no separate Title field for project names.
 
-The Title field is straightforward — students type their project name.
-
-### Instructions
-
-1. Find `Title_DataCard1` in Tree view
-2. Click on the TextInput control inside
-3. Verify in **Advanced** tab:
-
-| Property | Value |
-|----------|-------|
-| Mode | `TextMode.SingleLine` |
-| MaxLength | `255` |
-
-### Add Placeholder Text
-
-Set **HintText** to:
-
-```powerfx
-"e.g., Phone Stand, Chess Piece, Bracket"
-```
-
-## 5B. Configure Course Number Field
+## 5A. Configure Course Number Field
 
 ### Instructions
 
@@ -715,7 +714,7 @@ Set **HintText** to:
 
 > 💡 **Note:** This field is optional — personal projects don't have a course number.
 
-## 5C. Configure Discipline Field
+## 5B. Configure Discipline Field
 
 This is a Choice field (dropdown).
 
@@ -727,20 +726,48 @@ This is a Choice field (dropdown).
 
 > 💡 **Default behavior is fine** — students select from the list of disciplines defined in SharePoint.
 
-## 5D. Configure ProjectType Field
+## 5C. Configure ProjectType Field
 
-This is a Choice field (dropdown).
+This Choice field helps categorize print requests for reporting and prioritization.
 
 ### Instructions
 
-1. Find `ProjectType_DataCard1`
-2. Verify the ComboBox shows choices like:
-   - Class Project
-   - Personal Project
-   - Research
-   - Other
+1. **Find `ProjectType_DataCard1`** in Tree view
+2. **Expand it** and click on the ComboBox control inside (e.g., `DataCardValue`)
+3. **Verify the Items property** references the SharePoint choices:
 
-## 5E. Configure DueDate Field
+```powerfx
+Choices([@PrintRequests].ProjectType)
+```
+
+### Available Choices
+
+These values are defined in the SharePoint column and should include:
+
+| Choice | When to Use |
+|--------|-------------|
+| Class Project | Required for a course assignment |
+| Personal Project | Student's own design, not for class |
+| Research | Faculty/graduate research project |
+| Club/Organization | Student org or club project |
+| Other | Doesn't fit other categories |
+
+> 💡 **Note:** The actual choices come from SharePoint. If you need to add/modify options, edit the ProjectType column in the PrintRequests list settings.
+
+### Ensure No Default Value
+
+Students should consciously select their project type. To ensure no default:
+
+1. **Check SharePoint:** Go to PrintRequests list → Settings → ProjectType column → Set Default value to **None**
+2. **Check Power Apps:** The ComboBox's **DefaultSelectedItems** should be:
+
+```powerfx
+Parent.Default
+```
+
+This shows blank for new items and the saved value when editing.
+
+## 5D. Configure DueDate Field
 
 ### Instructions
 
@@ -763,7 +790,7 @@ Set **MinDate** to:
 Today()
 ```
 
-## 5F. Configure Notes Field
+## 5E. Configure Notes Field
 
 This should be a multi-line text field for additional instructions.
 
@@ -788,7 +815,6 @@ TextMode.MultiLine
 ### Verification
 
 After completing this step:
-- [ ] Title field accepts text input
 - [ ] Course Number has helpful placeholder
 - [ ] Discipline dropdown shows available options
 - [ ] ProjectType dropdown shows available options
@@ -805,15 +831,21 @@ After completing this step:
 
 ## 6A. Configure Method Field
 
-The Method field determines which printers are available.
+The Method field determines which printers are available. The choices (Filament, Resin) come from the SharePoint column definition.
 
 ### Instructions
 
 1. Find `Method_DataCard1` in Tree view
-2. Click on the ComboBox control inside (note its exact name, e.g., `DataCardValue6`)
-3. Verify it shows choices: **Filament**, **Resin**
+2. Expand it and note the ComboBox control name inside (e.g., `DataCardValue8`)
+3. Verify the **Items** property references SharePoint choices:
 
-> 💡 **Write down the DataCardValue name** — you'll need it for the Printer filter formula.
+```powerfx
+Choices([@PrintRequests].Method)
+```
+
+> 💡 **Where do the choices come from?** The Method options are defined in SharePoint. To modify them, go to PrintRequests list → List Settings → Method column → Edit the choices there.
+
+> 📝 **Note the control name** (e.g., `DataCardValue8`) — you'll need it for the Printer filter formula.
 
 ## 6B. Configure Printer Field (Cascading Dropdown)
 
@@ -829,7 +861,7 @@ The Method field determines which printers are available.
 ### Instructions
 
 1. In the Tree View, expand `Printer_DataCard1`
-2. Click on the **ComboBox** control inside (e.g., `DataCardValue7`)
+2. Click on the **ComboBox** control inside (e.g., `DataCardValue10`)
 3. Click in the **formula bar** at the top
 4. Make sure you're editing the **Items** property
 5. Delete the existing formula
@@ -841,9 +873,9 @@ The Method field determines which printers are available.
 Filter(
     Choices([@PrintRequests].Printer),
     If(
-        DataCardValue6.Selected.Value = "Filament",
+        DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
-        DataCardValue6.Selected.Value = "Resin",
+        DataCardValue8.Selected.Value = "Resin",
         Value = "Form 3 (5.7×5.7×7.3in)",
         true
     )
@@ -852,43 +884,94 @@ Filter(
 
 7. Press **Enter** to confirm
 
-> ⚠️ **IMPORTANT:** Replace `DataCardValue6` with your actual Method control name! To find the correct name:
-> 1. Click on **Method_DataCard1** in the Tree View
-> 2. Expand it and note the control name inside
-> 3. Replace `DataCardValue6` in the formula above
+> ⚠️ **Control Name:** This formula uses `DataCardValue8` for the Method control. If your Method ComboBox has a different name, replace `DataCardValue8` with your actual control name.
 
 ### Understanding the Formula
 
 | Part | What It Does |
 |------|--------------|
 | `Choices([@PrintRequests].Printer)` | Gets all printer options from SharePoint |
-| `DataCardValue6.Selected.Value = "Filament"` | Checks if Filament is selected |
+| `DataCardValue8.Selected.Value = "Filament"` | Checks if Filament is selected |
 | `Value in [...]` | Filters to only FDM printers |
 | `Value = "Form 3..."` | Filters to only resin printer |
 | `true` | Shows all printers if no method selected |
 
-## 6C. Configure Color Field
+## 6C. Configure Color Field (Cascading Dropdown)
+
+**Goal:** Resin printers only support limited colors. Filter the Color dropdown based on Method.
+
+### Color/Method Compatibility
+
+| Method | Available Colors |
+|--------|------------------|
+| **Filament** | All colors (Blue, Red, Green, Black, White, etc.) |
+| **Resin** | Black, Gray, White, Clear only |
 
 ### Instructions
 
-1. Find `Color_DataCard1`
-2. Verify the ComboBox shows the color choices defined in SharePoint
+1. In the Tree View, expand `Color_DataCard1`
+2. Click on the **ComboBox** control inside (e.g., `DataCardValue9`)
+3. Click in the **formula bar** at the top
+4. Make sure you're editing the **Items** property
+5. Delete the existing formula
+6. Paste this formula:
 
-> 💡 **Note:** Color options come from the SharePoint column definition. No special configuration needed.
+**⬇️ FORMULA: Paste into Items property**
 
-## 6D. Test the Cascading Filter
+```powerfx
+Filter(
+    Choices([@PrintRequests].Color),
+    Or(
+        DataCardValue8.Selected.Value <> "Resin",
+        Value = "Black",
+        Value = "White",
+        Value = "Gray",
+        Value = "Clear"
+    )
+)
+```
+
+7. Press **Enter** to confirm
+
+> ⚠️ **Control Name:** This formula uses `DataCardValue8` for the Method control. Replace if your control name differs.
+
+### Understanding the Formula
+
+| Part | What It Does |
+|------|--------------|
+| `Choices([@PrintRequests].Color)` | Gets all color options from SharePoint |
+| `DataCardValue8.Selected.Value <> "Resin"` | If NOT Resin, include all colors |
+| `Value = "Black"` (etc.) | If Resin, only include these specific colors |
+| `Or(...)` | Include color if ANY condition is true |
+
+**Logic:** A color is shown if EITHER:
+- The Method is NOT Resin (show all colors), OR
+- The color is Black, White, Gray, or Clear (resin-compatible)
+
+> 💡 **Note:** The color values in the formula must match exactly what's in SharePoint (case-sensitive). Check your SharePoint Color column choices.
+
+## 6D. Test the Cascading Filters
 
 ### Instructions
 
 1. Press **F5** to enter Preview mode
 2. Test these scenarios:
 
+**Printer Filter Tests:**
+
 | Test | Expected Result |
 |------|-----------------|
 | Select **Method = Filament** | Printer shows: Prusa MK4S, Prusa XL, Raised3D |
 | Select **Method = Resin** | Printer shows: Form 3 only |
 | No Method selected | Printer shows: All printers |
-| Change Method after Printer selected | Printer selection should clear |
+
+**Color Filter Tests:**
+
+| Test | Expected Result |
+|------|-----------------|
+| Select **Method = Filament** | Color shows: All colors |
+| Select **Method = Resin** | Color shows: Black, Gray, White, Clear only |
+| No Method selected | Color shows: All colors |
 
 3. Press **Escape** to exit Preview mode
 
@@ -899,36 +982,58 @@ After completing this step:
 - [ ] Printer dropdown filters based on Method
 - [ ] Selecting Filament shows 3 FDM printers
 - [ ] Selecting Resin shows only Form 3
-- [ ] Color dropdown shows available options
+- [ ] Color dropdown filters based on Method
+- [ ] Selecting Resin limits colors to Black, Gray, White, Clear
 - [ ] All three fields are marked as required
 
 ---
 
 # STEP 7: Attachments Section
 
-**What you're doing:** Adding the file upload control with clear naming instructions so students know how to name their files.
+**What you're doing:** Configuring the attachments datacard with clear file naming instructions so students know how to name their files before uploading.
 
-**Time:** 20 minutes
+**Time:** 25 minutes
 
-## 7A. Add File Naming Warning Label
+> ⚠️ **IMPORTANT:** In SharePoint forms, you cannot add controls directly to `SharePointForm1`—they will float outside the form and not scroll properly with the other fields. All custom controls must be placed **inside a datacard** to stay properly positioned.
 
-Students need clear instructions about file naming requirements.
+## 7A. Unlock and Expand the Attachments DataCard
+
+Before adding the warning label, you need to unlock the datacard and make room for additional controls.
 
 ### Instructions
 
-1. **Select SharePointForm1** in the Tree view
+1. In the **Tree view**, find and click on `Attachments_DataCard1`
+2. In the **Properties** panel on the right, click **Advanced**
+3. Click **Unlock to change properties**
+
+> Once unlocked, you can add custom controls inside this datacard.
+
+4. The DataCard height will auto-adjust based on content, or you can set it manually if needed.
+
+## 7B. Add File Naming Warning Label
+
+Students need clear instructions about file naming requirements. This label goes **inside** the Attachments datacard.
+
+### Instructions
+
+1. In the **Tree view**, click on `Attachments_DataCard1` to select it
 2. Click **+ Insert** → **Text label**
-3. **Rename it:** `lblFileWarning`
-4. **Position it** above the Attachments field by setting:
+   
+> ⚠️ **CRITICAL:** Make sure `Attachments_DataCard1` is selected BEFORE inserting. The label must appear as a child of the datacard in the Tree view, not as a sibling.
+
+3. In the Tree view, confirm the new label appears **inside** `Attachments_DataCard1` (indented under it)
+4. **Rename it:** `lblFileWarning`
+5. **Position it** at the top of the datacard:
 
 | Property | Value |
 |----------|-------|
 | X | `20` |
-| Y | Position above Attachments_DataCard1 (adjust as needed) |
+| Y | `20` |
 | Width | `Parent.Width - 40` |
-| Height | `120` |
+| Height | `215` |
+| Overflow | `Overflow.Scroll` |
 
-5. Set the **Text** property:
+6. Set the **Text** property:
 
 **⬇️ TEXT: Paste into the Text property**
 
@@ -941,6 +1046,8 @@ Examples:
   - JaneDoe_Filament_Blue.stl
   - MikeSmith_Resin_Clear.3mf
 
+Accepted formats: .stl, .obj, .3mf, .idea, .form
+
 Files not following this format will be rejected."
 ```
 
@@ -948,7 +1055,7 @@ Files not following this format will be rejected."
 
 > ⚠️ **No Emojis:** Avoid using emojis in label text—they can cause "Unexpected character" errors.
 
-## 7B. Style the Warning Label
+## 7C. Style the Warning Label
 
 ### Instructions
 
@@ -974,13 +1081,33 @@ With `lblFileWarning` selected, set these properties in the **Advanced** tab:
 
 > This creates a yellow warning box that stands out visually.
 
-## 7C. Configure Attachments Field
+## 7D. Reposition the Attachments Controls
+
+Now you need to move the label and attachment control below the warning label.
 
 ### Instructions
 
-1. Find `Attachments_DataCard1`
-2. The control inside is an **AttachmentControl**
-3. No special configuration needed — it uses SharePoint's built-in attachment handling
+1. In the **Tree view**, expand `Attachments_DataCard1`
+
+2. Find **DataCardKey** (the "Attachments" label) and set:
+
+| Property | Value |
+|----------|-------|
+| Y | `245` |
+| Size | `14` |
+| Align | `Align.Center` |
+
+3. Find **DataCardValue** (the actual attachment upload control) and set:
+
+| Property | Value |
+|----------|-------|
+| X | `35` |
+| Y | `300` |
+| Height | `100` |
+
+## 7E. About the Attachments Control
+
+The attachment control uses SharePoint's built-in attachment handling—no special configuration needed.
 
 ### File Type Restrictions
 
@@ -993,29 +1120,14 @@ With `lblFileWarning` selected, set these properties in the **Advanced** tab:
 - `.idea` — PrusaSlicer project file
 - `.form` — Formlabs project file
 
-## 7D. Add File Type Hint (Optional)
-
-You can add a helper label below the warning:
-
-1. Insert another **Text label**
-2. **Rename it:** `lblFileTypes`
-3. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Accepted formats: .stl, .obj, .3mf, .idea, .form"` |
-| Font | `Font.'Segoe UI'` |
-| Size | `9` |
-| Color | `RGBA(100, 100, 100, 1)` |
-| FontWeight | `FontWeight.Normal` |
-
 ### Verification
 
 After completing this step:
-- [ ] Yellow warning box displays file naming instructions
-- [ ] Warning is clearly visible and readable
-- [ ] Attachments control appears below the warning
-- [ ] File type hint is visible (if added)
+- [ ] `Attachments_DataCard1` is unlocked
+- [ ] `lblFileWarning` appears **inside** the datacard (indented in Tree view)
+- [ ] Yellow warning box displays file naming instructions and accepted formats
+- [ ] Attachment control appears **below** the warning label
+- [ ] Everything scrolls together with the form (not floating)
 
 ---
 
@@ -1092,37 +1204,279 @@ If ReqKey doesn't need to appear even for edits:
 2. Click **Edit fields** in Properties
 3. Find **ReqKey** → click **...** → **Remove**
 
-## 8C. Configure StudentConfirmed Field
+## 8C. Build the Estimate Confirmation Panel
 
-**Goal:** Show this field only when students edit their requests to confirm cost estimates.
+**Goal:** Replace the raw StudentConfirmed checkbox with a proper confirmation UI that shows estimate details and a clear "Confirm" button. This panel only appears when staff have reviewed the request and set Status to "Pending".
 
-### Instructions
+**Time:** 25 minutes
 
-1. Click on `StudentConfirmed_DataCard1`
-2. In **Advanced** tab, set **Visible** to:
+> 💡 **What students will see:** When they click the link in their estimate email and edit their request, they'll see a prominent panel showing the cost, print time, and a big confirmation button—not a buried checkbox.
+
+### Step 1: Unlock and Configure the DataCard
+
+1. Click on `StudentConfirmed_DataCard1` in the Tree view
+2. In the **Properties** panel, click **Advanced**
+3. Click **Unlock to change properties**
+4. Set the **Visible** property to:
 
 **⬇️ FORMULA: Paste into Visible**
 
 ```powerfx
-SharePointForm1.Mode <> FormMode.New
+SharePointForm1.Mode <> FormMode.New && ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
 ```
 
-This hides the field for new submissions but shows it when editing.
+This shows the confirmation panel ONLY when:
+- The form is in Edit mode (not a new submission)
+- The request Status is "Pending" (staff have added estimates)
+- The student has NOT already confirmed (prevents showing the panel again if they reopen the form)
 
-### Understanding the Logic
+5. Set the **Height** property to:
 
-| Scenario | Visible Value | Result |
-|----------|--------------|--------|
-| New submission | `false` | Hidden (students don't confirm yet) |
-| Editing request | `true` | Visible (students can confirm estimate) |
+```powerfx
+280
+```
+
+### Step 2: Hide the Default Checkbox Controls
+
+We'll hide the default controls and build our own UI.
+
+1. Expand `StudentConfirmed_DataCard1` in the Tree view
+2. Find `DataCardKey` (the label) → Set **Visible** to `false`
+3. Find `DataCardValue` (the checkbox) → Set **Visible** to `false`
+
+> ⚠️ **Don't delete them!** We need DataCardValue to exist for the form submission to work. We're just hiding it.
+
+### Step 3: Add the Confirmation Background
+
+1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Rectangle**
+2. Rename it: `recConfirmPanel`
+3. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `10` |
+| Y | `10` |
+| Width | `Parent.Width - 20` |
+| Height | `260` |
+| Fill | `RGBA(232, 245, 233, 1)` |
+| HoverFill | `RGBA(232, 245, 233, 1)` |
+| PressedFill | `RGBA(232, 245, 233, 1)` |
+| DisabledFill | `RGBA(232, 245, 233, 1)` |
+| BorderColor | `RGBA(76, 175, 80, 1)` |
+| BorderStyle | `BorderStyle.None` |
+| BorderThickness | `2` |
+
+> ⚠️ **Important:** Set all four fill properties (Fill, HoverFill, PressedFill, DisabledFill) to the same color to prevent the rectangle from turning blue on mouse interaction.
+
+### Step 4: Add the Title Label
+
+1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Text label**
+2. Rename it: `lblConfirmTitle`
+3. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `20` |
+| Width | `Parent.Width - 40` |
+| Height | `35` |
+| Text | `"CONFIRM YOUR PRINT ESTIMATE"` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `16` |
+| Color | `RGBA(46, 125, 50, 1)` |
+
+### Step 5: Add the Estimate Details Labels
+
+Add labels to display the estimate information. Students need to see what they're confirming!
+
+#### 5A. Cost Label
+
+1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+2. Rename it: `lblConfirmCost`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `60` |
+| Width | `Parent.Width - 40` |
+| Height | `30` |
+| Size | `13` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+
+4. Set the **Text** property:
+
+**⬇️ FORMULA: Paste into Text**
+
+```powerfx
+"Estimated Cost: " & If(IsBlank(ThisItem.EstimatedCost), "Not yet calculated", Text(ThisItem.EstimatedCost, "$#,##0.00"))
+```
+
+#### 5B. Time Label
+
+1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+2. Rename it: `lblConfirmTime`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `90` |
+| Width | `Parent.Width - 40` |
+| Height | `30` |
+| Size | `13` |
+| Font | `Font.'Segoe UI'` |
+
+4. Set the **Text** property:
+
+**⬇️ FORMULA: Paste into Text**
+
+```powerfx
+"Print Time: " & If(IsBlank(ThisItem.EstimatedTime), "Not yet estimated", ThisItem.EstimatedTime & " hours")
+```
+
+#### 5C. Method & Color Label
+
+1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+2. Rename it: `lblConfirmDetails`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `120` |
+| Width | `Parent.Width - 40` |
+| Height | `30` |
+| Size | `13` |
+| Font | `Font.'Segoe UI'` |
+
+4. Set the **Text** property:
+
+**⬇️ FORMULA: Paste into Text**
+
+```powerfx
+"Method: " & ThisItem.Method.Value & "  •  Color: " & ThisItem.Color.Value
+```
+
+### Step 6: Add the Confirmation Button
+
+This is the main action—a big button that confirms the estimate.
+
+1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Button**
+2. Rename it: `btnConfirmEstimate`
+3. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `165` |
+| Width | `Parent.Width - 40` |
+| Height | `50` |
+| Text | `"I CONFIRM THIS ESTIMATE"` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `14` |
+| Fill | `RGBA(46, 125, 50, 1)` |
+| Color | `Color.White` |
+| HoverFill | `RGBA(56, 142, 60, 1)` |
+| PressedFill | `RGBA(27, 94, 32, 1)` |
+| BorderRadius | `8` |
+
+4. Set the **OnSelect** property:
+
+**⬇️ FORMULA: Paste into OnSelect**
+
+```powerfx
+Patch(
+    'PrintRequests',
+    LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID),
+    {StudentConfirmed: true}
+);
+Notify("Thank you! Your estimate is confirmed. Your print is now in the queue.", NotificationType.Success);
+RequestHide()
+```
+
+> This directly updates the StudentConfirmed field and closes the form. We use `SharePointIntegration.SelectedListItemID` because `SharePointForm1.Item` isn't available in SharePoint customized forms. Flow B will detect this change and automatically update the Status to "Ready to Print".
+
+### Step 7: Add Help Text
+
+1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+2. Rename it: `lblConfirmHelp`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `225` |
+| Width | `Parent.Width - 40` |
+| Height | `35` |
+| Text | `"Questions? Contact coad-fablab@lsu.edu before confirming."` |
+| Size | `10` |
+| Font | `Font.'Segoe UI'` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| Align | `Align.Center` |
+
+### Step 8: Arrange Z-Order
+
+Make sure the labels and button appear in front of the background rectangle.
+
+1. In the Tree view, look at the children of `StudentConfirmed_DataCard1`
+2. Drag controls so the order is (top to bottom):
+
+```
+▼ StudentConfirmed_DataCard1
+    lblConfirmTitle      ← IN FRONT
+    lblConfirmCost
+    lblConfirmTime
+    lblConfirmDetails
+    btnConfirmEstimate
+    lblConfirmHelp
+    recConfirmPanel      ← BEHIND (bottom of list)
+    DataCardKey          ← Hidden
+    DataCardValue        ← Hidden
+    StarVisible
+    ErrorMessage
+```
+
+### Understanding the Confirmation Flow
+
+| Step | What Happens |
+|------|--------------|
+| 1 | Staff review request, add estimates, set Status = "Pending" |
+| 2 | Flow B sends estimate email with link to "My Requests" |
+| 3 | Student clicks link, opens their request in Edit mode |
+| 4 | Confirmation panel appears (because Status = Pending) |
+| 5 | Student sees cost, time, details prominently displayed |
+| 6 | Student clicks "I CONFIRM THIS ESTIMATE" |
+| 7 | Patch updates StudentConfirmed = true |
+| 8 | Flow B detects change → Status becomes "Ready to Print" |
+| 9 | Form closes, student sees success message |
 
 ### Verification
 
 After completing this step:
 - [ ] Status field is hidden but defaults to "Uploaded"
 - [ ] ReqKey field is hidden or removed
-- [ ] StudentConfirmed field is hidden for new items
-- [ ] StudentConfirmed field appears when editing existing items
+- [ ] Confirmation panel is hidden for new submissions
+- [ ] Confirmation panel is hidden when Status ≠ "Pending"
+- [ ] Confirmation panel appears when editing a "Pending" request
+- [ ] Panel displays estimated cost, time, method, and color
+- [ ] "I CONFIRM" button is prominent and clickable
+- [ ] Clicking button shows success notification and closes form
+
+### Flow B Dependency
+
+> ⚠️ **IMPORTANT:** For the confirmation workflow to work end-to-end, Flow B must send a **direct item link** in the estimate email:
+> 
+> ```
+> /Lists/PrintRequests/EditForm.aspx?ID={ItemID}
+> ```
+> 
+> This ensures students land directly on their specific request (with the confirmation panel visible), rather than having to hunt through a list view.
+> 
+> See `Flow-(B)-Audit-LogChanges.md` Step 7b for the email template configuration.
 
 ---
 
@@ -1385,10 +1739,36 @@ After completing this step:
 |-------|-----------------|
 | Student field | ✅ Shows saved name (not editable) |
 | StudentEmail field | ✅ Shows saved email |
-| StudentConfirmed field | ✅ NOW VISIBLE (wasn't visible on New) |
+| Confirmation panel | ❌ NOT visible (Status is "Uploaded", not "Pending") |
 | All data preserved | ✅ Your test values are shown |
 
-## 12E. Clean Up
+## 12E. Confirmation Panel Test
+
+To test the confirmation panel, you need a request with Status = "Pending".
+
+### Instructions
+
+1. In SharePoint, manually edit your test item's **Status** to "Pending"
+2. Open the item in the form (Edit mode)
+3. Verify:
+
+| Check | Expected Result |
+|-------|-----------------|
+| Confirmation panel | ✅ Green panel now appears |
+| Estimated Cost | ✅ Shows value or "Not yet calculated" |
+| Print Time | ✅ Shows value or "Not yet estimated" |
+| Method & Color | ✅ Shows your selected values |
+| Confirm button | ✅ Big green "I CONFIRM THIS ESTIMATE" button |
+
+4. Click the **"I CONFIRM THIS ESTIMATE"** button
+5. Verify:
+   - Success notification appears
+   - Form closes
+   - In SharePoint list, StudentConfirmed = Yes
+
+> ⚠️ **Note:** If Flow B is running, the Status will automatically change to "Ready to Print" after you confirm.
+
+## 12F. Clean Up
 
 1. Delete your test item:
    - Select the item in the list
@@ -1545,6 +1925,8 @@ Ensure DefaultSelectedItems includes all three properties:
 | Task | Control | Property | Value |
 |------|---------|----------|-------|
 | Dynamic form height | SharePointForm1 | Height | `Attachments_DataCard1.Y + Attachments_DataCard1.Height + 100` |
+| Header background color | recFormHeader | Fill | `RGBA(70, 29, 124, 1)` |
+| Prevent hover color change | recFormHeader | HoverFill | `RGBA(70, 29, 124, 1)` |
 | Auto-fill Student name | ComboBox in Student_DataCard | DefaultSelectedItems | See formula above |
 | Show student name correctly | ComboBox in Student_DataCard | DisplayFields | `["DisplayName"]` |
 | Auto-fill StudentEmail | Input in StudentEmail_DataCard | Default | `Lower(User().Email)` |
@@ -1610,7 +1992,7 @@ Filter(
 | Attachments | ✅ Visible | ✅ Visible |
 | **Status** | ❌ Hidden | ❌ Hidden |
 | **ReqKey** | ❌ Hidden | ❌ Hidden |
-| **StudentConfirmed** | ❌ Hidden | ✅ Visible |
+| **Confirmation Panel** | ❌ Hidden | ✅ Visible only when Status = "Pending" |
 | All staff fields | ❌ Removed | ❌ Removed |
 
 ---
@@ -1634,6 +2016,16 @@ Attachments_DataCard1.Y + Attachments_DataCard1.Height + 100
 ```
 
 > ⚠️ Replace `Attachments_DataCard1` with your last visible DataCard if different.
+
+## recFormHeader — Fill Properties (Prevent Hover Color Change)
+
+```powerfx
+// All four properties should be the same LSU Purple
+Fill: RGBA(70, 29, 124, 1)
+HoverFill: RGBA(70, 29, 124, 1)
+PressedFill: RGBA(70, 29, 124, 1)
+DisabledFill: RGBA(70, 29, 124, 1)
+```
 
 ## Student_DataCard ComboBox — DefaultSelectedItems
 
@@ -1683,11 +2075,27 @@ If(
 false
 ```
 
-## StudentConfirmed_DataCard — Visible
+## StudentConfirmed_DataCard — Visible (Confirmation Panel)
 
 ```powerfx
-SharePointForm1.Mode <> FormMode.New
+SharePointForm1.Mode <> FormMode.New && ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
 ```
+
+> This includes `!ThisItem.StudentConfirmed` to hide the panel if the student has already confirmed—prevents confusion if they reopen the form while it's still technically "Pending".
+
+## btnConfirmEstimate — OnSelect
+
+```powerfx
+Patch(
+    'PrintRequests',
+    LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID),
+    {StudentConfirmed: true}
+);
+Notify("Thank you! Your estimate is confirmed. Your print is now in the queue.", NotificationType.Success);
+RequestHide()
+```
+
+> ⚠️ **Note:** Use `SharePointIntegration.SelectedListItemID` (not `SharePointForm1.Item.ID`) in SharePoint customized forms.
 
 ## Printer_DataCard ComboBox — Items (Cascading)
 
@@ -1695,16 +2103,33 @@ SharePointForm1.Mode <> FormMode.New
 Filter(
     Choices([@PrintRequests].Printer),
     If(
-        DataCardValue6.Selected.Value = "Filament",
+        DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
-        DataCardValue6.Selected.Value = "Resin",
+        DataCardValue8.Selected.Value = "Resin",
         Value = "Form 3 (5.7×5.7×7.3in)",
         true
     )
 )
 ```
 
-> ⚠️ Replace `DataCardValue6` with your actual Method control name!
+> ⚠️ This uses `DataCardValue8` for the Method control. Replace if your control name differs.
+
+## Color_DataCard ComboBox — Items (Cascading)
+
+```powerfx
+Filter(
+    Choices([@PrintRequests].Color),
+    Or(
+        DataCardValue8.Selected.Value <> "Resin",
+        Value = "Black",
+        Value = "White",
+        Value = "Gray",
+        Value = "Clear"
+    )
+)
+```
+
+> ⚠️ Color values must match SharePoint exactly (case-sensitive).
 
 ## lblFileWarning — Text
 

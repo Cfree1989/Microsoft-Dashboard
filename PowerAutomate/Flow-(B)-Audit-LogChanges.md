@@ -554,6 +554,9 @@ Some display names differ from internal field names. Always use internal names i
    - **LastAction:** Type `Student Confirmed Estimate`
    - **LastActionBy Claims:** Click **Expression** → Type `triggerOutputs()?['body/Student']?['Claims']`
    - **LastActionAt:** Click **Expression** → Type `utcNow()`
+   - **TigerCardNumber:** Click **Expression** → Type `triggerOutputs()?['body/TigerCardNumber']`
+
+> ⚠️ **Required Field Note:** TigerCardNumber is a required field in SharePoint. Even though we're not changing it, we must pass through the existing value or the update will fail.
 
 **Action 3: Log Confirmation in AuditLog**
 1. **+ Add an action** → **Create item** (SharePoint)
@@ -795,15 +798,13 @@ ESTIMATE DETAILS:
 - Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}
 
 TO CONFIRM THIS ESTIMATE:
-1. Click the link below to view your request
-2. Find the "StudentConfirmed" field
-3. Change it from "No" to "Yes"
-4. Click "Save" at the top
+Click the button below to open your request and confirm:
 
 View and Confirm Your Request:
-https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/EditForm.aspx?ID=@{outputs('Get_Current_Pending_Data')?['body/ID']}
 
-TIP: The link will open your requests in SharePoint. Your request should be at the top of the list.
+When the form opens, you'll see a green confirmation panel at the top.
+Just click "I CONFIRM THIS ESTIMATE" and you're done!
 
 If you have any questions or concerns about the estimate, please contact us before confirming.
 
@@ -818,22 +819,23 @@ Location: Room 145 Atkinson Hall
 This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
-**✅ URL CONFIGURED:** The confirmation link now directs students to the "My Requests" SharePoint view where they can toggle the StudentConfirmed field to confirm their estimate. This approach:
+**✅ DIRECT ITEM LINK:** The confirmation link now opens the **specific request** directly in Edit mode. This approach:
 - Uses SharePoint's built-in authentication (no HTTP trigger issues)
-- Students only see their own requests (automatic security)
-- No separate PR-Confirm flow needed (PR-Audit handles confirmation detection)
-- More reliable and simpler than HTTP trigger approach
+- Opens the exact item—no hunting through a list
+- Shows the confirmation panel immediately (Power Apps form required)
+- Single click to confirm after opening
 
 **📋 How it works:**
-1. Student clicks link → Opens "My Requests" view in SharePoint
-2. Student finds their request (should be at top with Status = "Pending")
-3. Student changes StudentConfirmed from "No" to "Yes" → Clicks Save
-4. PR-Audit flow detects the change → Updates Status to "Ready to Print" → Logs confirmation
+1. Student clicks link → Opens **their specific request** in Edit mode
+2. Confirmation panel appears (green box with cost details + "I CONFIRM" button)
+3. Student clicks "I CONFIRM THIS ESTIMATE" button
+4. Power Apps Patch updates StudentConfirmed → Form closes
+5. PR-Audit flow detects the change → Updates Status to "Ready to Print" → Logs confirmation
 
-**⚠️ Prerequisites:** Before using this email, ensure you've completed the setup in `PR-Confirm_EstimateApproval-SharePoint.md`:
+**⚠️ Prerequisites:** Before using this email, ensure you've completed:
 - Added StudentConfirmed field to PrintRequests list
-- Verified "My Requests" view security settings
-- Added confirmation detection logic to PR-Audit flow (see Step 4 of SharePoint implementation guide)
+- Built the Confirmation Panel in Power Apps (see `StudentForm-Instructions.md` Step 8C)
+- The Power Apps form must be set as the default list form
 
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
@@ -1115,15 +1117,16 @@ Update these sections in the email templates for your lab:
 
 ### Student Confirmation Testing
 - [ ] StudentConfirmed field exists in SharePoint with default "No"
-- [ ] "My Requests" view security configured (students see only own requests)
+- [ ] Power Apps confirmation panel built (Step 8C in StudentForm-Instructions.md)
 - [ ] Status change to "Pending" sends estimate email to student
-- [ ] Estimate email contains SharePoint link to "My Requests" view
-- [ ] Student can toggle StudentConfirmed from "No" to "Yes"
+- [ ] Estimate email contains **direct item link** (EditForm.aspx?ID=...)
+- [ ] Clicking link opens the specific request in Edit mode
+- [ ] Confirmation panel appears (green box with cost details)
+- [ ] Clicking "I CONFIRM THIS ESTIMATE" button works
 - [ ] StudentConfirmed = "Yes" + Status = "Pending" → Status updates to "Ready to Print"
 - [ ] Confirmation creates audit log entry with Student actor
 - [ ] Optional confirmation receipt email sent to student
 - [ ] Loop prevention working: Second confirmation attempt (Status already "Ready to Print") does nothing
-- [ ] Staff cannot see other students' requests in "My Requests" view
 
 ### Email Notifications
 - [ ] Status change to "Rejected" sends rejection email + audit log
