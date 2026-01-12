@@ -43,11 +43,30 @@
 ## Error Handling Configuration
 
 **Configure retry policies on all critical actions:**
-- **Retry Policy Type:** Exponential
-- **Retry Count:** 4
-- **Initial Interval:** 1 minute
+- **Retry Policy Type:** Exponential interval
 - **Apply to:** Create item (AuditLog), Send email actions
 - **Concurrency Control:** Set to 1 for strictly ordered audit logs
+
+**How to set retry policy on any action:**
+1. Click the **three dots (…)** on the action card
+2. Choose **Settings**
+3. Scroll down to **Networking** section
+4. In **Retry policy** dropdown, select **Exponential interval**
+5. Fill in ALL four fields (all are required):
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
+6. Click **Done**
+
+**ISO 8601 Duration Format Reference:**
+| Duration | Format |
+|----------|--------|
+| 20 seconds | `PT20S` |
+| 30 seconds | `PT30S` |
+| 1 minute | `PT1M` |
+| 5 minutes | `PT5M` |
+| 1 hour | `PT1H` |
 
 ---
 
@@ -541,11 +560,12 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Update item** (SharePoint)
 2. **Rename:** Type `Update to Ready to Print`
 3. **Configure retry policy:**
-   - Click **three dots (…)** → **Settings**
-   - **Retry Policy:** **On**
-   - **Type:** **Exponential**
-   - **Count:** **4**
-   - **Minimum Interval:** **PT30S**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select **Exponential interval**
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
 4. **Fill in fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -585,7 +605,7 @@ Some display names differ from internal field names. Always use internal names i
 **Action 4: Send Confirmation Receipt to Student (Optional)**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Type `Send Confirmation Receipt to Student`
-3. **Configure retry policy** (Exponential, Count 4, PT1M)
+3. **Configure retry policy** (see Error Handling Configuration section above)
 4. **Fill in:**
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `triggerOutputs()?['body/StudentEmail']`
@@ -651,11 +671,14 @@ Some display names differ from internal field names. Always use internal names i
 
 **Action 1: Configure Retry Policy on Status Log**
 1. **Find "Log Status Change" action** (from Step 6b, Field Detector 1) → Click **three dots (…)** → **Settings**
-2. **Retry Policy:** Turn to **On**
-   - **Type:** Select **Exponential**
-   - **Count:** Type **4**
-   - **Minimum Interval:** Type **PT1M**
-3. **Click Done**
+2. Scroll to **Networking** section
+3. **Retry policy:** Select **Exponential interval**
+4. Fill in ALL four fields:
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
+5. **Click Done**
 
 **Action 2: Add Rejection Condition**
 1. **After "Log Status Change"** → **+ Add an action** → **Condition**
@@ -694,7 +717,7 @@ Some display names differ from internal field names. Always use internal names i
 **Action 6: Send Rejection Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Rejection Email`
-3. **Configure retry policy** (same as Action 1: Exponential, Count 4, PT1M)
+3. **Configure retry policy** (same as Action 1 - see Error Handling Configuration section)
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
@@ -777,7 +800,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 3: Send Estimate Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Estimate Email`
-3. **Configure retry policy** (Exponential, Count 4, PT1M)
+3. **Configure retry policy** (see Error Handling Configuration section above)
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
@@ -840,7 +863,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Estimate Email Sent`
-3. **Configure retry policy** (Exponential, Count 4, PT1M)
+3. **Configure retry policy** (see Error Handling Configuration section above)
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -887,7 +910,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 3: Send Completion Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Completion Email`
-3. **Configure retry policy** (Exponential, Count 4, PT1M)
+3. **Configure retry policy** (see Error Handling Configuration section above)
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
@@ -916,7 +939,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 4: Log Completion Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Completion Email Sent`
-3. **Configure retry policy** (Exponential, Count 4, PT1M)
+3. **Configure retry policy** (see Error Handling Configuration section above)
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -946,8 +969,9 @@ This is an automated message from the LSU Digital Fabrication Lab.
    - Keep all field change detectors and email logic
 
 2. **Add retry policies to all Create item actions:**
-   - Click **three dots (…)** → **Settings** → **Configure retry policy**
-   - **Type:** Exponential, **Count:** 4, **Minimum Interval:** PT1M
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Exponential interval
+   - **Count:** `4`, **Interval:** `PT1M`, **Minimum interval:** `PT20S`, **Maximum interval:** `PT1H`
 
 3. **Configure trigger concurrency:**
    - Click on trigger → **three dots (…)** → **Settings**
@@ -1046,18 +1070,23 @@ To customize the email templates:
 **How to configure retry policy on any action:**
 1. Click the **three dots (…)** on the action card
 2. Choose **Settings**
-3. Turn **Retry Policy** to **On**
-4. Configure:
-   - **Type:** Select **Exponential**
-   - **Count:** Set to **4**
-   - **Minimum Interval:** Type **PT1M** (ISO 8601 format for 1 minute)
-5. Click **Done**
+3. Scroll to **Networking** section
+4. In **Retry policy** dropdown, select **Exponential interval**
+5. Fill in ALL four fields (all are required):
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
+6. Click **Done**
 
-**ISO 8601 Duration Format Examples:**
-- 30 seconds = **PT30S**
-- 1 minute = **PT1M**
-- 2 minutes = **PT2M**
-- 90 seconds = **PT1M30S**
+**ISO 8601 Duration Format Reference:**
+| Duration | Format |
+|----------|--------|
+| 20 seconds | `PT20S` |
+| 30 seconds | `PT30S` |
+| 1 minute | `PT1M` |
+| 5 minutes | `PT5M` |
+| 1 hour | `PT1H` |
 
 ### Email Template Customization Points
 Update these sections in the email templates for your lab:

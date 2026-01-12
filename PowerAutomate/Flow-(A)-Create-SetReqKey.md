@@ -22,26 +22,36 @@ This flow runs automatically when someone submits a new 3D print request. Here's
 ## Error Handling Configuration
 
 **Configure retry policies on all actions for resilience:**
-- **Retry Policy Type:** Exponential
-- **Retry Count:** 4
-- **Initial Interval:** 1 minute
+- **Retry Policy Type:** Exponential interval
 - **Apply to:** Update item, Create item (AuditLog), Send email actions
 
 **How to set retry policy on any action:**
 1. Click the **three dots (…)** on the action card
 2. Choose **Settings**
-3. Turn **Retry Policy** to **On**
-4. Configure:
-   - **Type:** Select **Exponential**
-   - **Count:** Set to **4**
-   - **Minimum Interval:** Type **PT1M** (ISO 8601 format for 1 minute)
-5. Click **Done**
+3. Scroll down to **Networking** section
+4. In **Retry policy** dropdown, select **Exponential interval**
+5. Fill in ALL four fields (all are required):
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
+6. Click **Done**
 
-**ISO 8601 Duration Format Examples:**
-- 30 seconds = **PT30S**
-- 1 minute = **PT1M**
-- 2 minutes = **PT2M**
-- 90 seconds = **PT1M30S**
+**What these values mean:**
+- **Count:** Number of retry attempts (4 retries)
+- **Interval:** Base wait time between retries (1 minute)
+- **Minimum interval:** Shortest possible wait (20 seconds)
+- **Maximum interval:** Longest possible wait (1 hour)
+
+**ISO 8601 Duration Format Reference:**
+| Duration | Format |
+|----------|--------|
+| 20 seconds | `PT20S` |
+| 30 seconds | `PT30S` |
+| 1 minute | `PT1M` |
+| 5 minutes | `PT5M` |
+| 1 hour | `PT1H` |
+| 90 seconds | `PT1M30S` |
 
 ---
 
