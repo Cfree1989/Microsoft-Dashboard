@@ -11,13 +11,14 @@
 
 This flow runs automatically when a new message is added to the RequestComments list. Here's what happens:
 
-1. **Check direction** (Outbound = staff message, Inbound = student reply)
-2. **If outbound:** Look up the print request details
-3. **Check for existing thread** (reuse ThreadID or generate new one)
-4. **Generate MessageID** for email threading
-5. **Send threaded email** to student from shared mailbox
-6. **Update message** with threading info (ThreadID, MessageID)
-7. **Log to audit** for tracking
+1. **Look up print request details** (ReqKey, student info)
+2. **Initialize ThreadID variable** (must be at root level before any conditions)
+3. **Check direction** (Outbound = staff message, Inbound = student reply)
+4. **If outbound:** Check for existing thread (reuse ThreadID or generate new one)
+5. **Generate MessageID** for email threading
+6. **Send threaded email** to student from shared mailbox
+7. **Update message** with threading info (ThreadID, MessageID)
+8. **Log to audit** for tracking
 
 ---
 
@@ -99,7 +100,11 @@ This flow runs automatically when a new message is added to the RequestComments 
 2. Search for and select **Get item** (SharePoint)
 3. Rename the action to: `Get Print Request`
    - Click the **three dots (…)** → **Rename** → type `Get Print Request`
-4. **Configure retry policy** (see instructions above)
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -107,7 +112,25 @@ This flow runs automatically when a new message is added to the RequestComments 
 
 ---
 
-### Step 3: Check Direction (Skip Inbound Messages)
+### Step 3: Initialize ThreadID Variable (Root Level)
+
+**What this does:** Creates an empty ThreadID variable at the root level. This MUST be done before any conditions because Power Automate does not allow Initialize Variable actions inside conditions or loops.
+
+> ⚠️ **Important:** Initialize Variable actions CANNOT be nested inside conditions, loops, or any other control actions. They must always be at the root (top) level of the flow.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Initialize variable**
+3. Rename the action to: `Initialize ThreadID`
+   - Click the **three dots (…)** → **Rename** → type `Initialize ThreadID`
+4. Fill in:
+   - **Name:** Type `ThreadID`
+   - **Type:** Select `String`
+   - **Value:** Leave empty (we'll set it later based on thread existence)
+
+---
+
+### Step 4: Check Direction (Skip Inbound Messages)
 
 **What this does:** Flow D only sends emails for outbound (staff) messages. Inbound messages are processed by Flow E. This check prevents duplicate processing.
 
@@ -121,7 +144,7 @@ This flow runs automatically when a new message is added to the RequestComments 
    - **Middle:** Select **is equal to**
    - **Right box:** Type `Outbound` (without quotes)
 
-**YES Branch:** Continue with email sending (Steps 4-8)  
+**YES Branch:** Continue with email sending (Steps 5-9)  
 **NO Branch:** Terminate flow (inbound messages don't need email notification)
 
 #### NO Branch — Terminate (Inbound Message)
@@ -137,7 +160,7 @@ This flow runs automatically when a new message is added to the RequestComments 
 
 ---
 
-### Step 4: Check for Existing Thread (Inside YES Branch)
+### Step 5: Check for Existing Thread (Inside YES Branch)
 
 **What this does:** Determines if this is the first message in a conversation or a reply to an existing thread. Looks for any previous outbound messages for the same request.
 
@@ -146,10 +169,16 @@ This flow runs automatically when a new message is added to the RequestComments 
 2. Search for and select **Get items** (SharePoint)
 3. Rename the action to: `Get Existing Thread Messages`
    - Click the **three dots (…)** → **Rename** → type `Get Existing Thread Messages`
-4. **Configure retry policy** (see instructions above)
-5. Fill in:
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
+5. Fill in basic fields:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `RequestComments`
+6. In the **Advanced parameters** section, click **Show all** to expand all 6 parameters
+7. Fill in advanced fields:
    - **Filter Query:** Click **Expression** tab (fx) → paste this expression → click **Update**:
 ```
 concat('RequestID eq ', triggerOutputs()?['body/RequestID'], ' and Direction eq ''Outbound'' and ID ne ', triggerOutputs()?['body/ID'])
@@ -164,26 +193,12 @@ concat('RequestID eq ', triggerOutputs()?['body/RequestID'], ' and Direction eq 
 
 ---
 
-### Step 5: Generate Thread ID
+### Step 6: Set ThreadID Based on Thread Existence
 
-**What this does:** Creates a new ThreadID for new conversations, or reuses existing ThreadID for replies. This ensures all messages about the same request stay grouped in the student's email client.
-
-#### Step 5a: Initialize ThreadID Variable
+**What this does:** Sets the ThreadID variable — either reuses an existing ThreadID for replies, or generates a new one for new conversations. This ensures all messages about the same request stay grouped in the student's email client.
 
 **UI steps:**
 1. Click **+ Add an action** (still inside YES branch, after Get Existing Thread Messages)
-2. Search for and select **Initialize variable**
-3. Rename the action to: `Initialize ThreadID`
-   - Click the **three dots (…)** → **Rename** → type `Initialize ThreadID`
-4. Fill in:
-   - **Name:** Type `ThreadID`
-   - **Type:** Select `String`
-   - **Value:** Leave empty (we'll set it in the next step)
-
-#### Step 5b: Set ThreadID Based on Thread Existence
-
-**UI steps:**
-1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename the condition to: `Check if Thread Exists`
    - Click the **three dots (…)** → **Rename** → type `Check if Thread Exists`
@@ -192,7 +207,7 @@ concat('RequestID eq ', triggerOutputs()?['body/RequestID'], ' and Direction eq 
    - **Middle:** Select **is greater than**
    - **Right box:** Type `0`
 
-##### YES Branch (Existing Thread — Reuse ThreadID)
+#### YES Branch (Existing Thread — Reuse ThreadID)
 
 **UI steps:**
 1. Click **+ Add an action** in the YES (green) branch
@@ -203,7 +218,7 @@ concat('RequestID eq ', triggerOutputs()?['body/RequestID'], ' and Direction eq 
    - **Name:** Select `ThreadID` from dropdown
    - **Value:** Click **Expression** tab (fx) → paste: `first(outputs('Get_Existing_Thread_Messages')?['body/value'])?['ThreadID']` → click **Update**
 
-##### NO Branch (New Thread — Generate ThreadID)
+#### NO Branch (New Thread — Generate ThreadID)
 
 **UI steps:**
 1. Click **+ Add an action** in the NO (red) branch
@@ -223,7 +238,7 @@ concat(outputs('Get_Print_Request')?['body/ReqKey'], '-', formatDateTime(utcNow(
 
 ---
 
-### Step 6: Generate Message ID
+### Step 7: Generate Message ID
 
 **What this does:** Creates a unique Message-ID for email threading. This ID follows email standards and helps email clients group related messages together.
 
@@ -246,7 +261,7 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
 
 ---
 
-### Step 7: Check Author Role
+### Step 8: Check Author Role
 
 **What this does:** Verifies this is a staff message before sending email. This is a safety check since we already filtered by Direction = Outbound.
 
@@ -260,23 +275,27 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
    - **Middle:** Select **is equal to**
    - **Right box:** Type `Staff` (without quotes)
 
-**YES Branch:** Staff message confirmed → Send email to student (Step 8)  
+**YES Branch:** Staff message confirmed → Send email to student (Step 9)  
 **NO Branch:** Not a staff message → Terminate (shouldn't happen if Direction = Outbound)
 
 ---
 
-### Step 8: YES Branch (Staff → Email Student)
+### Step 9: YES Branch (Staff → Email Student)
 
 **What this does:** Sends a threaded email notification to the student, updates the message record with threading info, and logs the action to the audit trail.
 
-#### Step 8a: Send Threaded Email
+#### Step 9a: Send Threaded Email
 
 **UI steps:**
 1. Click **+ Add an action** in the YES (green) branch of "Check if Staff Message"
 2. Search for and select **Send an email from a shared mailbox (V2)** (Office 365 Outlook)
 3. Rename the action to: `Send Threaded Email to Student`
    - Click the **three dots (…)** → **Rename** → type `Send Threaded Email to Student`
-4. **Configure retry policy** (see instructions above)
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Original Mailbox Address:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/StudentEmail']` → click **Update**
@@ -287,47 +306,64 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 
 > **Important:** The `[REQ-00001]` prefix in the subject enables Flow E to parse student replies and match them to the correct request. Do not change this format.
 
-6. **Body:** Paste this HTML and replace dynamic content placeholders:
-```html
-<p>Hi <strong>@{outputs('Get_Print_Request')?['body/Student']?['DisplayName']}</strong>,</p>
+6. **Body:** Build the email by typing plain text and inserting expressions:
 
-<p>You have a new message about your print request.</p>
+**How to build:**
+1. Click in the **Body** field
+2. Type text, then when you reach a dynamic value:
+   - Click **Expression** tab (fx)
+   - Paste the expression from the table below
+   - Click **Update**
+3. Continue typing the next section of text
 
-<div style="background-color: #f5f5f5; padding: 15px; margin: 15px 0; border-left: 4px solid #6b2d5b;">
-<strong>MESSAGE:</strong><br>
-@{triggerOutputs()?['body/Message']}
-</div>
+| Text to type | Then insert expression |
+|--------------|----------------------|
+| `Hi ` | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
+| `,` (comma + new lines) | |
+| `You have a new message about your print request.` | |
+| `MESSAGE:` | |
+| (new line) | `triggerOutputs()?['body/Message']` |
+| `---` | |
+| `Request: ` | `outputs('Get_Print_Request')?['body/ReqKey']` |
+| `From: ` | `triggerOutputs()?['body/Author']?['DisplayName']` |
+| (rest of email) | |
 
-<hr>
-<p><strong>Request:</strong> @{outputs('Get_Print_Request')?['body/ReqKey']}<br>
-<strong>From:</strong> @{triggerOutputs()?['body/Author']?['DisplayName']}</p>
+**Complete expressions reference:**
+| Field | Expression |
+|-------|------------|
+| Student Name | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
+| Message Body | `triggerOutputs()?['body/Message']` |
+| ReqKey | `outputs('Get_Print_Request')?['body/ReqKey']` |
+| Author Name | `triggerOutputs()?['body/Author']?['DisplayName']` |
 
-<p><em>You can reply directly to this email, and your response will be added to your request.</em></p>
+**Final email should look like:**
+```
+Hi [Dynamic: Student Name],
 
-<p style="color: #666; font-size: 12px;">
-LSU Digital Fabrication Lab<br>
-Room 145 Atkinson Hall<br>
+You have a new message about your print request.
+
+MESSAGE:
+[Dynamic: Message Body]
+
+---
+Request: [Dynamic: ReqKey]
+From: [Dynamic: Author Name]
+
+You can reply directly to this email, and your response will be added to your request.
+
+Digital Fabrication Lab
+Room 145 Atkinson Hall
 coad-fablab@lsu.edu
-</p>
 ```
 
-**How to build the body:**
-1. Click in the **Body** field
-2. Toggle to HTML mode (if available) or paste HTML directly
-3. For dynamic content like `@{outputs('Get_Print_Request')?['body/ReqKey']}`:
-   - Place cursor where you want the value
-   - Click **Dynamic content** tab
-   - Select the appropriate field OR
-   - Click **Expression** tab and paste the expression
-
-7. Click **Show advanced options** to expand
+7. In the **Advanced parameters** section, click **Show all** to expand additional fields
 8. **Importance:** Select `Normal`
 
 > **Note:** The Office 365 Outlook connector's "Send an email from a shared mailbox (V2)" action automatically handles Message-ID generation. We store our generated MessageID in SharePoint for reference and future threading.
 
 ---
 
-#### Step 8b: Update RequestComments with Threading Info
+#### Step 9b: Update RequestComments with Threading Info
 
 **What this does:** Stores the ThreadID and MessageID back on the comment record for tracking and threading future messages.
 
@@ -336,17 +372,26 @@ coad-fablab@lsu.edu
 2. Search for and select **Update item** (SharePoint)
 3. Rename the action to: `Update Message with Threading`
    - Click the **three dots (…)** → **Rename** → type `Update Message with Threading`
-4. **Configure retry policy** (see instructions above)
-5. Fill in:
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
+5. Fill in the required fields first (pass back original values so they don't get cleared):
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `RequestComments`
    - **Id:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/ID']` → click **Update**
+   - **RequestID:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/RequestID']` → click **Update**
+   - **Message:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/Message']` → click **Update**
+6. Fill in the new threading fields:
    - **ThreadID:** Click **Expression** tab (fx) → paste: `variables('ThreadID')` → click **Update**
    - **MessageID:** Click **Expression** tab (fx) → paste: `outputs('Generate_MessageID')` → click **Update**
 
+> **Note:** RequestID and Message are required fields in SharePoint. By passing back the original values from `triggerOutputs()`, you satisfy the requirement without changing the existing data.
+
 ---
 
-#### Step 8c: Log to Audit
+#### Step 9c: Log to Audit
 
 **What this does:** Creates an audit trail entry recording that a message was sent to the student.
 
@@ -355,7 +400,11 @@ coad-fablab@lsu.edu
 2. Search for and select **Create item** (SharePoint)
 3. Rename the action to: `Log Message Sent`
    - Click the **three dots (…)** → **Rename** → type `Log Message Sent`
-4. **Configure retry policy** (see instructions above)
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -378,7 +427,7 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 
 ---
 
-### Step 9: NO Branch (Not Staff Message — Safety Terminate)
+### Step 10: NO Branch (Not Staff Message — Safety Terminate)
 
 **What this does:** This branch handles the edge case where AuthorRole is not "Staff". Since we already filter by Direction = Outbound in Step 3, this should rarely execute. It's a safety net to prevent unexpected behavior.
 
@@ -392,32 +441,6 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 4. Fill in:
    - **Status:** Select `Succeeded`
    - **Message (optional):** Type `Message author is not Staff - no email notification sent`
-
----
-
-## Legacy Step Reference: Student Messages (Deprecated)
-
-> **Note:** The following logic has been moved to Flow E (PR-Mailbox) which handles inbound email replies. This section is kept for reference only.
-
-### Original Step 5: NO Branch (Student → Flag for Staff)
-
-### Update NeedsAttention (Legacy - Now in Flow E)
-
-> This logic has been moved to Flow E for inbound email processing.
-
-1. **+ Add action** → **Update item** (SharePoint) → List: `PrintRequests`
-2. **Id:** `triggerOutputs()?['body/RequestID']`
-3. **NeedsAttention:** `Yes`
-4. **LastAction Value:** `Message Received`
-5. **LastActionAt:** `utcNow()`
-
-### Log to Audit (Legacy - Now in Flow E)
-
-1. **+ Add action** → **Create item** (SharePoint) → List: `AuditLog`
-2. **Title:** `Student Message Received`
-3. **RequestID:** `triggerOutputs()?['body/RequestID']`
-4. **Action Value:** `Message Received`
-5. **ActorRole Value:** `Student`
 
 ---
 
@@ -536,26 +559,26 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 3: Check if Outbound Message                              │
+│  Step 3: Initialize ThreadID (ROOT LEVEL - Required!)           │
+│  → Create empty ThreadID variable BEFORE any conditions         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 4: Check if Outbound Message                              │
 │  → Direction = "Outbound"?                                      │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (Inbound)        │ YES (Outbound)                            │
-│ → Stop Flow -       │ → Continue to Step 4                      │
+│ → Stop Flow -       │ → Continue to Step 5                      │
 │   Inbound Message   │                                           │
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓ (YES only)
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 4: Get Existing Thread Messages                           │
+│  Step 5: Get Existing Thread Messages                           │
 │  → Find previous outbound messages for same request             │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 5a: Initialize ThreadID                                   │
-│  → Create empty ThreadID variable                               │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  Step 5b: Check if Thread Exists                                │
+│  Step 6: Check if Thread Exists                                 │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (New Thread)     │ YES (Existing Thread)                     │
 │ → Generate New      │ → Use Existing ThreadID                   │
@@ -563,31 +586,31 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 6: Generate MessageID                                     │
+│  Step 7: Generate MessageID                                     │
 │  → Create unique email Message-ID                               │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 7: Check if Staff Message                                 │
+│  Step 8: Check if Staff Message                                 │
 │  → AuthorRole = "Staff"?                                        │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (Not Staff)      │ YES (Staff)                               │
-│ → Stop Flow - Not   │ → Continue to Step 8                      │
+│ → Stop Flow - Not   │ → Continue to Step 9                      │
 │   Staff Message     │                                           │
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓ (YES only)
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 8a: Send Threaded Email to Student                        │
+│  Step 9a: Send Threaded Email to Student                        │
 │  → Email with [REQ-00001] subject prefix                        │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 8b: Update Message with Threading                         │
+│  Step 9b: Update Message with Threading                         │
 │  → Store ThreadID, MessageID on RequestComments item            │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 8c: Log Message Sent                                      │
+│  Step 9c: Log Message Sent                                      │
 │  → Create AuditLog entry                                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -691,19 +714,19 @@ Use these exact names when renaming actions in Power Automate:
 | Step | Action Type | Rename To |
 |------|-------------|-----------|
 | 2 | Get item (SharePoint) | `Get Print Request` |
-| 3 | Condition | `Check if Outbound Message` |
-| 3 (NO) | Terminate | `Stop Flow - Inbound Message` |
-| 4 | Get items (SharePoint) | `Get Existing Thread Messages` |
-| 5a | Initialize variable | `Initialize ThreadID` |
-| 5b | Condition | `Check if Thread Exists` |
-| 5b (YES) | Set variable | `Use Existing ThreadID` |
-| 5b (NO) | Set variable | `Generate New ThreadID` |
-| 6 | Compose | `Generate MessageID` |
-| 7 | Condition | `Check if Staff Message` |
-| 8a | Send email (V2) | `Send Threaded Email to Student` |
-| 8b | Update item (SharePoint) | `Update Message with Threading` |
-| 8c | Create item (SharePoint) | `Log Message Sent` |
-| 9 | Terminate | `Stop Flow - Not Staff Message` |
+| 3 | Initialize variable | `Initialize ThreadID` |
+| 4 | Condition | `Check if Outbound Message` |
+| 4 (NO) | Terminate | `Stop Flow - Inbound Message` |
+| 5 | Get items (SharePoint) | `Get Existing Thread Messages` |
+| 6 | Condition | `Check if Thread Exists` |
+| 6 (YES) | Set variable | `Use Existing ThreadID` |
+| 6 (NO) | Set variable | `Generate New ThreadID` |
+| 7 | Compose | `Generate MessageID` |
+| 8 | Condition | `Check if Staff Message` |
+| 9a | Send email (V2) | `Send Threaded Email to Student` |
+| 9b | Update item (SharePoint) | `Update Message with Threading` |
+| 9c | Create item (SharePoint) | `Log Message Sent` |
+| 10 | Terminate | `Stop Flow - Not Staff Message` |
 
 **Why rename actions?**
 - Makes flow easier to read and debug

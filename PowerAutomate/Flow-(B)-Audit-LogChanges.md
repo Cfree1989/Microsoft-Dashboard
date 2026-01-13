@@ -581,7 +581,11 @@ Some display names differ from internal field names. Always use internal names i
 **Action 3: Log Confirmation in AuditLog**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Type `Log Student Confirmation`
-3. **Configure retry policy** (same as Action 2)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -605,7 +609,11 @@ Some display names differ from internal field names. Always use internal names i
 **Action 4: Send Confirmation Receipt to Student (Optional)**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Type `Send Confirmation Receipt to Student`
-3. **Configure retry policy** (see Error Handling Configuration section above)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in:**
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `triggerOutputs()?['body/StudentEmail']`
@@ -717,12 +725,16 @@ Some display names differ from internal field names. Always use internal names i
 **Action 6: Send Rejection Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Rejection Email`
-3. **Configure retry policy** (same as Action 1 - see Error Handling Configuration section)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
+   - **Body:** Click **Code View button (`</>`)** at top right → Paste the plain text below (expressions will auto-resolve):
 
 ```
 Unfortunately, your 3D Print request has been rejected by our staff.
@@ -753,7 +765,11 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 7: Log Rejection Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Rejection Email Sent`
-3. **Configure retry policy** (same as Action 1)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -800,12 +816,16 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 3: Send Estimate Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Estimate Email`
-3. **Configure retry policy** (see Error Handling Configuration section above)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
+   - **Body:** Click **Code View button (`</>`)** → Paste the plain text below (expressions will auto-resolve):
 
 ```
 Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},
@@ -863,7 +883,11 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Estimate Email Sent`
-3. **Configure retry policy** (see Error Handling Configuration section above)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -910,12 +934,16 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 3: Send Completion Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Completion Email`
-3. **Configure retry policy** (see Error Handling Configuration section above)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('Your 3D print is ready for pickup – ', outputs('Get_Current_Completed_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View button (`</>`)** → Paste the HTML below:
+   - **Body:** Click **Code View button (`</>`)** → Paste the plain text below (expressions will auto-resolve):
 
 ```
 Your print is ready for pick up in the Fabrication Lab!
@@ -939,7 +967,11 @@ This is an automated message from the LSU Digital Fabrication Lab.
 **Action 4: Log Completion Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Log Completion Email Sent`
-3. **Configure retry policy** (see Error Handling Configuration section above)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. **Fill in ALL fields:**
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`

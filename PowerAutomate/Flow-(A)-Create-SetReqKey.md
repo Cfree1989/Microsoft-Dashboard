@@ -164,7 +164,11 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 2. Search for and select **Update item** (SharePoint)
 3. Rename the action to: `Reject Request - No Files`
    - Click the **three dots (…)** → **Rename** → type `Reject Request - No Files`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -180,7 +184,11 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 2. Search for and select **Create item** (SharePoint)
 3. Rename the action to: `Log No Files Rejection`
    - Click the **three dots (…)** → **Rename** → type `Log No Files Rejection`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
@@ -201,22 +209,27 @@ This ensures names work across Windows, Mac, and Linux filesystems.
 2. Search for and select **Send an email from a shared mailbox (V2)**
 3. Rename the action to: `Send No Files Email`
    - Click the **three dots (…)** → **Rename** → type `Send No Files Email`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Expression** → `triggerOutputs()?['body/Author/Email']`
    - **Subject:** Type `Action needed: attach your 3D print file`
-   - **Body:** Paste this HTML:
-```html
-<p>We're unable to process your 3D print request because no files were attached.</p>
-<p><strong>Required:</strong> At least one 3D model file must be attached</p>
-<p><strong>Accepted formats:</strong> .stl, .obj, .3mf, .idea, .form</p>
-<p><strong>File naming:</strong> FirstLast_Method_Color.ext</p>
-<p><strong>Example:</strong> JaneDoe_Resin_Clear.3mf</p>
-<br>
-<p>Please attach your file and submit a new request. Thank you!</p>
-<br>
-<p><em>This is an automated message from the LSU Digital Fabrication Lab.</em></p>
+   - **Body:** Type this plain text:
+```
+We're unable to process your 3D print request because no files were attached.
+
+Required: At least one 3D model file must be attached
+Accepted formats: .stl, .obj, .3mf, .idea, .form
+File naming: FirstLast_Method_Color.ext
+Example: JaneDoe_Resin_Clear.3mf
+
+Please attach your file and submit a new request. Thank you!
+
+This is an automated message from the Digital Fabrication Lab.
 ```
 
 **Action 4: Terminate flow**
@@ -307,7 +320,11 @@ and(
 1. Search for and select **Update item** (SharePoint)
 2. Rename the action to: `Reject Request - Invalid Filename`
    - Click the **three dots (…)** → **Rename** → type `Reject Request - Invalid Filename`
-3. **Configure retry policy**
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `PrintRequests`
@@ -323,7 +340,11 @@ and(
 2. Search for and select **Create item** (SharePoint)
 3. Rename the action to: `Log Invalid Filename Rejection`
    - Click the **three dots (…)** → **Rename** → type `Log Invalid Filename Rejection`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
@@ -344,18 +365,24 @@ and(
 2. Search for and select **Send an email from a shared mailbox (V2)**
 3. Rename the action to: `Send Invalid Filename Email`
    - Click the **three dots (…)** → **Rename** → type `Send Invalid Filename Email`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Expression** → `triggerOutputs()?['body/Author/Email']`
    - **Subject:** Type `Action needed: rename your 3D print file`
-   - **Body:** Paste this HTML:
-```html
-<p>We're unable to process your request because the attached file name doesn't follow our format.</p>
-<p><strong>Required format:</strong> FirstLast_Method_Color</p>
-<p><strong>Examples:</strong> JaneDoe_Resin_Clear (with .stl, .obj, .3mf, .idea, or .form extension)</p>
-<p><strong>Accepted file types:</strong> .stl, .obj, .3mf, .idea, .form</p>
-<p>Please rename your file accordingly and submit a new request. Thank you!</p>
+   - **Body:** Type this plain text:
+```
+We're unable to process your request because the attached file name doesn't follow our format.
+
+Required format: FirstLast_Method_Color
+Examples: JaneDoe_Resin_Clear (with .stl, .obj, .3mf, .idea, or .form extension)
+Accepted file types: .stl, .obj, .3mf, .idea, .form
+
+Please rename your file accordingly and submit a new request. Thank you!
 ```
 
 **Action 4: Flag invalid attachment**
@@ -400,7 +427,11 @@ Add these actions in order (moved out of the loop so they run once):
 **Action 1: Update item (SharePoint)**
 1. Search for and select **Update item** (SharePoint)
 2. Rename the action to: `Update Request - Valid File`
-3. **Configure retry policy** (see instructions at top)
+3. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -418,7 +449,11 @@ Add these actions in order (moved out of the loop so they run once):
 1. Click **+ Add an action** in No branch
 2. Search for and select **Create item** (SharePoint)
 3. Rename the action to: `Log Request Creation`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
@@ -440,21 +475,26 @@ Add these actions in order (moved out of the loop so they run once):
 1. Click **+ Add an action** in No branch
 2. Search for and select **Send an email from a shared mailbox (V2)**
 3. Rename the action to: `Send Confirmation Email`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **StudentEmail** (from Update item)
    - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
-   - **Body:** Use **Dynamic content** and **Expressions** to build this plain text email:
+   - **Body:** Type plain text, inserting expressions where indicated:
+
 ```
 We received your 3D Print request.
 
 REQUEST DETAILS:
-- Request: [Dynamic content: Outputs from Generate Standardized Display Name]
-- Request ID: [Dynamic content: Outputs from Generate ReqKey]
-- Method: [Dynamic content: Method from trigger]
-- Printer: [Dynamic content: Printer from trigger]
-- Color: [Dynamic content: Color from trigger]
+- Request: [Expression: Display Name]
+- Request ID: [Expression: ReqKey]
+- Method: [Expression: Method]
+- Printer: [Expression: Printer]
+- Color: [Expression: Color]
 
 NEXT STEPS:
 • Our team will review your request for technical feasibility
@@ -462,27 +502,40 @@ NEXT STEPS:
 • Estimated review time: 1-2 business days
 
 View your request details:
-https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Dynamic content: ID from trigger]
+https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Expression: ID]
 
 View all your requests:
 https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
 
 ---
-This is an automated message from the LSU Digital Fabrication Lab.
+This is an automated message from the Digital Fabrication Lab.
 ```
 
-**How to build this in Power Automate:**
-1. Type the HTML structure in the Body field
-2. Place cursor where you see [Dynamic content: ...]
-3. Click **Dynamic content** and select the indicated field
-4. For trigger fields, look under "When an item is created"
-5. For outputs, look under the respective action names
+**Expressions reference:**
+| Placeholder | Expression |
+|-------------|------------|
+| Display Name | `outputs('Generate_Standardized_Display_Name')` |
+| ReqKey | `outputs('Generate_ReqKey')` |
+| Method | `triggerOutputs()?['body/Method']?['Value']` |
+| Printer | `triggerOutputs()?['body/Printer']?['Value']` |
+| Color | `triggerOutputs()?['body/Color']?['Value']` |
+| ID | `triggerOutputs()?['body/ID']` |
+
+**How to build:**
+1. Type plain text in Body field
+2. When you reach `[Expression: ...]`, click **Expression** tab (fx)
+3. Paste the expression from the table above
+4. Click **Update**, then continue typing
 
 **Action 4: Log email sent**
 1. Click **+ Add an action** in No branch
 2. Search for and select **Create item** (SharePoint)
 3. Rename the action to: `Log Email Sent`
-4. **Configure retry policy**
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings** → scroll to **Networking**
+   - **Retry policy:** Select `Exponential interval`
+   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
+   - Click **Done**
 5. Fill in:
    - **Site Address:** Same as above
    - **List Name:** `AuditLog`
