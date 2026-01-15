@@ -424,7 +424,6 @@ We use **prefixes** to identify control types at a glance:
 | `ico` | Icon | `icoExpand` |
 | `con` | Container | `conExpandedDetails` |
 | `frm` | Form | `frmAttachments` |
-| `tmr` | Timer | `tmrGlow` |
 
 ### Complete Tree View — All Controls
 
@@ -490,9 +489,11 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnNotesCancel
         txtAddNote
         lblAddNoteLabel
-        lblStaffNotesContent
+        ddNotesStaff
+        lblNotesStaffLabel
+        txtStaffNotesContent
         lblStaffNotesHeader
-        lblStudentNotesContent
+        txtStudentNotesContent
         lblStudentNotesHeader
         lblNotesTitle
         recNotesModal
@@ -635,7 +636,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     btnNavDashboard                   ← Step 4
     lblAppTitle                       ← Step 4
     recHeader                         ← Step 4
-    tmrGlow                           ← Step 14
 ```
 
 ### Key Rules
@@ -954,14 +954,15 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Y | `0` |
 | Width | `Parent.TemplateWidth` |
 | Height | `Parent.TemplateHeight - 8` |
-| Fill | `If(ThisItem.NeedsAttention, RGBA(255, 250, 230, 1), Color.White)` |
-| BorderColor | `RGBA(220, 220, 220, 1)` |
-| BorderThickness | `1` |
+| Fill | `If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), Color.White)` |
+| BorderColor | `If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), RGBA(220, 220, 220, 1))` |
+| BorderThickness | `If(ThisItem.NeedsAttention, 2, 1)` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
+> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px).
 
 ### Student Name (lblStudentName)
 
@@ -4046,10 +4047,12 @@ scrDashboard
     ├── btnAddNote                   ← "+ Add Note" button
     ├── btnNotesCancel               ← "Cancel" button
     ├── txtAddNote                   ← Text input for new note
+    ├── ddNotesStaff                 ← Staff dropdown
+    ├── lblNotesStaffLabel           ← "Add note as:"
     ├── lblAddNoteLabel              ← "Add a note:"
-    ├── lblStaffNotesContent         ← Staff notes display
+    ├── txtStaffNotesContent         ← Staff notes display (scrollable)
     ├── lblStaffNotesHeader          ← "Staff Notes & Activity"
-    ├── lblStudentNotesContent       ← Student notes display
+    ├── txtStudentNotesContent       ← Student notes display (scrollable)
     ├── lblStudentNotesHeader        ← "Student Notes"
     ├── lblNotesTitle                ← "Notes - REQ-00042"
     ├── recNotesModal                ← White modal box
@@ -4160,7 +4163,8 @@ scrDashboard
 ```powerfx
 Set(varShowNotesModal, 0);
 Set(varSelectedItem, Blank());
-Reset(txtAddNote)
+Reset(txtAddNote);
+Reset(ddNotesStaff)
 ```
 
 ---
@@ -4184,25 +4188,27 @@ Reset(txtAddNote)
 
 ---
 
-### Student Notes Content (lblStudentNotesContent)
+### Student Notes Content (txtStudentNotesContent)
 
-21. Click **+ Insert** → **Text label**.
-22. **Rename it:** `lblStudentNotesContent`
+21. Click **+ Insert** → **Text input**.
+22. **Rename it:** `txtStudentNotesContent`
 23. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `If(IsBlank(varSelectedItem.Notes), "None", varSelectedItem.Notes)` |
+| Default | `If(IsBlank(varSelectedItem.Notes), "None", varSelectedItem.Notes)` |
 | X | `recNotesModal.X + 20` |
 | Y | `recNotesModal.Y + 82` |
 | Width | `510` |
 | Height | `60` |
+| Mode | `TextMode.MultiLine` |
+| DisplayMode | `DisplayMode.View` |
 | Size | `11` |
 | Color | `If(IsBlank(varSelectedItem.Notes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))` |
 | FontItalic | `IsBlank(varSelectedItem.Notes)` |
-| VerticalAlign | `VerticalAlign.Top` |
+| BorderColor | `RGBA(200, 200, 200, 1)` |
 
-> 💡 **Note:** This displays the student's notes from submission (the `Notes` field). Read-only.
+> 💡 **Note:** Using a Text Input with `DisplayMode.View` provides automatic scrollbars when content overflows. This displays the student's notes from submission (the `Notes` field). Read-only.
 
 ---
 
@@ -4225,39 +4231,79 @@ Reset(txtAddNote)
 
 ---
 
-### Staff Notes Content (lblStaffNotesContent)
+### Staff Notes Content (txtStaffNotesContent)
 
-27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblStaffNotesContent`
+27. Click **+ Insert** → **Text input**.
+28. **Rename it:** `txtStaffNotesContent`
 29. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `If(IsBlank(varSelectedItem.StaffNotes), "None", varSelectedItem.StaffNotes)` |
+| Default | `If(IsBlank(varSelectedItem.StaffNotes), "None", varSelectedItem.StaffNotes)` |
 | X | `recNotesModal.X + 20` |
 | Y | `recNotesModal.Y + 172` |
 | Width | `510` |
 | Height | `120` |
+| Mode | `TextMode.MultiLine` |
+| DisplayMode | `DisplayMode.View` |
 | Size | `11` |
 | Color | `If(IsBlank(varSelectedItem.StaffNotes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))` |
 | FontItalic | `IsBlank(varSelectedItem.StaffNotes)` |
-| VerticalAlign | `VerticalAlign.Top` |
+| BorderColor | `RGBA(200, 200, 200, 1)` |
 
-> 💡 **Note:** This displays the `StaffNotes` field which includes system audit entries (APPROVED by..., REJECTED by..., etc.) and any manual notes added by staff.
+> 💡 **Note:** Using a Text Input with `DisplayMode.View` provides automatic scrollbars when content overflows. This displays the `StaffNotes` field which includes system audit entries (APPROVED by..., REJECTED by..., etc.) and any manual notes added by staff.
+
+---
+
+### Staff Name Label (lblNotesStaffLabel)
+
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblNotesStaffLabel`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Add note as: *"` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 300` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+---
+
+### Staff Dropdown (ddNotesStaff)
+
+33. Click **+ Insert** → **Combo box**.
+34. **Rename it:** `ddNotesStaff`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 325` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
 
 ---
 
 ### Add Note Label (lblAddNoteLabel)
 
-30. Click **+ Insert** → **Text label**.
-31. **Rename it:** `lblAddNoteLabel`
-32. Set properties:
+36. Click **+ Insert** → **Text label**.
+37. **Rename it:** `lblAddNoteLabel`
+38. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Add a note:"` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 310` |
+| Y | `recNotesModal.Y + 370` |
 | Width | `150` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -4268,15 +4314,15 @@ Reset(txtAddNote)
 
 ### Add Note Text Input (txtAddNote)
 
-33. Click **+ Insert** → **Text input**.
-34. **Rename it:** `txtAddNote`
-35. Set properties:
+39. Click **+ Insert** → **Text input**.
+40. **Rename it:** `txtAddNote`
+41. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 335` |
+| Y | `recNotesModal.Y + 395` |
 | Width | `510` |
 | Height | `80` |
 | HintText | `"Type your note here..."` |
@@ -4285,15 +4331,15 @@ Reset(txtAddNote)
 
 ### Cancel Button (btnNotesCancel)
 
-36. Click **+ Insert** → **Button**.
-37. **Rename it:** `btnNotesCancel`
-38. Set properties:
+42. Click **+ Insert** → **Button**.
+43. **Rename it:** `btnNotesCancel`
+44. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recNotesModal.X + 300` |
-| Y | `recNotesModal.Y + 440` |
+| Y | `recNotesModal.Y + 480` |
 | Width | `100` |
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
@@ -4303,27 +4349,28 @@ Reset(txtAddNote)
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
 
-39. Set **OnSelect:**
+45. Set **OnSelect:**
 
 ```powerfx
 Set(varShowNotesModal, 0);
 Set(varSelectedItem, Blank());
-Reset(txtAddNote)
+Reset(txtAddNote);
+Reset(ddNotesStaff)
 ```
 
 ---
 
 ### Add Note Button (btnAddNote)
 
-40. Click **+ Insert** → **Button**.
-41. **Rename it:** `btnAddNote`
-42. Set properties:
+46. Click **+ Insert** → **Button**.
+47. **Rename it:** `btnAddNote`
+48. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"+ Add Note"` |
 | X | `recNotesModal.X + 410` |
-| Y | `recNotesModal.Y + 440` |
+| Y | `recNotesModal.Y + 480` |
 | Width | `120` |
 | Height | `36` |
 | Fill | `RGBA(16, 124, 16, 1)` |
@@ -4333,21 +4380,22 @@ Reset(txtAddNote)
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
 
-43. Set **DisplayMode:**
+49. Set **DisplayMode:**
 
 ```powerfx
-If(IsBlank(txtAddNote.Text), DisplayMode.Disabled, DisplayMode.Edit)
+If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
 ```
 
-44. Set **OnSelect:**
+50. Set **OnSelect:**
 
 ```powerfx
-// Append the new note to StaffNotes with [NOTE] prefix and timestamp
+// Append the new note to StaffNotes with staff name and timestamp
 Patch(PrintRequests, varSelectedItem,
 {
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & Char(10)),
-        "[NOTE] " & txtAddNote.Text & " - " & Text(Now(), "mm/dd/yyyy")
+        First(Split(ddNotesStaff.Selected.MemberName, " ")).Value & ": " &
+        txtAddNote.Text & " - " & Text(Now(), "mm/dd/yyyy")
     )
 });
 
@@ -4361,7 +4409,7 @@ Reset(txtAddNote);
 Notify("Note added successfully!", NotificationType.Success)
 ```
 
-> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` and include a timestamp. This distinguishes them from system-generated entries like "APPROVED by..." which don't have the prefix.
+> 💡 **Note Format:** Manual notes are prefixed with the staff member's first name and include a timestamp. This distinguishes them from system-generated entries like "APPROVED by..." which don't have the prefix.
 
 ---
 
@@ -4376,9 +4424,11 @@ Your Notes Modal should now contain these controls:
     btnNotesCancel
     txtAddNote
     lblAddNoteLabel
-    lblStaffNotesContent
+    ddNotesStaff
+    lblNotesStaffLabel
+    txtStaffNotesContent
     lblStaffNotesHeader
-    lblStudentNotesContent
+    txtStudentNotesContent
     lblStudentNotesHeader
     lblNotesTitle
     recNotesModal
@@ -4389,9 +4439,10 @@ Your Notes Modal should now contain these controls:
 1. Click "View Notes" on any job card
 2. Verify Student Notes section shows the student's submission notes (or "None")
 3. Verify Staff Notes section shows audit entries and manual notes (or "None")
-4. Type a note and click "+ Add Note"
-5. Verify the note appears in the Staff Notes section with `[NOTE]` prefix
-6. Click Cancel or X to close the modal
+4. Select a staff member in the "Add note as" dropdown
+5. Type a note and click "+ Add Note"
+6. Verify the note appears in the Staff Notes section with the staff first name prefix
+7. Click Cancel or X to close the modal
 
 ---
 
@@ -4591,35 +4642,27 @@ Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention})
 
 ---
 
-### Optional: Animated Glow Timer (tmrGlow)
+### Attention Card Styling
 
-6. Click on **scrDashboard** in Tree view (outside the gallery).
-7. Click **+ Insert** → **Input** → **Timer**.
-8. **Rename it:** `tmrGlow`
-9. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Duration | `1500` |
-| Repeat | `true` |
-| AutoStart | `!IsEmpty(Filter(PrintRequests, NeedsAttention = true))` |
-| Visible | `false` |
-
-> ⚡ **Performance Optimization:** The `AutoStart` formula only runs the timer when there are items that need attention. This prevents unnecessary CPU cycles when no items are flagged.
-
-10. Update `recCardBackground` (inside galJobCards). Set **Fill:**
+6. Update `recCardBackground` (inside galJobCards). Set **Fill:**
 
 ```powerfx
-If(
-    ThisItem.NeedsAttention,
-    If(
-        Mod(tmrGlow.Value, 1500) < 750,
-        RGBA(255, 250, 230, 1),
-        RGBA(255, 245, 210, 1)
-    ),
-    Color.White
-)
+If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), Color.White)
 ```
+
+7. Set **BorderColor:**
+
+```powerfx
+If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), RGBA(220, 220, 220, 1))
+```
+
+8. Set **BorderThickness:**
+
+```powerfx
+If(ThisItem.NeedsAttention, 2, 1)
+```
+
+> 💡 **Static Highlight:** Items needing attention get a noticeable warm yellow/orange background with an orange border. No animation required—the color stands out without being distracting.
 
 ---
 
@@ -6076,28 +6119,17 @@ SortByColumns(
 )
 ```
 
-## Glow Effect (Card Background)
+## Attention Highlight (Card Background)
 
 ```powerfx
-// Rectangle.Fill for attention glow
-If(
-    ThisItem.NeedsAttention,
-    If(Mod(tmrGlow.Value, 1500) < 750, 
-        RGBA(255, 215, 0, 0.08),
-        RGBA(255, 215, 0, 0.03)
-    ),
-    Color.White
-)
+// Rectangle.Fill for attention highlight
+If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), Color.White)
 
-// Rectangle.BorderColor for attention glow
-If(
-    ThisItem.NeedsAttention,
-    If(Mod(tmrGlow.Value, 1500) < 750, 
-        RGBA(255, 215, 0, 1),
-        RGBA(255, 215, 0, 0.6)
-    ),
-    RGBA(220, 220, 220, 1)
-)
+// Rectangle.BorderColor for attention highlight
+If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), RGBA(220, 220, 220, 1))
+
+// Rectangle.BorderThickness for attention highlight
+If(ThisItem.NeedsAttention, 2, 1)
 ```
 
 ## Color Switch Statement
