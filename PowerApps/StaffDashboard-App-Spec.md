@@ -26,7 +26,8 @@
 14. [Building the Archive Modal](#step-12-building-the-archive-modal)
 15. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
 16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
-17. [Adding Search and Filters](#step-14-adding-search-and-filters)
+17. [Building the Notes Modal](#step-13-building-the-notes-modal)
+18. [Adding Search and Filters](#step-14-adding-search-and-filters)
 18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
 19. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
 20. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
@@ -335,6 +336,7 @@ Set(varShowDetailsModal, 0);
 Set(varShowPaymentModal, 0);
 Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
+Set(varShowNotesModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -386,6 +388,7 @@ Set(varLoadingMessage, "")
 | `varShowPaymentModal` | ID of item for payment (0=hidden) | Number |
 | `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
 | `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
+| `varShowNotesModal` | ID of item for notes modal (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
@@ -481,6 +484,19 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblFileTitle
         recFileModal
         recFileOverlay
+    ▼ conNotesModal                   ← Step 13 (Notes Modal Container)
+        btnNotesClose
+        btnAddNote
+        btnNotesCancel
+        txtAddNote
+        lblAddNoteLabel
+        lblStaffNotesContent
+        lblStaffNotesHeader
+        lblStudentNotesContent
+        lblStudentNotesHeader
+        lblNotesTitle
+        recNotesModal
+        recNotesOverlay
     ▼ conPaymentModal                 ← Step 12C (Payment Modal Container)
         btnPaymentConfirm
         btnPaymentCancel
@@ -602,10 +618,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblDueDate                    ← Step 7
         lblCreated                    ← Step 7
         lblJobId                      ← Step 7
-        btnSaveNotes                  ← Step 7
-        txtStaffNotes                 ← Step 7
-        lblStaffNotesPlaceholder      ← Step 7
-        lblStaffNotesHeader           ← Step 7
+        btnViewNotes                  ← Step 7 (opens Notes Modal)
         lblColor                      ← Step 7
         lblPrinter                    ← Step 7
         lblStudentEmail               ← Step 7
@@ -1101,37 +1114,37 @@ Switch(
 
 ---
 
-### Staff Notes Section (lblStaffNotesHeader + lblStaffNotesPlaceholder)
+### View Notes Button (btnViewNotes)
 
-24. Click **+ Insert** → **Text label**.
-25. **Rename it:** `lblStaffNotesHeader`
+24. Click **+ Insert** → **Button**.
+25. **Rename it:** `btnViewNotes`
 26. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Staff Notes"` |
+| Text | `"View Notes"` |
 | X | `12` |
 | Y | `100` |
 | Width | `100` |
-| Height | `20` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Height | `32` |
+| Fill | `RGBA(240, 240, 240, 1)` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| BorderColor | `RGBA(200, 200, 200, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
 | Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
 
-27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblStaffNotesPlaceholder`
-29. Set properties:
+27. Set **OnSelect:**
 
-| Property | Value |
-|----------|-------|
-| Text | `If(IsBlank(ThisItem.StaffNotes), "No notes added yet — click to add", ThisItem.StaffNotes)` |
-| X | `12` |
-| Y | `118` |
-| Width | `Parent.TemplateWidth - 24` |
-| Height | `40` |
-| Size | `10` |
-| Color | `If(IsBlank(ThisItem.StaffNotes), RGBA(150, 150, 150, 1), RGBA(80, 80, 80, 1))` |
-| FontItalic | `IsBlank(ThisItem.StaffNotes)` |
+```powerfx
+Set(varShowNotesModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
+
+> 💡 **Note:** This button opens the Notes Modal (Step 13) which displays both Student Notes and Staff Notes, and allows staff to add new notes.
 
 ---
 
@@ -1304,7 +1317,8 @@ These labels show additional info when the card is expanded. All have the same V
 
 | Property | Value |
 |----------|-------|
-| Text | `Coalesce(ThisItem.'Course Number', "—")` |
+| Text | `Coalesce(Text(ThisItem.'Course Number'), "—")` |
+| _Note_ | Use `Text()` for numeric columns to avoid the runtime error "The value '' cannot be converted to a number." |
 | X | `80` |
 | Y | `225` |
 | Width | `150` |
@@ -1332,8 +1346,7 @@ Your gallery template should now contain these controls (Z-order: top = front):
     lblJobId
     lblJobIdLabel
     lblDetailsHeader
-    lblStaffNotesPlaceholder
-    lblStaffNotesHeader
+    btnViewNotes
     lblColor
     lblPrinter
     lblStudentEmail
@@ -1348,7 +1361,7 @@ Each card displays:
 - File/request info
 - Email and printer
 - Color indicator
-- Staff notes section
+- View Notes button (opens Notes Modal)
 - Expandable additional details
 
 
@@ -4015,6 +4028,370 @@ Set(varLoadingMessage, "")
 > - Payment details appended to PaymentNotes (creates a log)
 > - Staff can process another pickup later
 > - Final pickup (unchecked) records to FinalWeight/FinalCost fields
+
+---
+
+# STEP 13: Building the Notes Modal
+
+**What you're doing:** Creating a modal that displays both Student Notes (from submission) and Staff Notes (including system audit entries), and allows staff to add new notes.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conNotesModal                    ← CONTAINER (set Visible here only!)
+    ├── btnNotesClose                ← X button top-right
+    ├── btnAddNote                   ← "+ Add Note" button
+    ├── btnNotesCancel               ← "Cancel" button
+    ├── txtAddNote                   ← Text input for new note
+    ├── lblAddNoteLabel              ← "Add a note:"
+    ├── lblStaffNotesContent         ← Staff notes display
+    ├── lblStaffNotesHeader          ← "Staff Notes & Activity"
+    ├── lblStudentNotesContent       ← Student notes display
+    ├── lblStudentNotesHeader        ← "Student Notes"
+    ├── lblNotesTitle                ← "Notes - REQ-00042"
+    ├── recNotesModal                ← White modal box
+    └── recNotesOverlay              ← Dark semi-transparent background
+```
+
+---
+
+### Modal Container (conNotesModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conNotesModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowNotesModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recNotesOverlay)
+
+5. With `conNotesModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recNotesOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+
+---
+
+### Modal Content Box (recNotesModal)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recNotesModal`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 550) / 2` |
+| Y | `(Parent.Height - 520) / 2` |
+| Width | `550` |
+| Height | `520` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+---
+
+### Modal Title (lblNotesTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblNotesTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Notes - " & varSelectedItem.ReqKey` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 20` |
+| Width | `480` |
+| Height | `30` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `18` |
+| Color | `RGBA(50, 50, 50, 1)` |
+
+---
+
+### Close Button (btnNotesClose)
+
+14. Click **+ Insert** → **Button**.
+15. **Rename it:** `btnNotesClose`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recNotesModal.X + recNotesModal.Width - 45` |
+| Y | `recNotesModal.Y + 15` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `RGBA(240, 240, 240, 1)` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+
+17. Set **OnSelect:**
+
+```powerfx
+Set(varShowNotesModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtAddNote)
+```
+
+---
+
+### Student Notes Header (lblStudentNotesHeader)
+
+18. Click **+ Insert** → **Text label**.
+19. **Rename it:** `lblStudentNotesHeader`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student Notes"` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 60` |
+| Width | `510` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+---
+
+### Student Notes Content (lblStudentNotesContent)
+
+21. Click **+ Insert** → **Text label**.
+22. **Rename it:** `lblStudentNotesContent`
+23. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(IsBlank(varSelectedItem.Notes), "None", varSelectedItem.Notes)` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 82` |
+| Width | `510` |
+| Height | `60` |
+| Size | `11` |
+| Color | `If(IsBlank(varSelectedItem.Notes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))` |
+| FontItalic | `IsBlank(varSelectedItem.Notes)` |
+| VerticalAlign | `VerticalAlign.Top` |
+
+> 💡 **Note:** This displays the student's notes from submission (the `Notes` field). Read-only.
+
+---
+
+### Staff Notes Header (lblStaffNotesHeader)
+
+24. Click **+ Insert** → **Text label**.
+25. **Rename it:** `lblStaffNotesHeader`
+26. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Staff Notes & Activity"` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 150` |
+| Width | `510` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+---
+
+### Staff Notes Content (lblStaffNotesContent)
+
+27. Click **+ Insert** → **Text label**.
+28. **Rename it:** `lblStaffNotesContent`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(IsBlank(varSelectedItem.StaffNotes), "None", varSelectedItem.StaffNotes)` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 172` |
+| Width | `510` |
+| Height | `120` |
+| Size | `11` |
+| Color | `If(IsBlank(varSelectedItem.StaffNotes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))` |
+| FontItalic | `IsBlank(varSelectedItem.StaffNotes)` |
+| VerticalAlign | `VerticalAlign.Top` |
+
+> 💡 **Note:** This displays the `StaffNotes` field which includes system audit entries (APPROVED by..., REJECTED by..., etc.) and any manual notes added by staff.
+
+---
+
+### Add Note Label (lblAddNoteLabel)
+
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblAddNoteLabel`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Add a note:"` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 310` |
+| Width | `150` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `RGBA(80, 80, 80, 1)` |
+
+---
+
+### Add Note Text Input (txtAddNote)
+
+33. Click **+ Insert** → **Text input**.
+34. **Rename it:** `txtAddNote`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Mode | `TextMode.MultiLine` |
+| X | `recNotesModal.X + 20` |
+| Y | `recNotesModal.Y + 335` |
+| Width | `510` |
+| Height | `80` |
+| HintText | `"Type your note here..."` |
+
+---
+
+### Cancel Button (btnNotesCancel)
+
+36. Click **+ Insert** → **Button**.
+37. **Rename it:** `btnNotesCancel`
+38. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recNotesModal.X + 300` |
+| Y | `recNotesModal.Y + 440` |
+| Width | `100` |
+| Height | `36` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+
+39. Set **OnSelect:**
+
+```powerfx
+Set(varShowNotesModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtAddNote)
+```
+
+---
+
+### Add Note Button (btnAddNote)
+
+40. Click **+ Insert** → **Button**.
+41. **Rename it:** `btnAddNote`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"+ Add Note"` |
+| X | `recNotesModal.X + 410` |
+| Y | `recNotesModal.Y + 440` |
+| Width | `120` |
+| Height | `36` |
+| Fill | `RGBA(16, 124, 16, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+
+43. Set **DisplayMode:**
+
+```powerfx
+If(IsBlank(txtAddNote.Text), DisplayMode.Disabled, DisplayMode.Edit)
+```
+
+44. Set **OnSelect:**
+
+```powerfx
+// Append the new note to StaffNotes with [NOTE] prefix and timestamp
+Patch(PrintRequests, varSelectedItem,
+{
+    StaffNotes: Concatenate(
+        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & Char(10)),
+        "[NOTE] " & txtAddNote.Text & " - " & Text(Now(), "mm/dd/yyyy")
+    )
+});
+
+// Refresh the selected item to show updated notes
+Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
+
+// Clear the input
+Reset(txtAddNote);
+
+// Show success notification
+Notify("Note added successfully!", NotificationType.Success)
+```
+
+> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` and include a timestamp. This distinguishes them from system-generated entries like "APPROVED by..." which don't have the prefix.
+
+---
+
+### ✅ Step 13 Checklist
+
+Your Notes Modal should now contain these controls:
+
+```
+▼ conNotesModal
+    btnNotesClose
+    btnAddNote
+    btnNotesCancel
+    txtAddNote
+    lblAddNoteLabel
+    lblStaffNotesContent
+    lblStaffNotesHeader
+    lblStudentNotesContent
+    lblStudentNotesHeader
+    lblNotesTitle
+    recNotesModal
+    recNotesOverlay
+```
+
+**Testing the Notes Modal:**
+1. Click "View Notes" on any job card
+2. Verify Student Notes section shows the student's submission notes (or "None")
+3. Verify Staff Notes section shows audit entries and manual notes (or "None")
+4. Type a note and click "+ Add Note"
+5. Verify the note appears in the Staff Notes section with `[NOTE]` prefix
+6. Click Cancel or X to close the modal
 
 ---
 
