@@ -620,6 +620,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblCreated                    ← Step 7
         lblJobId                      ← Step 7
         btnViewNotes                  ← Step 7 (opens Notes Modal)
+        lblEstimates                  ← Step 7 (shows after approval)
         lblColor                      ← Step 7
         lblPrinter                    ← Step 7
         lblStudentEmail               ← Step 7
@@ -1115,6 +1116,39 @@ Switch(
 
 ---
 
+### Estimates Display (lblEstimates)
+
+24. Click **+ Insert** → **Text label**.
+25. **Rename it:** `lblEstimates`
+26. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `12` |
+| Y | `95` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(100, 100, 100, 1)` |
+
+27. Set **Text:**
+
+```powerfx
+If(
+    !IsBlank(ThisItem.EstimatedWeight),
+    "⚖ " & Text(ThisItem.EstimatedWeight) & "g" &
+    If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
+    If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
+    ""
+)
+```
+
+28. Set **Visible:** `!IsBlank(ThisItem.EstimatedWeight)`
+
+> 💡 **When it shows:** This label only appears after approval, when EstimatedWeight has been set. Displays weight, optional print time, and calculated cost.
+
+---
+
 ### View Notes Button (btnViewNotes)
 
 24. Click **+ Insert** → **Button**.
@@ -1126,8 +1160,8 @@ Switch(
 | Text | `"View Notes"` |
 | X | `12` |
 | Y | `100` |
-| Width | `100` |
-| Height | `32` |
+| Width | `80` |
+| Height | `28` |
 | Fill | `RGBA(240, 240, 240, 1)` |
 | Color | `RGBA(50, 50, 50, 1)` |
 | BorderColor | `RGBA(200, 200, 200, 1)` |
@@ -1348,6 +1382,7 @@ Your gallery template should now contain these controls (Z-order: top = front):
     lblJobIdLabel
     lblDetailsHeader
     btnViewNotes
+    lblEstimates
     lblColor
     lblPrinter
     lblStudentEmail
@@ -1362,6 +1397,7 @@ Each card displays:
 - File/request info
 - Email and printer
 - Color indicator
+- Estimates (weight, time, cost) — visible after approval
 - View Notes button (opens Notes Modal)
 - Expandable additional details
 
