@@ -1687,7 +1687,7 @@ Set(varSelectedItem, ThisItem)
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
 | Size | `9` |
-| Visible | `ThisItem.Status.Value <> "Pending"` |
+| Visible | `Not(ThisItem.Status.Value in ["Pending", "Uploaded"])` |
 
 28. Set **OnSelect:**
 
@@ -1696,7 +1696,7 @@ Set(varShowDetailsModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **Visibility:** Available on ALL status tabs except Pending. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
+> 💡 **Visibility:** Available on ALL status tabs except Pending and Uploaded. New submissions need to be reviewed and assigned estimates first before details can be edited. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
 
 ---
 
@@ -2883,9 +2883,9 @@ Set(varLoadingMessage, "")
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
-> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). Changing Method automatically resets the Printer dropdown to show compatible printers only.
+> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending and Uploaded statuses). Changing Method automatically resets the Printer dropdown to show compatible printers only.
 
-> ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
+> ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending and Uploaded. New submissions need initial review and estimate assignment before details can be edited. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
 
 ### Control Hierarchy (Container-Based)
 
@@ -5650,8 +5650,10 @@ Add a "Send Message" button to each job card in the gallery.
 | Y | `Parent.TemplateHeight - 85` |
 | Width | `100` |
 | Height | `28` |
-| Fill | `RGBA(70, 130, 220, 1)` |
-| Color | `Color.White` |
+| Fill | `Color.White` |
+| Color | `RGBA(70, 130, 220, 1)` |
+| BorderColor | `RGBA(70, 130, 220, 1)` |
+| BorderThickness | `1` |
 | RadiusTopLeft | `6` |
 | RadiusTopRight | `6` |
 | RadiusBottomLeft | `6` |
