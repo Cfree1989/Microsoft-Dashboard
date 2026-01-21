@@ -7,6 +7,48 @@
 
 ---
 
+## ⚠️ Critical Implementation Notes (Read First!)
+
+> **These issues caused hours of debugging. Follow these rules to avoid the same problems:**
+
+### Bug #1: `ColumnHasChanged` vs `HasColumnChanged`
+
+Power Automate's Dynamic Content shows "Has Column Changed: [FieldName]" but the SharePoint API actually returns data under `ColumnHasChanged` (different casing). **Dynamic Content will silently fail.**
+
+**Solution:** Always use **Expressions** instead of Dynamic Content for field change detection:
+```
+outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName']
+```
+
+### Bug #2: Boolean vs String Comparison
+
+Even with the correct expression, comparing a boolean `true` to a string `"true"` fails silently. Typing `true` in a condition creates a **string**, not a boolean.
+
+**Solution:** Use the `equals()` function and ensure the right side is an **Expression**:
+- **Left side (Expression):** `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName'], true)`
+- **Middle:** `is equal to`
+- **Right side (Expression):** `true` ← **MUST click Expression tab and type `true`**
+
+### Bug #3: Multiple Condition Rows
+
+If a condition has two rows combined with "AND" (e.g., one Expression row + one Dynamic Content row), the Dynamic Content row fails and the entire condition returns false.
+
+**Solution:** Each field change detection condition should have **exactly ONE row** using the `equals()` expression format above.
+
+### Quick Reference — Correct Field Detector Pattern
+
+For every "Check [Field] Changed" condition, use this pattern:
+
+| Part | Tab | Value |
+|------|-----|-------|
+| Left | Expression | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName'], true)` |
+| Middle | — | `is equal to` |
+| Right | Expression | `true` |
+
+Replace `FieldName` with the SharePoint internal column name (e.g., `StudentConfirmed`, `Status`, `Printer`).
+
+---
+
 ## Prerequisites
 
 ### SharePoint Field: StudentConfirmed (Required for Estimate Approval Workflow)
@@ -179,6 +221,47 @@ This creates `PrintRequests_FieldNames.csv` with ALL field mappings.
 
 **Test Step 4:** Save → Change any field → Should see no errors in flow run history
 
+### ⚠️ CRITICAL: ColumnHasChanged vs HasColumnChanged Bug
+
+**Power Automate's Dynamic Content shows `Has Column Changed: [FieldName]` but this does NOT work reliably!**
+
+The SharePoint API returns a property called `ColumnHasChanged`, but Power Automate's Dynamic Content picker looks for `HasColumnChanged`. This mismatch causes field change detection to fail silently—conditions return `false` even when fields actually changed.
+
+**The Fix:** Use the `equals()` function to properly compare boolean values. This avoids issues with boolean vs string comparison.
+
+| Field | Expression to Use (Left Side) |
+|-------|-------------------------------|
+| Printer | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Printer'], true)` |
+| Status | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Status'], true)` |
+| Method | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Method'], true)` |
+| Color | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Color'], true)` |
+| Priority | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Priority'], true)` |
+| EstimatedTime | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstHours'], true)` |
+| EstimatedWeight | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstWeight'], true)` |
+| EstimatedCost | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstimatedCost'], true)` |
+| Notes | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Notes'], true)` |
+| StudentConfirmed | `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['StudentConfirmed'], true)` |
+
+**Note:** Use the SharePoint **internal field name** in the expression (e.g., `EstHours` not `EstimatedTime`).
+
+**⚠️ IMPORTANT: Single Row + Boolean Comparison!**
+
+1. Each condition must have **exactly ONE row** with the expression
+2. The `equals()` function ensures proper boolean comparison (avoids `true` vs `"true"` issues)
+3. If you see multiple rows combined with "AND", delete extra rows
+
+**Condition Setup:**
+1. Delete ALL existing rows (click checkbox → delete)
+2. Click **+ New item**
+3. **Left box:** Click **Expression** → paste the `equals(...)` expression → **OK**
+4. **Middle:** `is equal to`
+5. **Right box:** Click **Expression** → type `true` → **OK**
+6. **Save** the flow
+
+> ⚠️ **Both sides must use Expression!** The right side MUST be set via the Expression tab (not plain text) to ensure boolean comparison works correctly.
+
+---
+
 ### Step 5: Add First Field Change Detector (Printer)
 
 **What this does:** Tests field change detection with a single field (Printer) before adding all fields. This is the critical step that failed in the original flow.
@@ -188,9 +271,11 @@ This creates `PrintRequests_FieldNames.csv` with ALL field mappings.
 2. **Search:** Type `Condition` → Select **Condition**
 3. **Rename condition:** Click **three dots (…)** → **Rename** → Type `Check Printer Changed`
 4. **Configure condition:**
-   - **Left box:** Click **Dynamic content** → Under "Get Item Changes" section → Select **Has Column Changed: Printer**
+   - **Left box:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Printer'], true)`
    - **Middle dropdown:** Select **is equal to**
-   - **Right box:** Type `true`
+   - **Right box:** Click **Expression** → Type `true`
+
+> ⚠️ **Both sides must use Expression!** This ensures proper boolean comparison.
 
 **In the YES branch (when Printer changed):**
 5. **+ Add an action** → **Create item** (SharePoint)
@@ -218,41 +303,11 @@ This creates `PrintRequests_FieldNames.csv` with ALL field mappings.
 
 ### Step 6: Add Remaining Field Change Detectors
 
-**What this does:** Once Printer detection works, adds all other field change detectors. Each runs in parallel for efficient processing.
+**What this does:** Once Printer detection works, adds all other field change detectors (Status, Method, Color, Priority, EstimatedTime, EstimatedWeight, EstimatedCost, Notes, and StudentConfirmed). Each runs in parallel for efficient processing.
 
 **⚠️ ONLY DO THIS STEP AFTER Step 5 is working perfectly.**
 
-**UI steps (Add each as PARALLEL conditions at same level as "Check Printer Changed"):**
-
-#### 6a: Add Status Change Detector (MOST IMPORTANT)
-
-1. **+ Add an action** at same level as "Check Printer Changed" → **Condition**
-2. **Rename:** Type `Check Status Changed`
-3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
-   - **Middle:** **is equal to**
-   - **Right:** Type `true`
-4. **YES branch** → **+ Add an action** → **Create item** (SharePoint)
-5. **Rename:** Type `Log Status Change`
-6. **Fill in (use expressions to avoid "For Each" loops):**
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `AuditLog`
-   - **Title:** Type `Status Change`
-   - **RequestID:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
-   - **ReqKey:** Click **Expression** → Type `triggerOutputs()?['body/ReqKey']`
-   - **Action Value:** Type `Status Change`
-   - **FieldName:** Type `Status`
-   - **NewValue:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
-   - **Actor Claims:** Click **Expression** → Type `triggerOutputs()?['body/Modified By Claims']`
-   - **ActorRole Value:** Type `Staff`
-   - **ClientApp Value:** Type `SharePoint Form`
-   - **ActionAt:** Click **Expression** → Type `utcNow()`
-   - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
-   - **Notes:** Click **Expression** → Type `concat('Status updated to ', triggerOutputs()?['body/Status']?['Value'])`
-
-#### 6b: Add Remaining Field Detectors
-
-**What this does:** Adds parallel field change detectors for Status, Method, Color, Priority, EstimatedTime, EstimatedWeight, EstimatedCost, and Notes. Each field gets its own condition and logging action.
+Add each detector as a **PARALLEL condition at the same level as "Check Printer Changed"**. See the detailed instructions for each field detector below.
 
 **⚠️ CRITICAL: SharePoint Internal Field Names**
 Some display names differ from internal field names. Always use internal names in expressions:
@@ -268,9 +323,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Status Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Status** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Status'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -300,9 +355,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Method Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Method** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Method'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -332,9 +387,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Color Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Color** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Color'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -364,9 +419,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Priority Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Priority** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Priority'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -396,9 +451,11 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedTime Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedTime** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstHours'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
+
+> ⚠️ **Note:** Use internal field name `EstHours`, not display name `EstimatedTime`.
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -430,9 +487,11 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedWeight Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedWeight** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstWeight'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
+
+> ⚠️ **Note:** Use internal field name `EstWeight`, not display name `EstimatedWeight`.
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -464,9 +523,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check EstimatedCost Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: EstimatedCost** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstimatedCost'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -498,9 +557,9 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check Notes Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: Notes** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Notes'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
 
 **In YES branch:**
 4. **+ Add an action** → **Create item** (SharePoint)
@@ -532,9 +591,11 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → **Condition**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Check StudentConfirmed Changed`
 3. **Configure condition:**
-   - **Left:** **Dynamic content** → **Has Column Changed: StudentConfirmed** (from Get Item Changes)
+   - **Left:** Click **Expression** → Type `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['StudentConfirmed'], true)`
    - **Middle:** **is equal to**
-   - **Right:** Type `true`
+   - **Right:** Click **Expression** → Type `true`
+
+> ⚠️ **Critical:** Both sides MUST use Expression (not plain text). The `equals()` function ensures proper boolean comparison.
 
 **In YES branch:**
 
@@ -545,7 +606,7 @@ Some display names differ from internal field names. Always use internal names i
    - **Row 1:**
      - **Left:** Click **Expression** → Type `triggerOutputs()?['body/StudentConfirmed']`
      - **Middle:** **is equal to**
-     - **Right:** Type `true`
+     - **Right:** Click **Expression** → Type `true`
    - **AND** (not OR!)
    - **Row 2:**
      - **Left:** Click **Expression** → Type `triggerOutputs()?['body/Status']?['Value']`
@@ -1053,7 +1114,9 @@ When building this flow, you'll see dynamic content available from multiple sour
     - **Avoid for:** Email content, as the data can be stale (see "Data Freshness" note).
 
 2.  **"Get Item Changes"**
-    - **Use for:** ONLY the **"Has Column Changed: [FieldName]"** boolean values. These are used inside `Condition` actions to check IF a field has been updated.
+    - **Use for:** Field change detection via **Expressions** (not Dynamic Content!).
+    - **Correct expression format:** `outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName']`
+    - ⚠️ **WARNING:** Do NOT use Dynamic Content's "Has Column Changed: [FieldName]" — it references `HasColumnChanged` which doesn't exist in the API response. The actual property is `ColumnHasChanged`. See the "ColumnHasChanged vs HasColumnChanged Bug" section.
     - **Avoid for:** Any other purpose. Do not use its `Title`, `Status`, or other field values in emails or logging actions, as they may not be the most current.
 
 3.  **"Get Current Item Data" (e.g., `Get Current Rejected Data`, `Get Current Pending Data`, etc.)**
@@ -1259,18 +1322,53 @@ Update these sections in the email templates for your lab:
 #### Issue 3: Field Change Detection Not Working
 
 **Symptoms:**
-- Conditions always evaluate to false
+- Conditions always evaluate to false even when fields actually changed
 - "Has Column Changed" values are null or empty
+- `expressionResult: false` in run history even when SharePoint detected the change
 
 **Root Causes:**
-1. **Wrong field internal names** in conditions
-2. **Get Item Changes action failing** silently
-3. **Trigger Window Start Token missing** or corrupted
+1. **ColumnHasChanged vs HasColumnChanged bug** — Dynamic Content uses `HasColumnChanged` but API returns `ColumnHasChanged`
+2. **Boolean vs String comparison bug** — Comparing boolean `true` to string `"true"` fails silently; condition returns false even when data is correct
+3. **Multiple rows combined with AND** — Condition has both an Expression row AND a Dynamic Content row; since Dynamic Content fails, the whole AND fails
+4. **Wrong field internal names** in conditions (e.g., `EstimatedTime` vs `EstHours`)
+5. **Wrong action name in expression** — e.g., `Get_Item_Changes` vs actual name like `Get_changes_for_an_item_or_a_file_(properties_only)`
+6. **Right side not using Expression** — Typing `true` as plain text creates a string, not a boolean
+7. **Get Item Changes action failing** silently
+8. **Trigger Window Start Token missing** or corrupted
 
 **Debugging Steps:**
-1. Add debug logging (see Step 3a) to check `outputs('Get_Item_Changes')?['body/ColumnHasChanged/FieldName']`
-2. Verify field internal names in SharePoint List Settings → Columns
-3. Check that Trigger Window Start Token is bound correctly in Get Item Changes
+1. **Check the Get Item Changes output** in run history — look for `"ColumnHasChanged": { "YourField": true }`
+2. If field shows `true` in output but condition evaluates to `false`:
+   - **Most likely:** Boolean vs string comparison issue — use `equals()` function
+   - Check for multiple rows in the condition
+   - Verify the right side uses Expression (not plain text)
+3. **Verify only ONE row** in the condition — delete any extra rows combined with AND
+4. **Verify action name matches** — click on "Get Item Changes" action to see its exact name, use underscores for spaces in expressions
+5. Verify field internal names in SharePoint List Settings → Columns (URL shows `Field=InternalName`)
+6. Check that Trigger Window Start Token is bound correctly in Get Item Changes
+
+**Most Common Fix — Use `equals()` Function:**
+
+The `equals()` function ensures proper boolean comparison and avoids type mismatch issues:
+
+```
+equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName'], true)
+```
+
+**Condition Setup:**
+1. **Left side:** Expression → `equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['FieldName'], true)`
+2. **Middle:** `is equal to`
+3. **Right side:** Expression → `true` (MUST use Expression tab, not plain text!)
+
+**Example for StudentConfirmed:**
+```
+equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['StudentConfirmed'], true)
+```
+
+**If action name is different**, replace `Get_Item_Changes` with your actual action name:
+```
+equals(outputs('Your_Actual_Action_Name')?['body']?['ColumnHasChanged']?['FieldName'], true)
+```
 
 #### Issue 4: Attachment Changes Not Logged
 
