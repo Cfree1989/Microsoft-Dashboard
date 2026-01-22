@@ -2233,15 +2233,20 @@ Filter(
 
 # Code Reference (Copy-Paste Snippets)
 
-## App.OnStart (Optional)
+## App.OnStart (Required)
 
-If you need global variables:
+Initialize the confirmation modal variable to prevent it from showing on new submissions:
 
 ```powerfx
-// Cache user info
+// Initialize modal visibility (required)
+Set(varShowConfirmModal, false);
+
+// Cache user info (optional)
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 ```
+
+> ⚠️ **IMPORTANT:** Without initializing `varShowConfirmModal` to `false`, the confirmation modal may incorrectly appear when students open a new form.
 
 ## SharePointForm1 — Height (Dynamic)
 
