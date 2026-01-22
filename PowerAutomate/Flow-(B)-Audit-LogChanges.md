@@ -704,8 +704,7 @@ Some display names differ from internal field names. Always use internal names i
    • Final cost may differ slightly based on actual material used
    • Bring your student ID for pickup
 
-   View My Requests:
-   https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+   <a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View My Requests</a>
 
    If you have any questions, feel free to contact us!
 
@@ -886,12 +885,14 @@ This is an automated message from the LSU Digital Fabrication Lab.
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View button (`</>`)** → Paste the plain text below (expressions will auto-resolve):
+   - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
+
+> **Note:** The hyperlink uses an HTML `<a href="...">` anchor tag. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expression inside the href attribute will resolve correctly.
 
 ```
 Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},
 
-Your 3D print estimate is ready! Before we start printing, please review and confirm the details below.
+Your 3D print estimate has been Approved! Before we start printing, please review and confirm the details below.
 
 ⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.
 
@@ -902,10 +903,8 @@ ESTIMATE DETAILS:
 - Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}
 
 TO CONFIRM THIS ESTIMATE:
-Click the button below to open your request and confirm:
 
-View and Confirm Your Request:
-https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/EditForm.aspx?ID=@{outputs('Get_Current_Pending_Data')?['body/ID']}
+<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/EditForm.aspx?ID=@{outputs('Get_Current_Pending_Data')?['body/ID']}">View and Confirm Your Request</a>
 
 When the form opens, you'll see a green confirmation panel at the top.
 Just click "I CONFIRM THIS ESTIMATE" and you're done!

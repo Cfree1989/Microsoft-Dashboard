@@ -484,7 +484,9 @@ Add these actions in order (moved out of the loop so they run once):
    - **Shared Mailbox:** `coad-fablab@lsu.edu`
    - **To:** **Dynamic content** → **StudentEmail** (from Update item)
    - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
-   - **Body:** Type plain text, inserting expressions where indicated:
+   - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
+
+> **Note:** The hyperlinks use HTML `<a href="...">` anchor tags. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expressions inside the href attributes will resolve correctly.
 
 ```
 We received your 3D Print request.
@@ -501,11 +503,9 @@ NEXT STEPS:
 • You'll receive updates as your request progresses through our queue
 • Estimated review time: 1-2 business days
 
-View your request details:
-https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=[Expression: ID]
+<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a>
 
-View all your requests:
-https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx
+<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a>
 
 ---
 This is an automated message from the Digital Fabrication Lab.
