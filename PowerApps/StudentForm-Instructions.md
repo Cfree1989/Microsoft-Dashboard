@@ -240,8 +240,12 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
         Printer_DataCard1            ← Cascading dropdown
         Color_DataCard1
         
-        // === ATTACHMENTS (Step 7) ===
-        Attachments_DataCard1        ← Contains lblFileWarning
+        // === ATTACHMENTS & SUBMIT (Step 7) ===
+        ▼ Attachments_DataCard1      ← Contains lblFileWarning + btnSubmit
+            btnSubmit                ← "SUBMIT REQUEST" button
+            DataCardValue            ← Attachment upload control
+            DataCardKey              ← "Attachments" label
+            lblFileWarning           ← File naming warning (yellow box)
         
         // === HIDDEN (Step 8) ===
         Status_DataCard1             ← Visible: false
@@ -1132,6 +1136,81 @@ The attachment control uses SharePoint's built-in attachment handling—no speci
 - `.idea` — PrusaSlicer project file
 - `.form` — Formlabs project file
 
+## 7F. Add Submit Button
+
+Students need a clear, prominent submit button at the bottom of the form instead of hunting for SharePoint's default Save button at the top left.
+
+### Instructions
+
+> 💡 **Tip:** If the confirmation modal (`conConfirmModal`) is blocking the form in the editor, temporarily hide it:
+> 1. Click on `conConfirmModal` in the Tree view
+> 2. Set its **Visible** property to `false`
+> 3. Complete the steps below to add the submit button
+> 4. When done, restore **Visible** to `varShowConfirmModal`
+
+1. With `Attachments_DataCard1` selected, click **+ Insert** → **Button**
+
+> ⚠️ **CRITICAL:** Make sure `Attachments_DataCard1` is selected BEFORE inserting. The button must appear as a child of the datacard in the Tree view.
+
+2. In the Tree view, confirm the new button appears **inside** `Attachments_DataCard1` (indented under it)
+3. **Rename it:** `btnSubmit`
+4. **Position it** below the attachment upload control:
+
+| Property | Value |
+|----------|-------|
+| X | `35` |
+| Y | `420` |
+| Width | `Parent.Width - 70` |
+| Height | `50` |
+
+> 💡 **Note:** The Y value positions the button below the attachment control (which is at Y=300, Height=100). Adjust if your layout differs.
+
+### Style the Submit Button
+
+With `btnSubmit` selected, set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"SUBMIT REQUEST"` |
+| Fill | `RGBA(70, 29, 124, 1)` |
+| Color | `Color.White` |
+| HoverFill | `RGBA(90, 49, 144, 1)` |
+| PressedFill | `RGBA(50, 19, 104, 1)` |
+| DisabledFill | `RGBA(166, 166, 166, 1)` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `14` |
+| BorderRadius | `8` |
+
+> This creates a prominent purple button that matches the form header branding.
+
+### Set the OnSelect Action
+
+Set the **OnSelect** property:
+
+**⬇️ FORMULA: Paste into OnSelect**
+
+```powerfx
+SubmitForm(SharePointForm1)
+```
+
+This submits the form to SharePoint and closes the form panel automatically.
+
+### Update DataCard Height
+
+The Attachments_DataCard1 needs to be tall enough to contain all its controls plus padding below the button. Set the DataCard's **Height** property:
+
+1. Click on `Attachments_DataCard1` itself (the card, not a control inside)
+2. Set **Height** to:
+
+```powerfx
+540
+```
+
+This provides comfortable padding below the submit button (button ends at Y=470, leaving 70px of space).
+
+> 💡 **Tip:** If the button appears cut off, increase this value. The form will scroll to show all content.
+
 ### Verification
 
 After completing this step:
@@ -1139,6 +1218,9 @@ After completing this step:
 - [ ] `lblFileWarning` appears **inside** the datacard (indented in Tree view)
 - [ ] Yellow warning box displays file naming instructions and accepted formats
 - [ ] Attachment control appears **below** the warning label
+- [ ] `btnSubmit` appears at the bottom of the datacard
+- [ ] Submit button is purple with white text
+- [ ] Clicking Submit saves the form and closes it
 - [ ] Everything scrolls together with the form (not floating)
 
 ---
@@ -1867,7 +1949,7 @@ After completing this step:
 | DueDate | Tomorrow's date |
 
 2. Attach a test file (any .stl file)
-3. Click **Submit** (or **Save**)
+3. Click the purple **SUBMIT REQUEST** button at the bottom of the form
 
 ### Expected Results
 
@@ -2266,6 +2348,14 @@ RequestHide()
 ```powerfx
 Set(varShowConfirmModal, false)
 ```
+
+## btnSubmit — OnSelect (Submit Button)
+
+```powerfx
+SubmitForm(SharePointForm1)
+```
+
+> This submits the form to SharePoint and automatically closes the form panel.
 
 ## Printer_DataCard ComboBox — Items (Cascading)
 
