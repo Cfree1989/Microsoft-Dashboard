@@ -197,11 +197,25 @@ We use **prefixes** to identify control types at a glance:
 
 Here's the **complete Tree view** exactly as it should appear after all steps are complete:
 
-> ⚠️ **Note:** Your DataCard numbers may differ. The important thing is the structure and visibility settings.
+> ⚠️ **Note:** Your DataCard numbers may differ. The important thing is the structure and visibility settings. Your screen may be named `FormScreen1` instead of `scrFormScreen`.
 
 ```
 ▼ App
-▼ scrFormScreen                      ← Main screen
+▼ FormScreen1                        ← Main screen 
+    
+    // === CONFIRMATION MODAL (Step 8C) ===
+    ▼ conConfirmModal                ← Modal container (Visible: varShowConfirmModal)
+        btnConfirmEstimate           ← "I CONFIRM THIS ESTIMATE" button
+        btnConfirmCancel             ← "Cancel" button
+        lblConfirmHelp               ← Help text
+        lblConfirmDetails            ← Method & Color
+        lblConfirmTime               ← Print time
+        lblConfirmCost               ← Estimated cost
+        lblConfirmStudent            ← Student name and request ID
+        lblConfirmTitle              ← "CONFIRM YOUR PRINT ESTIMATE"
+        recConfirmModal              ← White modal box (centered)
+        recConfirmOverlay            ← Dark semi-transparent overlay
+    
     ▼ SharePointForm1                ← Main form control
         
         // === HEADER INSIDE DATACARD (Step 3) ===
@@ -231,9 +245,6 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
         
         // === HIDDEN (Step 8) ===
         Status_DataCard1             ← Visible: false
-        
-        // === CONFIRMATION PANEL (Step 8) ===
-        StudentConfirmed_DataCard1   ← Visible only when Status = "Pending"
 ```
 
 ### Fields NOT in Form (Staff-Only)
@@ -353,7 +364,8 @@ For each field in this list, do the following:
 > ⚠️ **DO NOT REMOVE these fields:**
 > - **Status** — Required by SharePoint (we'll hide it in Step 8)
 > - **TigerCardNumber** — Students need to enter this
-> - **StudentConfirmed** — Used for confirmation panel (shown when Status = "Pending")
+>
+> **Note:** StudentConfirmed field can be removed from the form — the confirmation modal (Step 8C) uses direct `Patch()` and doesn't need the DataCard.
 
 ## 2B. Add Missing Fields
 
@@ -380,7 +392,6 @@ If any student-facing fields are missing, add them now.
 | Notes | ✅ Yes |
 | Attachments | ✅ Yes |
 | Status | ✅ Yes (will hide) |
-| StudentConfirmed | ✅ Yes (confirmation panel) |
 
 3. Click **Add** to add any missing fields
 
@@ -405,8 +416,9 @@ Drag fields in the Edit fields panel to arrange them in logical order:
 12. Notes
 13. Attachments
 14. Status (will hide)
-15. StudentConfirmed (confirmation panel)
 ```
+
+> **Note:** StudentConfirmed is not needed as a DataCard — the confirmation modal (Step 8C) handles this at the screen level.
 
 > 💡 **Tip:** Click and drag a field to move it up or down in the list.
 
@@ -1204,106 +1216,179 @@ If ReqKey doesn't need to appear even for edits:
 2. Click **Edit fields** in Properties
 3. Find **ReqKey** → click **...** → **Remove**
 
-## 8C. Build the Estimate Confirmation Panel
+## 8C. Build the Estimate Confirmation Modal
 
-**Goal:** Replace the raw StudentConfirmed checkbox with a proper confirmation UI that shows estimate details and a clear "Confirm" button. This panel only appears when staff have reviewed the request and set Status to "Pending".
+**Goal:** Create a prominent modal overlay that appears when students open their request to confirm an estimate. The modal displays estimate details and requires explicit confirmation before printing begins.
 
-**Time:** 25 minutes
+**Time:** 30 minutes
 
-> 💡 **What students will see:** When they click the link in their estimate email and edit their request, they'll see a prominent panel showing the cost, print time, and a big confirmation button—not a buried checkbox.
+> 💡 **What students will see:** When they click the link in their estimate email, a dark overlay appears with a centered modal showing the cost, print time, and a big confirmation button—impossible to miss!
 
-### Step 1: Unlock and Configure the DataCard
+> 🎯 **Why a Modal?** Unlike an inline panel that can be scrolled past, a modal overlay demands attention and ensures students see and acknowledge the estimate before proceeding.
 
-1. Click on `StudentConfirmed_DataCard1` in the Tree view
-2. In the **Properties** panel, click **Advanced**
-3. Click **Unlock to change properties**
-4. Set the **Visible** property to:
+### Target Tree Structure
 
-**⬇️ FORMULA: Paste into Visible**
+After completing this section, your Tree view should look like:
 
-```powerfx
-SharePointForm1.Mode <> FormMode.New && ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
+```
+▼ FormScreen1                        ← Main screen
+    ▼ conConfirmModal                ← Modal container (shows when needed)
+        btnConfirmEstimate           ← "I CONFIRM THIS ESTIMATE" button
+        btnConfirmCancel             ← "Cancel" button
+        lblConfirmHelp               ← Help text
+        lblConfirmDetails            ← Method & Color
+        lblConfirmTime               ← Print time
+        lblConfirmCost               ← Estimated cost
+        lblConfirmStudent            ← Student name and request ID
+        lblConfirmTitle              ← "CONFIRM YOUR PRINT ESTIMATE"
+        recConfirmModal              ← White modal box (centered)
+        recConfirmOverlay            ← Dark semi-transparent overlay
+    ▼ SharePointForm1                ← Form control
+        ...DataCards...
 ```
 
-This shows the confirmation panel ONLY when:
-- The form is in Edit mode (not a new submission)
-- The request Status is "Pending" (staff have added estimates)
-- The student has NOT already confirmed (prevents showing the panel again if they reopen the form)
+---
 
-5. Set the **Height** property to:
+### Step 1: Remove StudentConfirmed DataCard (if present)
 
-```powerfx
-280
-```
+If you previously built an inline confirmation panel, remove it:
 
-### Step 2: Hide the Default Checkbox Controls
+1. In Tree View, find `StudentConfirmed_DataCard1` under `SharePointForm1`
+2. Click on it and press **Delete** (or right-click → Delete)
+3. Confirm deletion
 
-We'll hide the default controls and build our own UI.
+> **Why this is safe:** The modal uses `Patch()` to directly update SharePoint, so we don't need the DataCard's form binding.
 
-1. Expand `StudentConfirmed_DataCard1` in the Tree view
-2. Find `DataCardKey` (the label) → Set **Visible** to `false`
-3. Find `DataCardValue` (the checkbox) → Set **Visible** to `false`
+---
 
-> ⚠️ **Don't delete them!** We need DataCardValue to exist for the form submission to work. We're just hiding it.
+### Step 2: Add Modal Container to Screen
 
-### Step 3: Add the Confirmation Background
-
-1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Rectangle**
-2. Rename it: `recConfirmPanel`
-3. Set these properties:
+1. In Tree View, click on **FormScreen1** (the screen, not the form)
+2. Click **+ Insert** → **Layout** → **Container**
+3. Rename it: `conConfirmModal`
+4. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `10` |
-| Y | `10` |
-| Width | `Parent.Width - 20` |
-| Height | `260` |
-| Fill | `RGBA(232, 245, 233, 1)` |
-| HoverFill | `RGBA(232, 245, 233, 1)` |
-| PressedFill | `RGBA(232, 245, 233, 1)` |
-| DisabledFill | `RGBA(232, 245, 233, 1)` |
-| BorderColor | `RGBA(76, 175, 80, 1)` |
-| BorderStyle | `BorderStyle.None` |
-| BorderThickness | `2` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowConfirmModal` |
 
-> ⚠️ **Important:** Set all four fill properties (Fill, HoverFill, PressedFill, DisabledFill) to the same color to prevent the rectangle from turning blue on mouse interaction.
+5. In Tree View, drag `conConfirmModal` so it appears **above** `SharePointForm1` (so it renders on top)
 
-### Step 4: Add the Title Label
+---
 
-1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Text label**
-2. Rename it: `lblConfirmTitle`
-3. Set these properties:
+### Step 3: Add Dark Overlay
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Rectangle**
+2. Rename it: `recConfirmOverlay`
+3. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `20` |
-| Y | `20` |
-| Width | `Parent.Width - 40` |
-| Height | `35` |
-| Text | `"CONFIRM YOUR PRINT ESTIMATE"` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Bold` |
-| Size | `16` |
-| Color | `RGBA(46, 125, 50, 1)` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+| HoverFill | `RGBA(0, 0, 0, 0.7)` |
+| PressedFill | `RGBA(0, 0, 0, 0.7)` |
+| DisabledFill | `RGBA(0, 0, 0, 0.7)` |
 
-### Step 5: Add the Estimate Details Labels
+> ⚠️ **Important:** Set all four fill properties to the same value to prevent the rectangle from turning blue on hover.
 
-Add labels to display the estimate information. Students need to see what they're confirming!
+---
 
-#### 5A. Cost Label
+### Step 4: Add Modal Box
 
-1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
-2. Rename it: `lblConfirmCost`
+1. With `conConfirmModal` selected, click **+ Insert** → **Rectangle**
+2. Rename it: `recConfirmModal`
 3. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `20` |
-| Y | `60` |
+| Y | `(Parent.Height - 400) / 2` |
 | Width | `Parent.Width - 40` |
-| Height | `30` |
-| Size | `13` |
+| Height | `400` |
+| Fill | `Color.White` |
+| HoverFill | `Color.White` |
+| PressedFill | `Color.White` |
+| DisabledFill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+> **Note:** Using `Parent.Width - 40` makes the modal responsive to the form width, with 20px padding on each side. Set all fill properties to prevent blue hover effect.
+
+---
+
+### Step 5: Add Modal Title
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
+2. Rename it: `lblConfirmTitle`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"CONFIRM YOUR PRINT ESTIMATE"` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 20` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `35` |
 | Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `16` |
+| Color | `RGBA(46, 125, 50, 1)` |
+
+---
+
+### Step 6: Add Student/Request Info Label
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
+2. Rename it: `lblConfirmStudent`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 55` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `25` |
+| Size | `12` |
+| Color | `RGBA(100, 100, 100, 1)` |
+
+4. Set the **Text** property:
+
+**⬇️ FORMULA: Paste into Text**
+
+```powerfx
+LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).ReqKey & " - " & LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Student.DisplayName
+```
+
+> ⚠️ **SharePoint Form Limitation:** `SharePointForm1.Item` isn't accessible from screen-level controls. Use `LookUp()` with `SharePointIntegration.SelectedListItemID` instead.
+
+---
+
+### Step 7: Add Estimate Details Labels
+
+#### 7A. Cost Label
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
+2. Rename it: `lblConfirmCost`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 100` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `30` |
+| Size | `14` |
 | FontWeight | `FontWeight.Semibold` |
 
 4. Set the **Text** property:
@@ -1311,77 +1396,77 @@ Add labels to display the estimate information. Students need to see what they'r
 **⬇️ FORMULA: Paste into Text**
 
 ```powerfx
-"Estimated Cost: " & If(IsBlank(ThisItem.EstimatedCost), "Not yet calculated", Text(ThisItem.EstimatedCost, "$#,##0.00"))
+"Estimated Cost: " & If(IsBlank(LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).EstimatedCost), "Not calculated", Text(LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).EstimatedCost, "$#,##0.00"))
 ```
 
-#### 5B. Time Label
+#### 7B. Time Label
 
-1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
 2. Rename it: `lblConfirmTime`
 3. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `20` |
-| Y | `90` |
-| Width | `Parent.Width - 40` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 135` |
+| Width | `recConfirmModal.Width - 40` |
 | Height | `30` |
-| Size | `13` |
-| Font | `Font.'Segoe UI'` |
+| Size | `14` |
 
 4. Set the **Text** property:
 
 **⬇️ FORMULA: Paste into Text**
 
 ```powerfx
-"Print Time: " & If(IsBlank(ThisItem.EstimatedTime), "Not yet estimated", ThisItem.EstimatedTime & " hours")
+"Print Time: " & If(IsBlank(LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).EstimatedTime), "Not estimated", LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).EstimatedTime & " hours")
 ```
 
-#### 5C. Method & Color Label
+#### 7C. Method & Color Label
 
-1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
 2. Rename it: `lblConfirmDetails`
 3. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `20` |
-| Y | `120` |
-| Width | `Parent.Width - 40` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 170` |
+| Width | `recConfirmModal.Width - 40` |
 | Height | `30` |
-| Size | `13` |
-| Font | `Font.'Segoe UI'` |
+| Size | `14` |
 
 4. Set the **Text** property:
 
 **⬇️ FORMULA: Paste into Text**
 
 ```powerfx
-"Method: " & ThisItem.Method.Value & "  •  Color: " & ThisItem.Color.Value
+"Method: " & LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Method.Value & "  •  Color: " & LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Color.Value
 ```
 
-### Step 6: Add the Confirmation Button
+---
 
-This is the main action—a big button that confirms the estimate.
+### Step 8: Add Confirm Button
 
-1. With `StudentConfirmed_DataCard1` selected, click **+ Insert** → **Button**
+This is the main action—a prominent button that confirms the estimate.
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Button**
 2. Rename it: `btnConfirmEstimate`
-3. Set these properties:
+3. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `20` |
-| Y | `165` |
-| Width | `Parent.Width - 40` |
-| Height | `50` |
 | Text | `"I CONFIRM THIS ESTIMATE"` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Bold` |
-| Size | `14` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 230` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `50` |
 | Fill | `RGBA(46, 125, 50, 1)` |
 | Color | `Color.White` |
 | HoverFill | `RGBA(56, 142, 60, 1)` |
 | PressedFill | `RGBA(27, 94, 32, 1)` |
+| Font | `Font.'Segoe UI'` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `14` |
 | BorderRadius | `8` |
 
 4. Set the **OnSelect** property:
@@ -1394,77 +1479,144 @@ Patch(
     LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID),
     {StudentConfirmed: true}
 );
+Set(varShowConfirmModal, false);
 Notify("Thank you! Your estimate is confirmed. Your print is now in the queue.", NotificationType.Success);
 RequestHide()
 ```
 
-> This directly updates the StudentConfirmed field and closes the form. We use `SharePointIntegration.SelectedListItemID` because `SharePointForm1.Item` isn't available in SharePoint customized forms. Flow B will detect this change and automatically update the Status to "Ready to Print".
+> This directly updates the StudentConfirmed field, hides the modal, shows a success message, and closes the form. Flow B will detect this change and automatically update the Status to "Ready to Print".
 
-### Step 7: Add Help Text
+---
 
-1. Insert a **Text label** inside `StudentConfirmed_DataCard1`
+### Step 9: Add Cancel Button
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Button**
+2. Rename it: `btnConfirmCancel`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 290` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `40` |
+| Fill | `RGBA(150, 150, 150, 1)` |
+| Color | `Color.White` |
+| HoverFill | `RGBA(120, 120, 120, 1)` |
+| PressedFill | `RGBA(100, 100, 100, 1)` |
+| Font | `Font.'Segoe UI'` |
+| BorderRadius | `8` |
+
+4. Set the **OnSelect** property:
+
+**⬇️ FORMULA: Paste into OnSelect**
+
+```powerfx
+Set(varShowConfirmModal, false)
+```
+
+---
+
+### Step 10: Add Help Text
+
+1. With `conConfirmModal` selected, click **+ Insert** → **Text label**
 2. Rename it: `lblConfirmHelp`
 3. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `20` |
-| Y | `225` |
-| Width | `Parent.Width - 40` |
-| Height | `35` |
 | Text | `"Questions? Contact coad-fablab@lsu.edu before confirming."` |
+| X | `recConfirmModal.X + 20` |
+| Y | `recConfirmModal.Y + 350` |
+| Width | `recConfirmModal.Width - 40` |
+| Height | `35` |
 | Size | `10` |
 | Font | `Font.'Segoe UI'` |
 | Color | `RGBA(100, 100, 100, 1)` |
 | Align | `Align.Center` |
 
-### Step 8: Arrange Z-Order
+---
 
-Make sure the labels and button appear in front of the background rectangle.
+### Step 11: Add Auto-Show Logic
 
-1. In the Tree view, look at the children of `StudentConfirmed_DataCard1`
-2. Drag controls so the order is (top to bottom):
+The modal should automatically appear when the form opens in Edit mode with Status = "Pending".
+
+1. Click on **FormScreen1** in Tree View
+2. Set the **OnVisible** property:
+
+**⬇️ FORMULA: Paste into OnVisible**
+
+```powerfx
+Set(
+    varShowConfirmModal,
+    SharePointForm1.Mode <> FormMode.New && 
+    LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Status.Value = "Pending" && 
+    !LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).StudentConfirmed
+)
+```
+
+This shows the modal ONLY when:
+- The form is in Edit mode (not a new submission)
+- The request Status is "Pending" (staff have added estimates)
+- The student has NOT already confirmed
+
+> ⚠️ **Note:** We use `LookUp()` instead of `SharePointForm1.Item` because screen-level controls can't access form item properties directly.
+
+---
+
+### Step 12: Arrange Z-Order
+
+In Tree View, ensure controls inside `conConfirmModal` are ordered (top to bottom). Drag to reorder if needed:
 
 ```
-▼ StudentConfirmed_DataCard1
-    lblConfirmTitle      ← IN FRONT
-    lblConfirmCost
-    lblConfirmTime
-    lblConfirmDetails
-    btnConfirmEstimate
+▼ conConfirmModal
+    btnConfirmEstimate    ← IN FRONT (buttons on top)
+    btnConfirmCancel
     lblConfirmHelp
-    recConfirmPanel      ← BEHIND (bottom of list)
-    DataCardKey          ← Hidden
-    DataCardValue        ← Hidden
-    StarVisible
-    ErrorMessage
+    lblConfirmDetails
+    lblConfirmTime
+    lblConfirmCost
+    lblConfirmStudent
+    lblConfirmTitle
+    recConfirmModal       ← Modal box (white background)
+    recConfirmOverlay     ← BEHIND (dark overlay at bottom)
 ```
+
+Also ensure `conConfirmModal` is **ABOVE** `SharePointForm1` in the Tree View so it renders on top of the form.
+
+---
 
 ### Understanding the Confirmation Flow
 
 | Step | What Happens |
 |------|--------------|
 | 1 | Staff review request, add estimates, set Status = "Pending" |
-| 2 | Flow B sends estimate email with link to "My Requests" |
+| 2 | Flow B sends estimate email with direct link to the request |
 | 3 | Student clicks link, opens their request in Edit mode |
-| 4 | Confirmation panel appears (because Status = Pending) |
-| 5 | Student sees cost, time, details prominently displayed |
+| 4 | `FormScreen1.OnVisible` runs, sets `varShowConfirmModal = true` |
+| 5 | Modal appears with dark overlay, showing cost/time/details |
 | 6 | Student clicks "I CONFIRM THIS ESTIMATE" |
-| 7 | Patch updates StudentConfirmed = true |
+| 7 | Patch updates StudentConfirmed = true, modal hides |
 | 8 | Flow B detects change → Status becomes "Ready to Print" |
-| 9 | Form closes, student sees success message |
+| 9 | Form closes, student sees success notification |
+
+---
 
 ### Verification
 
 After completing this step:
-- [ ] Status field is hidden but defaults to "Uploaded"
-- [ ] ReqKey field is hidden or removed
-- [ ] Confirmation panel is hidden for new submissions
-- [ ] Confirmation panel is hidden when Status ≠ "Pending"
-- [ ] Confirmation panel appears when editing a "Pending" request
-- [ ] Panel displays estimated cost, time, method, and color
-- [ ] "I CONFIRM" button is prominent and clickable
-- [ ] Clicking button shows success notification and closes form
+- [ ] Modal appears immediately when opening a "Pending" request
+- [ ] Dark overlay covers the entire form
+- [ ] White modal box is centered on screen
+- [ ] Estimate details (cost, time, method, color) are clearly displayed
+- [ ] "I CONFIRM THIS ESTIMATE" button is prominent
+- [ ] Clicking Confirm updates StudentConfirmed and closes form
+- [ ] Clicking Cancel dismisses the modal (can still view/edit the form)
+- [ ] Modal does NOT appear for new submissions
+- [ ] Modal does NOT appear if already confirmed
+
+---
 
 ### Flow B Dependency
 
@@ -1474,7 +1626,7 @@ After completing this step:
 > /Lists/PrintRequests/EditForm.aspx?ID={ItemID}
 > ```
 > 
-> This ensures students land directly on their specific request (with the confirmation panel visible), rather than having to hunt through a list view.
+> This ensures students land directly on their specific request (with the confirmation modal visible), rather than having to hunt through a list view.
 > 
 > See `Flow-(B)-Audit-LogChanges.md` Step 7b for the email template configuration.
 
@@ -2075,15 +2227,26 @@ If(
 false
 ```
 
-## StudentConfirmed_DataCard — Visible (Confirmation Panel)
+## FormScreen1 — OnVisible (Modal Auto-Show)
 
 ```powerfx
-SharePointForm1.Mode <> FormMode.New && ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
+Set(
+    varShowConfirmModal,
+    SharePointForm1.Mode <> FormMode.New && 
+    LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Status.Value = "Pending" && 
+    !LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).StudentConfirmed
+)
 ```
 
-> This includes `!ThisItem.StudentConfirmed` to hide the panel if the student has already confirmed—prevents confusion if they reopen the form while it's still technically "Pending".
+> This shows the confirmation modal when the form opens in Edit mode for a "Pending" request that hasn't been confirmed yet. Uses `LookUp()` because `SharePointForm1.Item` isn't accessible from screen-level controls.
 
-## btnConfirmEstimate — OnSelect
+## conConfirmModal — Visible
+
+```powerfx
+varShowConfirmModal
+```
+
+## btnConfirmEstimate — OnSelect (Modal)
 
 ```powerfx
 Patch(
@@ -2091,11 +2254,18 @@ Patch(
     LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID),
     {StudentConfirmed: true}
 );
+Set(varShowConfirmModal, false);
 Notify("Thank you! Your estimate is confirmed. Your print is now in the queue.", NotificationType.Success);
 RequestHide()
 ```
 
 > ⚠️ **Note:** Use `SharePointIntegration.SelectedListItemID` (not `SharePointForm1.Item.ID`) in SharePoint customized forms.
+
+## btnConfirmCancel — OnSelect (Modal)
+
+```powerfx
+Set(varShowConfirmModal, false)
+```
 
 ## Printer_DataCard ComboBox — Items (Cascading)
 
