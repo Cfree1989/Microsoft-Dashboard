@@ -486,7 +486,7 @@ Add these actions in order (moved out of the loop so they run once):
    - **Subject:** **Expression** → `concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))`
    - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
 
-> **Note:** The hyperlinks use HTML `<a href="...">` anchor tags. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expressions inside the href attributes will resolve correctly.
+> **Note:** The hyperlink uses an HTML `<a href="...">` anchor tag. When using Code View, HTML tags render correctly in the email.
 
 ```
 We received your 3D Print request.
@@ -503,8 +503,6 @@ NEXT STEPS:
 • You'll receive updates as your request progresses through our queue
 • Estimated review time: 1-2 business days
 
-<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}">View your request details</a>
-
 <a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a>
 
 ---
@@ -519,7 +517,6 @@ This is an automated message from the Digital Fabrication Lab.
 | Method | `triggerOutputs()?['body/Method']?['Value']` |
 | Printer | `triggerOutputs()?['body/Printer']?['Value']` |
 | Color | `triggerOutputs()?['body/Color']?['Value']` |
-| ID | `triggerOutputs()?['body/ID']` |
 
 **How to build:**
 1. Type plain text in Body field
