@@ -1582,17 +1582,17 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    "Printing",
-    varMeEmail
+    Text(ThisItem.ID),      // RequestID
+    "Status Change",        // Action
+    "Status",               // FieldName
+    "Printing",             // NewValue
+    varMeEmail              // ActorEmail
 );
 
 Notify("Print started!", NotificationType.Success)
 ```
 
-> 💡 **Flow C Parameters:** Only pass the 5 required parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The optional parameters (OldValue, ClientApp, Notes) are not passed.
+> 💡 **Flow C Parameters:** Pass 5 parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The flow auto-populates ClientApp ("Power Apps") and Notes.
 
 ### Complete Printing Button (btnComplete)
 
@@ -1629,11 +1629,11 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    "Completed",
-    varMeEmail
+    Text(ThisItem.ID),      // RequestID
+    "Status Change",        // Action
+    "Status",               // FieldName
+    "Completed",            // NewValue
+    varMeEmail              // ActorEmail
 );
 
 Notify("Marked as completed!", NotificationType.Success)
@@ -2058,11 +2058,11 @@ Patch(PrintRequests, varSelectedItem, {
 // Log to AuditLog via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),
-        "Rejected",
-        "Status",
-        "Rejected",
-        ddRejectStaff.Selected.MemberEmail
+        Text(varSelectedItem.ID),              // RequestID
+        "Rejected",                            // Action
+        "Status",                              // FieldName
+        "Rejected",                            // NewValue
+        ddRejectStaff.Selected.MemberEmail     // ActorEmail
     ),
     Notify("Could not log rejection.", NotificationType.Error),
     Notify("Request rejected. Student will be notified.", NotificationType.Success)
@@ -2559,11 +2559,11 @@ IfError(
     // SUCCESS: Continue with Flow logging
     IfError(
         'Flow-(C)-Action-LogAction'.Run(
-            Text(varSelectedItem.ID),
-            "Approved",
-            "Status",
-            "Pending",
-            ddApprovalStaff.Selected.MemberEmail
+            Text(varSelectedItem.ID),              // RequestID
+            "Approved",                            // Action
+            "Status",                              // FieldName
+            "Pending",                             // NewValue
+            ddApprovalStaff.Selected.MemberEmail   // ActorEmail
         ),
         Notify("Approved, but could not log to audit.", NotificationType.Warning),
         Notify("Approved! Student will receive estimate email.", NotificationType.Success)
@@ -2854,11 +2854,11 @@ Patch(PrintRequests, varSelectedItem, {
 // Log action via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),
-        "Archived",
-        "Status",
-        "Archived",
-        ddArchiveStaff.Selected.MemberEmail
+        Text(varSelectedItem.ID),              // RequestID
+        "Archived",                            // Action
+        "Status",                              // FieldName
+        "Archived",                            // NewValue
+        ddArchiveStaff.Selected.MemberEmail    // ActorEmail
     ),
     Notify("Could not log archive.", NotificationType.Error),
     Notify("Request archived successfully.", NotificationType.Success)
@@ -3453,11 +3453,11 @@ Patch(
 // Log to audit via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),
-        "Details Changed",
-        "Details",
-        varChangeDesc,
-        ddDetailsStaff.Selected.MemberEmail
+        Text(varSelectedItem.ID),              // RequestID
+        "Details Changed",                     // Action
+        "Details",                             // FieldName
+        varChangeDesc,                         // NewValue
+        ddDetailsStaff.Selected.MemberEmail    // ActorEmail
     ),
     Notify("Could not log changes.", NotificationType.Error),
     Notify("Print details updated successfully!", NotificationType.Success)
@@ -6116,6 +6116,8 @@ Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilament
 ```
 
 > ⚠️ **Replace flow name:** If your flow has a different name (like `PR-Action_LogAction` or `PR-Action: Log action`), use that name instead in all formulas.
+
+> 💡 **5 Parameters:** Pass RequestID, Action, FieldName, NewValue, ActorEmail. The flow auto-populates ClientApp ("Power Apps") and Notes.
 
 ---
 

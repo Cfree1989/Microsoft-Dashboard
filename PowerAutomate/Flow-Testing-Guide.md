@@ -1590,11 +1590,8 @@ Flow visible: [ ] Yes  [ ] No
 RequestID: "1"
 Action: "Approved"
 FieldName: "Status"
-OldValue: "Uploaded"
 NewValue: "Ready to Print"
 ActorEmail: "" (BLANK - required parameter missing)
-ClientApp: "Power Apps"
-Notes: "Test"
 ```
 2. Check response
 
@@ -1628,16 +1625,13 @@ Error message correct: [ ] Yes  [ ] No
 - [ ] Can call flow manually or from Power Apps
 
 **Test Steps:**
-1. Call flow with valid parameters:
+1. Call flow with valid parameters (5 parameters):
 ```
 RequestID: "1"
 Action: "Status Change"
 FieldName: "Status"
-OldValue: "Uploaded"
 NewValue: "Ready to Print"
 ActorEmail: "staffmember@lsu.edu"
-ClientApp: "Power Apps"
-Notes: "Approved via dashboard"
 ```
 2. Wait 10 seconds
 3. Check AuditLog list
@@ -1659,14 +1653,14 @@ Notes: "Approved via dashboard"
   - ReqKey: REQ-00001 (retrieved from PrintRequests)
   - Action: Status Change
   - FieldName: Status
-  - OldValue: Uploaded
+  - OldValue: (blank - not populated)
   - NewValue: Ready to Print
   - Actor Claims: staffmember@lsu.edu
   - ActorRole: Staff
-  - ClientApp: Power Apps
+  - ClientApp: Power Apps (hardcoded)
   - ActionAt: Present
   - FlowRunId: Present
-  - Notes: "Approved via dashboard"
+  - Notes: "Staff action via Power Apps: Status Change" (auto-generated)
 
 **Actual Result:**
 ```
@@ -1734,34 +1728,34 @@ Display name shown: [ ] Yes  [ ] No
 
 ---
 
-#### TEST C-006: Optional Parameters (Blank Notes)
+#### TEST C-006: Auto-Generated Fields
 
-**Objective:** Verify flow handles optional parameters correctly.
+**Objective:** Verify flow auto-generates ClientApp and Notes fields.
 
 **Prerequisites:**
 - [ ] Can call flow
 
 **Test Steps:**
-1. Call flow with **Notes parameter blank**:
+1. Call flow with 5 parameters:
 ```
 RequestID: "1"
 Action: "Priority Changed"
 FieldName: "Priority"
-OldValue: "Normal"
 NewValue: "High"
 ActorEmail: "staff@lsu.edu"
-ClientApp: "Power Apps"
-Notes: "" (BLANK - optional)
 ```
 2. Check audit entry
 
 **Expected Result:**
 - [ ] Flow succeeds
-- [ ] Notes field auto-generated: "Action performed by staff via Power Apps: Priority Changed"
+- [ ] ClientApp = "Power Apps" (hardcoded)
+- [ ] Notes auto-generated: "Staff action via Power Apps: Priority Changed"
+- [ ] OldValue = blank
 
 **Actual Result:**
 ```
 Flow succeeded: [ ] Yes  [ ] No
+ClientApp = "Power Apps": [ ] Yes  [ ] No
 Notes auto-generated: [ ] Yes  [ ] No
 Notes content: _______________
 ```
@@ -1784,14 +1778,11 @@ Notes content: _______________
 ```powerfx
 Set(varFlowResult,
     'PR-Action: Log action'.Run(
-        Text(1),
-        "Test Action",
-        "TestField",
-        "Old",
-        "New",
-        User().Email,
-        "Power Apps",
-        "Test from button"
+        Text(1),           // RequestID
+        "Test Action",     // Action
+        "TestField",       // FieldName
+        "New",             // NewValue
+        User().Email       // ActorEmail
     )
 );
 Notify("Success: " & varFlowResult.success & ", Audit ID: " & varFlowResult.auditId)
@@ -1882,13 +1873,16 @@ Text truncated: [ ] Yes  [ ] No
 **Test Steps:**
 1. Call flow with special characters:
 ```
+RequestID: "1"
 Action: "Comment Added: "Check this!""
-Notes: "Student said: Can't print—need help & advice"
+FieldName: "StaffNotes"
+NewValue: "Student said: Can't print—need help & advice"
+ActorEmail: "staff@lsu.edu"
 ```
 2. Check audit entry
 
 **Expected Result:**
-- [ ] Special characters preserved
+- [ ] Special characters preserved in Action and NewValue
 - [ ] No encoding errors
 - [ ] Quotes, ampersands, dashes display correctly
 
@@ -1943,14 +1937,11 @@ Unique auditIds: [ ] Yes  [ ] No
 Set(varFlowResult,
     IfError(
         'PR-Action: Log action'.Run(
-            Text(99999), // Invalid ID
-            "Test",
-            "Field",
-            "Old",
-            "New",
-            User().Email,
-            "Power Apps",
-            "Test"
+            Text(99999),    // Invalid ID
+            "Test",         // Action
+            "Field",        // FieldName
+            "New",          // NewValue
+            User().Email    // ActorEmail
         ),
         {success: false, message: FirstError.Message}
     )

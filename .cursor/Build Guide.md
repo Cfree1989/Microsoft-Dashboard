@@ -386,7 +386,7 @@ You will make three flows. Open **Power Automate** (flow.microsoft.com) and ensu
 
 **Quick Summary:**
 - **Type:** Instant cloud flow (called from Power Apps)
-- **Trigger:** Power Apps with 8 input parameters
+- **Trigger:** Power Apps with 5 input parameters (RequestID, Action, FieldName, NewValue, ActorEmail)
 - **Actions:** Validate inputs → Get SharePoint item → Create AuditLog entry → Return success response
 
 ---
@@ -518,14 +518,11 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'PR-Action_LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    ThisItem.Status,
-    "Pending",
-    varMeEmail,
-    "Power Apps",
-    "Approved - pending student confirmation of estimate"
+    Text(ThisItem.ID),      // RequestID
+    "Status Change",        // Action
+    "Status",               // FieldName
+    "Pending",              // NewValue
+    varMeEmail              // ActorEmail
 );
 
 Notify("Approved. Estimate email sent to student.", NotificationType.Success);
@@ -550,14 +547,11 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'PR-Action_LogAction'.Run(
-    Text(ThisItem.ID),
-    "Status Change",
-    "Status",
-    ThisItem.Status,
-    "Rejected",
-    varMeEmail,
-    "Power Apps",
-    "File validation failure - does not meet .stl/.obj/.3mf or 150MB requirements"
+    Text(ThisItem.ID),      // RequestID
+    "Rejected",             // Action
+    "Status",               // FieldName
+    "Rejected",             // NewValue
+    varMeEmail              // ActorEmail
 );
 
 Notify("Request rejected due to file policy violation. Student will be notified.", NotificationType.Warning);
@@ -658,14 +652,11 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    // Optional: explicit audit entry via Flow C
    IfError(
        'PR-Action_LogAction'.Run(
-           Text(frmAttachmentsEdit.LastSubmit.ID),
-           If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),
-           "Attachments",
-           "",
-           "",
-           varMeEmail,
-           "Power Apps",
-           Coalesce(varAttachmentChangedName, "")
+           Text(frmAttachmentsEdit.LastSubmit.ID),                                    // RequestID
+           If(varAttachmentChangeType = "Removed", "File Removed", "File Added"),    // Action
+           "Attachments",                                                             // FieldName
+           Coalesce(varAttachmentChangedName, "File changed"),                        // NewValue
+           varMeEmail                                                                 // ActorEmail
        ),
        Notify("Could not log attachment action.", NotificationType.Error)
    );

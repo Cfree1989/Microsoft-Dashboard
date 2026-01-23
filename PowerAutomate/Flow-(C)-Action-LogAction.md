@@ -29,11 +29,9 @@
 
 ### Step 2: Add Input Parameters
 
-**What this does:** Defines the 8 parameters that Power Apps will send to the flow when staff perform actions (approve, reject, update fields, etc.).
+**What this does:** Defines the 5 parameters that Power Apps will send to the flow when staff perform actions (approve, reject, update fields, etc.).
 
 **⚠️ Parameter Order Matters:** Power Automate assigns internal names (`text`, `text_1`, `text_2`, etc.) based on the order you add them. Add them in the exact order below to match the expressions in later steps.
-
-**⚠️ UI Note:** Power Automate's current interface uses "Make the field Optional" checkbox. When UNCHECKED (default), the field is REQUIRED. When CHECKED, the field is OPTIONAL.
 
 **UI steps:**
 1. In the **Power Apps** trigger card → Click **Add an input**
@@ -43,61 +41,33 @@
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `RequestID`
 - **Please enter description:** Type `The ID of the request being modified`
-- **Check the "Required" checkbox**
 - **Internal reference:** `triggerBody()['text']`
 
 #### Parameter 2: Action
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `Action`
 - **Please enter description:** Type `The action being performed (e.g., Status Change, Approved, Rejected)`
-- **Check the "Required" checkbox**
 - **Internal reference:** `triggerBody()['text_1']`
 
 #### Parameter 3: FieldName
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `FieldName`
 - **Please enter description:** Type `The field being changed (e.g., Status, Priority, StaffNotes)`
-- **Check the "Required" checkbox**
 - **Internal reference:** `triggerBody()['text_2']`
 
-#### Parameter 4: OldValue
-- **Click "Add an input"** → **Select "Text"**
-- **Input name:** Type `OldValue`
-- **Please enter description:** Type `Previous value of the field (optional)`
-- **Leave "Required" unchecked**
-- **Internal reference:** `triggerBody()['text_3']`
-
-#### Parameter 5: NewValue
+#### Parameter 4: NewValue
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `NewValue`
 - **Please enter description:** Type `New value of the field`
-- **Check the "Required" checkbox**
-- **Internal reference:** `triggerBody()['text_4']`
+- **Internal reference:** `triggerBody()['text_3']`
 
-#### Parameter 6: ActorEmail
+#### Parameter 5: ActorEmail
 - **Click "Add an input"** → **Select "Text"**
 - **Input name:** Type `ActorEmail`
 - **Please enter description:** Type `Email of the staff member performing the action`
-- **Check the "Required" checkbox**
-- **Internal reference:** `triggerBody()['text_5']`
+- **Internal reference:** `triggerBody()['text_4']`
 
-#### Parameter 7: ClientApp
-- **Click "Add an input"** → **Select "Text"**
-- **Input name:** Type `ClientApp`
-- **Please enter description:** Type `Source application (default: Power Apps)`
-- **CHECK "Make the field Optional"** (this makes it optional)
-- **Internal reference:** `triggerBody()['text_6']`
-
-#### Parameter 8: Notes
-- **Click "Add an input"** → **Select "Text"**
-- **Input name:** Type `Notes`
-- **Please enter description:** Type `Additional context or notes (optional)`
-- **Leave "Required" unchecked**
-- **Internal reference:** `triggerBody()['text_7']`
-
-**⚠️ Critical Note:** The `triggerBody()['text_X']` references shown above are used in the expressions in later steps. If you add parameters in a different order, you'll need to adjust the text indices in Steps 4 and 5.
-
-**Test Step 2:** Save → All 8 parameters should show in the Power Apps trigger card with correct Required/Optional status
+**Test Step 2:** Save → All 5 parameters should show in the Power Apps trigger card
 
 ---
 
@@ -139,7 +109,7 @@
 4. **Configure condition:**
    - **Left box:** Click **Expression** tab (fx) → Paste the expression below:
    ```
-   and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_4'])), not(empty(triggerBody()['text_5'])))
+   and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_3'])), not(empty(triggerBody()['text_4'])))
    ```
    - Click **Update**
    - **Middle dropdown:** Select **is equal to**
@@ -148,8 +118,8 @@
 **⚠️ What this expression checks:**
 - `triggerBody()['text']` = RequestID (required)
 - `triggerBody()['text_1']` = Action (required)
-- `triggerBody()['text_4']` = NewValue (required)
-- `triggerBody()['text_5']` = ActorEmail (required)
+- `triggerBody()['text_3']` = NewValue (required)
+- `triggerBody()['text_4']` = ActorEmail (required)
 
 **Alternative method (if Expression tab not working):**
 1. Before the Condition, add a **Compose** action
@@ -187,16 +157,14 @@
    - **ReqKey:** Click **Dynamic content** → Select **ReqKey** (from Get Request Item)
    - **Action Value:** Click **Dynamic content** → Select **Action** (from Power Apps trigger)
    - **FieldName:** Click **Dynamic content** → Select **FieldName** (from Power Apps trigger)
-   - **OldValue:** Click **Dynamic content** → Select **OldValue** (from Power Apps trigger)
+   - **OldValue:** Leave blank
    - **NewValue:** Click **Dynamic content** → Select **NewValue** (from Power Apps trigger)
    - **Actor Claims:** Click **Dynamic content** → Select **ActorEmail** (from Power Apps trigger)
    - **ActorRole Value:** Type `Staff`
-   - **ClientApp Value:** Click **Dynamic content** → Select **ClientApp** (from Power Apps trigger)
+   - **ClientApp Value:** Type `Power Apps`
    - **ActionAt:** Click **Expression** → Type `utcNow()`
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
-   - **Notes:** Click **Expression** → Type `if(empty(triggerBody()['text_7']), concat('Action performed by staff via Power Apps: ', triggerBody()['text_1']), triggerBody()['text_7'])`
-
-**⚠️ Notes Field Logic:** If Notes parameter is empty, auto-generates "Action performed by staff via Power Apps: [Action]". Otherwise uses the provided Notes.
+   - **Notes:** Click **Expression** → Type `concat('Staff action via Power Apps: ', triggerBody()['text_1'])`
 
 **Test Step 5:** Save → Call flow from Power Apps with valid data → Check AuditLog for entry with all fields populated
 
@@ -270,7 +238,8 @@
 - [ ] ActorEmail resolves to Person field in SharePoint
 - [ ] ReqKey correctly retrieved from PrintRequests
 - [ ] FlowRunId and ActionAt timestamps populated
-- [ ] Notes field handles both provided and auto-generated content
+- [ ] Notes field auto-generates from Action name
+- [ ] ClientApp shows "Power Apps"
 - [ ] Retry policies trigger on simulated SharePoint failures
 
 **🎉 SUCCESS:** You now have a working Flow C that Power Apps can call to log staff actions!
@@ -293,11 +262,13 @@
 **Verify Connection:**
 - In Power Apps formula bar, type the flow name with a period (e.g., `'Flow C (PR-Action)'.`)
 - You should see `.Run()` appear in IntelliSense
-- The `.Run()` function will show 8 parameters matching Step 2
+- The `.Run()` function will show 5 parameters: RequestID, Action, FieldName, NewValue, ActorEmail
 
 ---
 
 ## Power Apps Usage Examples
+
+> 💡 **Note:** This flow accepts 5 parameters. OldValue, ClientApp, and Notes are auto-populated by the flow.
 
 ### Example 1: Approve Button with Full Error Handling
 
@@ -305,21 +276,18 @@
 
 **Power Apps code (OnSelect property of Approve button):**
 
-**Note:** Replace `'Flow C (PR-Action)'` with your actual flow name in Power Apps (it might be `'PR-Action: Log action'` if you used the old naming).
+**Note:** Replace `'Flow C (PR-Action)'` with your actual flow name in Power Apps (it might be `'Flow-(C)-Action-LogAction'` or `'PR-Action: Log action'`).
 
 ```powerfx
 // Store flow result
 Set(varFlowResult,
     IfError(
         'Flow C (PR-Action)'.Run(
-            Text(ThisItem.ID),                           // RequestID
-            "Approved",                                  // Action
-            "Status",                                    // FieldName  
-            ThisItem.Status.Value,                       // OldValue
-            "Ready to Print",                            // NewValue
-            User().Email,                                // ActorEmail
-            "Power Apps",                                // ClientApp
-            "Approved via Staff Dashboard"               // Notes
+            Text(ThisItem.ID),      // RequestID
+            "Approved",             // Action
+            "Status",               // FieldName  
+            "Ready to Print",       // NewValue
+            User().Email            // ActorEmail
         ),
         {success: false, message: FirstError.Message}   // Error fallback if flow fails
     )
@@ -342,32 +310,22 @@ Refresh(PrintRequests);
 
 ---
 
-### Example 2: Reject Button with Multiple Rejection Reasons
+### Example 2: Reject Button
 
-**What this does:** Rejects a request with concatenated rejection reasons from checkboxes and custom text.
+**What this does:** Rejects a request and logs the action.
 
 **Power Apps code (OnSelect property of Reject button):**
 
 ```powerfx
-// Build rejection reasons string
-Set(varRejectionReasons, "");
-If(chkFileQuality.Value, Set(varRejectionReasons, varRejectionReasons & "File Quality Issues; "));
-If(chkTooLarge.Value, Set(varRejectionReasons, varRejectionReasons & "Too Large to Print; "));
-If(chkUnsupported.Value, Set(varRejectionReasons, varRejectionReasons & "Unsupported Material; "));
-If(!IsBlank(txtCustomReason.Text), Set(varRejectionReasons, varRejectionReasons & txtCustomReason.Text));
-
 // Call flow to log rejection
 Set(varFlowResult,
     IfError(
-        'PR-Action: Log action'.Run(
-            Text(ThisItem.ID),
-            "Rejected",
-            "Status", 
-            ThisItem.Status.Value,
-            "Rejected",
-            User().Email,
-            "Power Apps",
-            "Request rejected. Reasons: " & varRejectionReasons
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(ThisItem.ID),      // RequestID
+            "Rejected",             // Action
+            "Status",               // FieldName
+            "Rejected",             // NewValue
+            User().Email            // ActorEmail
         ),
         {success: false, message: FirstError.Message}
     )
@@ -375,9 +333,7 @@ Set(varFlowResult,
 
 // Handle response
 If(varFlowResult.success,
-    Notify("Rejection logged. Audit ID: " & varFlowResult.auditId, NotificationType.Success);
-    // Reset form
-    Reset(chkFileQuality); Reset(chkTooLarge); Reset(chkUnsupported); Reset(txtCustomReason);,
+    Notify("Rejection logged. Audit ID: " & varFlowResult.auditId, NotificationType.Success),
     Notify("Failed to log rejection: " & varFlowResult.message, NotificationType.Error)
 );
 
@@ -409,15 +365,12 @@ If(IsBlank(varValidationErrors),
     // Validation passed - call flow
     Set(varFlowResult,
         IfError(
-            'PR-Action: Log action'.Run(
-                Text(ThisItem.ID),
-                "Field Updated",
-                "StaffNotes",
-                ThisItem.StaffNotes,
-                txtStaffNotes.Text,
-                User().Email,
-                "Power Apps",
-                "Staff notes updated by " & User().FullName
+            'Flow-(C)-Action-LogAction'.Run(
+                Text(ThisItem.ID),          // RequestID
+                "Field Updated",            // Action
+                "StaffNotes",               // FieldName
+                txtStaffNotes.Text,         // NewValue
+                User().Email                // ActorEmail
             ),
             {success: false, message: FirstError.Message}
         )
@@ -440,7 +393,7 @@ If(IsBlank(varValidationErrors),
 
 ### Example 4: Update Estimates with Calculated Cost
 
-**What this does:** Updates cost estimate fields and logs the calculation method in Notes.
+**What this does:** Updates cost estimate fields and logs the action.
 
 **Power Apps code (OnSelect property of Save Estimates button):**
 
@@ -459,17 +412,12 @@ Set(varCalculatedCost,
 // Log the estimate update
 Set(varFlowResult,
     IfError(
-        'PR-Action: Log action'.Run(
-            Text(ThisItem.ID),
-            "Estimate Updated",
-            "EstimatedCost",
-            Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"),
-            Text(varCalculatedCost, "[$-en-US]#,##0.00"),
-            User().Email,
-            "Power Apps",
-            "Cost calculated: " & numEstimatedWeight.Text & "g × $" & 
-                Text(varMaterialRate, "[$-en-US]#,##0.00") & "/g = $" & 
-                Text(varCalculatedCost, "[$-en-US]#,##0.00")
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(ThisItem.ID),                              // RequestID
+            "Estimate Updated",                             // Action
+            "EstimatedCost",                                // FieldName
+            Text(varCalculatedCost, "[$-en-US]#,##0.00"),   // NewValue
+            User().Email                                    // ActorEmail
         ),
         {success: false, message: FirstError.Message}
     )
@@ -486,23 +434,36 @@ If(varFlowResult.success,
 
 ## Parameter Reference Table
 
-**Quick reference for the 8 parameters when calling the flow:**
+**Quick reference for the 5 parameters:**
 
-| Parameter # | Name | Type | Required | Example Value | Purpose |
-|-------------|------|------|----------|---------------|---------|
-| 1 | RequestID | Text | ✅ Yes | `Text(ThisItem.ID)` | ID of the PrintRequests item |
-| 2 | Action | Text | ✅ Yes | `"Approved"` | Type of action being performed |
-| 3 | FieldName | Text | ✅ Yes | `"Status"` | Which field is being changed |
-| 4 | OldValue | Text | ❌ No | `ThisItem.Status.Value` | Previous value (for audit trail) |
-| 5 | NewValue | Text | ✅ Yes | `"Ready to Print"` | New value being set |
-| 6 | ActorEmail | Text | ✅ Yes | `User().Email` | Email of staff performing action |
-| 7 | ClientApp | Text | ❌ No | `"Power Apps"` | Source application name |
-| 8 | Notes | Text | ❌ No | `"Approved by manager"` | Additional context |
+| Parameter # | Name | Internal | Example Value | Purpose |
+|-------------|------|----------|---------------|---------|
+| 1 | RequestID | `text` | `Text(ThisItem.ID)` | ID of the PrintRequests item |
+| 2 | Action | `text_1` | `"Approved"` | Type of action being performed |
+| 3 | FieldName | `text_2` | `"Status"` | Which field is being changed |
+| 4 | NewValue | `text_3` | `"Pending"` | New value being set |
+| 5 | ActorEmail | `text_4` | `User().Email` | Email of staff performing action |
+
+**Auto-populated fields in AuditLog (hardcoded in flow):**
+- **OldValue:** Left blank (consistent with other flows)
+- **ClientApp:** `"Power Apps"`
+- **Notes:** Auto-generated from Action name
 
 **⚠️ Common Mistakes:**
 - ❌ `ThisItem.ID` → ✅ `Text(ThisItem.ID)` (must convert to text)
 - ❌ `ThisItem.Status` → ✅ `ThisItem.Status.Value` (Choice fields need .Value)
 - ❌ Missing `User().Email` → ✅ Always provide ActorEmail for audit trail
+
+**Power Apps Call Pattern:**
+```powerfx
+'Flow-(C)-Action-LogAction'.Run(
+    Text(ThisItem.ID),      // RequestID
+    "Status Change",        // Action
+    "Status",               // FieldName
+    "NewStatus",            // NewValue
+    varMeEmail              // ActorEmail
+)
+```
 
 ---
 
@@ -512,7 +473,7 @@ If(varFlowResult.success,
 ✅ **Enhanced Error Handling** - Exponential retry policies on SharePoint actions  
 ✅ **Structured JSON Responses** - Success/failure status with audit entry ID  
 ✅ **Comprehensive Audit Fields** - All audit information captured  
-✅ **Flexible Notes** - Auto-generates notes if not provided  
+✅ **Auto-generated Notes** - Notes created from Action name  
 ✅ **Power Apps Integration** - Complete examples with error handling  
 ✅ **Actor Attribution** - Email automatically resolves to Person field  
 
@@ -541,13 +502,39 @@ If(varFlowResult.success,
 - AuditLog entry not created
 
 **Fix:**
-1. Check that all 4 required parameters are provided:
-   - RequestID (Parameter 1)
-   - Action (Parameter 2)
-   - NewValue (Parameter 5)
-   - ActorEmail (Parameter 6)
+1. Check that all 5 parameters are provided:
+   - RequestID (Parameter 1 - `text`)
+   - Action (Parameter 2 - `text_1`)
+   - FieldName (Parameter 3 - `text_2`)
+   - NewValue (Parameter 4 - `text_3`)
+   - ActorEmail (Parameter 5 - `text_4`)
 2. Verify parameters aren't blank: `!IsBlank(User().Email)`
 3. Convert IDs to text: `Text(ThisItem.ID)` not `ThisItem.ID`
+
+---
+
+### Issue 2b: "Invalid number of arguments" Error in Power Apps
+
+**Symptoms:**
+- Power Apps shows error: "Invalid number of arguments: received X, expected 5-6"
+
+**Cause:**
+- Power Apps is passing more or fewer parameters than the flow expects
+- The flow trigger only has 5 parameters defined
+
+**Fix:**
+1. Verify you're passing exactly 5 parameters to the flow
+2. Check your flow trigger in Power Automate shows 5 inputs
+3. Use this pattern:
+```powerfx
+'Flow-(C)-Action-LogAction'.Run(
+    Text(ThisItem.ID),      // RequestID
+    "Action Name",          // Action
+    "FieldName",            // FieldName
+    "NewValue",             // NewValue
+    User().Email            // ActorEmail
+)
+```
 
 ---
 
