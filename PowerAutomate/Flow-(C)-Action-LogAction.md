@@ -115,11 +115,16 @@
    - **Middle dropdown:** Select **is equal to**
    - **Right box:** Type `true`
 
-**⚠️ What this expression checks:**
+**⚠️ What this expression checks (4 required parameters):**
 - `triggerBody()['text']` = RequestID (required)
 - `triggerBody()['text_1']` = Action (required)
 - `triggerBody()['text_3']` = NewValue (required)
 - `triggerBody()['text_4']` = ActorEmail (required)
+
+**Why `text_2` (FieldName) is NOT in this expression:**
+- FieldName is **optional** - some actions don't need it (e.g., a general "Approved" action)
+- The expression intentionally skips from `text_1` to `text_3`
+- This is by design, not an error
 
 **Alternative method (if Expression tab not working):**
 1. Before the Condition, add a **Compose** action
@@ -153,7 +158,7 @@
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
    - **Title:** Click **Expression** → Type `concat('Staff Action: ', triggerBody()['text_1'])`
-   - **RequestID:** Click **Dynamic content** → Select **RequestID** (from Power Apps trigger)
+   - **RequestID:** Click **Dynamic content** → Select **ID** (from Get Request Item) ← Uses Number type from SharePoint
    - **ReqKey:** Click **Dynamic content** → Select **ReqKey** (from Get Request Item)
    - **Action Value:** Click **Dynamic content** → Select **Action** (from Power Apps trigger)
    - **FieldName:** Click **Dynamic content** → Select **FieldName** (from Power Apps trigger)
@@ -165,6 +170,8 @@
    - **ActionAt:** Click **Expression** → Type `utcNow()`
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Click **Expression** → Type `concat('Staff action via Power Apps: ', triggerBody()['text_1'])`
+
+> 💡 **Why use ID from Get Request Item?** The AuditLog `RequestID` column is a Number type. Using the ID from SharePoint (already a number) is cleaner than using the trigger input (which is a string).
 
 **Test Step 5:** Save → Call flow from Power Apps with valid data → Check AuditLog for entry with all fields populated
 
@@ -495,7 +502,45 @@ If(varFlowResult.success,
 
 ---
 
-### Issue 2: "Missing required parameters" Error
+### Issue 2: Internal Parameter Names Mismatch (InvalidTemplate Error)
+
+**Symptoms:**
+- Flow fails with `InvalidTemplate` error
+- Error message: `property 'text_X' doesn't exist`
+- Validation expression cannot be evaluated
+
+**Cause:**
+- Power Automate assigns internal names (`text`, `text_1`, `text_2`, etc.) based on the **order** parameters are added
+- If parameters were deleted and re-added, or added out of order, the internal names won't match the expressions
+
+**How to Check Your Internal Names:**
+1. Click on the **Power Apps trigger** card
+2. Click **...** menu → **Peek code**
+3. Look at the `properties` section to see actual internal names
+
+**Expected Internal Names (if added in correct order):**
+```json
+{
+  "text": "RequestID",
+  "text_1": "Action",
+  "text_2": "FieldName",
+  "text_3": "NewValue",
+  "text_4": "ActorEmail"
+}
+```
+
+**Fix Option 1 - Update Expressions:**
+Update the Validate Required Inputs expression to match your actual internal names.
+
+**Fix Option 2 - Rebuild Parameters (Cleanest):**
+1. Delete all 5 parameters from the Power Apps trigger
+2. Re-add them in exact order: RequestID, Action, FieldName, NewValue, ActorEmail
+3. Save the flow
+4. In Power Apps: Remove and re-add the flow connection to refresh
+
+---
+
+### Issue 2b: "Missing required parameters" Error
 
 **Symptoms:**
 - Flow returns error response
@@ -538,7 +583,42 @@ If(varFlowResult.success,
 
 ---
 
-### Issue 3: Actor Claims Field Not Resolving
+### Issue 3: "Action logged but audit failed" or AuditLog Entry Not Created
+
+**Symptoms:**
+- Power Apps shows warning: "Approved, but could not log to audit"
+- Flow runs but Create Audit Log Entry action fails
+- No entry appears in AuditLog list
+
+**Cause:**
+- The **Action** column in AuditLog is a **Choice** field
+- The action value being logged (e.g., "Approved") isn't in the list of valid choices
+
+**Fix:**
+1. Go to SharePoint → **Site contents** → **AuditLog** list
+2. Click **Settings** (gear) → **List settings**
+3. Under **Columns**, click on **Action**
+4. Add missing choices. **Recommended full list:**
+   - Created
+   - Updated
+   - Status Change
+   - File Added
+   - Comment Added
+   - Assigned
+   - **Approved** ← Add this
+   - **Picked Up** ← Add this
+   - **Started** ← Add this
+   - **Completed** ← Add this
+   - Email Sent
+   - Rejected
+   - System
+5. Click **OK** to save
+
+**Note:** Add any action values your app might log to prevent future failures.
+
+---
+
+### Issue 4: Actor Claims Field Not Resolving
 
 **Symptoms:**
 - Actor Claims field shows as text in AuditLog, not as Person field
@@ -554,7 +634,7 @@ If(varFlowResult.success,
 
 ---
 
-### Issue 4: Flow Times Out in Power Apps
+### Issue 5: Flow Times Out in Power Apps
 
 **Symptoms:**
 - Long wait in Power Apps after calling flow
@@ -568,7 +648,7 @@ If(varFlowResult.success,
 
 ---
 
-### Issue 5: JSON Response Not Parsing
+### Issue 6: JSON Response Not Parsing
 
 **Symptoms:**
 - Can't access `varFlowResult.success` or `.auditId`

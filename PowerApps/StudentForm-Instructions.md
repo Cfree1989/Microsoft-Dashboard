@@ -203,6 +203,9 @@ Here's the **complete Tree view** exactly as it should appear after all steps ar
 ▼ App
 ▼ FormScreen1                        ← Main screen 
     
+    // === TIMER FOR MODAL CHECK (Step 8C) ===
+    tmrCheckPending                  ← Hidden timer (Duration: 500, AutoStart: true)
+    
     // === CONFIRMATION MODAL (Step 8C) ===
     ▼ conConfirmModal                ← Modal container (Visible: varShowConfirmModal)
         btnConfirmEstimate           ← "I CONFIRM THIS ESTIMATE" button
@@ -1620,9 +1623,17 @@ Set(varShowConfirmModal, false)
 
 ---
 
-### Step 11: Add Auto-Show Logic
+### Step 11: Add Auto-Show Logic (Timer-Based)
 
 The modal should automatically appear when the form opens in Edit mode with Status = "Pending".
+
+> ⚠️ **CRITICAL: Race Condition Issue**
+> 
+> When SharePoint loads the form, `FormScreen1.OnVisible` fires **before** `SharePointIntegration.SelectedListItemID` is populated. If you put the modal logic directly in `OnVisible`, the LookUp will fail (ID is blank), and `varShowConfirmModal` will be set to `false` before the item data loads.
+> 
+> **Solution:** Use a Timer control to delay the check by 500ms, giving SharePoint time to pass the item ID to Power Apps.
+
+#### 11A. Initialize the Variable in OnVisible
 
 1. Click on **FormScreen1** in Tree View
 2. Set the **OnVisible** property:
@@ -1630,18 +1641,63 @@ The modal should automatically appear when the form opens in Edit mode with Stat
 **⬇️ FORMULA: Paste into OnVisible**
 
 ```powerfx
+Set(varShowConfirmModal, false)
+```
+
+This initializes the variable to `false` to prevent any flicker.
+
+#### 11B. Add a Timer Control
+
+1. Click on **FormScreen1** in Tree View (the screen, not the form)
+2. Click **+ Insert** → **Input** → **Timer**
+3. Rename it: `tmrCheckPending`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Duration | `500` |
+| AutoStart | `true` |
+| Repeat | `false` |
+| Start | `true` |
+| Visible | `false` |
+
+5. Set the **OnTimerEnd** property:
+
+**⬇️ FORMULA: Paste into OnTimerEnd**
+
+```powerfx
 Set(
     varShowConfirmModal,
     SharePointForm1.Mode <> FormMode.New && 
+    !IsBlank(SharePointIntegration.SelectedListItemID) &&
     LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Status.Value = "Pending" && 
     !LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).StudentConfirmed
 )
 ```
 
-This shows the modal ONLY when:
-- The form is in Edit mode (not a new submission)
-- The request Status is "Pending" (staff have added estimates)
-- The student has NOT already confirmed
+#### Why This Works
+
+| Step | Timing | What Happens |
+|------|--------|--------------|
+| 1 | 0ms | SharePoint loads the form page |
+| 2 | ~50ms | `FormScreen1.OnVisible` fires, sets `varShowConfirmModal = false` |
+| 3 | ~100ms | Timer starts (AutoStart = true) |
+| 4 | ~200ms | `SharePointIntegration.SelectedListItemID` gets populated |
+| 5 | ~300ms | `SharePointForm1` loads the item data |
+| 6 | 500ms | Timer ends, `OnTimerEnd` runs with valid data |
+| 7 | 500ms | `varShowConfirmModal` set to `true` if conditions match |
+| 8 | 500ms | Modal appears! |
+
+The 500ms delay ensures SharePoint has enough time to pass the item ID to Power Apps before we check the conditions.
+
+#### Understanding the Formula
+
+| Part | What It Does |
+|------|--------------|
+| `SharePointForm1.Mode <> FormMode.New` | Only show for existing items (Edit mode) |
+| `!IsBlank(SharePointIntegration.SelectedListItemID)` | Safety check: ensure ID is available |
+| `LookUp(...).Status.Value = "Pending"` | Only show when staff have added estimates |
+| `!LookUp(...).StudentConfirmed` | Only show if student hasn't confirmed yet |
 
 > ⚠️ **Note:** We use `LookUp()` instead of `SharePointForm1.Item` because screen-level controls can't access form item properties directly.
 
@@ -1676,19 +1732,23 @@ Also ensure `conConfirmModal` is **ABOVE** `SharePointForm1` in the Tree View so
 | 1 | Staff review request, add estimates, set Status = "Pending" |
 | 2 | Flow B sends estimate email with direct link to the request |
 | 3 | Student clicks link, opens their request in Edit mode |
-| 4 | `FormScreen1.OnVisible` runs, sets `varShowConfirmModal = true` |
-| 5 | Modal appears with dark overlay, showing cost/time/details |
-| 6 | Student clicks "I CONFIRM THIS ESTIMATE" |
-| 7 | Patch updates StudentConfirmed = true, modal hides |
-| 8 | Flow B detects change → Status becomes "Ready to Print" |
-| 9 | Form closes, student sees success notification |
+| 4 | `FormScreen1.OnVisible` runs, initializes `varShowConfirmModal = false` |
+| 5 | Timer `tmrCheckPending` starts automatically (500ms delay) |
+| 6 | SharePoint populates `SharePointIntegration.SelectedListItemID` |
+| 7 | Timer ends, `OnTimerEnd` checks conditions and sets `varShowConfirmModal = true` |
+| 8 | Modal appears with dark overlay, showing cost/time/details |
+| 9 | Student clicks "I CONFIRM THIS ESTIMATE" |
+| 10 | Patch updates StudentConfirmed = true, modal hides |
+| 11 | Flow B detects change → Status becomes "Ready to Print" |
+| 12 | Form closes, student sees success notification |
 
 ---
 
 ### Verification
 
 After completing this step:
-- [ ] Modal appears immediately when opening a "Pending" request
+- [ ] Timer `tmrCheckPending` exists on FormScreen1 (hidden, AutoStart = true)
+- [ ] Modal appears ~500ms after opening a "Pending" request
 - [ ] Dark overlay covers the entire form
 - [ ] White modal box is centered on screen
 - [ ] Estimate details (cost, time, method, color) are clearly displayed
@@ -2013,6 +2073,40 @@ To test the confirmation panel, you need a request with Status = "Pending".
 
 # Troubleshooting
 
+## Problem: Confirmation modal doesn't appear for "Pending" requests
+
+**Cause:** Race condition — `FormScreen1.OnVisible` fires before `SharePointIntegration.SelectedListItemID` is populated by SharePoint.
+
+**Symptoms:**
+- Modal never shows, even when Status = "Pending" and StudentConfirmed = false
+- Works fine when testing in Power Apps Preview mode
+- Fails when opening the actual SharePoint form via link
+
+**Solution:**
+Use a Timer control to delay the modal check by 500ms:
+
+1. Add a Timer control named `tmrCheckPending` to FormScreen1
+2. Set Timer properties:
+   - Duration: `500`
+   - AutoStart: `true`
+   - Repeat: `false`
+   - Visible: `false`
+3. Move the modal logic from `OnVisible` to the Timer's `OnTimerEnd`:
+   ```powerfx
+   Set(
+       varShowConfirmModal,
+       SharePointForm1.Mode <> FormMode.New && 
+       !IsBlank(SharePointIntegration.SelectedListItemID) &&
+       LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Status.Value = "Pending" && 
+       !LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).StudentConfirmed
+   )
+   ```
+4. Simplify `FormScreen1.OnVisible` to just: `Set(varShowConfirmModal, false)`
+
+**Why this happens:** SharePoint custom forms load asynchronously. The form's `OnVisible` event fires immediately, but `SharePointIntegration.SelectedListItemID` isn't populated until SharePoint passes the item ID to Power Apps (~200-300ms later). The timer ensures we wait for the data before checking conditions.
+
+---
+
 ## Problem: "Field 'Status' is required" error
 
 **Cause:** You removed the Status field instead of hiding it.
@@ -2314,18 +2408,37 @@ If(
 false
 ```
 
-## FormScreen1 — OnVisible (Modal Auto-Show)
+## FormScreen1 — OnVisible (Initialize Variable)
+
+```powerfx
+Set(varShowConfirmModal, false)
+```
+
+> This initializes the modal visibility to `false`. The actual check happens in the Timer's `OnTimerEnd` event.
+
+## tmrCheckPending — Timer Properties
+
+| Property | Value |
+|----------|-------|
+| Duration | `500` |
+| AutoStart | `true` |
+| Repeat | `false` |
+| Start | `true` |
+| Visible | `false` |
+
+## tmrCheckPending — OnTimerEnd (Modal Auto-Show)
 
 ```powerfx
 Set(
     varShowConfirmModal,
     SharePointForm1.Mode <> FormMode.New && 
+    !IsBlank(SharePointIntegration.SelectedListItemID) &&
     LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).Status.Value = "Pending" && 
     !LookUp('PrintRequests', ID = SharePointIntegration.SelectedListItemID).StudentConfirmed
 )
 ```
 
-> This shows the confirmation modal when the form opens in Edit mode for a "Pending" request that hasn't been confirmed yet. Uses `LookUp()` because `SharePointForm1.Item` isn't accessible from screen-level controls.
+> ⚠️ **Why a Timer?** When SharePoint loads the form, `OnVisible` fires before `SharePointIntegration.SelectedListItemID` is populated. The 500ms timer delay ensures the item ID is available before we check conditions. Uses `LookUp()` because `SharePointForm1.Item` isn't accessible from screen-level controls.
 
 ## conConfirmModal — Visible
 
