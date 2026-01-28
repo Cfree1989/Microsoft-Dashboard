@@ -5199,6 +5199,50 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 > **Note:** The unread badge shows a red circle with the count of student replies that staff haven't read yet. It only appears when there are unread inbound messages.
 
+#### Mark Read Button (Outside galMessages)
+
+28. Still in `galJobCards` (not galMessages), click **+ Insert** → **Button**.
+29. **Rename it:** `btnMarkRead`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Mark Read"` |
+| X | `145` |
+| Y | `258` |
+| Width | `75` |
+| Height | `20` |
+| Size | `8` |
+| Fill | `Color.White` |
+| Color | `RGBA(209, 52, 56, 1)` |
+| BorderColor | `RGBA(209, 52, 56, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| HoverFill | `RGBA(209, 52, 56, 1)` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
+| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+
+31. Set **OnSelect**:
+
+```powerfx
+UpdateIf(
+    RequestComments,
+    RequestID = ThisItem.ID &&
+    Direction.Value = "Inbound" &&
+    ReadByStaff = false,
+    {ReadByStaff: true}
+);
+Notify("Messages marked as read", NotificationType.Success)
+```
+
+> **Note:** This button appears next to the unread badge and marks all unread inbound messages for this request as read. Once clicked, both the badge and button disappear (since there are no more unread messages).
+>
+> **Why UpdateIf instead of ForAll + Patch?** Power Apps doesn't allow `Patch` inside `ForAll` when operating on the same data source being iterated. `UpdateIf` updates all matching records in a single operation, avoiding this limitation.
+
 ---
 
 ## Step 17C: Building the Message Modal
