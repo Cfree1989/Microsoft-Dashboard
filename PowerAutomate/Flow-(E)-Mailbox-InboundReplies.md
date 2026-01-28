@@ -196,10 +196,16 @@ Continue with Steps 4+ (all remaining steps go in the YES branch)
 3. Rename the action to: `Get Print Request by ReqKey`
    - Click the **three dots (...)** → **Rename** → type `Get Print Request by ReqKey`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in basic fields:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -286,10 +292,16 @@ Continue with Steps 6+ (all remaining steps go in the YES branch of this conditi
 3. Rename the action to: `Log Sender Mismatch`
    - Click the **three dots (...)** → **Rename** → type `Log Sender Mismatch`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -330,10 +342,16 @@ Continue with Steps 7+ (all remaining steps go in the YES branch of "Validate Se
 3. Rename the action to: `Get Existing Thread`
    - Click the **three dots (...)** → **Rename** → type `Get Existing Thread`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in basic fields:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `RequestComments`
@@ -398,10 +416,16 @@ if(
 3. Rename the action to: `Create Inbound Message`
    - Click the **three dots (...)** → **Rename** → type `Create Inbound Message`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `RequestComments`
@@ -465,10 +489,16 @@ if(
 3. Rename the action to: `Flag Request for Attention`
    - Click the **three dots (...)** → **Rename** → type `Flag Request for Attention`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
@@ -490,10 +520,16 @@ if(
 3. Rename the action to: `Log Inbound Message`
    - Click the **three dots (...)** → **Rename** → type `Log Inbound Message`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -526,10 +562,16 @@ concat('Student replied via email. Thread: ', outputs('Create_Inbound_Message')?
 3. Rename the action to: `Mark Email as Read`
    - Click the **three dots (...)** → **Rename** → type `Mark Email as Read`
 4. **Configure retry policy:**
-   - Click **three dots (...)** → **Settings** → scroll to **Networking**
-   - **Retry policy:** Select `Exponential interval`
-   - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
-   - Click **Done**
+   1. Click the **three dots (...)** on the action card
+   2. Choose **Settings**
+   3. Scroll down to **Networking** section
+   4. In **Retry policy** dropdown, select **Exponential interval**
+   5. Fill in ALL four fields (all are required):
+      - **Count:** `4`
+      - **Interval:** `PT1M`
+      - **Minimum interval:** `PT20S`
+      - **Maximum interval:** `PT1H`
+   6. Click **Done**
 5. Fill in:
    - **Message Id:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/id']` → click **Update**
    - **Mailbox address:** Type `coad-fablab@lsu.edu`
