@@ -426,9 +426,20 @@ if(
       - **Minimum interval:** `PT20S`
       - **Maximum interval:** `PT1H`
    6. Click **Done**
-5. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `RequestComments`
+
+#### Basic Required Fields
+
+5. Fill in the basic required fields:
+   - **Site Address:** Select `Digital Fabrication Lab - https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** Select `RequestComments`
+   - **RequestID:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['ID']` → click **Update**
+   - **Message:** Click **Expression** tab (fx) → paste: `outputs('Clean_Email_Body')` → click **Update**
+
+#### Advanced Parameters
+
+6. Click **Advanced parameters** dropdown → select **Show all** to expand all 14 fields
+7. Fill in the advanced fields:
+   - **Limit Columns by View:** Leave empty (not needed)
    - **Title:** Click **Expression** tab (fx) → paste this expression → click **Update**:
 
 ```
@@ -439,9 +450,7 @@ if(
 )
 ```
 
-   - **RequestID:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['ID']` → click **Update**
    - **ReqKey:** Click **Expression** tab (fx) → paste: `outputs('Build_Full_ReqKey')` → click **Update**
-   - **Message:** Click **Expression** tab (fx) → paste: `outputs('Clean_Email_Body')` → click **Update**
    - **Author Claims:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['Student']?['Claims']` → click **Update**
    - **AuthorRole Value:** Select `Student`
    - **SentAt:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/receivedDateTime']` → click **Update**
@@ -459,6 +468,7 @@ if(
 )
 ```
 
+   - **MessageID:** Leave empty (this field captures the Message-ID header from outbound emails sent by Flow D; inbound replies don't generate a new MessageID)
    - **InReplyTo:** Click **Expression** tab (fx) → paste this expression → click **Update**:
 
 ```
@@ -468,6 +478,8 @@ if(
   ''
 )
 ```
+
+   - **Content type Id:** Leave as default (do not change)
 
 **ThreadID Logic:**
 - If existing thread found → Reuse that ThreadID for continuity
