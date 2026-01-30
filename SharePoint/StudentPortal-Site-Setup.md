@@ -235,21 +235,34 @@ Your current Home page contains staff-focused content (TigerCASH Log, Schedule, 
 
 Create a new student-facing Home page that will become the site's default landing page.
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Click the page title area and type: `Home`
-4. **Add a Hero Web Part:**
-   - Click the **+** button below the title
-   - Search for **Hero**
-   - Select layout (single image recommended)
-   - Click **Select image** → Upload lab banner photo
-   - Set **Link**: Leave empty (informational only)
-   - Set **Call to action text**: Leave empty
+**To create a modern Site page:**
 
-5. **Add Welcome Text Section:**
-   - Click **+** below the Hero
-   - Select **Text**
-   - Add placeholder text:
+1. Go to the **site home** (click site name "Digital Fabrication Lab" in header)
+2. Click **+ New** in the top command bar
+3. Select **Page**
+4. The **Template gallery: Pages** will appear with pre-built templates
+
+**Choose a template:**
+
+| Option | Description |
+|--------|-------------|
+| **Create blank** (top right) | Empty page - add your own web parts from scratch |
+| **About a topic** | Pre-built layout with Hero section - recommended for Home page |
+| **Visual topic introduction** | Alternative Hero-style layout |
+
+5. Select **"About a topic"** template (or **Create blank** for full control)
+6. Click the page title area and type: `Home`
+
+**Customize the template content:**
+
+7. **Replace the Hero section:**
+   - Click on the Hero image
+   - Click **Change image** → Upload your lab banner photo
+   - Update any text overlays with your lab name/tagline
+
+8. **Replace placeholder text sections:**
+   - Click on text areas and replace with your content
+   - Add placeholder for now:
    
    ```
    [PLACEHOLDER: Migrate welcome content from Moodle HTML]
@@ -257,19 +270,22 @@ Create a new student-facing Home page that will become the site's default landin
    Welcome to the Digital Fabrication Laboratory...
    ```
 
-6. **Add Quick Links Section:**
-   - Click **+** below the text
-   - Search for **Quick links**
+9. **Add/modify Quick Links Section:**
+   - If not present, click **+** to add a **Quick links** web part
    - Select **Compact** or **Grid** layout
    - Add links to other pages (will complete after creating all pages)
 
-7. Click **Publish** (or **Save as draft** until all pages are ready)
+10. Click **Publish** (or **Save as draft** until all pages are ready)
+
+> 💡 **For all remaining pages:** Use **Create blank** in the Template gallery (simpler content pages don't need a template).
+
+---
 
 ### 4.2: Create Additive Manufacturing Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Additive`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank** (top right)
+3. Name the page: `Additive`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -294,9 +310,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.3: Create Subtractive Manufacturing Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Subtractive`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Subtractive`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -316,9 +332,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.4: Create Class Projects Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Class Projects`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Class Projects`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -336,9 +352,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.5: Create Resources Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Resources`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Resources`
 4. **Add Quick Links or Document Library Web Part:**
    - Click **+** → **Quick links** (for external links)
    - OR **Document library** (for file downloads)
@@ -358,9 +374,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.6: Create Feedback Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Feedback`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Feedback`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -382,9 +398,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.7: Create Lab Rules Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Lab Rules`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Lab Rules`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -404,9 +420,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 ### 4.8: Create Safety Page
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `Safety`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `Safety`
 4. **Add Text Web Part:**
    - Click **+** → **Text**
    - Add placeholder:
@@ -428,9 +444,9 @@ Create a new student-facing Home page that will become the site's default landin
 
 This page shows students their own print requests.
 
-1. Go to **Site contents** → **Site Pages**
-2. Click **+ New** → **Site page**
-3. Name: `My Print Requests`
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank**
+3. Name the page: `My Print Requests`
 4. **Add Text Header:**
    - Click **+** → **Text**
    - Type: `View the status of your 3D print requests below. You can only see requests you have submitted.`
