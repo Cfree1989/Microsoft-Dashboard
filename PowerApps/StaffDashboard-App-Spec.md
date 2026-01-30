@@ -34,7 +34,8 @@
     - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
     - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
     - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
-    - [Step 17D: Adding the Loading Overlay](#step-17d-adding-the-loading-overlay) ← **UX Enhancement**
+    - [Step 17D: View Messages Modal](#step-17d-view-messages-modal) ← **NEW**
+    - [Step 17E: Adding the Loading Overlay](#step-17e-adding-the-loading-overlay) ← **UX Enhancement**
 21. [Publishing the App](#step-18-publishing-the-app)
 22. [Testing the App](#step-19-testing-the-app)
 23. [Troubleshooting](#troubleshooting)
@@ -337,6 +338,7 @@ Set(varShowPaymentModal, 0);
 Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
 Set(varShowNotesModal, 0);
+Set(varShowViewMessagesModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -389,6 +391,7 @@ Set(varLoadingMessage, "")
 | `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
 | `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varShowNotesModal` | ID of item for notes modal (0=hidden) | Number |
+| `varShowViewMessagesModal` | ID of item for view messages modal (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
@@ -455,12 +458,12 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 ```
 ▼ App
 ▼ scrDashboard
-    ▼ conLoadingOverlay               ← Step 17D (Loading — TOP for highest z-order)
+    ▼ conLoadingOverlay               ← Step 17E (Loading — TOP for highest z-order)
         lblLoadingMessage
         lblLoadingSpinner
         recLoadingBox
         recLoadingOverlay
-    ▼ conMessageModal                 ← Step 17C (Message Modal Container)
+    ▼ conMessageModal                 ← Step 17C (Send Message Modal Container)
         btnMessageSend
         btnMessageCancel
         lblMessageCharCount
@@ -474,6 +477,14 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblMessageTitle
         recMessageModal
         recMessageOverlay
+    ▼ conViewMessagesModal            ← Step 17D (View Messages Modal Container)
+        btnViewMsgClose
+        btnViewMsgSendNew
+        btnViewMsgMarkRead
+        galViewMessages
+        lblViewMsgTitle
+        recViewMsgModal
+        recViewMsgOverlay
     ▼ conFileModal                    ← Step 16 (Files Modal Container)
         btnFileCancel
         btnFileSave
@@ -593,9 +604,12 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     txtSearch                         ← Step 14
     recFilterBar                      ← Step 14 (filter bar background)
     ▼ galJobCards                     ← Step 6
-        btnSendMessage                ← Step 16C
+        btnCardSendMessage            ← Step 16C
+        lblUnreadBadge                ← Step 16B
+        btnViewMessages               ← Step 16B (opens View Messages Modal)
+        lblMessagesHeader             ← Step 16B
         btnFiles                      ← Step 16
-        btnChangeDetails              ← Step 12B
+        btnEditDetails                ← Step 12B
         btnPickedUp                   ← Step 9
         btnComplete                   ← Step 9
         btnStartPrint                 ← Step 9
@@ -603,20 +617,15 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnReject                     ← Step 9
         btnApprove                    ← Step 9
         icoLightbulb                  ← Step 15
-        // icoExpandCollapse removed (details always visible)
-        lblUnreadBadge                ← Step 16B
-        ▼ galMessages                 ← Step 16B
-            lblMsgContent             ← Step 16B
-            lblMsgDirectionBadge      ← Step 16B
-            lblMsgAuthor              ← Step 16B
-            icoMsgDirection           ← Step 16B
-            recMessageBg              ← Step 16B
-        lblNoMessages                 ← Step 16B
-        lblMessagesHeader             ← Step 16B
         lblCourse                     ← Step 7
+        lblCourseLabel                ← Step 7
         lblProjectType                ← Step 7
+        lblProjectTypeLabel           ← Step 7
         lblDiscipline                 ← Step 7
-        lblDueDate                    ← Step 7
+        lblDisciplineLabel            ← Step 7
+        lblCreatedLabel               ← Step 7
+        lblJobIdLabel                 ← Step 7
+        lblDetailsHeader              ← Step 7
         lblCreated                    ← Step 7
         lblJobId                      ← Step 7
         btnViewNotes                  ← Step 7 (opens Notes Modal)
@@ -624,7 +633,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblColor                      ← Step 7
         lblPrinter                    ← Step 7
         lblStudentEmail               ← Step 7
-        lblReqKey                     ← Step 7
+        lblFilename                   ← Step 7
         lblSubmittedTime              ← Step 7
         lblStudentName                ← Step 7
         recCardBackground             ← Step 7
@@ -1026,10 +1035,10 @@ If(
 > - "Submitted Xd Xh Xm ago" for older items
 > - Red color indicates urgency
 
-### File Name / Request Info (lblReqKey)
+### File Name / Request Info (lblFilename)
 
 11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblReqKey`
+12. **Rename it:** `lblFilename`
 13. Set properties:
 
 | Property | Value |
@@ -1386,7 +1395,7 @@ Your gallery template should now contain these controls (Z-order: top = front):
     lblColor
     lblPrinter
     lblStudentEmail
-    lblReqKey
+    lblFilename
     lblSubmittedTime
     lblStudentName
     recCardBackground              ← Bottom (background)
@@ -4642,7 +4651,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 
 > 💡 **Quick Test:** After reordering, click a card's Approve button. The modal should appear fully visible, covering the filter bar and search controls completely.
 
-> ⚠️ **Note:** Later steps will add more modals (File Modal, Message Modal, Loading Overlay). Each time you add a new modal, drag its container to the TOP of the Tree view. The Loading Overlay (STEP 17D) must always be the topmost container.
+> ⚠️ **Note:** Later steps will add more modals (File Modal, Message Modal, View Messages Modal, Loading Overlay). Each time you add a new modal, drag its container to the TOP of the Tree view. The Loading Overlay (STEP 17E) must always be the topmost container.
 
 ---
 
@@ -5048,141 +5057,47 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Color | `RGBA(80, 80, 80, 1)` |
 | Visible | `true` |
 
-#### Messages Gallery (galMessages)
+#### View Messages Button (btnViewMessages)
 
-4. Click **+ Insert** → **Blank vertical gallery**.
-5. **Rename it:** `galMessages`
+4. Click **+ Insert** → **Button**.
+5. **Rename it:** `btnViewMessages`
 6. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Items | `Sort(Filter(RequestComments, RequestID = ThisItem.ID), SentAt, SortOrder.Descending)` |
+| Text | `"View Messages"` |
 | X | `12` |
 | Y | `280` |
-| Width | `Parent.TemplateWidth - 24` |
-| Height | `120` |
-| TemplateSize | `70` |
-| TemplatePadding | `2` |
-| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID))` |
-| ShowScrollbar | `true` |
-
-> **Note:** TemplateSize is 70 to accommodate Direction indicator.
-
-> ⚠️ **Performance Consideration:** This gallery-inside-gallery pattern works well for typical usage (5-20 messages per request). However, if your lab expects:
-> - **Many messages per request (50+):** Consider limiting to recent messages: `FirstN(Sort(...), 10)`
-> - **Many concurrent requests (100+):** The nested Filter may hit delegation limits
-> - **Slow performance:** Add an index on RequestID in SharePoint or cache messages in a collection
-
-#### Inside galMessages — Message Background
-
-7. Inside `galMessages`, add a **Rectangle** for message background:
-   - **Name:** `recMessageBg`
-   - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.3, 0)`
-   - **Y:** `0`
-   - **Width:** `Parent.TemplateWidth * 0.7 - 10`
-   - **Height:** `Parent.TemplateHeight - 4`
-   - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
-
-> **Direction-based styling:**
-> - **Outbound (staff → student):** Blue tint, aligned right
-> - **Inbound (student → staff):** Warm yellow tint, aligned left
-
-#### Inside galMessages — Direction Icon
-
-8. Make sure you're inside `galMessages` (click on it in the Tree View).
-9. Click **+ Insert** → **Icons** → select any icon (we'll change it dynamically).
-10. **Rename it:** `icoMsgDirection`
-11. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Icon | `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)` |
-| X | `recMessageBg.X + 8` |
-| Y | `4` |
-| Width | `14` |
-| Height | `14` |
-| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))` |
-
-> **Icon behavior:** Shows "Send" arrow for staff messages (Outbound), "Mail" envelope for student replies (Inbound).
-
-#### Inside galMessages — Author Label
-
-12. Still inside `galMessages`, click **+ Insert** → **Text label**.
-13. **Rename it:** `lblMsgAuthor`
-14. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, h:mm AM/PM")` |
-| X | `recMessageBg.X + 26` |
-| Y | `4` |
-| Width | `180` |
-| Height | `16` |
-| Size | `9` |
-| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
-| FontItalic | `false` |
-| Font | `Font.'Segoe UI Semibold'` |
-
-#### Inside galMessages — Direction Badge
-
-15. Still inside `galMessages`, click **+ Insert** → **Text label**.
-16. **Rename it:** `lblMsgDirectionBadge`
-17. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")` |
-| X | `recMessageBg.X + recMessageBg.Width - 50` |
-| Y | `4` |
-| Width | `40` |
-| Height | `14` |
-| Size | `8` |
-| Align | `Align.Right` |
-| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
-| FontItalic | `true` |
-
-#### Inside galMessages — Message Content
-
-18. Still inside `galMessages`, click **+ Insert** → **Text label**.
-19. **Rename it:** `lblMsgContent`
-20. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `If(Len(ThisItem.Message) > 100, Left(ThisItem.Message, 100) & "...", ThisItem.Message)` |
-| X | `recMessageBg.X + 8` |
-| Y | `22` |
-| Width | `recMessageBg.Width - 16` |
-| Height | `40` |
+| Width | `100` |
+| Height | `28` |
+| Fill | `RGBA(240, 240, 240, 1)` |
+| Color | `RGBA(70, 130, 220, 1)` |
+| BorderColor | `RGBA(70, 130, 220, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
 | Size | `10` |
-| Color | `RGBA(50, 50, 50, 1)` |
+| HoverFill | `RGBA(70, 130, 220, 1)` |
+| HoverColor | `Color.White` |
 
-#### No Messages Placeholder (Outside galMessages)
+7. Set **OnSelect:**
 
-21. Click on `galJobCards` in the Tree View (NOT galMessages — go up one level to the job card).
-22. Click **+ Insert** → **Text label**.
-23. **Rename it:** `lblNoMessages`
-24. Set properties:
+```powerfx
+Set(varShowViewMessagesModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
 
-| Property | Value |
-|----------|-------|
-| Text | `"No messages yet"` |
-| X | `12` |
-| Y | `280` |
-| Width | `200` |
-| Height | `20` |
-| Color | `RGBA(150, 150, 150, 1)` |
-| FontItalic | `true` |
-| Size | `10` |
-| Visible | `IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID))` |
+> **Note:** This button opens the View Messages Modal (Step 17D) which displays the full conversation thread in a scrollable modal.
 
-> **Note:** This label only shows when there are no messages for this request. It sits where the galMessages gallery would be.
+---
 
-#### Unread Badge (Outside galMessages)
+#### Unread Badge (lblUnreadBadge)
 
-25. Still in `galJobCards` (not galMessages), click **+ Insert** → **Text label**.
-26. **Rename it:** `lblUnreadBadge`
-27. Set properties:
+8. Still in `galJobCards`, click **+ Insert** → **Text label**.
+9. **Rename it:** `lblUnreadBadge`
+10. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5199,49 +5114,16 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 > **Note:** The unread badge shows a red circle with the count of student replies that staff haven't read yet. It only appears when there are unread inbound messages.
 
-#### Mark Read Button (Outside galMessages)
+---
 
-28. Still in `galJobCards` (not galMessages), click **+ Insert** → **Button**.
-29. **Rename it:** `btnMarkRead`
-30. Set properties:
+#### Job Card Messages Summary
 
-| Property | Value |
-|----------|-------|
-| Text | `"✓ Mark Read"` |
-| X | `145` |
-| Y | `258` |
-| Width | `75` |
-| Height | `20` |
-| Size | `8` |
-| Fill | `Color.White` |
-| Color | `RGBA(209, 52, 56, 1)` |
-| BorderColor | `RGBA(209, 52, 56, 1)` |
-| BorderThickness | `1` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
-| HoverFill | `RGBA(209, 52, 56, 1)` |
-| HoverColor | `RGBA(255, 255, 255, 1)` |
-| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
-| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+With these controls, each job card shows:
+- **Messages (X)** header with total count
+- **View Messages** button to open the full conversation modal
+- **Red unread badge** with count of unread student replies
 
-31. Set **OnSelect**:
-
-```powerfx
-UpdateIf(
-    RequestComments,
-    RequestID = ThisItem.ID &&
-    Direction.Value = "Inbound" &&
-    ReadByStaff = false,
-    {ReadByStaff: true}
-);
-Notify("Messages marked as read", NotificationType.Success)
-```
-
-> **Note:** This button appears next to the unread badge and marks all unread inbound messages for this request as read. Once clicked, both the badge and button disappear (since there are no more unread messages).
->
-> **Why UpdateIf instead of ForAll + Patch?** Power Apps doesn't allow `Patch` inside `ForAll` when operating on the same data source being iterated. `UpdateIf` updates all matching records in a single operation, avoiding this limitation.
+The full message content and Mark Read functionality are in the View Messages Modal (Step 17D).
 
 ---
 
@@ -5620,7 +5502,7 @@ Patch(
         RequestID: varSelectedItem.ID,
         ReqKey: varSelectedItem.ReqKey,
         Message: txtMessageBody.Text,
-        Author: {
+        Author0: {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
             Department: "",
@@ -5672,6 +5554,8 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 ```
 
 > **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow D will detect this and send the email with threading headers. See `PowerAutomate/Flow-(D)-Message-Notifications.md` for details.
+
+> **Important:** The field is named `Author0` (not `Author`) because SharePoint has a built-in "Author" field for "Created By". When you create a custom Person column named "Author", SharePoint assigns it the internal name `Author0` to avoid conflict.
 
 ---
 
@@ -5725,7 +5609,345 @@ Set(varShowMessageModal, ThisItem.ID)
 
 ---
 
-# STEP 17D: Adding the Loading Overlay
+## Step 17D: View Messages Modal
+
+**What you're doing:** Creating a modal to view the full conversation thread between staff and students, with better formatting than the inline display.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Overview
+
+This modal displays the complete message history for a print request:
+- Full message content (no truncation)
+- Clear visual distinction between inbound/outbound messages
+- Scrollable conversation thread
+- Button to send new messages
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conViewMessagesModal            ← CONTAINER (set Visible here only!)
+    ├── btnViewMsgClose             ← X close button
+    ├── btnViewMsgSendNew           ← "Send New Message" button
+    ├── btnViewMsgMarkRead          ← "Mark All Read" button (visible when unread)
+    ├── galViewMessages             ← Scrollable message gallery
+    │   ├── recVMsgBg               ← Background (direction-based colors)
+    │   ├── icoVMsgDirection        ← Direction icon (send/mail)
+    │   ├── lblVMsgAuthor           ← Author name + timestamp
+    │   ├── lblVMsgDirectionBadge   ← SENT/REPLY badge
+    │   └── lblVMsgContent          ← Full message text
+    ├── lblViewMsgTitle             ← "Messages - REQ-00001"
+    ├── recViewMsgModal             ← White modal box
+    └── recViewMsgOverlay           ← Dark semi-transparent overlay
+```
+
+---
+
+### Modal Container (conViewMessagesModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conViewMessagesModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowViewMessagesModal > 0` |
+
+---
+
+### Modal Overlay (recViewMsgOverlay)
+
+5. With `conViewMessagesModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recViewMsgOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+
+---
+
+### Modal Box (recViewMsgModal)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recViewMsgModal`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 550) / 2` |
+| Width | `600` |
+| Height | `550` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+---
+
+### Modal Title (lblViewMsgTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblViewMsgTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Messages - " & varSelectedItem.ReqKey` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 15` |
+| Width | `400` |
+| Height | `30` |
+| Font | `Font.'Segoe UI Semibold'` |
+| Size | `18` |
+| Color | `RGBA(70, 130, 220, 1)` |
+
+---
+
+### Close Button (btnViewMsgClose)
+
+14. Click **+ Insert** → **Button**.
+15. **Rename it:** `btnViewMsgClose`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recViewMsgModal.X + recViewMsgModal.Width - 45` |
+| Y | `recViewMsgModal.Y + 10` |
+| Width | `35` |
+| Height | `35` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| BorderThickness | `0` |
+| Size | `16` |
+| HoverFill | `RGBA(240, 240, 240, 1)` |
+
+17. Set **OnSelect:**
+
+```powerfx
+Set(varShowViewMessagesModal, 0);
+Set(varSelectedItem, Blank())
+```
+
+---
+
+### Messages Gallery (galViewMessages)
+
+18. Click **+ Insert** → **Blank vertical gallery**.
+19. **Rename it:** `galViewMessages`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 55` |
+| Width | `560` |
+| Height | `420` |
+| TemplateSize | `100` |
+| TemplatePadding | `4` |
+| ShowScrollbar | `true` |
+
+---
+
+#### Inside galViewMessages — Message Background
+
+21. Inside `galViewMessages`, add a **Rectangle**:
+   - **Name:** `recVMsgBg`
+   - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.15, 0)`
+   - **Y:** `0`
+   - **Width:** `Parent.TemplateWidth * 0.85`
+   - **Height:** `Parent.TemplateHeight - 8`
+   - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
+   - **RadiusTopLeft:** `6`
+   - **RadiusTopRight:** `6`
+   - **RadiusBottomLeft:** `6`
+   - **RadiusBottomRight:** `6`
+
+---
+
+#### Inside galViewMessages — Direction Icon
+
+22. Inside `galViewMessages`, click **+ Insert** → **Icons** → select any icon.
+23. **Rename it:** `icoVMsgDirection`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Icon | `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)` |
+| X | `recVMsgBg.X + 10` |
+| Y | `8` |
+| Width | `16` |
+| Height | `16` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))` |
+
+---
+
+#### Inside galViewMessages — Author Label
+
+25. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+26. **Rename it:** `lblVMsgAuthor`
+27. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, yyyy h:mm AM/PM")` |
+| X | `recVMsgBg.X + 32` |
+| Y | `6` |
+| Width | `300` |
+| Height | `18` |
+| Size | `10` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
+| Font | `Font.'Segoe UI Semibold'` |
+
+---
+
+#### Inside galViewMessages — Direction Badge
+
+28. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+29. **Rename it:** `lblVMsgDirectionBadge`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")` |
+| X | `recVMsgBg.X + recVMsgBg.Width - 55` |
+| Y | `6` |
+| Width | `45` |
+| Height | `16` |
+| Size | `9` |
+| Align | `Align.Right` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
+| FontItalic | `true` |
+
+---
+
+#### Inside galViewMessages — Message Content
+
+31. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+32. **Rename it:** `lblVMsgContent`
+33. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Message` |
+| X | `recVMsgBg.X + 10` |
+| Y | `26` |
+| Width | `recVMsgBg.Width - 20` |
+| Height | `Parent.TemplateHeight - 36` |
+| Size | `11` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| VerticalAlign | `VerticalAlign.Top` |
+| Overflow | `Overflow.Scroll` |
+
+> **Note:** Full message content is displayed without truncation. Long messages will scroll within the template.
+
+---
+
+### Send New Message Button (btnViewMsgSendNew)
+
+34. Click **+ Insert** → **Button**.
+35. **Rename it:** `btnViewMsgSendNew`
+36. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"📧 Send New Message"` |
+| X | `recViewMsgModal.X + recViewMsgModal.Width - 170` |
+| Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
+| Width | `150` |
+| Height | `35` |
+| Fill | `RGBA(70, 130, 220, 1)` |
+| Color | `Color.White` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
+
+37. Set **OnSelect:**
+
+```powerfx
+// Close view modal and open send modal
+Set(varShowViewMessagesModal, 0);
+Set(varShowMessageModal, varSelectedItem.ID)
+```
+
+> **Note:** This closes the View Messages modal and opens the Send Message modal (Step 17C) for the same request.
+
+---
+
+### Mark Read Button (btnViewMsgMarkRead)
+
+38. Click **+ Insert** → **Button**.
+39. **Rename it:** `btnViewMsgMarkRead`
+40. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✓ Mark All Read"` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
+| Width | `120` |
+| Height | `35` |
+| Fill | `Color.White` |
+| Color | `RGBA(209, 52, 56, 1)` |
+| BorderColor | `RGBA(209, 52, 56, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `6` |
+| RadiusTopRight | `6` |
+| RadiusBottomLeft | `6` |
+| RadiusBottomRight | `6` |
+| HoverFill | `RGBA(209, 52, 56, 1)` |
+| HoverColor | `Color.White` |
+| Visible | `!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+
+41. Set **OnSelect:**
+
+```powerfx
+UpdateIf(
+    RequestComments,
+    RequestID = varSelectedItem.ID &&
+    Direction.Value = "Inbound" &&
+    ReadByStaff = false,
+    {ReadByStaff: true}
+);
+Notify("Messages marked as read", NotificationType.Success)
+```
+
+> **Note:** This button only appears when there are unread inbound messages. After clicking, it disappears and the unread badge on the job card also updates.
+
+---
+
+### Testing the View Messages Modal
+
+- [ ] "View Messages" button appears on job cards
+- [ ] Clicking opens modal with correct request title
+- [ ] Messages display with correct direction styling (blue=outbound, yellow=inbound)
+- [ ] Full message content visible (no truncation)
+- [ ] Messages scroll when there are many
+- [ ] Close button (X) closes modal
+- [ ] "Send New Message" opens the send message modal
+- [ ] "Mark All Read" button appears when there are unread messages
+- [ ] Clicking "Mark All Read" clears unread status and hides the button
+- [ ] Unread badge on job card updates after marking read
+
+---
+
+# STEP 17E: Adding the Loading Overlay
 
 **What you're doing:** Adding a loading indicator that shows during async operations (Patch, Flow calls) to prevent user confusion and double-clicks.
 

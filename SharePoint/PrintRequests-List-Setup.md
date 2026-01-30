@@ -167,12 +167,29 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - White
    - Gray
    - Red
-   - Green
-   - Blue
+   - Orange
    - Yellow
-   - Other
+   - Green
+   - Forest Green
+   - Blue
+   - Purple
+   - Brown
+   - Chocolate Brown
+   - Copper
+   - Bronze
+   - Silver
+   - Clear
 5. **Require that this column contains information:** Yes
 6. Click **Save**
+
+#### Apply Color Formatting (Visual Color Display)
+
+7. After creating the column, click the **Color** column header → **Column settings** → **Format this column**
+8. Click **Advanced mode**
+9. Paste the JSON from `SharePoint/FilamentColor-Column-Formatting.json`
+10. Click **Save**
+
+> 💡 **Result:** Each color choice will display as a pill/badge with its actual filament color as the background, making it easy to visually identify colors in the list view.
 
 ### Column 9: Method (Choice)
 
@@ -481,7 +498,7 @@ These columns capture actual payment details when a print is picked up.
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |
 | ProjectType | Choice | No | - | Class Project; Research; Personal; Other |
-| Color | Choice | Yes | - | Any; Black; White; Gray; Red; Green; Blue; Yellow; Other |
+| Color | Choice | Yes | - | Any; Black; White; Gray; Red; Orange; Yellow; Green; Forest Green; Blue; Purple; Brown; Chocolate Brown; Copper; Bronze; Silver; Clear |
 | Method | Choice | Yes | - | Filament; Resin |
 | Printer | Choice | Yes | - | Printer with build dimensions |
 | DueDate | Date | No | - | Timeline planning |
@@ -533,6 +550,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] Printer has all 4 printer options with dimensions
 - [ ] StudentConfirmed, NeedsAttention, Expanded default to No
 - [ ] Status column formatting applied
+- [ ] Color column formatting applied (actual filament colors)
 - [ ] Views created: My Requests, All Requests, Active Queue
 
 ---

@@ -370,7 +370,7 @@ concat('RequestID eq ', outputs('Get_Request_Record')?['ID'])
 
 ### Step 8: Clean Email Body
 
-**What this does:** Strips quoted reply text from the email body to get just the new content the student wrote. Checks for common reply markers in order of priority.
+**What this does:** Strips quoted reply text from the email body to get just the new content the student wrote. Uses `bodyPreview` (plain text) instead of `body` (HTML) to avoid capturing HTML formatting from email clients. Checks for common reply markers in order of priority.
 
 **UI steps:**
 1. Click **+ Add an action**
@@ -382,15 +382,19 @@ concat('RequestID eq ', outputs('Get_Request_Record')?['ID'])
 
 ```
 if(
-  contains(triggerOutputs()?['body/body'], '---'),
-  first(split(triggerOutputs()?['body/body'], '---')),
+  contains(triggerOutputs()?['body/bodyPreview'], '---'),
+  first(split(triggerOutputs()?['body/bodyPreview'], '---')),
   if(
-    contains(triggerOutputs()?['body/body'], 'From:'),
-    first(split(triggerOutputs()?['body/body'], 'From:')),
+    contains(triggerOutputs()?['body/bodyPreview'], '___'),
+    first(split(triggerOutputs()?['body/bodyPreview'], '___')),
     if(
-      contains(triggerOutputs()?['body/body'], 'On '),
-      first(split(triggerOutputs()?['body/body'], 'On ')),
-      triggerOutputs()?['body/body']
+      contains(triggerOutputs()?['body/bodyPreview'], 'From:'),
+      first(split(triggerOutputs()?['body/bodyPreview'], 'From:')),
+      if(
+        contains(triggerOutputs()?['body/bodyPreview'], 'On '),
+        first(split(triggerOutputs()?['body/bodyPreview'], 'On ')),
+        triggerOutputs()?['body/bodyPreview']
+      )
     )
   )
 )
@@ -398,11 +402,12 @@ if(
 
 **How this expression works:**
 1. First checks for `---` (our separator from Flow D emails)
-2. Then checks for `From:` (common in forwarded/quoted emails)
-3. Then checks for `On ` (common in "On [date], [person] wrote:")
-4. Falls back to full body if no markers found
+2. Then checks for `___` (common email signature delimiter - underscores)
+3. Then checks for `From:` (common in forwarded/quoted emails)
+4. Then checks for `On ` (common in "On [date], [person] wrote:")
+5. Falls back to full body if no markers found
 
-> **Note:** This handles the most common reply patterns. Edge cases with unusual formatting may include some quoted text.
+> **Note:** This expression uses `bodyPreview` (plain text) to avoid HTML formatting issues. It handles the most common reply patterns. Edge cases with unusual formatting may include some quoted text.
 
 ---
 
@@ -511,14 +516,25 @@ if(
       - **Minimum interval:** `PT20S`
       - **Maximum interval:** `PT1H`
    6. Click **Done**
-5. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `PrintRequests`
+
+#### Basic Required Fields
+
+5. Fill in the basic required fields:
+   - **Site Address:** Select `Digital Fabrication Lab - https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** Select `PrintRequests`
    - **Id:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['ID']` → click **Update**
-   - **NeedsAttention:** Select `Yes`
-   - **LastAction Value:** Select `Message Received`
-   - **LastActionBy:** Leave blank (system action)
+   - **TigerCardNumber:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['TigerCardNumber']` → click **Update**
+
+> **Note:** TigerCardNumber is a required field in the list. We preserve the existing value by pulling it from the request record. This prevents accidentally clearing the field during the update.
+
+#### Advanced Parameters
+
+6. Click **Advanced parameters** dropdown → select **Show all** (or just expand to show the fields you need)
+7. Fill in the advanced fields:
+   - **LastAction Value:** Select `Comment Added`
+   - **LastActionBy Claims:** Leave empty (system action, no specific user)
    - **LastActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
+   - **NeedsAttention:** Select `Yes`
 
 ---
 
@@ -548,7 +564,7 @@ if(
    - **Title:** Type `Student Email Reply Received`
    - **RequestID:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['ID']` → click **Update**
    - **ReqKey:** Click **Expression** tab (fx) → paste: `outputs('Build_Full_ReqKey')` → click **Update**
-   - **Action Value:** Select `Message Received`
+   - **Action Value:** Select `Comment Added`
    - **FieldName:** Type `Direction`
    - **NewValue:** Type `Inbound`
    - **Actor Claims:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['Student']?['Claims']` → click **Update**
@@ -584,10 +600,20 @@ concat('Student replied via email. Thread: ', outputs('Create_Inbound_Message')?
       - **Minimum interval:** `PT20S`
       - **Maximum interval:** `PT1H`
    6. Click **Done**
-5. Fill in:
-   - **Message Id:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/id']` → click **Update**
-   - **Mailbox address:** Type `coad-fablab@lsu.edu`
-   - **Mark as:** Select `Read`
+
+#### Basic Required Field
+
+5. Fill in the basic required field:
+   - **Message Id:** Select **Message Id** from the Dynamic content panel (from the trigger "When a new email arrives in a shared mailbox")
+   
+   > **Alternative:** If dynamic content isn't available, click **Expression** tab (fx) → paste: `triggerOutputs()?['body/id']` → click **Update**
+
+#### Advanced Parameters
+
+6. Click **Advanced parameters** dropdown → select **Show all** to expand (2 fields)
+7. Fill in the advanced fields:
+   - **Original Mailbox Address:** Type `coad-fablab@lsu.edu` in the search box and select it (this is a people/email picker field)
+   - **Mark as:** Select `Yes` (Yes = mark as read, No = mark as unread)
 
 ---
 
@@ -633,7 +659,7 @@ concat('Student replied via email. Thread: ', outputs('Create_Inbound_Message')?
 - [ ] Reply with `From:` quote → Only new content saved
 - [ ] Reply with `On [date] wrote:` → Only new content saved
 - [ ] Simple reply without markers → Full body saved
-- [ ] HTML email body → Content extracted properly
+- [ ] HTML email body → Plain text extracted via bodyPreview
 
 ### Threading
 
@@ -652,7 +678,7 @@ concat('Student replied via email. Thread: ', outputs('Create_Inbound_Message')?
 
 ### Audit Trail Verification
 
-- [ ] Successful message: AuditLog entry has Action = "Message Received"
+- [ ] Successful message: AuditLog entry has Action = "Comment Added"
 - [ ] Rejected message: AuditLog entry has Action = "Email Rejected"
 - [ ] AuditLog entry has correct RequestID and ReqKey
 - [ ] AuditLog entry has FlowRunId populated
@@ -817,7 +843,7 @@ The flow validates that the email sender matches the StudentEmail on record. Thi
 ### Audit Trail
 
 All actions are logged to AuditLog:
-- **Successful message creation** — Action: "Message Received"
+- **Successful message creation** — Action: "Comment Added"
 - **Rejected messages** — Action: "Email Rejected" with sender details
 - **Flow run IDs** for debugging and accountability
 
@@ -902,7 +928,7 @@ Step 12: Mark Email as Read
 ### With PrintRequests
 
 - **NeedsAttention flag** surfaces replies in dashboard attention queue
-- **LastAction** updated to "Message Received"
+- **LastAction** updated to "Comment Added"
 - **LastActionAt** updated to current time
 - **No status change** — staff decides next action after reading message
 
