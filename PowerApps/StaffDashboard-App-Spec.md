@@ -928,8 +928,8 @@ SortByColumns(
         // Needs attention filter
         If(varNeedsAttention, NeedsAttention = true, true)
     ),
-    "Modified",
-    SortOrder.Descending
+    "NeedsAttention", SortOrder.Descending,  // Attention items first (true > false)
+    "Created", SortOrder.Ascending            // Then oldest first (longest in queue)
 )
 ```
 
@@ -1109,20 +1109,28 @@ If(
 ```powerfx
 Switch(
     ThisItem.Color.Value,
-    "Black", RGBA(50, 50, 50, 1),
+    "Black", RGBA(26, 26, 26, 1),
     "White", RGBA(180, 180, 180, 1),
     "Gray", RGBA(128, 128, 128, 1),
-    "Red", RGBA(200, 50, 50, 1),
-    "Green", RGBA(50, 150, 50, 1),
-    "Blue", RGBA(50, 100, 200, 1),
-    "Yellow", RGBA(218, 165, 32, 1),
-    "Dark Yellow", RGBA(184, 134, 11, 1),
-    "Any", RGBA(150, 150, 150, 1),
-    RGBA(100, 100, 100, 1)
+    "Red", RGBA(204, 0, 0, 1),
+    "Orange", RGBA(255, 102, 0, 1),
+    "Yellow", RGBA(255, 215, 0, 1),
+    "Green", RGBA(76, 175, 80, 1),
+    "Forest Green", RGBA(34, 139, 34, 1),
+    "Blue", RGBA(0, 102, 204, 1),
+    "Purple", RGBA(107, 63, 160, 1),
+    "Brown", RGBA(93, 64, 55, 1),
+    "Chocolate Brown", RGBA(123, 63, 0, 1),
+    "Copper", RGBA(184, 115, 51, 1),
+    "Bronze", RGBA(205, 127, 50, 1),
+    "Silver", RGBA(192, 192, 192, 1),
+    "Clear", RGBA(245, 245, 245, 1),
+    "Any", RGBA(224, 224, 224, 1),
+    RGBA(153, 153, 153, 1)
 )
 ```
 
-> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint.
+> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint. Colors match the SharePoint column formatting in `FilamentColor-Column-Formatting.json`.
 
 ---
 
@@ -6446,6 +6454,7 @@ Table(
 ## Job Cards Gallery Filter
 
 ```powerfx
+// NeedsAttention items appear first, then sorted by time in queue (oldest first)
 SortByColumns(
     Filter(
         PrintRequests,
@@ -6457,8 +6466,8 @@ SortByColumns(
         ),
         If(varNeedsAttention, NeedsAttention = true, true)
     ),
-    "Modified",
-    SortOrder.Descending
+    "NeedsAttention", SortOrder.Descending,  // Attention items first
+    "Created", SortOrder.Ascending            // Oldest first (longest in queue)
 )
 ```
 
@@ -6478,18 +6487,27 @@ If(ThisItem.NeedsAttention, 2, 1)
 ## Color Switch Statement
 
 ```powerfx
+// Matches SharePoint FilamentColor-Column-Formatting.json
 Switch(
     ThisItem.Color.Value,
-    "Black", RGBA(50, 50, 50, 1),
+    "Black", RGBA(26, 26, 26, 1),
     "White", RGBA(180, 180, 180, 1),
     "Gray", RGBA(128, 128, 128, 1),
-    "Red", RGBA(200, 50, 50, 1),
-    "Green", RGBA(50, 150, 50, 1),
-    "Blue", RGBA(50, 100, 200, 1),
-    "Yellow", RGBA(218, 165, 32, 1),
-    "Dark Yellow", RGBA(184, 134, 11, 1),
-    "Any", RGBA(150, 150, 150, 1),
-    RGBA(100, 100, 100, 1)
+    "Red", RGBA(204, 0, 0, 1),
+    "Orange", RGBA(255, 102, 0, 1),
+    "Yellow", RGBA(255, 215, 0, 1),
+    "Green", RGBA(76, 175, 80, 1),
+    "Forest Green", RGBA(34, 139, 34, 1),
+    "Blue", RGBA(0, 102, 204, 1),
+    "Purple", RGBA(107, 63, 160, 1),
+    "Brown", RGBA(93, 64, 55, 1),
+    "Chocolate Brown", RGBA(123, 63, 0, 1),
+    "Copper", RGBA(184, 115, 51, 1),
+    "Bronze", RGBA(205, 127, 50, 1),
+    "Silver", RGBA(192, 192, 192, 1),
+    "Clear", RGBA(245, 245, 245, 1),
+    "Any", RGBA(224, 224, 224, 1),
+    RGBA(153, 153, 153, 1)
 )
 ```
 
