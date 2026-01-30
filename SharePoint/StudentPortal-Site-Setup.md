@@ -281,182 +281,50 @@ Create a new student-facing Home page that will become the site's default landin
 
 ---
 
-### 4.2: Create Additive Manufacturing Page
+### 4.2: Create Remaining Pages (Blank)
+
+Create all remaining pages as blank placeholders. Content will be added later by migrating from Moodle.
+
+**Quick creation steps (repeat for each page):**
 
 1. From the site home, click **+ New** → **Page**
 2. In the Template gallery, click **Create blank** (top right)
-3. Name the page: `Additive`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Additive Manufacturing content from Moodle HTML]
-   
-   Topics to cover:
-   - FDM Printing (Filament)
-   - Resin Printing (SLA)
-   - Available Printers and Build Volumes
-   - Supported File Formats (.stl, .obj, .3mf)
-   - Pricing Information
-   - How to Submit a Print Request
-   ```
+3. Name the page
+4. Click **Publish**
 
-5. **Add Image Web Part (optional):**
-   - Click **+** → **Image**
-   - Upload printer photos
+**Pages to create:**
 
-6. Click **Publish**
+| Page Name | URL After Creation |
+|-----------|-------------------|
+| Additive | /SitePages/Additive.aspx |
+| Subtractive | /SitePages/Subtractive.aspx |
+| Class Projects | /SitePages/Class-Projects.aspx |
+| Resources | /SitePages/Resources.aspx |
+| Feedback | /SitePages/Feedback.aspx |
+| Lab Rules | /SitePages/Lab-Rules.aspx |
+| Safety | /SitePages/Safety.aspx |
+| My Print Requests | /SitePages/My-Print-Requests.aspx |
 
-### 4.3: Create Subtractive Manufacturing Page
+> 💡 **Tip:** You can leave pages completely blank or add a simple "Content coming soon" text placeholder.
 
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Subtractive`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Subtractive Manufacturing content from Moodle HTML]
-   
-   Topics to cover:
-   - CNC Routing
-   - Laser Cutting
-   - Available Equipment
-   - Material Guidelines
-   - Booking Procedures
-   ```
+---
 
-5. Click **Publish**
+### 4.3: Configure My Print Requests Page (Special Setup)
 
-### 4.4: Create Class Projects Page
+The "My Print Requests" page requires a List web part to show students their print requests. Complete this after creating the blank page:
 
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Class Projects`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Class Projects content from Moodle HTML]
-   
-   Topics to cover:
-   - Course-specific project guidelines
-   - Assignment submission requirements
-   - Examples/portfolio of past projects
-   ```
-
-5. Click **Publish**
-
-### 4.5: Create Resources Page
-
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Resources`
-4. **Add Quick Links or Document Library Web Part:**
-   - Click **+** → **Quick links** (for external links)
-   - OR **Document library** (for file downloads)
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Resources content from Moodle HTML]
-   
-   Items to include:
-   - Software download links (PrusaSlicer, PreForm, etc.)
-   - File templates
-   - Tutorial videos
-   - User guides/manuals
-   ```
-
-5. Click **Publish**
-
-### 4.6: Create Feedback Page
-
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Feedback`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Feedback content from Moodle HTML]
-   
-   Options:
-   - Embed Microsoft Forms survey
-   - Contact information
-   - Feedback submission process
-   ```
-
-5. **Optional - Embed Microsoft Form:**
-   - Click **+** → **Embed**
-   - Paste Microsoft Forms embed URL
-
-6. Click **Publish**
-
-### 4.7: Create Lab Rules Page
-
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Lab Rules`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Lab Rules content from Moodle HTML]
-   
-   Topics to cover:
-   - Usage policies
-   - Hours of operation
-   - Payment requirements
-   - Equipment reservation
-   - Behavioral expectations
-   ```
-
-5. Click **Publish**
-
-### 4.8: Create Safety Page
-
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `Safety`
-4. **Add Text Web Part:**
-   - Click **+** → **Text**
-   - Add placeholder:
-   
-   ```
-   [PLACEHOLDER: Migrate Safety content from Moodle HTML]
-   
-   Topics to cover:
-   - Required safety training
-   - PPE requirements
-   - Emergency procedures
-   - Equipment-specific safety
-   - Reporting incidents
-   ```
-
-5. Click **Publish**
-
-### 4.9: Create My Print Requests Page
-
-This page shows students their own print requests.
-
-1. From the site home, click **+ New** → **Page**
-2. In the Template gallery, click **Create blank**
-3. Name the page: `My Print Requests`
-4. **Add Text Header:**
+1. Go to **Site Pages** → Open **My Print Requests**
+2. Click **Edit** in the toolbar
+3. **Add Text Header:**
    - Click **+** → **Text**
    - Type: `View the status of your 3D print requests below. You can only see requests you have submitted.`
 
-5. **Add List Web Part:**
+4. **Add List Web Part:**
    - Click **+** → **List**
    - Select **PrintRequests**
    - The list will automatically show only the current user's items (due to item-level permissions)
 
-6. **Configure List View:**
+5. **Configure List View:**
    - Click the web part → **Edit web part** (pencil icon)
    - Under **View**, select **My Requests** (if you created this view)
    - OR select columns to display:
@@ -469,12 +337,12 @@ This page shows students their own print requests.
      - EstimatedCost
      - Created
 
-7. **Add Link to Submission Form:**
+6. **Add Link to Submission Form:**
    - Click **+** → **Button** (or Quick links)
    - Text: `Submit New Print Request`
    - Link: URL to your Power Apps submission form or SharePoint form
 
-8. Click **Publish**
+7. Click **Republish**
 
 ---
 
