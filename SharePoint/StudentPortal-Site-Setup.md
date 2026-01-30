@@ -21,24 +21,34 @@ This guide transforms the existing SharePoint team site into a student-facing po
 
 ```
 SharePoint Site: Digital Fabrication Lab
-├── Student Experience (Site Visitors)
-│   ├── Home (landing page)
+│
+├── Home (NEW - Student-facing landing page, site default)
+│   └── Moodle-style welcome, student quick links
+│
+├── Lab Hub (RENAMED from existing "Home" - Staff only)
+│   └── Staff docs, TigerCASH Log, Schedule, Master SOP, etc.
+│
+├── Student Pages (visible to everyone)
 │   ├── Additive (3D printing info)
 │   ├── Subtractive (CNC/laser info)
+│   ├── Class Projects (course guidelines)
 │   ├── Resources (downloads/guides)
+│   ├── Feedback (surveys/contact)
 │   ├── Lab Rules (policies)
 │   ├── Safety (requirements)
 │   ├── My Print Requests (filtered to own items)
 │   └── Submit Request (Power App form)
 │
-└── Staff Experience (Site Members)
-    ├── All student pages (above)
+└── Staff-Only (audience-targeted, Members only)
+    ├── Lab Hub (staff operations page)
     ├── Print Lab Dashboard (Power App)
     ├── PrintRequests (full list)
     ├── RequestComments (messaging)
     ├── AuditLog (tracking)
     └── Staff (team management)
 ```
+
+**Key Concept:** Staff see everything (student pages + staff sections). Students only see the student pages.
 
 ---
 
@@ -205,7 +215,25 @@ The PrintRequests list uses item-level permissions so students can only see thei
 
 Create pages that mirror the Moodle course structure. Each page will use SharePoint's modern page experience with web parts.
 
-### 4.1: Create Home Page
+### 4.0: Rename Existing Home Page to "Lab Hub" (Staff Operations)
+
+Your current Home page contains staff-focused content (TigerCASH Log, Schedule, Master SOP, etc.). We'll keep this as a staff-only operations page.
+
+1. Go to **Site contents** → **Site Pages**
+2. Find the current **Home** page
+3. Click the **...** (ellipsis) next to it → **Rename**
+4. Change the name to: `Lab Hub`
+5. Click **Rename**
+
+> 💡 **Alternative Method:** Open the page, click **Page details** in the toolbar, and edit the page name there.
+
+**Result:** Your existing staff operations page is now called "Lab Hub" and will be configured as staff-only in navigation later. The URL will change to `/SitePages/Lab-Hub.aspx`.
+
+---
+
+### 4.1: Create Home Page (Student Landing)
+
+Create a new student-facing Home page that will become the site's default landing page.
 
 1. Go to **Site contents** → **Site Pages**
 2. Click **+ New** → **Site page**
@@ -484,11 +512,14 @@ Add these items visible to **staff only**:
 | Label | Link | Audience |
 |-------|------|----------|
 | --- | (Separator) | - |
+| Lab Hub | `/SitePages/Lab-Hub.aspx` | Digital Fabrication Lab Members |
 | Print Lab Dashboard | [Power App URL] | Digital Fabrication Lab Members |
 | PrintRequests | `/Lists/PrintRequests` | Digital Fabrication Lab Members |
 | RequestComments | `/Lists/RequestComments` | Digital Fabrication Lab Members |
 | AuditLog | `/Lists/AuditLog` | Digital Fabrication Lab Members |
 | Staff | `/Lists/Staff` | Digital Fabrication Lab Members |
+
+> 💡 **Lab Hub** is your renamed original Home page containing staff docs, TigerCASH Log, Schedule, Master SOP, etc.
 
 **To add staff-only items:**
 
@@ -516,6 +547,7 @@ Add these items visible to **staff only**:
    My Print Requests
    Submit Request
    ─────────────────
+   Lab Hub                (Staff only - your original home page)
    Print Lab Dashboard    (Staff only)
    PrintRequests          (Staff only)
    RequestComments        (Staff only)
@@ -660,7 +692,8 @@ If you previously used a document library for file submissions:
 
 | Page Name | URL | Purpose | Audience |
 |-----------|-----|---------|----------|
-| Home | /SitePages/Home.aspx | Landing page with hero and quick links | Everyone |
+| Home | /SitePages/Home.aspx | Student landing page with hero and quick links | Everyone |
+| Lab Hub | /SitePages/Lab-Hub.aspx | Staff operations (renamed from original Home) | Staff Only |
 | Additive | /SitePages/Additive.aspx | 3D printing information | Everyone |
 | Subtractive | /SitePages/Subtractive.aspx | CNC/laser information | Everyone |
 | Class Projects | /SitePages/Class-Projects.aspx | Course project guidelines | Everyone |
@@ -684,7 +717,7 @@ If you previously used a document library for file submissions:
 
 | Navigation Item | Visible To | Type |
 |-----------------|------------|------|
-| Home | Everyone | Page |
+| Home | Everyone | Page (Student landing) |
 | Additive | Everyone | Page |
 | Subtractive | Everyone | Page |
 | Class Projects | Everyone | Page |
@@ -694,6 +727,7 @@ If you previously used a document library for file submissions:
 | Safety | Everyone | Page |
 | My Print Requests | Everyone | Page |
 | Submit Request | Everyone | External Link |
+| Lab Hub | Staff Only | Page (Staff operations) |
 | Print Lab Dashboard | Staff Only | External Link |
 | PrintRequests | Staff Only | List |
 | RequestComments | Staff Only | List |
@@ -713,7 +747,8 @@ If you previously used a document library for file submissions:
 - [ ] PrintRequests item-level permissions verified (Read: Only their own)
 
 ### Pages Created
-- [ ] Home.aspx created and set as site homepage
+- [ ] Existing Home page renamed to "Lab Hub" (staff operations)
+- [ ] New Home.aspx created (student landing) and set as site homepage
 - [ ] Additive.aspx created
 - [ ] Subtractive.aspx created
 - [ ] Class-Projects.aspx created
@@ -725,7 +760,8 @@ If you previously used a document library for file submissions:
 
 ### Navigation Configured
 - [ ] Audience targeting enabled on navigation
-- [ ] All student pages added to navigation
+- [ ] All student pages added to navigation (visible to Everyone)
+- [ ] Lab Hub configured with Members audience (staff only)
 - [ ] Staff-only items configured with Members audience
 - [ ] Submit Request link added
 - [ ] Unnecessary items removed (3D File Submission, etc.)
