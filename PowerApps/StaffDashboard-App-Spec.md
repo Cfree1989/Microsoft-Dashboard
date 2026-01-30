@@ -600,6 +600,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         recRejectModal
         recRejectOverlay
     btnClearFilters                   ← Step 14
+    btnRefresh                        ← Step 14
     chkNeedsAttention                 ← Step 14
     txtSearch                         ← Step 14
     recFilterBar                      ← Step 14 (filter bar background)
@@ -4495,9 +4496,9 @@ Your Notes Modal should now contain these controls:
 
 **What you're doing:** Creating a dedicated filter bar between the status tabs and job cards gallery with search and filter controls.
 
-> ⚠️ **IMPORTANT:** You must create **ALL 4 controls** in this section. The filter bar won't look right if you only create some of them. The background rectangle (`recFilterBar`) provides the visual container for the other controls.
+> ⚠️ **IMPORTANT:** You must create **ALL 5 controls** in this section. The filter bar won't look right if you only create some of them. The background rectangle (`recFilterBar`) provides the visual container for the other controls.
 
-> 💡 **Design:** A clean horizontal bar with a subtle background containing search input, attention filter checkbox, and clear button.
+> 💡 **Design:** A clean horizontal bar with a subtle background containing search input, attention filter checkbox, refresh button, and clear button.
 
 ### Control Hierarchy
 
@@ -4506,6 +4507,7 @@ scrDashboard
 ├── recFilterBar              ← Background bar (CREATE THIS FIRST!)
 ├── txtSearch                 ← Search input
 ├── chkNeedsAttention         ← Checkbox filter
+├── btnRefresh                ← Refresh data button
 └── btnClearFilters           ← Reset button
 ```
 
@@ -4612,6 +4614,39 @@ Reset(chkNeedsAttention)
 
 ---
 
+### Refresh Data Button (btnRefresh)
+
+18. Click **+ Insert** → **Button**.
+19. **Rename it:** `btnRefresh`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"↻ Refresh"` |
+| X | `Parent.Width - 176` |
+| Y | `117` |
+| Width | `80` |
+| Height | `36` |
+| Fill | `RGBA(70, 130, 220, 1)` |
+| Color | `Color.White` |
+| HoverFill | `RGBA(50, 110, 200, 1)` |
+| BorderColor | `RGBA(70, 130, 220, 1)` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+
+21. Set **OnSelect:**
+
+```powerfx
+Refresh(PrintRequests)
+```
+
+> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted via the student form, the tab counts and gallery won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts.
+
+---
+
 ### ⚠️ CRITICAL: Reorder Modal Containers for Proper Z-Index
 
 **After creating the filter bar controls, you MUST reorder the modal CONTAINERS so they appear ON TOP of the filter bar when visible.**
@@ -4642,6 +4677,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
    ├── recFilterBar              ← Filter bar BELOW modal containers
    ├── txtSearch
    ├── chkNeedsAttention
+   ├── btnRefresh
    ├── btnClearFilters
    ├── galJobCards               ← Gallery BELOW filter bar
    └── (remaining controls...)
@@ -6144,6 +6180,7 @@ Notify("Changes saved!", NotificationType.Success)
 - [ ] Clicking a tab filters the gallery
 - [ ] Search filters by name/email/ReqKey
 - [ ] "Needs Attention" checkbox filters correctly
+- [ ] Refresh button reloads data and updates tab counts
 
 #### Action Buttons
 - [ ] Approve button opens approval modal
