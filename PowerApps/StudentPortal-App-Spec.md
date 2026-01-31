@@ -251,19 +251,69 @@ Set(varFilamentRate, 0.10);
 Set(varResinRate, 0.20);
 Set(varMinimumCost, 3.00);
 
-// === STYLING / THEMING ===
+// ============================================
+// === STYLING / THEMING (Centralized) ===
+// ============================================
+// Change these once to update the entire app!
+
+// --- FONT ---
 Set(varAppFont, Font.'Segoe UI');
+
+// --- COLORS: Primary Palette ---
+Set(varColorPrimary, RGBA(70, 29, 124, 1));        // LSU Purple - headers, primary buttons
+Set(varColorPrimaryHover, RGBA(90, 49, 144, 1));   // Purple hover state
+Set(varColorPrimaryPressed, RGBA(50, 19, 104, 1)); // Purple pressed state
+Set(varColorSecondary, RGBA(253, 208, 35, 1));     // LSU Gold - accents
+
+// --- COLORS: Semantic ---
+Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - confirm, success
+Set(varColorSuccessHover, RGBA(36, 144, 36, 1));   // Green hover
+Set(varColorDanger, RGBA(209, 52, 56, 1));         // Red - cancel, errors
+Set(varColorDangerHover, RGBA(229, 72, 76, 1));    // Red hover
+Set(varColorWarning, RGBA(255, 185, 0, 1));        // Amber - warnings, pending
+Set(varColorInfo, RGBA(70, 130, 220, 1));          // Blue - info, uploaded
+
+// --- COLORS: Neutrals ---
+Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
+Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
+Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
+Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
+Set(varColorBgCard, Color.White);                   // Card/modal background
+Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
+Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
+
+// --- BORDER RADIUS ---
+Set(varRadiusLarge, 12);    // Modals
+Set(varRadiusMedium, 8);    // Cards, large buttons
+Set(varRadiusSmall, 6);     // Standard buttons
+Set(varRadiusXSmall, 4);    // Inputs, small buttons
+Set(varRadiusPill, 14);     // Status badges (pill shape)
+
+// --- SIZING ---
+Set(varHeaderHeight, 80);   // Top header bar
+Set(varNavHeight, 70);      // Bottom navigation bar
+Set(varInputHeight, 45);    // Standard input field height
+Set(varButtonHeight, 50);   // Primary button height
+Set(varButtonHeightSmall, 40); // Secondary button height
+
+// --- SPACING ---
+Set(varSpacingXL, 20);      // Large padding (screen edges)
+Set(varSpacingLG, 16);      // Card padding
+Set(varSpacingMD, 12);      // Form field gaps
+Set(varSpacingSM, 8);       // Small gaps
+Set(varSpacingXS, 4);       // Tiny gaps
 
 // === STATUS COLORS ===
 // Consistent with Staff Dashboard
 Set(varStatusColors, Table(
-    {Status: "Uploaded", Color: RGBA(70, 130, 220, 1)},
-    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(16, 124, 16, 1)},
+    {Status: "Uploaded", Color: varColorInfo},
+    {Status: "Pending", Color: varColorWarning},
+    {Status: "Ready to Print", Color: varColorSuccess},
     {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
     {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
     {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
-    {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Rejected", Color: varColorDanger},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
 ```
@@ -278,20 +328,104 @@ Set(varStatusColors, Table(
 
 > 💡 **Tip:** You can also press **F5** to preview the app, which automatically runs OnStart.
 
-### Understanding the Variables
+### Understanding the Styling Variables
+
+Use these variables in your control properties instead of hardcoding values. This lets you change the entire app's look by editing OnStart!
+
+#### How to Use
+
+| Instead of... | Use... |
+|---------------|--------|
+| `RGBA(70, 29, 124, 1)` | `varColorPrimary` |
+| `Font.'Segoe UI'` | `varAppFont` |
+| `RadiusTopLeft: 8` | `RadiusTopLeft: varRadiusMedium` |
+| `Height: 45` | `Height: varInputHeight` |
+
+#### Example: Text Input with Variables
+
+```powerfx
+// Before (hardcoded)
+Font: Font.'Segoe UI'
+Height: 45
+BorderColor: RGBA(200, 200, 200, 1)
+FocusedBorderColor: RGBA(70, 29, 124, 1)
+RadiusTopLeft: 4
+
+// After (using variables)
+Font: varAppFont
+Height: varInputHeight
+BorderColor: varColorBorder
+FocusedBorderColor: varColorPrimary
+RadiusTopLeft: varRadiusXSmall
+RadiusTopRight: varRadiusXSmall
+RadiusBottomLeft: varRadiusXSmall
+RadiusBottomRight: varRadiusXSmall
+```
+
+### Variable Reference Table
+
+#### Colors
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `varColorPrimary` | LSU Purple | Headers, primary buttons |
+| `varColorPrimaryHover` | Lighter purple | Button hover states |
+| `varColorPrimaryPressed` | Darker purple | Button pressed states |
+| `varColorSecondary` | LSU Gold | Accents, highlights |
+| `varColorSuccess` | Green | Confirm buttons, success states |
+| `varColorDanger` | Red | Cancel buttons, errors |
+| `varColorWarning` | Amber | Warnings, pending states |
+| `varColorInfo` | Blue | Info messages |
+| `varColorText` | Dark gray | Primary text |
+| `varColorTextMuted` | Medium gray | Secondary text |
+| `varColorTextLight` | Light gray | Hints, placeholders |
+| `varColorBg` | Off-white | Screen backgrounds |
+| `varColorBgCard` | White | Cards, modals |
+| `varColorBorder` | Gray | Input borders |
+| `varColorBorderLight` | Light gray | Card borders |
+| `varColorDisabled` | Gray | Disabled controls |
+
+#### Border Radius
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `varRadiusLarge` | 12 | Modals |
+| `varRadiusMedium` | 8 | Cards, nav buttons |
+| `varRadiusSmall` | 6 | Primary action buttons |
+| `varRadiusXSmall` | 4 | Inputs, small buttons |
+| `varRadiusPill` | 14 | Status badges |
+
+#### Sizing
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `varHeaderHeight` | 80 | Top header bar |
+| `varNavHeight` | 70 | Bottom navigation |
+| `varInputHeight` | 45 | Text inputs, dropdowns |
+| `varButtonHeight` | 50 | Primary buttons |
+| `varButtonHeightSmall` | 40 | Secondary buttons |
+
+#### Spacing
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `varSpacingXL` | 20 | Screen edge padding |
+| `varSpacingLG` | 16 | Card padding |
+| `varSpacingMD` | 12 | Form field gaps |
+| `varSpacingSM` | 8 | Small gaps |
+| `varSpacingXS` | 4 | Tiny gaps |
+
+### Other Variables
 
 | Variable | Purpose | Type |
 |----------|---------|------|
 | `varMeEmail` | Current user's email (lowercase) | Text |
 | `varMeName` | Current user's display name | Text |
-| `varCurrentScreen` | Currently active screen | Text |
 | `varShowConfirmModal` | ID of item for estimate confirmation (0=hidden) | Number |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
-| `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
-| `varFormSubmitted` | Track successful form submission | Boolean |
+| `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
 | `varStatusColors` | Status-to-color mapping table | Table |
-| `varAppFont` | Global font for consistent styling | Font |
 
 ---
 
@@ -304,15 +438,23 @@ Before you start building the UI, understand the structure of the app:
 ```
 ▼ App
 ▼ scrSubmit                     ← Screen 1: Submit Request Form
+    ▼ conLoadingOverlay         ← Loading indicator (Visible: varIsLoading)
+        lblLoadingText
+        recLoadingBg
+        recLoadingOverlay
     recHeaderSubmit             ← Purple header bar
     lblHeaderSubmit             ← "Submit Request" title
-    scrollSubmitForm            ← Scrollable container for form
+    ▼ conSubmitForm             ← Scrollable container for form
         ... form fields ...
     recNavBar                   ← Bottom navigation bar
     btnNavSubmit                ← "Submit" nav button (active)
     btnNavMyRequests            ← "My Requests" nav button
 
 ▼ scrMyRequests                 ← Screen 2: My Requests List
+    ▼ conLoadingOverlay2        ← Loading indicator (Visible: varIsLoading)
+        lblLoadingText2
+        recLoadingBg2
+        recLoadingOverlay2
     ▼ conConfirmModal           ← Estimate confirmation modal
         ... modal controls ...
     ▼ conCancelModal            ← Cancel request modal
@@ -385,10 +527,10 @@ We use **prefixes** to identify control types at a glance:
 | X | `0` |
 | Y | `0` |
 | Width | `Parent.Width` |
-| Height | `80` |
-| Fill | `RGBA(70, 29, 124, 1)` |
+| Height | `varHeaderHeight` |
+| Fill | `varColorPrimary` |
 
-> This creates an LSU Purple header bar.
+> This creates an LSU Purple header bar using your centralized styling variables.
 
 ### Adding the Header Title (lblHeaderSubmit)
 
@@ -417,11 +559,11 @@ We use **prefixes** to identify control types at a glance:
 | Property | Value |
 |----------|-------|
 | X | `0` |
-| Y | `Parent.Height - 70` |
+| Y | `Parent.Height - varNavHeight` |
 | Width | `Parent.Width` |
-| Height | `70` |
-| Fill | `Color.White` |
-| BorderColor | `RGBA(220, 220, 220, 1)` |
+| Height | `varNavHeight` |
+| Fill | `varColorBgCard` |
+| BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
 
 ### Adding Navigation Button: Submit (Active)
@@ -433,19 +575,19 @@ We use **prefixes** to identify control types at a glance:
 | Property | Value |
 |----------|-------|
 | Text | `"📝 Submit"` |
-| X | `20` |
-| Y | `Parent.Height - 60` |
+| X | `varSpacingXL` |
+| Y | `Parent.Height - varNavHeight + 10` |
 | Width | `(Parent.Width - 60) / 2` |
-| Height | `50` |
-| Fill | `RGBA(70, 29, 124, 1)` |
+| Height | `varButtonHeight` |
+| Fill | `varColorPrimary` |
 | Color | `Color.White` |
-| Font | `Font.'Segoe UI'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
 
 16. Set **OnSelect:**
 
@@ -495,6 +637,83 @@ Your Tree view should now look like:
     btnNavSubmit
     btnNavMyRequests
 ```
+
+---
+
+### Step 4B: Adding Loading Overlay (Optional but Recommended)
+
+**What you're doing:** Creating a loading indicator that appears during form submission.
+
+#### Create Loading Container
+
+1. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
+2. **Rename it:** `conLoadingOverlay`
+3. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| Visible | `varIsLoading` |
+
+4. In Tree view, drag `conLoadingOverlay` to the **top** (so it renders in front of everything).
+
+#### Add Overlay Background
+
+5. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recLoadingOverlay`
+7. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `RGBA(0, 0, 0, 0.5)`
+
+#### Add Loading Box
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recLoadingBg`
+10. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 200) / 2` |
+| Y | `(Parent.Height - 100) / 2` |
+| Width | `200` |
+| Height | `100` |
+| Fill | `Color.White` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+#### Add Loading Text
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblLoadingText`
+13. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Submitting..."` |
+| X | `recLoadingBg.X` |
+| Y | `recLoadingBg.Y + 35` |
+| Width | `recLoadingBg.Width` |
+| Height | `30` |
+| Align | `Align.Center` |
+| Size | `14` |
+| Color | `RGBA(70, 29, 124, 1)` |
+
+#### Arrange Z-Order
+
+In Tree view, ensure controls inside `conLoadingOverlay` are ordered:
+
+```
+▼ conLoadingOverlay
+    lblLoadingText      ← IN FRONT
+    recLoadingBg        ← White box
+    recLoadingOverlay   ← BEHIND (semi-transparent)
+```
+
+> 💡 **Tip:** Copy this same container structure to `scrMyRequests` (rename with `2` suffix) for consistent loading feedback on both screens.
 
 ---
 
@@ -605,15 +824,16 @@ Your Tree view should now look like:
 | Default | `""` |
 | HintText | `"16-digit number from your Tiger Card"` |
 | Width | `Parent.Width - 40` |
-| Height | `45` |
+| Height | `varInputHeight` |
 | Mode | `TextMode.SingleLine` |
 | Format | `TextFormat.Text` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| FocusedBorderColor | `RGBA(70, 29, 124, 1)` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
+| Font | `varAppFont` |
+| BorderColor | `varColorBorder` |
+| FocusedBorderColor | `varColorPrimary` |
+| RadiusTopLeft | `varRadiusXSmall` |
+| RadiusTopRight | `varRadiusXSmall` |
+| RadiusBottomLeft | `varRadiusXSmall` |
+| RadiusBottomRight | `varRadiusXSmall` |
 
 25. Click **+ Insert** → **Text label**.
 26. **Rename it:** `lblTigerCardHint`
@@ -923,18 +1143,18 @@ Files not following this format will be rejected."
 | Text | `"SUBMIT REQUEST"` |
 | Width | `Parent.Width - 40` |
 | Height | `55` |
-| Fill | `RGBA(70, 29, 124, 1)` |
+| Fill | `varColorPrimary` |
 | Color | `Color.White` |
-| Font | `Font.'Segoe UI'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `16` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
-| HoverFill | `RGBA(90, 49, 144, 1)` |
-| PressedFill | `RGBA(50, 19, 104, 1)` |
-| DisabledFill | `RGBA(180, 180, 180, 1)` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| DisabledFill | `varColorDisabled` |
 
 11. Set **DisplayMode** (validates required fields):
 
@@ -1179,17 +1399,17 @@ Now add controls **inside** the gallery template.
 
 | Property | Value |
 |----------|-------|
-| X | `16` |
+| X | `varSpacingLG` |
 | Y | `0` |
 | Width | `Parent.TemplateWidth - 32` |
-| Height | `Parent.TemplateHeight - 8` |
-| Fill | `Color.White` |
-| BorderColor | `RGBA(220, 220, 220, 1)` |
+| Height | `Parent.TemplateHeight - varSpacingSM` |
+| Fill | `varColorBgCard` |
+| BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
 
 #### Request ID (ReqKey)
 
@@ -1570,19 +1790,20 @@ If(!IsBlank(varSelectedItem.EstimatedWeight), "Material: ~" & Text(varSelectedIt
 | Property | Value |
 |----------|-------|
 | Text | `"I CONFIRM THIS ESTIMATE"` |
-| X | `recConfirmModal.X + 20` |
+| X | `recConfirmModal.X + varSpacingXL` |
 | Y | `recConfirmModal.Y + 320` |
 | Width | `recConfirmModal.Width - 40` |
-| Height | `50` |
-| Fill | `RGBA(16, 124, 16, 1)` |
+| Height | `varButtonHeight` |
+| Fill | `varColorSuccess` |
+| HoverFill | `varColorSuccessHover` |
 | Color | `Color.White` |
-| Font | `Font.'Segoe UI'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
 
 31. Set **OnSelect:**
 
@@ -1746,19 +1967,20 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | Property | Value |
 |----------|-------|
 | Text | `"Yes, Cancel Request"` |
-| X | `recCancelModal.X + 20` |
+| X | `recCancelModal.X + varSpacingXL` |
 | Y | `recCancelModal.Y + 160` |
 | Width | `recCancelModal.Width - 40` |
-| Height | `45` |
-| Fill | `RGBA(209, 52, 56, 1)` |
+| Height | `varInputHeight` |
+| Fill | `varColorDanger` |
+| HoverFill | `varColorDangerHover` |
 | Color | `Color.White` |
-| Font | `Font.'Segoe UI'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `13` |
-| RadiusTopLeft | `6` |
-| RadiusTopRight | `6` |
-| RadiusBottomLeft | `6` |
-| RadiusBottomRight | `6` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
 
 21. Set **OnSelect:**
 
