@@ -22,30 +22,24 @@ This guide transforms the existing SharePoint team site into a student-facing po
 ```
 SharePoint Site: Digital Fabrication Lab
 │
-├── Home (NEW - Student-facing landing page, site default)
+├── Staff-Only Navigation (audience-targeted, Members only - at top)
+│   ├── Staff Hub (staff operations page)
+│   ├── Print Lab Dashboard (Power App)
+│   ├── PrintRequests (full list)
+│   ├── RequestComments (messaging)
+│   ├── AuditLog (tracking)
+│   └── Staff (team management)
+│
+├── Home (Student-facing landing page, site default)
 │   └── Moodle-style welcome, student quick links
 │
-├── Staff Hub (RENAMED from existing "Home" - Staff only)
-│   └── Staff docs, TigerCASH Log, Schedule, Master SOP, etc.
-│
-├── Student Pages (visible to everyone)
-│   ├── Additive (3D printing info)
-│   ├── Subtractive (CNC/laser info)
-│   ├── Class Projects (course guidelines)
-│   ├── Resources (downloads/guides)
-│   ├── Feedback (surveys/contact)
-│   ├── Lab Rules (policies)
-│   ├── Safety (requirements)
-│   ├── My Print Requests (filtered to own items)
-│   └── Submit Request (Power App form)
-│
-└── Staff-Only (audience-targeted, Members only)
-    ├── Staff Hub (staff operations page)
-    ├── Print Lab Dashboard (Power App)
-    ├── PrintRequests (full list)
-    ├── RequestComments (messaging)
-    ├── AuditLog (tracking)
-    └── Staff (team management)
+└── Student Pages (visible to everyone)
+    ├── Subtractive (CNC/laser info)
+    ├── Additive (3D printing info + Student Print Portal app)
+    ├── Resources (downloads/guides)
+    ├── Feedback (surveys/contact)
+    ├── Lab Rules (policies)
+    └── Safety (requirements)
 ```
 
 **Key Concept:** Staff see everything (student pages + staff sections). Students only see the student pages.
@@ -288,98 +282,16 @@ Create all remaining pages as blank placeholders. Content will be added later by
 
 | Page Name | URL After Creation |
 |-----------|-------------------|
-| Additive | /SitePages/Additive.aspx |
 | Subtractive | /SitePages/Subtractive.aspx |
-| Class Projects | /SitePages/Class-Projects.aspx |
+| Additive | /SitePages/Additive.aspx |
 | Resources | /SitePages/Resources.aspx |
 | Feedback | /SitePages/Feedback.aspx |
 | Lab Rules | /SitePages/Lab-Rules.aspx |
 | Safety | /SitePages/Safety.aspx |
-| My Print Requests | /SitePages/My-Print-Requests.aspx |
 
 > 💡 **Tip:** You can leave pages completely blank or add a simple "Content coming soon" text placeholder.
-
----
-
-### 4.3: Configure My Print Requests Page (Special Setup)
-
-The "My Print Requests" page shows students their print requests. You have two options:
-
-| Option | Approach | Recommendation |
-|--------|----------|----------------|
-| **Option A: List Web Part** | Embed the PrintRequests list directly | Quick setup, basic functionality |
-| **Option B: Power Apps Embed** | Embed the Student Print Portal app | Better UX, recommended (see Step 10) |
-
-> 💡 **Recommendation:** Complete this section with the List web part first to verify permissions work correctly. Then upgrade to the Power Apps embed in Step 10 for a better student experience.
-
-#### List Web Part Approach (Option A)
-
-The List web part lets students track their submissions without accessing the full PrintRequests list.
-
-#### Step 1: Open the Page for Editing
-
-1. Go to **Site contents** → **Site Pages**
-2. Click on **My-Print-Requests.aspx** to open it
-3. Click **Edit** in the top toolbar (or click the pencil icon)
-4. The **Toolbox** panel will appear on the right side with available web parts
-
-#### Step 2: Add Text Header
-
-1. Click the **+** button in the center of the page (or hover between sections to reveal it)
-2. The Toolbox on the right shows web parts — click **Text** (the "A" icon)
-3. A text box appears on the page with placeholder text "Add your text here."
-4. Click inside the text box and type:
-   ```
-   View the status of your 3D print requests below. You can only see requests you have submitted.
-   ```
-5. (Optional) Use the formatting toolbar to make it bold or larger
-
-#### Step 3: Add the PrintRequests List Web Part
-
-1. Click the **+** button below your text to add another web part
-2. In the Toolbox, click **See all web parts** at the bottom
-3. In the search box, type `List` and select the **List** web part
-4. A panel appears: **"Select a list or library"**
-5. Click **PrintRequests** from the list
-6. The list will embed on your page
-
-> 💡 **Why this works:** Students will only see their own items because of the item-level permissions configured on the PrintRequests list. You don't need to add any filters — SharePoint handles this automatically.
-
-#### Step 4: Configure the List View (Optional)
-
-1. Click on the embedded list to select it
-2. Click the **pencil icon** (Edit web part) on the left side of the web part
-3. A properties panel appears on the right
-4. Under **View**, you can select a specific view:
-   - Select **My Requests** if you created this view in PrintRequests list setup
-   - OR leave as default — item-level permissions will still filter correctly
-5. Under **Show command bar**, toggle OFF if you want a cleaner look
-6. Click **Apply** or click outside the panel to close
-
-#### Step 5: Add Submit Button (Optional)
-
-1. Click the **+** button below the list
-2. Click **Button** in the Toolbox (or **Quick links** for multiple links)
-3. Configure the button:
-   - **Label:** `Submit New Print Request`
-   - **Link:** Use one of these options:
-     - **Recommended:** Your Student Print Portal app Web link (see Step 10)
-     - **Alternative:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/_layouts/15/listform.aspx?PageType=8&ListId=%7B[YOUR-LIST-ID]%7D` (SharePoint form)
-   
-   > 💡 **Tip:** The Power Apps Student Portal provides a much better experience. See Step 10 for setup.
-   
-4. Click **Apply**
-
-#### Step 6: Publish the Page
-
-1. Review your page — it should have:
-   - Header text explaining what students will see
-   - Embedded PrintRequests list
-   - (Optional) Submit button
-2. Click **Republish** in the top-right corner
-3. Click **Republish** again in the confirmation dialog
-
-**Result:** Students visiting this page will see only their own print requests and can easily submit new ones.
+>
+> 📱 **Note:** The Additive page will include the Student Print Portal app (see Step 10), which handles both print request submission and tracking.
 
 ---
 
@@ -402,24 +314,48 @@ SharePoint modern sites have left navigation that can be customized and audience
 
 > 💡 **Note:** This allows you to show/hide navigation items based on M365 security groups or SharePoint groups.
 
-### 5.3: Configure Student-Visible Navigation
+### 5.3: Configure Staff-Only Navigation (At Top)
+
+Add these items visible to **staff only** at the top of the navigation:
+
+| Label | Link | Audience |
+|-------|------|----------|
+| Staff Hub | `/SitePages/Staff-Hub.aspx` | Digital Fabrication Lab Members |
+| Print Lab Dashboard | [Power App URL] | Digital Fabrication Lab Members |
+| PrintRequests | `/Lists/PrintRequests` | Digital Fabrication Lab Members |
+| RequestComments | `/Lists/RequestComments` | Digital Fabrication Lab Members |
+| AuditLog | `/Lists/AuditLog` | Digital Fabrication Lab Members |
+| Staff | `/Lists/Staff` | Digital Fabrication Lab Members |
+
+> 💡 **Staff Hub** is your renamed original Home page containing staff docs, TigerCASH Log, Schedule, Master SOP, etc.
+
+**To add staff-only items:**
+
+1. Click **+ Add link**
+2. Enter the **Label**
+3. Enter the **URL**
+4. Click **Edit audiences** (or the people icon)
+5. Type `Digital Fabrication Lab Members`
+6. Select the group from the dropdown
+7. Click **Save**
+
+### 5.4: Configure Student-Visible Navigation (Below Staff Items)
 
 Add these items visible to **everyone** (students and staff):
 
 | Label | Link | Audience |
 |-------|------|----------|
 | Home | `/SitePages/Home.aspx` | Everyone (leave blank) |
-| Additive | `/SitePages/Additive.aspx` | Everyone (leave blank) |
 | Subtractive | `/SitePages/Subtractive.aspx` | Everyone (leave blank) |
-| Class Projects | `/SitePages/Class-Projects.aspx` | Everyone (leave blank) |
+| Additive | `/SitePages/Additive.aspx` | Everyone (leave blank) |
 | Resources | `/SitePages/Resources.aspx` | Everyone (leave blank) |
 | Feedback | `/SitePages/Feedback.aspx` | Everyone (leave blank) |
 | Lab Rules | `/SitePages/Lab-Rules.aspx` | Everyone (leave blank) |
 | Safety | `/SitePages/Safety.aspx` | Everyone (leave blank) |
-| My Print Requests | `/SitePages/My-Print-Requests.aspx` | Everyone (leave blank) |
-| Submit Request | [Power Apps URL — see Step 10] | Everyone (leave blank) |
 
 > 💡 **How Audience Targeting Works:** In SharePoint, navigation items are visible to **everyone by default**. You only specify an audience when you want to **restrict** visibility. An empty/blank audience = visible to all users.
+>
+> 📱 **Note:** The Additive page includes the embedded Student Print Portal app, which provides both submission and request tracking functionality. No separate navigation items are needed for print requests.
 
 **To add each item:**
 
@@ -439,57 +375,30 @@ Add these items visible to **everyone** (students and staff):
 
 > ⚠️ **Important:** Don't look for an "Everyone" option to select. Simply skip the audience targeting step entirely. Blank = Everyone.
 
-### 5.4: Configure Staff-Only Navigation
-
-Add these items visible to **staff only**:
-
-| Label | Link | Audience |
-|-------|------|----------|
-| --- | (Separator) | - |
-| Staff Hub | `/SitePages/Lab-Hub.aspx` | Digital Fabrication Lab Members |
-| Print Lab Dashboard | [Power App URL] | Digital Fabrication Lab Members |
-| PrintRequests | `/Lists/PrintRequests` | Digital Fabrication Lab Members |
-| RequestComments | `/Lists/RequestComments` | Digital Fabrication Lab Members |
-| AuditLog | `/Lists/AuditLog` | Digital Fabrication Lab Members |
-| Staff | `/Lists/Staff` | Digital Fabrication Lab Members |
-
-> 💡 **Staff Hub** is your renamed original Home page containing staff docs, TigerCASH Log, Schedule, Master SOP, etc.
-
-**To add staff-only items:**
-
-1. Click **+ Add link**
-2. Enter the **Label**
-3. Enter the **URL**
-4. Click **Edit audiences** (or the people icon)
-5. Type `Digital Fabrication Lab Members`
-6. Select the group from the dropdown
-7. Click **Save**
-
 ### 5.5: Reorder Navigation Items
 
 1. Drag and drop items to arrange in logical order
-2. Recommended order:
+2. Recommended order (staff items at top, student pages below):
    ```
+   Staff Hub               (Staff only)
+   Print Lab Dashboard     (Staff only)
+   PrintRequests           (Staff only)
+   RequestComments         (Staff only)
+   AuditLog                (Staff only)
+   Staff                   (Staff only)
+   ─────────────────
    Home
-   Additive
    Subtractive
-   Class Projects
+   Additive                (includes Student Print Portal app)
    Resources
    Feedback
    Lab Rules
    Safety
-   My Print Requests
-   Submit Request
-   ─────────────────
-   Staff Hub                (Staff only - your original home page)
-   Print Lab Dashboard    (Staff only)
-   PrintRequests          (Staff only)
-   RequestComments        (Staff only)
-   AuditLog               (Staff only)
-   Staff                  (Staff only)
    ```
 
 3. Click **Save** when done
+
+> 💡 **Why staff items at top?** Staff members access the administrative items frequently. Putting them at the top reduces scrolling. Students won't see these items anyway due to audience targeting.
 
 ### 5.6: Remove Unnecessary Navigation Items
 
@@ -548,8 +457,8 @@ Now that all pages are created, add quick links on the Home page.
 | Resources | /SitePages/Resources.aspx | Document icon |
 | Lab Rules | /SitePages/Lab-Rules.aspx | Book icon |
 | Safety | /SitePages/Safety.aspx | Shield icon |
-| Submit Print Request | [Power App URL] | Add icon |
-| My Print Requests | /SitePages/My-Print-Requests.aspx | List icon |
+
+> 📱 **Note:** The Additive page includes the embedded Student Print Portal app, so students can submit and track print requests directly from that page. No separate quick links needed for print functionality.
 
 4. Click **Republish**
 
@@ -577,16 +486,16 @@ Now that all pages are created, add quick links on the Home page.
    - [ ] Only student navigation items visible
    - [ ] Staff-only nav items are HIDDEN
    - [ ] All student pages load correctly
-   - [ ] My Print Requests shows ONLY their own items
-   - [ ] Submit Request link works
+   - [ ] Student Print Portal app on Additive page shows ONLY their own requests
+   - [ ] Can submit new print request via the embedded app
    - [ ] Cannot access /Lists/AuditLog (permission denied)
    - [ ] Cannot access /Lists/Staff (permission denied)
    - [ ] Cannot access /Lists/RequestComments (permission denied)
 
 ### 8.3: Test Item-Level Security
 
-1. As a student, submit a test print request
-2. Go to My Print Requests page
+1. As a student, submit a test print request via the Student Print Portal app on the Additive page
+2. View the "My Requests" screen in the app
 3. Verify only their own request appears
 4. As a different student, verify they cannot see the first student's request
 
@@ -627,15 +536,13 @@ If you previously used a document library for file submissions:
 | Page Name | URL | Purpose | Audience |
 |-----------|-----|---------|----------|
 | Home | /SitePages/Home.aspx | Student landing page with hero and quick links | Everyone |
-| Staff Hub | /SitePages/Lab-Hub.aspx | Staff operations (renamed from original Home) | Staff Only |
-| Additive | /SitePages/Additive.aspx | 3D printing information | Everyone |
+| Staff Hub | /SitePages/Staff-Hub.aspx | Staff operations (renamed from original Home) | Staff Only |
 | Subtractive | /SitePages/Subtractive.aspx | CNC/laser information | Everyone |
-| Class Projects | /SitePages/Class-Projects.aspx | Course project guidelines | Everyone |
+| Additive | /SitePages/Additive.aspx | 3D printing info + Student Print Portal app | Everyone |
 | Resources | /SitePages/Resources.aspx | Downloads and tutorials | Everyone |
 | Feedback | /SitePages/Feedback.aspx | Survey/contact form | Everyone |
 | Lab Rules | /SitePages/Lab-Rules.aspx | Usage policies | Everyone |
 | Safety | /SitePages/Safety.aspx | Safety requirements | Everyone |
-| My Print Requests | /SitePages/My-Print-Requests.aspx | Student's own requests | Everyone |
 
 ### Permission Configuration Summary
 
@@ -651,22 +558,19 @@ If you previously used a document library for file submissions:
 
 | Navigation Item | Visible To | Type |
 |-----------------|------------|------|
-| Home | Everyone | Page (Student landing) |
-| Additive | Everyone | Page |
-| Subtractive | Everyone | Page |
-| Class Projects | Everyone | Page |
-| Resources | Everyone | Page |
-| Feedback | Everyone | Page |
-| Lab Rules | Everyone | Page |
-| Safety | Everyone | Page |
-| My Print Requests | Everyone | Page |
-| Submit Request | Everyone | External Link |
 | Staff Hub | Staff Only | Page (Staff operations) |
 | Print Lab Dashboard | Staff Only | External Link |
 | PrintRequests | Staff Only | List |
 | RequestComments | Staff Only | List |
 | AuditLog | Staff Only | List |
 | Staff | Staff Only | List |
+| Home | Everyone | Page (Student landing) |
+| Subtractive | Everyone | Page |
+| Additive | Everyone | Page (includes Student Print Portal app) |
+| Resources | Everyone | Page |
+| Feedback | Everyone | Page |
+| Lab Rules | Everyone | Page |
+| Safety | Everyone | Page |
 
 ---
 
@@ -683,21 +587,18 @@ If you previously used a document library for file submissions:
 ### Pages Created
 - [ ] Existing Home page renamed to "Staff Hub" (staff operations)
 - [ ] New Home.aspx created (student landing) and set as site homepage
-- [ ] Additive.aspx created
 - [ ] Subtractive.aspx created
-- [ ] Class-Projects.aspx created
+- [ ] Additive.aspx created (will include Student Print Portal app - see Step 10)
 - [ ] Resources.aspx created
 - [ ] Feedback.aspx created
 - [ ] Lab-Rules.aspx created
 - [ ] Safety.aspx created
-- [ ] My-Print-Requests.aspx created with List web part
 
 ### Navigation Configured
 - [ ] Audience targeting enabled on navigation
 - [ ] All student pages added to navigation (visible to Everyone)
 - [ ] Staff Hub configured with Members audience (staff only)
 - [ ] Staff-only items configured with Members audience
-- [ ] Submit Request link added
 - [ ] Unnecessary items removed (3D File Submission, etc.)
 
 ### Testing Complete
@@ -706,6 +607,7 @@ If you previously used a document library for file submissions:
 - [ ] Students cannot access staff-only lists
 - [ ] PrintRequests item-level security working
 - [ ] Home page loads as site default
+- [ ] Student Print Portal app on Additive page works correctly
 
 ---
 
@@ -720,13 +622,16 @@ If you previously used a document library for file submissions:
 
 ---
 
-## Step 10: Embedding the Student Print Portal App (Recommended)
+## Step 10: Embedding the Student Print Portal App on Additive Page
 
-The Student Print Portal is a Power Apps canvas app that provides students with a better experience than the SharePoint list view. It includes:
-- A clean submission form with cascading dropdowns
-- A "My Requests" gallery showing their submissions with status badges
-- Estimate confirmation capability
-- Ability to cancel requests before staff review
+The Student Print Portal is a Power Apps canvas app that provides students with a complete print request experience. It includes:
+- **Submit Screen:** Clean submission form with cascading dropdowns
+- **My Requests Screen:** Gallery showing their submissions with status badges
+- **Built-in Navigation:** Bottom nav bar to switch between screens
+- **Estimate Confirmation:** Modal for confirming cost estimates
+- **Cancel Capability:** Students can cancel requests before staff review
+
+By embedding this app on the Additive page, students get both educational content about 3D printing AND the ability to submit/track requests — all in one place.
 
 > 📚 **Build Guide:** See `PowerApps/StudentPortal-App-Spec.md` for complete build instructions.
 
@@ -745,94 +650,37 @@ Before embedding the app, ensure:
 4. Copy the **Web link** URL
    - Format: `https://apps.powerapps.com/play/e/[environment-id]/a/[app-id]`
 
-### 10.3: Update Submit Request Page
-
-Replace the SharePoint form link with the embedded Power Apps app.
-
-#### Option A: Embed the Full App (Recommended)
+### 10.3: Embed the App on Additive Page
 
 1. Go to **Site contents** → **Site Pages**
-2. Open **Submit-Request.aspx** (create if it doesn't exist)
+2. Open **Additive.aspx**
 3. Click **Edit** in the toolbar
-4. Delete any existing content
+4. Scroll to the bottom of your existing 3D printing content (or add content first if the page is blank)
 5. Click **+** to add a web part
 6. Search for and select **Power Apps**
 7. In the properties panel:
    - Paste the **Web link** you copied
-   - Set **Height**: `900` (or adjust based on your form length)
-8. Click **Republish**
+   - Set **Height**: `900` (or adjust based on your preference)
+8. (Optional) Add a text section above the app:
+   ```
+   Submit and Track Your 3D Print Requests
+   Use the app below to submit new print requests and track the status of your existing submissions.
+   ```
+9. Click **Republish**
 
-#### Option B: Link to the App (Simpler)
+> 💡 **Tip:** The app's built-in bottom navigation lets students switch between "Submit" and "My Requests" screens without leaving the Additive page.
 
-1. Edit the page
-2. Add a **Button** web part
-3. Configure:
-   - **Label:** `Open Print Request Form`
-   - **Link:** [Your app Web link]
-4. Style with LSU Purple background if desired
-5. Click **Republish**
-
-### 10.4: Update My Print Requests Page
-
-Replace the List web part with the Student Print Portal app for a better experience.
-
-#### Remove Old List Web Part
-
-1. Go to **Site contents** → **Site Pages**
-2. Open **My-Print-Requests.aspx**
-3. Click **Edit**
-4. Select the **List** web part (showing PrintRequests)
-5. Click the **trash icon** to delete it
-6. Keep the header text if desired
-
-#### Add Power Apps Web Part
-
-7. Click **+** where the list was
-8. Search for and select **Power Apps**
-9. In the properties panel:
-   - Paste the **Web link** you copied
-   - Set **Height**: `900`
-10. Click **Republish**
-
-> 💡 **Tip:** The same app handles both submission and viewing requests—students use the bottom navigation to switch between screens.
-
-### 10.5: Update Navigation Links
-
-Update the left navigation to point to the app or pages with the embedded app.
-
-1. Click **Edit** at the bottom of the left navigation panel
-2. Find **Submit Request** link
-3. Update the URL to one of:
-   - **Direct app link:** `https://apps.powerapps.com/play/e/.../a/...`
-   - **SharePoint page with embed:** `/SitePages/Submit-Request.aspx`
-4. Find **My Print Requests** link (if separate)
-5. Update similarly
-6. Click **Save**
-
-### 10.6: Alternative — Direct App Links Only
-
-If you prefer students go directly to the app without SharePoint pages:
-
-1. Update navigation links to use the Power Apps Web link directly
-2. Students will open the app in a new tab
-3. The app works on mobile devices when accessed this way
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Embedded on SharePoint pages** | Consistent site experience, stays within SharePoint | Requires page setup |
-| **Direct app link** | Simplest setup, works great on mobile | Opens in separate tab |
-| **Both** | Maximum flexibility | More links to maintain |
-
-### 10.7: Verification
+### 10.4: Verification
 
 After embedding, test the following:
 
-- [ ] Navigate to Submit Request page — app loads
+- [ ] Navigate to Additive page — app loads below the 3D printing content
 - [ ] Submit a test request through the app
-- [ ] Navigate to My Print Requests page — app loads
+- [ ] Use the app's bottom navigation to switch to "My Requests"
 - [ ] Your test request appears in the My Requests gallery
 - [ ] Status badges display correctly
-- [ ] Navigation between Submit and My Requests works within the app
+- [ ] Confirm estimate modal works (when status is "Pending")
+- [ ] Cancel request works (when status is "Uploaded")
 
 ---
 
@@ -861,13 +709,16 @@ For easy access, you can share the app link directly with students:
 ```
 📢 Submit your 3D print requests online!
 
-Use the new Student Print Portal to:
+Visit our Additive Manufacturing page to:
+✓ Learn about 3D printing services
 ✓ Submit print requests
 ✓ Track your request status  
 ✓ Confirm cost estimates
 ✓ View pickup instructions
 
-Access the portal: [YOUR APP LINK]
+Access the portal: [SHAREPOINT SITE URL]/SitePages/Additive.aspx
+
+Or use the direct app link: [YOUR APP LINK]
 
 Questions? Email coad-fablab@lsu.edu
 ```
@@ -939,9 +790,12 @@ When ready to migrate content from Moodle, for each page:
    - **Quick links** for link collections
    - **Button** for call-to-action links
    - **Divider** for visual separation
+   - **Power Apps** for the Student Print Portal (Additive page only)
 5. Copy/paste text content (formatting may need adjustment)
 6. Upload images to Site Assets or directly in web parts
 7. Republish the page
 
 > 💡 **Tip:** SharePoint text web parts support basic HTML. You can sometimes paste HTML directly, but complex formatting may not transfer perfectly.
+
+> 📱 **Note for Additive page:** After migrating 3D printing content from Moodle, add the Student Print Portal app at the bottom of the page (see Step 10). This gives students both educational content and print request functionality in one place.
 
