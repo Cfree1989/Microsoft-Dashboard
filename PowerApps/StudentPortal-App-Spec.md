@@ -926,10 +926,8 @@ Navigate(scrSubmit, ScreenTransition.Fade)
 | Y | `Parent.Height - 70` |
 | Width | `Parent.Width - (varSpacingLG * 2)` |
 | Height | `varButtonHeight` |
-| Fill | `Color.White` |
-| Color | `varColorSuccess` |
-| BorderColor | `varColorSuccess` |
-| BorderThickness | `2` |
+| Fill | `varColorSuccess` |
+| Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
@@ -937,7 +935,8 @@ Navigate(scrSubmit, ScreenTransition.Fade)
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
 | RadiusBottomRight | `varRadiusSmall` |
-| HoverFill | `RGBA(16, 124, 16, 0.1)` |
+| HoverFill | `varColorSuccessHover` |
+| PressedFill | `RGBA(0, 100, 0, 1)` |
 
 59. Set **OnSelect:**
 
@@ -1059,7 +1058,7 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 
 ---
 
-### 4A: Create Header Container
+### 5A: Create Header Container
 
 4. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
 5. **Rename it:** `conHeader`
@@ -1109,7 +1108,7 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 
 ---
 
-### 4B: Create Navigation Container
+### 5B: Create Navigation Container
 
 13. With `scrSubmit` selected (not conHeader), click **+ Insert** → **Layout** → **Container**.
 14. **Rename it:** `conNavBar`
@@ -1137,43 +1136,18 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 | Height | `Parent.Height` |
 | Fill | `varColorHeader` |
 
-#### Add Submit Nav Button (Active)
+#### Add Home Nav Button (Inactive)
 
 19. Click **+ Insert** → **Button**.
-20. **Rename it:** `btnNavSubmit`
+20. **Rename it:** `btnNavHome`
 21. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Submit"` |
+| Text | `"Home"` |
 | X | `varSpacingXL` |
 | Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `(Parent.Width - 60) / 2` |
-| Height | `varButtonHeightSmall` |
-| Fill | `varColorInfo` |
-| Color | `Color.White` |
-| Font | `varAppFont` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
-| RadiusTopLeft | `varRadiusSmall` |
-| RadiusTopRight | `varRadiusSmall` |
-| RadiusBottomLeft | `varRadiusSmall` |
-| RadiusBottomRight | `varRadiusSmall` |
-
-22. Set **OnSelect:** `// Already on this screen`
-
-#### Add My Requests Nav Button (Inactive)
-
-23. Click **+ Insert** → **Button**.
-24. **Rename it:** `btnNavMyRequests`
-25. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"My Requests"` |
-| X | `Parent.Width / 2 + 10` |
-| Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `(Parent.Width - 60) / 2` |
+| Width | `(Parent.Width - 80) / 3` |
 | Height | `varButtonHeightSmall` |
 | Fill | `RGBA(60, 60, 65, 1)` |
 | Color | `Color.White` |
@@ -1185,7 +1159,61 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 | RadiusBottomLeft | `varRadiusSmall` |
 | RadiusBottomRight | `varRadiusSmall` |
 
-26. Set **OnSelect:**
+22. Set **OnSelect:**
+
+```powerfx
+Navigate(scrHome, ScreenTransition.Fade)
+```
+
+#### Add Submit Nav Button (Active)
+
+23. Click **+ Insert** → **Button**.
+24. **Rename it:** `btnNavSubmit`
+25. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Submit"` |
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 80) / 3` |
+| Height | `varButtonHeightSmall` |
+| Fill | `varColorInfo` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+26. Set **OnSelect:** `// Already on this screen`
+
+#### Add My Requests Nav Button (Inactive)
+
+27. Click **+ Insert** → **Button**.
+28. **Rename it:** `btnNavMyRequests`
+29. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"My Requests"` |
+| X | `Parent.Width - Self.Width - varSpacingXL` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 80) / 3` |
+| Height | `varButtonHeightSmall` |
+| Fill | `RGBA(60, 60, 65, 1)` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Normal` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+30. Set **OnSelect:**
 
 ```powerfx
 Navigate(scrMyRequests, ScreenTransition.Fade)
@@ -1193,11 +1221,11 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 
 ---
 
-### 4C: Create Loading Overlay Container
+### 5C: Create Loading Overlay Container
 
-27. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
-28. **Rename it:** `conLoadingOverlay`
-29. Set these properties:
+31. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
+32. **Rename it:** `conLoadingOverlay`
+33. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1208,19 +1236,19 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 | Fill | `Transparent` |
 | Visible | `varIsLoading` |
 
-30. In Tree view, drag `conLoadingOverlay` to the **top** of scrSubmit's children (so it renders in front of everything).
+34. In Tree view, drag `conLoadingOverlay` to the **top** of scrSubmit's children (so it renders in front of everything).
 
 #### Add Overlay Background
 
-31. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
-32. **Rename it:** `recLoadingOverlay`
-33. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorOverlay`
+35. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
+36. **Rename it:** `recLoadingOverlay`
+37. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorOverlay`
 
 #### Add Loading Box
 
-34. Click **+ Insert** → **Rectangle**.
-35. **Rename it:** `recLoadingBg`
-36. Set these properties:
+38. Click **+ Insert** → **Rectangle**.
+39. **Rename it:** `recLoadingBg`
+40. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1236,9 +1264,9 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 
 #### Add Loading Text
 
-37. Click **+ Insert** → **Text label**.
-38. **Rename it:** `lblLoadingText`
-39. Set these properties:
+41. Click **+ Insert** → **Text label**.
+42. **Rename it:** `lblLoadingText`
+43. Set these properties:
 
 | Property | Value |
 |----------|-------|
