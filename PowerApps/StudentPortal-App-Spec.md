@@ -1,9 +1,15 @@
-# Student Print Portal — Canvas App (Phone)
+# Student Print Portal — Canvas App (Tablet)
 
-**⏱️ Time Required:** 6-8 hours (can be done in multiple sessions)  
-**🎯 Goal:** Students can submit 3D print requests and track their submissions through an intuitive mobile-friendly app
+**⏱️ Time Required:** 4-6 hours (can be done in multiple sessions)  
+**🎯 Goal:** Students can submit 3D print requests with file attachments and track their submissions through a clean, professional interface
 
 > 📚 **This is the comprehensive guide** — includes step-by-step build instructions, code references, and quick-copy snippets.
+>
+> **Key Features:**
+> - **EditForm with native attachment support** — files upload directly to SharePoint
+> - **Tablet layout (1024×768)** — optimized for computer submission, works on mobile
+> - **Modular container structure** — clean organization, reusable patterns
+> - **Staff Dashboard styling** — consistent look across student and staff apps
 
 ---
 
@@ -15,11 +21,11 @@
 4. [Adding Data Connections](#step-2-adding-data-connections)
 5. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
 6. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
-7. [Building Screen 1: Submit Request](#step-4-building-screen-1-submit-request)
-8. [Building the Submit Form](#step-5-building-the-submit-form)
-9. [Adding Cascading Dropdowns](#step-6-adding-cascading-dropdowns)
-10. [Adding File Attachments](#step-7-adding-file-attachments)
-11. [Building Screen 2: My Requests](#step-8-building-screen-2-my-requests)
+7. [Building Screen 1: Home (Landing)](#step-4-building-screen-1-home-landing) ← **NEW! Welcome screen**
+8. [Building Screen 2: Submit Request](#step-5-building-screen-2-submit-request)
+9. [Building the Submit Form (EditForm)](#step-6-building-the-submit-form-editform) ← **Uses EditForm for attachments**
+10. [Configuring Form Fields](#step-7-configuring-form-fields)
+11. [Building Screen 3: My Requests](#step-8-building-screen-3-my-requests)
 12. [Building the Request Cards Gallery](#step-9-building-the-request-cards-gallery)
 13. [Adding the Estimate Confirmation Modal](#step-10-adding-the-estimate-confirmation-modal)
 14. [Adding the Cancel Request Modal](#step-11-adding-the-cancel-request-modal)
@@ -68,36 +74,36 @@ Before you start, make sure you have:
 
 ## Design Standards
 
-This app follows consistent design patterns for a professional appearance that matches the Staff Dashboard and LSU branding.
+This app follows consistent design patterns matching the Staff Dashboard for a professional, cohesive appearance.
 
 ### Typography
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| App Title | `Font.'Segoe UI'` | 20 | Semibold |
+| App Title | `Font.'Segoe UI'` | 18 | Semibold |
 | Screen Headers | `Font.'Segoe UI'` | 18 | Semibold |
-| Section Headers | `Font.'Segoe UI'` | 14 | Semibold |
-| Body Text | `Font.'Segoe UI'` | 12 | Normal |
+| Section Headers | `Font.'Segoe UI'` | 12 | Semibold |
+| Body Text | `Font.'Segoe UI'` | 11 | Normal |
 | Labels/Hints | `Font.'Segoe UI'` | 10 | Normal |
 | Buttons | `Font.'Segoe UI'` | 12-14 | Semibold |
 
-> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the app. This matches the Microsoft design language and LSU's professional standards.
+> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the app. Use `varAppFont` variable instead of hardcoding.
 
-### Color Palette
+### Color Palette (Matching Staff Dashboard)
 
-| Purpose | Color | RGBA |
-|---------|-------|------|
-| Primary (LSU Purple) | Purple | `RGBA(70, 29, 124, 1)` |
-| Secondary (LSU Gold) | Gold | `RGBA(253, 208, 35, 1)` |
-| Success | Green | `RGBA(16, 124, 16, 1)` |
-| Warning | Amber | `RGBA(255, 185, 0, 1)` |
-| Error/Danger | Red | `RGBA(209, 52, 56, 1)` |
-| Info | Blue | `RGBA(70, 130, 220, 1)` |
-| Header Background | LSU Purple | `RGBA(70, 29, 124, 1)` |
-| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` |
-| Card Background | White | `Color.White` |
-| Muted Text | Gray | `RGBA(100, 100, 100, 1)` |
-| Screen Background | Light Gray | `RGBA(248, 248, 248, 1)` |
+| Purpose | Color | RGBA | Variable |
+|---------|-------|------|----------|
+| Primary (Active) | Blue | `RGBA(56, 96, 178, 1)` | `varColorPrimary` |
+| Success | Green | `RGBA(16, 124, 16, 1)` | `varColorSuccess` |
+| Warning | Amber | `RGBA(255, 185, 0, 1)` | `varColorWarning` |
+| Error/Danger | Red | `RGBA(209, 52, 56, 1)` | `varColorDanger` |
+| Info | Light Blue | `RGBA(70, 130, 220, 1)` | `varColorInfo` |
+| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | `varColorHeader` |
+| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | `varColorOverlay` |
+| Card Background | White | `Color.White` | `varColorBgCard` |
+| Muted Text | Gray | `RGBA(100, 100, 100, 1)` | `varColorTextMuted` |
+| Screen Background | Light Gray | `RGBA(248, 248, 248, 1)` | `varColorBg` |
+| Border | Gray | `RGBA(200, 200, 200, 1)` | `varColorBorder` |
 
 ### Status Colors (Matching Staff Dashboard)
 
@@ -116,38 +122,41 @@ This app follows consistent design patterns for a professional appearance that m
 
 | Type | Fill | Color | Border |
 |------|------|-------|--------|
-| Primary Action | LSU Purple | White | None |
-| Success Action | Green | White | None |
-| Danger Action | Red | White | None |
-| Secondary/Outline | White | Purple | Purple, 1px |
-| Navigation (Active) | LSU Purple | White | None |
-| Navigation (Inactive) | Light Gray | Dark Gray | None |
+| Primary Action | `varColorPrimary` | White | None |
+| Success Action | `varColorSuccess` | White | None |
+| Danger Action | `varColorDanger` | White | None |
+| Secondary/Outline | White | `varColorPrimary` | `varColorPrimary`, 1px |
+| Navigation (Active) | `varColorInfo` | White | None |
+| Navigation (Inactive) | `RGBA(60, 60, 65, 1)` | White | None |
 
 ### Corner Radius Standards
 
-| Element Type | Radius | Examples |
-|--------------|--------|----------|
-| Cards & Modals | `8` | Request cards, confirmation modals |
-| Primary Buttons | `6` | Submit, Confirm buttons |
-| Input Fields | `4` | Text inputs, dropdowns |
-| Status Badges | `12` | Rounded pill badges |
+| Element Type | Radius | Variable | Examples |
+|--------------|--------|----------|----------|
+| Cards & Modals | `8` | `varRadiusMedium` | Request cards, confirmation modals |
+| Primary Buttons | `6` | `varRadiusSmall` | Submit, Confirm buttons |
+| Input Fields | `4` | `varRadiusXSmall` | Text inputs, dropdowns |
+| Status Badges | `12` | `varRadiusPill` | Rounded pill badges |
 
-### Layout Dimensions (Phone Format)
+### Layout Dimensions (Tablet Format)
 
 | Element | Width | Height | Notes |
 |---------|-------|--------|-------|
-| Screen | `640` | `1136` | Phone portrait layout |
-| Header Bar | `Parent.Width` | `80` | Fixed at top |
-| Navigation Bar | `Parent.Width` | `70` | Fixed at bottom |
-| Content Area | `Parent.Width` | `Parent.Height - 150` | Between header and nav |
-| Form Fields | `Parent.Width - 40` | `50` | With 20px side margins |
+| Screen | `1024` | `768` | Tablet landscape layout |
+| Header Bar | `Parent.Width` | `60` | Fixed at top |
+| Navigation Bar | `Parent.Width` | `60` | Fixed at bottom |
+| Content Area | `Parent.Width` | `Parent.Height - 120` | Between header and nav |
+| Form Container | `Parent.Width` | `Parent.Height - 120` | Scrollable form area |
+| Form Fields | `Parent.Width - 40` | `45` | With 20px side margins |
 | Cards | `Parent.Width - 32` | Variable | With 16px side margins |
+
+> 💡 **Responsive Tip:** Use `Parent.Width` and `Parent.Height` for all sizing. This ensures the app adapts to different screen sizes.
 
 ---
 
 # STEP 1: Creating the Canvas App
 
-**What you're doing:** Creating a new Canvas app with a Phone layout, which gives you a mobile-friendly interface perfect for students on the go.
+**What you're doing:** Creating a new Canvas app with a Tablet layout, optimized for students submitting from computers while still working on mobile devices.
 
 ### Instructions
 
@@ -155,19 +164,19 @@ This app follows consistent design patterns for a professional appearance that m
 2. Make sure you're in the correct **Environment** (top right dropdown — should show "Louisiana State Universi...").
 3. In the left navigation, click **+ Create**.
 4. Under "Create your apps", click **Start with a blank canvas**.
-5. In the popup "Start with a blank canvas", click **Phone size** (left option).
+5. In the popup "Start with a blank canvas", click **Tablet size** (right option).
 6. Enter these settings:
    - **App name:** `Student Print Portal`
 7. Click **Create**.
 
-> 💡 **Tip:** Phone format creates a mobile-friendly vertical canvas—perfect for students accessing from their phones. It also works well embedded on SharePoint pages.
+> 💡 **Why Tablet?** Students typically submit print requests from computers where their 3D model files are stored. Tablet layout (1024×768) provides comfortable form entry on desktop while still working on mobile devices.
 
 > 📝 **Naming alternatives:** You can also use `3D Print Request Portal`, `FabLab Student Portal`, or any name that fits your lab.
 
 ### What You Should See
 
 - The Power Apps Studio editor opens
-- A blank white screen appears in the center (taller than wide)
+- A blank white screen appears in the center (wider than tall)
 - The left panel shows **Tree view** with `Screen1`
 - The top shows the formula bar
 
@@ -254,16 +263,15 @@ Set(varMinimumCost, 3.00);
 // ============================================
 // === STYLING / THEMING (Centralized) ===
 // ============================================
-// Change these once to update the entire app!
+// Matches Staff Dashboard styling - change these once to update the entire app!
 
 // --- FONT ---
 Set(varAppFont, Font.'Segoe UI');
 
-// --- COLORS: Primary Palette ---
-Set(varColorPrimary, RGBA(70, 29, 124, 1));        // LSU Purple - headers, primary buttons
-Set(varColorPrimaryHover, RGBA(90, 49, 144, 1));   // Purple hover state
-Set(varColorPrimaryPressed, RGBA(50, 19, 104, 1)); // Purple pressed state
-Set(varColorSecondary, RGBA(253, 208, 35, 1));     // LSU Gold - accents
+// --- COLORS: Primary Palette (Staff Dashboard) ---
+Set(varColorPrimary, RGBA(56, 96, 178, 1));        // Primary Blue - buttons, active elements
+Set(varColorPrimaryHover, RGBA(76, 116, 198, 1)); // Blue hover state
+Set(varColorPrimaryPressed, RGBA(36, 76, 158, 1)); // Blue pressed state
 
 // --- COLORS: Semantic ---
 Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - confirm, success
@@ -273,7 +281,8 @@ Set(varColorDangerHover, RGBA(229, 72, 76, 1));    // Red hover
 Set(varColorWarning, RGBA(255, 185, 0, 1));        // Amber - warnings, pending
 Set(varColorInfo, RGBA(70, 130, 220, 1));          // Blue - info, uploaded
 
-// --- COLORS: Neutrals ---
+// --- COLORS: Neutrals (Staff Dashboard) ---
+Set(varColorHeader, RGBA(45, 45, 48, 1));          // Dark Gray - header background
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
 Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
 Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
@@ -281,6 +290,7 @@ Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
 Set(varColorBgCard, Color.White);                   // Card/modal background
 Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
 Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
 Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
 // --- BORDER RADIUS ---
@@ -290,9 +300,9 @@ Set(varRadiusSmall, 6);     // Standard buttons
 Set(varRadiusXSmall, 4);    // Inputs, small buttons
 Set(varRadiusPill, 14);     // Status badges (pill shape)
 
-// --- SIZING ---
-Set(varHeaderHeight, 80);   // Top header bar
-Set(varNavHeight, 70);      // Bottom navigation bar
+// --- SIZING (Tablet Layout) ---
+Set(varHeaderHeight, 60);   // Top header bar
+Set(varNavHeight, 60);      // Bottom navigation bar
 Set(varInputHeight, 45);    // Standard input field height
 Set(varButtonHeight, 50);   // Primary button height
 Set(varButtonHeightSmall, 40); // Secondary button height
@@ -431,44 +441,113 @@ RadiusBottomRight: varRadiusXSmall
 
 ## Understanding Where Things Go (READ THIS!)
 
-Before you start building the UI, understand the structure of the app:
+Before you start building the UI, understand the modular structure of the app:
 
-### App Structure
+### App Structure (Modular Containers)
+
+This app uses a **container-based architecture** for clean organization and easy maintenance. Each major section is wrapped in a container.
 
 ```
 ▼ App
-▼ scrSubmit                     ← Screen 1: Submit Request Form
-    ▼ conLoadingOverlay         ← Loading indicator (Visible: varIsLoading)
+▼ scrHome                           ← Screen 1: Landing/Welcome Screen (StartScreen)
+    ▼ conHeader                     ← Header container
+        recHeaderBg                 ← Dark gray background
+        imgLogo                     ← FabLab/LSU logo (optional)
+        lblHeaderTitle              ← "3D Print Portal"
+    ▼ conWelcome                    ← Welcome message container
+        lblWelcome                  ← "Welcome, [Name]!"
+        lblSubtitle                 ← "What would you like to do today?"
+    ▼ conActionCards                ← Container for the two option cards
+        ▼ conSubmitCard             ← Left card - Submit New Request
+            recSubmitCardBg
+            icnSubmit               ← 3D printer icon
+            lblSubmitTitle          ← "Submit New Request"
+            lblSubmitDesc           ← Description text
+            btnGetStarted           ← "GET STARTED" button
+        lblOrDivider                ← "OR" text between cards
+        ▼ conRequestsCard           ← Right card - My Requests
+            recRequestsCardBg
+            icnRequests             ← List/clipboard icon
+            lblRequestsTitle        ← "My Requests"
+            lblRequestsDesc         ← Description text
+            btnViewRequests         ← "VIEW REQUESTS" button
+    ▼ conFooter                     ← Help info at bottom
+        lblHelpText                 ← "Need help? Visit Room 145..."
+    ▼ conNavBarHome                 ← Navigation bar (minimal on home)
+        recNavBgHome
+        lblPortalName               ← "Student 3D Print Portal"
+
+▼ scrSubmit                         ← Screen 2: Submit Request Form
+    ▼ conLoadingOverlay             ← Loading overlay (Visible: varIsLoading)
         lblLoadingText
         recLoadingBg
         recLoadingOverlay
-    recHeaderSubmit             ← Purple header bar
-    lblHeaderSubmit             ← "Submit Request" title
-    ▼ conSubmitForm             ← Scrollable container for form
-        ... form fields ...
-    recNavBar                   ← Bottom navigation bar
-    btnNavSubmit                ← "Submit" nav button (active)
-    btnNavMyRequests            ← "My Requests" nav button
+    ▼ conHeader                     ← Header container (reusable pattern)
+        lblHeaderTitle              ← "Submit Request"
+        recHeaderBg                 ← Dark gray background
+        btnBackHome                 ← Back to home button
+    ▼ conFormArea                   ← Scrollable form container
+        ▼ frmSubmit                 ← EditForm control (connected to PrintRequests)
+            Title_DataCard          ← Hidden (auto-generated title)
+            Student_DataCard        ← Auto-filled from user
+            StudentEmail_DataCard   ← Auto-filled from user
+            TigerCardNumber_DataCard ← Required input
+            CourseNumber_DataCard   ← Optional
+            Discipline_DataCard     ← Dropdown
+            ProjectType_DataCard    ← Dropdown
+            Method_DataCard         ← Dropdown (controls cascading)
+            Printer_DataCard        ← Cascading dropdown
+            Color_DataCard          ← Cascading dropdown
+            DueDate_DataCard        ← Date picker
+            Notes_DataCard          ← Multiline text
+            Attachments_DataCard    ← Native file attachments!
+            Status_DataCard         ← Hidden, defaults to "Uploaded"
+        lblFileWarning              ← File naming instructions
+        btnSubmit                   ← Submit button
+    ▼ conNavBar                     ← Navigation container (reusable pattern)
+        recNavBg                    ← Dark background
+        btnNavHome                  ← "Home"
+        btnNavSubmit                ← "Submit" (active)
+        btnNavMyRequests            ← "My Requests"
 
-▼ scrMyRequests                 ← Screen 2: My Requests List
-    ▼ conLoadingOverlay2        ← Loading indicator (Visible: varIsLoading)
-        lblLoadingText2
-        recLoadingBg2
-        recLoadingOverlay2
-    ▼ conConfirmModal           ← Estimate confirmation modal
-        ... modal controls ...
-    ▼ conCancelModal            ← Cancel request modal
-        ... modal controls ...
-    recHeaderRequests           ← Purple header bar
-    lblHeaderRequests           ← "My Requests" title
-    btnRefresh                  ← Refresh button
-    galMyRequests               ← Gallery of user's requests
-        ... card template ...
-    lblEmptyState               ← "No requests" message
-    recNavBar2                  ← Bottom navigation bar
-    btnNavSubmit2               ← "Submit" nav button
-    btnNavMyRequests2           ← "My Requests" nav button (active)
+▼ scrMyRequests                     ← Screen 3: My Requests List
+    ▼ conLoadingOverlay2            ← Loading overlay (same pattern)
+        ...
+    ▼ conConfirmModal               ← Confirm estimate modal (Visible: varShowConfirmModal > 0)
+        recModalOverlay
+        ▼ conModalContent
+            lblModalTitle
+            lblEstimateCost
+            lblEstimateTime
+            btnConfirm
+            btnCancelModal
+    ▼ conCancelModal                ← Cancel request modal (Visible: varShowCancelModal > 0)
+        ...
+    ▼ conHeader2                    ← Header container (same pattern)
+        lblHeaderTitle2
+        recHeaderBg2
+        btnRefresh
+        btnBackHome2                ← Back to home button
+    ▼ conGalleryArea                ← Gallery container
+        galMyRequests               ← Gallery of user's requests
+            ... card template ...
+        lblEmptyState               ← "No requests" message
+    ▼ conNavBar2                    ← Navigation container (same pattern)
+        recNavBg2
+        btnNavHome2                 ← "Home"
+        btnNavSubmit2               ← "Submit"
+        btnNavMyRequests2           ← "My Requests" (active)
 ```
+
+### Why Containers?
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Modularity** | Each section is self-contained and reusable |
+| **Visibility control** | Hide/show entire sections with one `Visible` property |
+| **Easy copying** | Copy containers between screens or apps |
+| **Clean Tree View** | Collapse containers to reduce clutter |
+| **Responsive sizing** | Child controls use `Parent.Width` relative to container |
 
 ### Naming Convention
 
@@ -476,50 +555,53 @@ We use **prefixes** to identify control types at a glance:
 
 | Prefix | Control Type | Example |
 |--------|-------------|---------|
-| `scr` | Screen | `scrSubmit`, `scrMyRequests` |
-| `rec` | Rectangle | `recHeaderSubmit` |
-| `lbl` | Label | `lblHeaderSubmit` |
-| `btn` | Button | `btnSubmit` |
+| `scr` | Screen | `scrHome`, `scrSubmit`, `scrMyRequests` |
+| `con` | Container | `conHeader`, `conNavBar`, `conFormArea` |
+| `frm` | EditForm | `frmSubmit` |
+| `rec` | Rectangle | `recHeaderBg`, `recNavBg` |
+| `lbl` | Label | `lblHeaderTitle`, `lblWelcome` |
+| `btn` | Button | `btnSubmit`, `btnGetStarted` |
 | `gal` | Gallery | `galMyRequests` |
-| `txt` | Text Input | `txtTigerCard` |
-| `dd` | Dropdown/ComboBox | `ddMethod` |
-| `dp` | Date Picker | `dpDueDate` |
-| `con` | Container | `conConfirmModal` |
-| `ico` | Icon | `icoStatus` |
-| `att` | Attachments | `attFiles` |
+| `icn` | Icon | `icnSubmit`, `icnRequests` |
+| `img` | Image | `imgLogo` |
+| `DataCard` | Form field card | `Student_DataCard`, `Method_DataCard` |
 
 ### Key Rules
 
 | Rule | Explanation |
 |------|-------------|
 | **App = formulas only** | Only put formulas like `OnStart` here. Never visual elements. |
-| **Screens = all visuals** | All rectangles, labels, buttons, galleries go in screens. |
-| **Modals use Containers** | Each modal is wrapped in a Container control — set Visible on container only! |
-| **Galleries are special** | If you select a gallery and then Insert, the new control goes INSIDE that gallery's template. |
-| **Rename immediately** | After adding a control, rename it right away (click name in Tree view). |
+| **Screens = containers** | Organize controls into logical containers on each screen. |
+| **Modals = containers** | Each modal is a Container with `Visible` controlled by a variable. |
+| **EditForm = DataCards** | Form fields are auto-generated DataCards inside the EditForm. |
+| **Rename immediately** | After adding a control, rename it right away. |
 
 > 💡 **How to rename:** In the Tree view, double-click the control name (or click once and press F2) to edit it.
 
 ---
 
-# STEP 4: Building Screen 1: Submit Request
+# STEP 4: Building Screen 1: Home (Landing)
 
-**What you're doing:** Creating the first screen where students fill out and submit their 3D print requests.
+**What you're doing:** Creating a welcoming landing screen that gives students a clear choice between submitting a new request or viewing their existing requests.
+
+> 💡 **Why a landing screen?** Instead of dropping students directly into a form, this screen provides a personalized welcome and two clear paths. Return visitors can quickly check their request status without scrolling past a form.
 
 ### First: Rename the Screen
 
 1. **In the Tree view, double-click on `Screen1`** to rename it.
-2. Type `scrSubmit` and press **Enter**.
+2. Type `scrHome` and press **Enter**.
 
 ### Set Screen Background
 
-3. With `scrSubmit` selected, set these properties:
-   - **Fill:** `RGBA(248, 248, 248, 1)`
+3. With `scrHome` selected, set these properties:
+   - **Fill:** `varColorBg`
 
-### Creating the Header Bar (recHeaderSubmit)
+---
 
-4. With `scrSubmit` selected, click **+ Insert** → **Rectangle**.
-5. **Rename it:** `recHeaderSubmit`
+### 4A: Create Header Container
+
+4. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+5. **Rename it:** `conHeaderHome`
 6. Set these properties:
 
 | Property | Value |
@@ -528,127 +610,13 @@ We use **prefixes** to identify control types at a glance:
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `varHeaderHeight` |
-| Fill | `varColorPrimary` |
+| Fill | `Transparent` |
 
-> This creates an LSU Purple header bar using your centralized styling variables.
+#### Add Header Background
 
-### Adding the Header Title (lblHeaderSubmit)
-
-7. Click **+ Insert** → **Text label**.
-8. **Rename it:** `lblHeaderSubmit`
+7. With `conHeaderHome` selected, click **+ Insert** → **Rectangle**.
+8. **Rename it:** `recHeaderBgHome`
 9. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Submit 3D Print Request"` |
-| X | `20` |
-| Y | `30` |
-| Width | `Parent.Width - 40` |
-| Height | `40` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `20` |
-| Color | `Color.White` |
-
-### Creating the Bottom Navigation Bar
-
-10. Click **+ Insert** → **Rectangle**.
-11. **Rename it:** `recNavBar`
-12. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| X | `0` |
-| Y | `Parent.Height - varNavHeight` |
-| Width | `Parent.Width` |
-| Height | `varNavHeight` |
-| Fill | `varColorBgCard` |
-| BorderColor | `varColorBorderLight` |
-| BorderThickness | `1` |
-
-### Adding Navigation Button: Submit (Active)
-
-13. Click **+ Insert** → **Button**.
-14. **Rename it:** `btnNavSubmit`
-15. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"📝 Submit"` |
-| X | `varSpacingXL` |
-| Y | `Parent.Height - varNavHeight + 10` |
-| Width | `(Parent.Width - 60) / 2` |
-| Height | `varButtonHeight` |
-| Fill | `varColorPrimary` |
-| Color | `Color.White` |
-| Font | `varAppFont` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `14` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
-
-16. Set **OnSelect:**
-
-```powerfx
-// Already on this screen
-```
-
-### Adding Navigation Button: My Requests
-
-17. Click **+ Insert** → **Button**.
-18. **Rename it:** `btnNavMyRequests`
-19. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"📋 My Requests"` |
-| X | `(Parent.Width - 60) / 2 + 40` |
-| Y | `Parent.Height - 60` |
-| Width | `(Parent.Width - 60) / 2` |
-| Height | `50` |
-| Fill | `RGBA(240, 240, 240, 1)` |
-| Color | `RGBA(70, 29, 124, 1)` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `14` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
-
-20. Set **OnSelect:**
-
-```powerfx
-Navigate(scrMyRequests, ScreenTransition.Fade)
-```
-
-### ✅ Step 4 Checklist
-
-Your Tree view should now look like:
-
-```
-▼ App
-▼ scrSubmit
-    recHeaderSubmit
-    lblHeaderSubmit
-    recNavBar
-    btnNavSubmit
-    btnNavMyRequests
-```
-
----
-
-### Step 4B: Adding Loading Overlay (Optional but Recommended)
-
-**What you're doing:** Creating a loading indicator that appears during form submission.
-
-#### Create Loading Container
-
-1. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
-2. **Rename it:** `conLoadingOverlay`
-3. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -656,22 +624,608 @@ Your Tree view should now look like:
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
-| Fill | `RGBA(0, 0, 0, 0)` |
+| Fill | `varColorHeader` |
+
+#### Add Header Title
+
+10. Click **+ Insert** → **Text label**.
+11. **Rename it:** `lblHeaderTitleHome`
+12. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"3D Print Portal"` |
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `300` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `18` |
+| Color | `Color.White` |
+| Align | `Align.Center` |
+
+---
+
+### 4B: Create Welcome Section
+
+13. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+14. **Rename it:** `conWelcome`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `varHeaderHeight + 30` |
+| Width | `Parent.Width` |
+| Height | `80` |
+| Fill | `Transparent` |
+
+#### Add Welcome Label
+
+16. With `conWelcome` selected, click **+ Insert** → **Text label**.
+17. **Rename it:** `lblWelcome`
+18. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Welcome, " & varMeName & "!"` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `40` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `24` |
+| Color | `varColorText` |
+| Align | `Align.Center` |
+
+#### Add Subtitle Label
+
+19. Click **+ Insert** → **Text label**.
+20. **Rename it:** `lblSubtitle`
+21. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"What would you like to do today?"` |
+| X | `0` |
+| Y | `lblWelcome.Y + lblWelcome.Height` |
+| Width | `Parent.Width` |
+| Height | `30` |
+| Font | `varAppFont` |
+| Size | `14` |
+| Color | `varColorTextMuted` |
+| Align | `Align.Center` |
+
+---
+
+### 4C: Create Action Cards Container
+
+22. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+23. **Rename it:** `conActionCards`
+24. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `varSpacingXL` |
+| Y | `conWelcome.Y + conWelcome.Height + 30` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `350` |
+| Fill | `Transparent` |
+
+---
+
+### 4D: Create "Submit New Request" Card (Left)
+
+25. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
+26. **Rename it:** `conSubmitCard`
+27. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `(Parent.Width - 80) / 2` |
+| Height | `Parent.Height` |
+| Fill | `varColorBgCard` |
+| BorderColor | `varColorBorderLight` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
+
+#### Add Submit Icon
+
+28. With `conSubmitCard` selected, click **+ Insert** → **Icons** → **Add** (or use a relevant icon like "Upload" or "Document").
+29. **Rename it:** `icnSubmit`
+30. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Icon | `Icon.Add` (or `Icon.Upload`) |
+| X | `(Parent.Width - 80) / 2` |
+| Y | `40` |
+| Width | `80` |
+| Height | `80` |
+| Color | `varColorPrimary` |
+
+#### Add Submit Title
+
+31. Click **+ Insert** → **Text label**.
+32. **Rename it:** `lblSubmitTitle`
+33. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Submit New Request"` |
+| X | `0` |
+| Y | `icnSubmit.Y + icnSubmit.Height + 20` |
+| Width | `Parent.Width` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `16` |
+| Color | `varColorText` |
+| Align | `Align.Center` |
+
+#### Add Submit Description
+
+34. Click **+ Insert** → **Text label**.
+35. **Rename it:** `lblSubmitDesc`
+36. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Upload your 3D model file and submit a new print request"` |
+| X | `varSpacingLG` |
+| Y | `lblSubmitTitle.Y + lblSubmitTitle.Height + 8` |
+| Width | `Parent.Width - (varSpacingLG * 2)` |
+| Height | `50` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorTextMuted` |
+| Align | `Align.Center` |
+
+#### Add "Get Started" Button
+
+37. Click **+ Insert** → **Button**.
+38. **Rename it:** `btnGetStarted`
+39. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"GET STARTED"` |
+| X | `varSpacingLG` |
+| Y | `Parent.Height - 70` |
+| Width | `Parent.Width - (varSpacingLG * 2)` |
+| Height | `varButtonHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `14` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+
+40. Set **OnSelect:**
+
+```powerfx
+Navigate(scrSubmit, ScreenTransition.Fade)
+```
+
+---
+
+### 4E: Add "OR" Divider
+
+41. With `conActionCards` selected, click **+ Insert** → **Text label**.
+42. **Rename it:** `lblOrDivider`
+43. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"OR"` |
+| X | `(Parent.Width - 50) / 2` |
+| Y | `(Parent.Height - 50) / 2` |
+| Width | `50` |
+| Height | `50` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+| Color | `varColorTextMuted` |
+| Align | `Align.Center` |
+| VerticalAlign | `VerticalAlign.Middle` |
+| Fill | `varColorBg` |
+| RadiusTopLeft | `25` |
+| RadiusTopRight | `25` |
+| RadiusBottomLeft | `25` |
+| RadiusBottomRight | `25` |
+| BorderColor | `varColorBorderLight` |
+| BorderThickness | `1` |
+
+---
+
+### 4F: Create "My Requests" Card (Right)
+
+44. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
+45. **Rename it:** `conRequestsCard`
+46. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `Parent.Width - conSubmitCard.Width` |
+| Y | `0` |
+| Width | `(Parent.Width - 80) / 2` |
+| Height | `Parent.Height` |
+| Fill | `varColorBgCard` |
+| BorderColor | `varColorBorderLight` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
+
+#### Add Requests Icon
+
+47. With `conRequestsCard` selected, click **+ Insert** → **Icons** → **DetailList** (or similar list icon).
+48. **Rename it:** `icnRequests`
+49. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Icon | `Icon.DetailList` |
+| X | `(Parent.Width - 80) / 2` |
+| Y | `40` |
+| Width | `80` |
+| Height | `80` |
+| Color | `varColorSuccess` |
+
+#### Add Requests Title
+
+50. Click **+ Insert** → **Text label**.
+51. **Rename it:** `lblRequestsTitle`
+52. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"My Requests"` |
+| X | `0` |
+| Y | `icnRequests.Y + icnRequests.Height + 20` |
+| Width | `Parent.Width` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `16` |
+| Color | `varColorText` |
+| Align | `Align.Center` |
+
+#### Add Requests Description
+
+53. Click **+ Insert** → **Text label**.
+54. **Rename it:** `lblRequestsDesc`
+55. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"View status, confirm estimates, or manage your existing requests"` |
+| X | `varSpacingLG` |
+| Y | `lblRequestsTitle.Y + lblRequestsTitle.Height + 8` |
+| Width | `Parent.Width - (varSpacingLG * 2)` |
+| Height | `50` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorTextMuted` |
+| Align | `Align.Center` |
+
+#### Add "View Requests" Button
+
+56. Click **+ Insert** → **Button**.
+57. **Rename it:** `btnViewRequests`
+58. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"VIEW REQUESTS"` |
+| X | `varSpacingLG` |
+| Y | `Parent.Height - 70` |
+| Width | `Parent.Width - (varSpacingLG * 2)` |
+| Height | `varButtonHeight` |
+| Fill | `Color.White` |
+| Color | `varColorSuccess` |
+| BorderColor | `varColorSuccess` |
+| BorderThickness | `2` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `14` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+| HoverFill | `RGBA(16, 124, 16, 0.1)` |
+
+59. Set **OnSelect:**
+
+```powerfx
+Navigate(scrMyRequests, ScreenTransition.Fade)
+```
+
+---
+
+### 4G: Create Help Footer
+
+60. With `scrHome` selected, click **+ Insert** → **Text label**.
+61. **Rename it:** `lblHelpText`
+62. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Need help? Visit Room 145 Atkinson Hall or email fablab@lsu.edu"` |
+| X | `0` |
+| Y | `Parent.Height - varNavHeight - 50` |
+| Width | `Parent.Width` |
+| Height | `30` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+| Align | `Align.Center` |
+
+---
+
+### 4H: Create Navigation Bar
+
+63. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+64. **Rename it:** `conNavBarHome`
+65. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `Parent.Height - varNavHeight` |
+| Width | `Parent.Width` |
+| Height | `varNavHeight` |
+| Fill | `Transparent` |
+
+#### Add Nav Background
+
+66. With `conNavBarHome` selected, click **+ Insert** → **Rectangle**.
+67. **Rename it:** `recNavBgHome`
+68. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorHeader`
+
+#### Add Portal Name Label
+
+69. Click **+ Insert** → **Text label**.
+70. **Rename it:** `lblPortalName`
+71. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student 3D Print Portal"` |
+| X | `0` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `Parent.Width` |
+| Height | `20` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `RGBA(150, 150, 150, 1)` |
+| Align | `Align.Center` |
+
+---
+
+### ✅ Step 4 Checklist (Home Screen)
+
+Your Tree view should now look like:
+
+```
+▼ scrHome
+    ▼ conHeaderHome
+        recHeaderBgHome
+        lblHeaderTitleHome
+    ▼ conWelcome
+        lblWelcome
+        lblSubtitle
+    ▼ conActionCards
+        ▼ conSubmitCard
+            icnSubmit
+            lblSubmitTitle
+            lblSubmitDesc
+            btnGetStarted
+        lblOrDivider
+        ▼ conRequestsCard
+            icnRequests
+            lblRequestsTitle
+            lblRequestsDesc
+            btnViewRequests
+    lblHelpText
+    ▼ conNavBarHome
+        recNavBgHome
+        lblPortalName
+```
+
+---
+
+# STEP 5: Building Screen 2: Submit Request
+
+**What you're doing:** Creating the submit request screen with a modular container structure for the submission form.
+
+### Create a New Screen
+
+1. In the Tree view, click **+ New screen** → **Blank**.
+2. **Rename it:** `scrSubmit`
+
+### Set Screen Background
+
+3. With `scrSubmit` selected, set these properties:
+   - **Fill:** `varColorBg`
+
+---
+
+### 4A: Create Header Container
+
+4. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
+5. **Rename it:** `conHeader`
+6. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `varHeaderHeight` |
+| Fill | `Transparent` |
+
+#### Add Header Background
+
+7. With `conHeader` selected, click **+ Insert** → **Rectangle**.
+8. **Rename it:** `recHeaderBg`
+9. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorHeader` |
+
+> This creates a dark gray header bar matching the Staff Dashboard.
+
+#### Add Header Title
+
+10. Click **+ Insert** → **Text label**.
+11. **Rename it:** `lblHeaderTitle`
+12. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Submit 3D Print Request"` |
+| X | `varSpacingXL` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `Parent.Width - 40` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `18` |
+| Color | `Color.White` |
+
+---
+
+### 4B: Create Navigation Container
+
+13. With `scrSubmit` selected (not conHeader), click **+ Insert** → **Layout** → **Container**.
+14. **Rename it:** `conNavBar`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `Parent.Height - varNavHeight` |
+| Width | `Parent.Width` |
+| Height | `varNavHeight` |
+| Fill | `Transparent` |
+
+#### Add Navigation Background
+
+16. With `conNavBar` selected, click **+ Insert** → **Rectangle**.
+17. **Rename it:** `recNavBg`
+18. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorHeader` |
+
+#### Add Submit Nav Button (Active)
+
+19. Click **+ Insert** → **Button**.
+20. **Rename it:** `btnNavSubmit`
+21. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Submit"` |
+| X | `varSpacingXL` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 60) / 2` |
+| Height | `varButtonHeightSmall` |
+| Fill | `varColorInfo` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+22. Set **OnSelect:** `// Already on this screen`
+
+#### Add My Requests Nav Button (Inactive)
+
+23. Click **+ Insert** → **Button**.
+24. **Rename it:** `btnNavMyRequests`
+25. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"My Requests"` |
+| X | `Parent.Width / 2 + 10` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 60) / 2` |
+| Height | `varButtonHeightSmall` |
+| Fill | `RGBA(60, 60, 65, 1)` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Normal` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+26. Set **OnSelect:**
+
+```powerfx
+Navigate(scrMyRequests, ScreenTransition.Fade)
+```
+
+---
+
+### 4C: Create Loading Overlay Container
+
+27. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Container**.
+28. **Rename it:** `conLoadingOverlay`
+29. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `Transparent` |
 | Visible | `varIsLoading` |
 
-4. In Tree view, drag `conLoadingOverlay` to the **top** (so it renders in front of everything).
+30. In Tree view, drag `conLoadingOverlay` to the **top** of scrSubmit's children (so it renders in front of everything).
 
 #### Add Overlay Background
 
-5. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recLoadingOverlay`
-7. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `RGBA(0, 0, 0, 0.5)`
+31. With `conLoadingOverlay` selected, click **+ Insert** → **Rectangle**.
+32. **Rename it:** `recLoadingOverlay`
+33. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorOverlay`
 
 #### Add Loading Box
 
-8. Click **+ Insert** → **Rectangle**.
-9. **Rename it:** `recLoadingBg`
-10. Set these properties:
+34. Click **+ Insert** → **Rectangle**.
+35. **Rename it:** `recLoadingBg`
+36. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -679,17 +1233,17 @@ Your Tree view should now look like:
 | Y | `(Parent.Height - 100) / 2` |
 | Width | `200` |
 | Height | `100` |
-| Fill | `Color.White` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
+| Fill | `varColorBgCard` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
 
 #### Add Loading Text
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblLoadingText`
-13. Set these properties:
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblLoadingText`
+39. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -700,7 +1254,7 @@ Your Tree view should now look like:
 | Height | `30` |
 | Align | `Align.Center` |
 | Size | `14` |
-| Color | `RGBA(70, 29, 124, 1)` |
+| Color | `varColorPrimary` |
 
 #### Arrange Z-Order
 
@@ -717,322 +1271,205 @@ In Tree view, ensure controls inside `conLoadingOverlay` are ordered:
 
 ---
 
-# STEP 5: Building the Submit Form
+# STEP 6: Building the Submit Form (EditForm)
 
-**What you're doing:** Adding all the form fields for students to fill out their print request.
+**What you're doing:** Adding an EditForm control that automatically handles form fields, validation, and file attachments.
 
-### Add a Vertical Container for the Form
+> 💡 **Why EditForm?** EditForm auto-generates DataCards for each SharePoint column, handles data binding automatically, and—critically—supports **native file attachments** via `SubmitForm()`. Individual controls with `Patch()` cannot save attachments.
 
-1. With `scrSubmit` selected, click **+ Insert** → **Layout** → **Vertical container**.
-2. **Rename it:** `conSubmitForm`
+---
+
+### 6A: Create Form Container
+
+1. With `scrSubmit` selected (not inside another container), click **+ Insert** → **Layout** → **Container**.
+2. **Rename it:** `conFormArea`
 3. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | X | `0` |
-| Y | `80` |
+| Y | `varHeaderHeight` |
 | Width | `Parent.Width` |
-| Height | `Parent.Height - 150` |
-| Fill | `RGBA(248, 248, 248, 1)` |
-| PaddingLeft | `20` |
-| PaddingRight | `20` |
-| PaddingTop | `20` |
-| PaddingBottom | `20` |
-| Gap | `12` |
-| VerticalOverflow | `LayoutOverflow.Scroll` |
+| Height | `Parent.Height - varHeaderHeight - varNavHeight` |
+| Fill | `varColorBg` |
 
-> 💡 **Why a container?** This creates a scrollable area so all form fields fit on any screen size.
+> This creates the main content area between the header and navigation bar.
 
 ---
 
-### Student Information Section
+### 6B: Add the EditForm Control
 
-#### Section Header
-
-4. With `conSubmitForm` selected, click **+ Insert** → **Text label**.
-5. **Rename it:** `lblSectionStudent`
+4. With `conFormArea` selected, click **+ Insert** → **Input** → **Edit form**.
+5. **Rename it:** `frmSubmit`
 6. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Student Information"` |
-| Width | `Parent.Width - 40` |
-| Height | `30` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `14` |
-| Color | `RGBA(70, 29, 124, 1)` |
+| DataSource | `PrintRequests` |
+| DefaultMode | `FormMode.New` |
+| X | `varSpacingXL` |
+| Y | `varSpacingXL` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `Parent.Height - (varSpacingXL * 2) - 120` |
 
-#### Student Name (Auto-filled, Read-only)
+7. After setting the DataSource, Power Apps will **auto-generate DataCards** for all columns in PrintRequests.
 
-7. Click **+ Insert** → **Text label**.
-8. **Rename it:** `lblStudentNameLabel`
-9. Set: **Text:** `"Student Name"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-10. Click **+ Insert** → **Text input**.
-11. **Rename it:** `txtStudentName`
-12. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `varMeName` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| DisplayMode | `DisplayMode.View` |
-| Fill | `RGBA(240, 240, 240, 1)` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
-
-#### Student Email (Auto-filled, Read-only)
-
-13. Click **+ Insert** → **Text label**.
-14. **Rename it:** `lblStudentEmailLabel`
-15. Set: **Text:** `"Student Email"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-16. Click **+ Insert** → **Text input**.
-17. **Rename it:** `txtStudentEmail`
-18. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `varMeEmail` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| DisplayMode | `DisplayMode.View` |
-| Fill | `RGBA(240, 240, 240, 1)` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
-
-#### Tiger Card Number (Required)
-
-19. Click **+ Insert** → **Text label**.
-20. **Rename it:** `lblTigerCardLabel`
-21. Set: **Text:** `"Tiger Card Number (16-digit POS) *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-22. Click **+ Insert** → **Text input**.
-23. **Rename it:** `txtTigerCard`
-24. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `""` |
-| HintText | `"16-digit number from your Tiger Card"` |
-| Width | `Parent.Width - 40` |
-| Height | `varInputHeight` |
-| Mode | `TextMode.SingleLine` |
-| Format | `TextFormat.Text` |
-| Font | `varAppFont` |
-| BorderColor | `varColorBorder` |
-| FocusedBorderColor | `varColorPrimary` |
-| RadiusTopLeft | `varRadiusXSmall` |
-| RadiusTopRight | `varRadiusXSmall` |
-| RadiusBottomLeft | `varRadiusXSmall` |
-| RadiusBottomRight | `varRadiusXSmall` |
-
-25. Click **+ Insert** → **Text label**.
-26. **Rename it:** `lblTigerCardHint`
-27. Set: **Text:** `"This is the 16-digit POS number, NOT your 89-number LSUID"`, **Height:** `18`, **Size:** `9`, **Color:** `RGBA(150, 150, 150, 1)`
+> ⚠️ **Wait for DataCards:** After connecting to PrintRequests, you'll see DataCards appear in the Tree view under `frmSubmit`. This may take a few seconds.
 
 ---
 
-### Project Details Section
+### 6C: Configure Form Fields
 
-#### Section Header
+Now we'll configure which fields are visible and how they behave.
 
-28. Click **+ Insert** → **Text label**.
-29. **Rename it:** `lblSectionProject`
-30. Set: **Text:** `"Project Details"`, **Height:** `30`, **Size:** `14`, **FontWeight:** `FontWeight.Semibold`, **Color:** `RGBA(70, 29, 124, 1)`
+#### Open the Fields Panel
 
-#### Course Number (Optional)
+8. With `frmSubmit` selected, in the right Properties pane, click **Edit fields**.
+9. A panel opens showing all fields currently in the form.
 
-31. Click **+ Insert** → **Text label**.
-32. **Rename it:** `lblCourseLabel`
-33. Set: **Text:** `"Course Number (optional)"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
+#### Remove Staff-Only Fields
 
-34. Click **+ Insert** → **Text input**.
-35. **Rename it:** `txtCourse`
-36. Set these properties:
+These fields should NOT appear on the student form. Remove them:
 
-| Property | Value |
-|----------|-------|
-| Default | `""` |
-| HintText | `"e.g., ART 2000, ME 4201"` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| FocusedBorderColor | `RGBA(70, 29, 124, 1)` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
+10. For each field below, click the **...** menu next to it and select **Remove**:
 
-#### Discipline (Dropdown)
+| Field to Remove | Reason |
+|-----------------|--------|
+| Priority | Staff manages queue priority |
+| EstimatedTime | Staff estimates print time |
+| EstimatedWeight | Staff estimates material |
+| EstimatedCost | Staff calculates cost |
+| StaffNotes | Internal staff communication |
+| LastAction | Auto-populated by flows |
+| LastActionBy | Auto-populated by flows |
+| LastActionAt | Auto-populated timestamp |
+| NeedsAttention | Staff attention flag |
+| RejectionReason | Staff rejection reasons |
+| TransactionNumber | Payment field |
+| FinalWeight | Payment field |
+| FinalCost | Payment field |
+| PaymentDate | Payment field |
+| PaymentNotes | Payment field |
+| StudentConfirmed | Handled by confirmation modal |
 
-37. Click **+ Insert** → **Text label**.
-38. **Rename it:** `lblDisciplineLabel`
-39. Set: **Text:** `"Discipline *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
+#### Reorder Fields
 
-40. Click **+ Insert** → **Drop down**.
-41. **Rename it:** `ddDiscipline`
-42. Set these properties:
+11. Drag fields in the panel to arrange in this order:
 
-| Property | Value |
-|----------|-------|
-| Items | `Choices(PrintRequests.Discipline)` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| ChevronBackground | `RGBA(70, 29, 124, 1)` |
-| ChevronFill | `Color.White` |
+```
+1. Title (will hide)
+2. Student
+3. StudentEmail
+4. TigerCardNumber
+5. Course Number
+6. Discipline
+7. ProjectType
+8. Method
+9. Printer
+10. Color
+11. DueDate
+12. Notes
+13. Attachments
+14. Status (will hide)
+```
 
-#### Project Type (Dropdown)
-
-43. Click **+ Insert** → **Text label**.
-44. **Rename it:** `lblProjectTypeLabel`
-45. Set: **Text:** `"Project Type *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-46. Click **+ Insert** → **Drop down**.
-47. **Rename it:** `ddProjectType`
-48. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Items | `Choices(PrintRequests.ProjectType)` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| ChevronBackground | `RGBA(70, 29, 124, 1)` |
-| ChevronFill | `Color.White` |
-
-#### Due Date
-
-49. Click **+ Insert** → **Text label**.
-50. **Rename it:** `lblDueDateLabel`
-51. Set: **Text:** `"Due Date *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-52. Click **+ Insert** → **Date picker**.
-53. **Rename it:** `dpDueDate`
-54. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| DefaultDate | `Today()` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| IconFill | `RGBA(70, 29, 124, 1)` |
+12. Click outside the panel to close it.
 
 ---
 
-### Print Configuration Section
+### 6D: Configure Individual DataCards
 
-#### Section Header
+Now we'll customize each DataCard. For each DataCard below, **click on it in the Tree view** and follow the instructions.
 
-55. Click **+ Insert** → **Text label**.
-56. **Rename it:** `lblSectionPrint`
-57. Set: **Text:** `"Print Configuration"`, **Height:** `30`, **Size:** `14`, **FontWeight:** `FontWeight.Semibold`, **Color:** `RGBA(70, 29, 124, 1)`
+#### Title_DataCard (Hide)
 
-#### Method (Dropdown) — Controls other dropdowns
+13. Click on `Title_DataCard` in Tree view.
+14. Set **Visible:** `false`
 
-58. Click **+ Insert** → **Text label**.
-59. **Rename it:** `lblMethodLabel`
-60. Set: **Text:** `"Print Method *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
+> Title will be auto-generated from the student name, method, and color.
 
-61. Click **+ Insert** → **Drop down**.
-62. **Rename it:** `ddMethod`
-63. Set these properties:
+#### Student_DataCard (Auto-fill)
 
-| Property | Value |
-|----------|-------|
-| Items | `Choices(PrintRequests.Method)` |
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| ChevronBackground | `RGBA(70, 29, 124, 1)` |
-| ChevronFill | `Color.White` |
+15. Expand `Student_DataCard` in Tree view.
+16. Click on the **ComboBox control inside** (usually named `DataCardValue` or similar).
+17. Set **DefaultSelectedItems:**
 
----
+**⬇️ FORMULA: Paste into DefaultSelectedItems**
 
-# STEP 6: Adding Cascading Dropdowns
+```powerfx
+If(
+    frmSubmit.Mode = FormMode.New,
+    [
+        {
+            DisplayName: User().FullName,
+            Claims: "i:0#.f|membership|" & Lower(User().Email),
+            Email: Lower(User().Email)
+        }
+    ],
+    Table(Parent.Default)
+)
+```
 
-**What you're doing:** Setting up Printer and Color dropdowns that filter based on the selected Method.
+18. Set **DisplayMode:** `DisplayMode.View` (so students can't change it)
 
-### Printer (Cascading Dropdown)
+#### StudentEmail_DataCard (Auto-fill)
 
-1. With `conSubmitForm` still selected, click **+ Insert** → **Text label**.
-2. **Rename it:** `lblPrinterLabel`
-3. Set: **Text:** `"Printer *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
+19. Click on the **TextInput control inside** `StudentEmail_DataCard`.
+20. Set **Default:**
 
-4. Click **+ Insert** → **Drop down**.
-5. **Rename it:** `ddPrinter`
-6. Set these properties:
+```powerfx
+If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
+```
 
-| Property | Value |
-|----------|-------|
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| ChevronBackground | `RGBA(70, 29, 124, 1)` |
-| ChevronFill | `Color.White` |
+21. Set **DisplayMode:** `DisplayMode.View`
 
-7. Set the **Items** property (cascading filter):
+#### TigerCardNumber_DataCard
 
-**⬇️ FORMULA: Paste into ddPrinter Items**
+22. Click on the **TextInput control inside** `TigerCardNumber_DataCard`.
+23. Set **HintText:** `"16-digit POS number from Tiger Card"`
+24. Click on `TigerCardNumber_DataCard` itself (the card, not the input).
+25. Set **Required:** `true`
+
+#### Method_DataCard (Controls Cascading)
+
+26. Click on the **ComboBox control inside** `Method_DataCard`.
+27. This control will be referenced by Printer and Color dropdowns for cascading filters.
+28. Note the exact name of this control (e.g., `DataCardValue8`) — you'll need it in Step 7.
+
+#### Printer_DataCard (Cascading Filter)
+
+29. Click on the **ComboBox control inside** `Printer_DataCard`.
+30. Set **Items** (replace `DataCardValue8` with your Method control's actual name):
+
+**⬇️ FORMULA: Paste into Items**
 
 ```powerfx
 Filter(
-    Choices(PrintRequests.Printer),
+    Choices([@PrintRequests].Printer),
     If(
-        ddMethod.Selected.Value = "Filament",
+        DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
-        ddMethod.Selected.Value = "Resin",
+        DataCardValue8.Selected.Value = "Resin",
         Value = "Form 3 (5.7×5.7×7.3in)",
         true
     )
 )
 ```
 
-> 💡 **How it works:** 
-> - Filament → Shows Prusa MK4S, Prusa XL, Raised3D
-> - Resin → Shows Form 3 only
+> 💡 **Cascading Logic:** Filament shows FDM printers, Resin shows only Form 3.
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblPrinterHint`
-10. Set: **Text:** `"Build dimensions shown in parentheses (W×D×H)"`, **Height:** `18`, **Size:** `9`, **Color:** `RGBA(150, 150, 150, 1)`
+#### Color_DataCard (Cascading Filter)
 
-### Color (Cascading Dropdown)
+31. Click on the **ComboBox control inside** `Color_DataCard`.
+32. Set **Items** (replace `DataCardValue8` with your Method control's actual name):
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblColorLabel`
-13. Set: **Text:** `"Color *"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
-
-14. Click **+ Insert** → **Drop down**.
-15. **Rename it:** `ddColor`
-16. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Width | `Parent.Width - 40` |
-| Height | `45` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| ChevronBackground | `RGBA(70, 29, 124, 1)` |
-| ChevronFill | `Color.White` |
-
-17. Set the **Items** property (cascading filter):
-
-**⬇️ FORMULA: Paste into ddColor Items**
+**⬇️ FORMULA: Paste into Items**
 
 ```powerfx
 Filter(
-    Choices(PrintRequests.Color),
+    Choices([@PrintRequests].Color),
     Or(
-        ddMethod.Selected.Value <> "Resin",
+        DataCardValue8.Selected.Value <> "Resin",
         Value = "Black",
         Value = "White",
         Value = "Gray",
@@ -1041,220 +1478,309 @@ Filter(
 )
 ```
 
-> 💡 **How it works:**
-> - Filament → All colors available
-> - Resin → Only Black, White, Gray, Clear (resin-compatible colors)
+> 💡 **Cascading Logic:** Resin is limited to Black, White, Gray, Clear. Filament gets all colors.
 
----
+#### Notes_DataCard
 
-### Notes Field
+33. Click on the **TextInput control inside** `Notes_DataCard`.
+34. Set **Mode:** `TextMode.MultiLine`
+35. Set **HintText:** `"Special instructions, scaling notes, questions for staff..."`
 
-18. Click **+ Insert** → **Text label**.
-19. **Rename it:** `lblNotesLabel`
-20. Set: **Text:** `"Additional Notes (optional)"`, **Height:** `20`, **Size:** `11`, **Color:** `RGBA(100, 100, 100, 1)`
+#### Attachments_DataCard
 
-21. Click **+ Insert** → **Text input**.
-22. **Rename it:** `txtNotes`
-23. Set these properties:
+36. This DataCard handles file attachments automatically!
+37. Click on `Attachments_DataCard` to select it.
+38. Set **Required:** `false` (files can be added after submission if needed)
 
-| Property | Value |
-|----------|-------|
-| Default | `""` |
-| HintText | `"Special instructions, scaling notes, questions..."` |
-| Width | `Parent.Width - 40` |
-| Height | `100` |
-| Mode | `TextMode.MultiLine` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| FocusedBorderColor | `RGBA(70, 29, 124, 1)` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
+> ✅ **Native Attachments:** Because we're using EditForm with `SubmitForm()`, file attachments work automatically. No extra configuration needed!
 
----
+#### Status_DataCard (Hidden, Auto-Set)
 
-# STEP 7: Adding File Attachments
+39. Click on `Status_DataCard`.
+40. Set **Visible:** `false`
 
-**What you're doing:** Adding the file attachment section with clear instructions.
-
-### File Warning Box
-
-1. Click **+ Insert** → **Text label**.
-2. **Rename it:** `lblFileWarning`
-3. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Width | `Parent.Width - 40` |
-| Height | `140` |
-| Fill | `RGBA(255, 244, 206, 1)` |
-| Color | `RGBA(102, 77, 3, 1)` |
-| Font | `Font.'Segoe UI'` |
-| Size | `11` |
-| PaddingTop | `12` |
-| PaddingBottom | `12` |
-| PaddingLeft | `12` |
-| PaddingRight | `12` |
-| BorderColor | `RGBA(255, 185, 0, 1)` |
-| BorderThickness | `1` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
-
-4. Set **Text:**
+41. Click on the **ComboBox control inside** `Status_DataCard`.
+42. Set **DefaultSelectedItems:**
 
 ```powerfx
-"IMPORTANT: File Naming Requirement
-
-Your files MUST be named: FirstLast_Method_Color
-Example: JaneDoe_Filament_Blue.stl
-
-Accepted formats: .stl, .obj, .3mf, .idea, .form
-
-Files not following this format will be rejected."
+If(
+    frmSubmit.Mode = FormMode.New,
+    [{Value: "Uploaded"}],
+    Table(Parent.Default)
+)
 ```
 
-### Attachments Control
-
-5. Click **+ Insert** → **Input** → **Attachments**.
-6. **Rename it:** `attFiles`
-7. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Width | `Parent.Width - 40` |
-| Height | `100` |
-| BorderColor | `RGBA(200, 200, 200, 1)` |
-| Items | `Blank()` |
-
-> 💡 **Note:** The Attachments control handles file uploads. Files are attached when the form is submitted.
+> This ensures new submissions always start with Status = "Uploaded".
 
 ---
 
-### Submit Button
+### 6E: Add File Warning Label
 
-8. Click **+ Insert** → **Button**.
-9. **Rename it:** `btnSubmit`
-10. Set these properties:
+43. With `conFormArea` selected (not frmSubmit), click **+ Insert** → **Text label**.
+44. **Rename it:** `lblFileWarning`
+45. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `varSpacingXL` |
+| Y | `frmSubmit.Y + frmSubmit.Height + varSpacingMD` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `80` |
+| Fill | `RGBA(255, 244, 206, 1)` |
+| Color | `RGBA(102, 77, 3, 1)` |
+| Font | `varAppFont` |
+| Size | `10` |
+| PaddingTop | `varSpacingMD` |
+| PaddingBottom | `varSpacingMD` |
+| PaddingLeft | `varSpacingMD` |
+| PaddingRight | `varSpacingMD` |
+| BorderColor | `varColorWarning` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `varRadiusXSmall` |
+| RadiusTopRight | `varRadiusXSmall` |
+| RadiusBottomLeft | `varRadiusXSmall` |
+| RadiusBottomRight | `varRadiusXSmall` |
+
+46. Set **Text:**
+
+```powerfx
+"FILE NAMING: Your files must be named FirstLast_Method_Color (e.g., JaneDoe_Filament_Blue.stl). Accepted formats: .stl, .obj, .3mf, .idea, .form"
+```
+
+---
+
+### 6F: Add Submit Button
+
+47. Click **+ Insert** → **Button**.
+48. **Rename it:** `btnSubmit`
+49. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"SUBMIT REQUEST"` |
-| Width | `Parent.Width - 40` |
-| Height | `55` |
+| X | `varSpacingXL` |
+| Y | `lblFileWarning.Y + lblFileWarning.Height + varSpacingMD` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `varButtonHeight` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
-| Size | `16` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
+| Size | `14` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
 | DisabledFill | `varColorDisabled` |
 
-11. Set **DisplayMode** (validates required fields):
+50. Set **DisplayMode** (validates required fields):
 
 ```powerfx
 If(
-    IsBlank(txtTigerCard.Text) ||
-    IsBlank(ddDiscipline.Selected) ||
-    IsBlank(ddProjectType.Selected) ||
-    IsBlank(ddMethod.Selected) ||
-    IsBlank(ddPrinter.Selected) ||
-    IsBlank(ddColor.Selected) ||
-    IsBlank(dpDueDate.SelectedDate),
-    DisplayMode.Disabled,
-    DisplayMode.Edit
+    frmSubmit.Valid,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
 )
 ```
 
-12. Set **OnSelect:**
+> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled. `frmSubmit.Valid` returns true when the form is ready to submit.
 
-**⬇️ FORMULA: Paste into btnSubmit OnSelect**
+51. Set **OnSelect:**
 
 ```powerfx
-// Show loading
 Set(varIsLoading, true);
+SubmitForm(frmSubmit)
+```
 
-// Create the print request
-Patch(
-    PrintRequests,
-    Defaults(PrintRequests),
-    {
-        Title: varMeName & "_" & ddMethod.Selected.Value & "_" & ddColor.Selected.Value,
-        Student: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            DisplayName: varMeName,
-            Claims: "i:0#.f|membership|" & varMeEmail,
-            Email: varMeEmail
-        },
-        StudentEmail: varMeEmail,
-        TigerCardNumber: txtTigerCard.Text,
-        'Course Number': txtCourse.Text,
-        Discipline: ddDiscipline.Selected,
-        ProjectType: ddProjectType.Selected,
-        Method: ddMethod.Selected,
-        Printer: ddPrinter.Selected,
-        Color: ddColor.Selected,
-        DueDate: dpDueDate.SelectedDate,
-        Notes: txtNotes.Text,
-        Status: {Value: "Uploaded"}
-    }
-);
+---
 
-// Hide loading
+### 6G: Add Validation Feedback Label
+
+This label shows students exactly which fields need attention when the form isn't valid.
+
+52. Click **+ Insert** → **Text label**.
+53. **Rename it:** `lblValidationMessage`
+54. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `varSpacingXL` |
+| Y | `btnSubmit.Y - 40` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `32` |
+| Visible | `!frmSubmit.Valid` |
+| Fill | `RGBA(255, 235, 235, 1)` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| Size | `11` |
+| PaddingTop | `varSpacingSM` |
+| PaddingBottom | `varSpacingSM` |
+| PaddingLeft | `varSpacingMD` |
+| PaddingRight | `varSpacingMD` |
+| BorderColor | `varColorDanger` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `varRadiusXSmall` |
+| RadiusTopRight | `varRadiusXSmall` |
+| RadiusBottomLeft | `varRadiusXSmall` |
+| RadiusBottomRight | `varRadiusXSmall` |
+
+55. Set **Text:**
+
+```powerfx
+"Please fill in all required fields before submitting."
+```
+
+> 💡 **Keep it simple:** A clear, friendly message is better than listing technical field names. The disabled Submit button already prevents submission, so this just explains why.
+
+---
+
+### 6H: Configure Form Events
+
+56. Click on `frmSubmit` in Tree view.
+57. Set **OnSuccess:**
+
+```powerfx
 Set(varIsLoading, false);
-
-// Show success and navigate
 Notify("Request submitted successfully! You'll receive a confirmation email shortly.", NotificationType.Success);
-
-// Reset form fields
-Reset(txtTigerCard);
-Reset(txtCourse);
-Reset(ddDiscipline);
-Reset(ddProjectType);
-Reset(ddMethod);
-Reset(ddPrinter);
-Reset(ddColor);
-Reset(dpDueDate);
-Reset(txtNotes);
-
-// Navigate to My Requests
+ResetForm(frmSubmit);
 Navigate(scrMyRequests, ScreenTransition.Fade)
 ```
 
-> ⚠️ **Note on Attachments:** The basic `Patch` function doesn't handle attachments. For full attachment support, you would need to use a Power Automate flow or the SharePoint form. The current implementation creates the request; students can add files through SharePoint if needed.
+58. Set **OnFailure:**
+
+```powerfx
+Set(varIsLoading, false);
+Notify(
+    "Something went wrong. Please try again or ask staff for help.",
+    NotificationType.Error,
+    5000
+)
+```
+
+> 💡 **Keep it simple:** Students don't need technical details. If submission fails after validation passes, it's likely a network or system issue — staff can investigate if needed.
 
 ---
 
-### Add Spacer at Bottom
+### ✅ Step 6 Checklist
 
-13. Click **+ Insert** → **Text label**.
-14. **Rename it:** `lblSpacer`
-15. Set: **Text:** `""`, **Height:** `100`
+Your Tree view should now look like:
 
-> This adds padding at the bottom so content isn't hidden behind the navigation bar when scrolling.
+```
+▼ scrSubmit
+    ▼ conLoadingOverlay
+        ...
+    ▼ conHeader
+        recHeaderBg
+        lblHeaderTitle
+    ▼ conFormArea
+        ▼ frmSubmit
+            Student_DataCard
+            StudentEmail_DataCard
+            TigerCardNumber_DataCard
+            CourseNumber_DataCard
+            Discipline_DataCard
+            ProjectType_DataCard
+            Method_DataCard
+            Printer_DataCard
+            Color_DataCard
+            DueDate_DataCard
+            Notes_DataCard
+            Attachments_DataCard
+            Status_DataCard (hidden)
+            Title_DataCard (hidden)
+        lblFileWarning
+        lblValidationMessage         ← NEW: Shows missing required fields
+        btnSubmit
+    ▼ conNavBar
+        recNavBg
+        btnNavSubmit
+        btnNavMyRequests
+```
 
 ---
 
-# STEP 8: Building Screen 2: My Requests
+# STEP 7: Configuring Form Fields
 
-**What you're doing:** Creating the second screen where students can view and manage their print requests.
+**What you're doing:** This step provides reference information for the form field configuration. Most of this was already covered in Step 6D.
+
+> 💡 **Note:** If you followed Step 6 completely, your form fields are already configured. This section provides additional reference for the cascading dropdown formulas.
+
+---
+
+### Cascading Dropdown Reference
+
+The Method, Printer, and Color fields work together with cascading filters:
+
+#### Printer Filter Logic
+
+When configuring `Printer_DataCard`'s ComboBox Items property, use this filter (replacing the control name with your actual Method control):
+
+```powerfx
+Filter(
+    Choices([@PrintRequests].Printer),
+    If(
+        DataCardValueMethod.Selected.Value = "Filament",
+        Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
+        DataCardValueMethod.Selected.Value = "Resin",
+        Value = "Form 3 (5.7×5.7×7.3in)",
+        true
+    )
+)
+```
+
+**Result:**
+- Filament → Shows Prusa MK4S, Prusa XL, Raised3D
+- Resin → Shows Form 3 only
+
+#### Color Filter Logic
+
+When configuring `Color_DataCard`'s ComboBox Items property:
+
+```powerfx
+Filter(
+    Choices([@PrintRequests].Color),
+    Or(
+        DataCardValueMethod.Selected.Value <> "Resin",
+        Value = "Black",
+        Value = "White",
+        Value = "Gray",
+        Value = "Clear"
+    )
+)
+```
+
+**Result:**
+- Filament → All colors available
+- Resin → Only Black, White, Gray, Clear (resin-compatible colors)
+
+---
+
+### Attachment Support
+
+Because we're using EditForm with `SubmitForm()`, file attachments work **automatically**. The `Attachments_DataCard` that was auto-generated handles all file upload functionality.
+
+> ✅ **No additional configuration needed** — just ensure the Attachments_DataCard is visible in the form.
+
+---
+
+# STEP 8: Building Screen 3: My Requests
+
+**What you're doing:** Creating the second screen where students can view and manage their print requests. Uses the same modular container structure as Screen 1.
 
 ### Create the Second Screen
 
 1. In the Tree view, click **+ New screen** → **Blank**.
 2. **Rename it:** `scrMyRequests`
-3. Set **Fill:** `RGBA(248, 248, 248, 1)`
+3. Set **Fill:** `varColorBg`
 
-### Creating the Header Bar
+---
 
-4. Click **+ Insert** → **Rectangle**.
-5. **Rename it:** `recHeaderRequests`
+### 7A: Create Header Container
+
+4. With `scrMyRequests` selected, click **+ Insert** → **Layout** → **Container**.
+5. **Rename it:** `conHeader2`
 6. Set these properties:
 
 | Property | Value |
@@ -1262,71 +1788,95 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 | X | `0` |
 | Y | `0` |
 | Width | `Parent.Width` |
-| Height | `80` |
-| Fill | `RGBA(70, 29, 124, 1)` |
+| Height | `varHeaderHeight` |
+| Fill | `Transparent` |
 
-### Header Title
+#### Add Header Background
 
-7. Click **+ Insert** → **Text label**.
-8. **Rename it:** `lblHeaderRequests`
-9. Set these properties:
+7. With `conHeader2` selected, click **+ Insert** → **Rectangle**.
+8. **Rename it:** `recHeaderBg2`
+9. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorHeader`
 
-| Property | Value |
-|----------|-------|
-| Text | `"My Print Requests"` |
-| X | `20` |
-| Y | `30` |
-| Width | `Parent.Width - 100` |
-| Height | `40` |
-| Font | `Font.'Segoe UI'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `20` |
-| Color | `Color.White` |
+#### Add Header Title
 
-### Refresh Button
-
-10. Click **+ Insert** → **Button**.
-11. **Rename it:** `btnRefresh`
+10. Click **+ Insert** → **Text label**.
+11. **Rename it:** `lblHeaderTitle2`
 12. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"↻"` |
-| X | `Parent.Width - 60` |
-| Y | `25` |
-| Width | `45` |
-| Height | `45` |
-| Fill | `RGBA(90, 49, 144, 1)` |
+| Text | `"My Print Requests"` |
+| X | `varSpacingXL` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `Parent.Width - 100` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `18` |
 | Color | `Color.White` |
-| Size | `20` |
-| RadiusTopLeft | `22` |
-| RadiusTopRight | `22` |
-| RadiusBottomLeft | `22` |
-| RadiusBottomRight | `22` |
 
-13. Set **OnSelect:**
+#### Add Refresh Button
+
+13. Click **+ Insert** → **Button**.
+14. **Rename it:** `btnRefresh`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"↻"` |
+| X | `Parent.Width - 55` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `40` |
+| Height | `40` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| Size | `18` |
+| RadiusTopLeft | `varRadiusPill` |
+| RadiusTopRight | `varRadiusPill` |
+| RadiusBottomLeft | `varRadiusPill` |
+| RadiusBottomRight | `varRadiusPill` |
+
+16. Set **OnSelect:**
 
 ```powerfx
 Refresh(PrintRequests);
 Notify("Requests refreshed!", NotificationType.Information)
 ```
 
-### Bottom Navigation Bar (Copy from Screen 1)
+---
 
-14-20. Create the navigation bar similar to Screen 1:
-- `recNavBar2` — Rectangle at Y: `Parent.Height - 70`
-- `btnNavSubmit2` — "📝 Submit" button (inactive style: Fill=`RGBA(240, 240, 240, 1)`, Color=`RGBA(70, 29, 124, 1)`)
-- `btnNavMyRequests2` — "📋 My Requests" button (active style: Fill=`RGBA(70, 29, 124, 1)`, Color=`Color.White`)
+### 7B: Create Navigation Container
 
-For `btnNavSubmit2` **OnSelect:**
-```powerfx
-Navigate(scrSubmit, ScreenTransition.Fade)
-```
+17. With `scrMyRequests` selected, click **+ Insert** → **Layout** → **Container**.
+18. **Rename it:** `conNavBar2`
+19. Copy the same structure from `conNavBar` on Screen 1, but swap active/inactive styles:
 
-For `btnNavMyRequests2` **OnSelect:**
-```powerfx
-// Already on this screen
-```
+| Control | Property | Value |
+|---------|----------|-------|
+| `recNavBg2` | Fill | `varColorHeader` |
+| `btnNavSubmit2` | Fill | `RGBA(60, 60, 65, 1)` (inactive) |
+| `btnNavSubmit2` | OnSelect | `Navigate(scrSubmit, ScreenTransition.Fade)` |
+| `btnNavMyRequests2` | Fill | `varColorInfo` (active) |
+| `btnNavMyRequests2` | OnSelect | `// Already on this screen` |
+
+---
+
+### 7C: Create Gallery Container
+
+20. With `scrMyRequests` selected, click **+ Insert** → **Layout** → **Container**.
+21. **Rename it:** `conGalleryArea`
+22. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `varHeaderHeight` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height - varHeaderHeight - varNavHeight` |
+| Fill | `Transparent` |
+
+> The gallery and empty state label will go inside this container.
 
 ---
 
@@ -1514,7 +2064,7 @@ Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find
 | Height | `24` |
 | Size | `13` |
 | FontWeight | `FontWeight.Semibold` |
-| Color | `RGBA(70, 29, 124, 1)` |
+| Color | `varColorPrimary` |
 | Visible | `!IsBlank(ThisItem.EstimatedCost)` |
 
 30. Set **Text:**
@@ -1725,7 +2275,7 @@ ThisItem.Status.Value in ["Ready to Print", "Printing", "Completed", "Paid & Pic
 | Font | `Font.'Segoe UI'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `28` |
-| Color | `RGBA(70, 29, 124, 1)` |
+| Color | `varColorPrimary` |
 | Align | `Align.Center` |
 
 20. Set **Text:**
@@ -2039,14 +2589,33 @@ Set(varSelectedItem, Blank())
 
 # STEP 12: Adding Navigation
 
-Navigation is already built into each screen (Steps 4 and 8). Just verify:
+Navigation is built into each screen. The Home screen uses card buttons, while other screens use a bottom navigation bar.
 
 ### Screen Navigation Summary
 
-| Screen | Active Button | Inactive Button Action |
-|--------|--------------|----------------------|
-| `scrSubmit` | `btnNavSubmit` (purple) | `btnNavMyRequests` → `Navigate(scrMyRequests)` |
-| `scrMyRequests` | `btnNavMyRequests2` (purple) | `btnNavSubmit2` → `Navigate(scrSubmit)` |
+| Screen | Navigation | Actions |
+|--------|------------|---------|
+| `scrHome` | Two card buttons | `btnGetStarted` → `scrSubmit`, `btnViewRequests` → `scrMyRequests` |
+| `scrSubmit` | Bottom nav bar | `btnNavHome` → `scrHome`, `btnNavMyRequests` → `scrMyRequests` |
+| `scrMyRequests` | Bottom nav bar | `btnNavHome2` → `scrHome`, `btnNavSubmit2` → `scrSubmit` |
+
+### Navigation Bar Updates (scrSubmit and scrMyRequests)
+
+The navigation bars on scrSubmit and scrMyRequests should include a Home button. Update them:
+
+#### On scrSubmit - Add Home Button
+
+1. Add a button `btnNavHome` to `conNavBar`:
+   - **Text:** `"Home"`
+   - **OnSelect:** `Navigate(scrHome, ScreenTransition.Fade)`
+   - Position it to the left of the existing buttons
+
+#### On scrMyRequests - Add Home Button
+
+2. Add a button `btnNavHome2` to `conNavBar2`:
+   - **Text:** `"Home"`
+   - **OnSelect:** `Navigate(scrHome, ScreenTransition.Fade)`
+   - Position it to the left of the existing buttons
 
 ### Set Default Screen
 
@@ -2054,10 +2623,10 @@ Navigation is already built into each screen (Steps 4 and 8). Just verify:
 2. Set **StartScreen** property:
 
 ```powerfx
-scrSubmit
+scrHome
 ```
 
-> This makes the Submit screen the first screen students see.
+> This makes the Home screen the landing page students see when they open the app.
 
 ---
 
@@ -2098,9 +2667,24 @@ scrSubmit
 
 **What you're doing:** Verifying all functionality works correctly.
 
-### Test 1: Submit Request Flow
+### Test 1: Home Screen (Landing)
 
 1. Open the app in preview (F5) or via the published link
+2. Verify:
+   - [ ] Home screen appears as the landing page
+   - [ ] Welcome message shows your name ("Welcome, [Your Name]!")
+   - [ ] Two cards are visible: "Submit New Request" and "My Requests"
+   - [ ] "OR" divider appears between cards
+3. Click "GET STARTED" button
+4. Verify:
+   - [ ] Navigates to Submit Request screen
+5. Use navigation to return to Home, then click "VIEW REQUESTS"
+6. Verify:
+   - [ ] Navigates to My Requests screen
+
+### Test 2: Submit Request Flow
+
+1. From Home screen, click "GET STARTED"
 2. Verify auto-filled fields:
    - [ ] Student Name shows your name
    - [ ] Student Email shows your email
@@ -2118,7 +2702,7 @@ scrSubmit
    - [ ] Navigates to My Requests
    - [ ] New request appears in gallery
 
-### Test 2: My Requests Gallery
+### Test 3: My Requests Gallery
 
 1. Navigate to My Requests screen
 2. Verify:
@@ -2128,7 +2712,7 @@ scrSubmit
 3. Click Refresh button
 4. Verify list refreshes
 
-### Test 3: Cancel Request
+### Test 4: Cancel Request
 
 1. Click "Cancel Request" on an Uploaded request
 2. Verify:
@@ -2136,7 +2720,7 @@ scrSubmit
    - [ ] Click "No, Keep Request" → modal closes
    - [ ] Click "Yes, Cancel Request" → request status changes to Rejected
 
-### Test 4: Estimate Confirmation
+### Test 5: Estimate Confirmation
 
 1. Have a staff member set estimates on your request and change status to "Pending"
 2. Refresh My Requests
@@ -2149,7 +2733,7 @@ scrSubmit
    - [ ] Click "I CONFIRM" → StudentConfirmed becomes true
    - [ ] Flow B should automatically change status to "Ready to Print"
 
-### Test 5: Different Status States
+### Test 6: Different Status States
 
 Have staff move a request through different statuses and verify:
 - [ ] Ready to Print: Shows "in queue" message
@@ -2287,6 +2871,25 @@ Reset(ddDiscipline);
 
 ---
 
+## Problem: Student reports submission failed
+
+**What the student sees:** "Something went wrong. Please try again or ask staff for help."
+
+**Staff troubleshooting steps:**
+
+1. **Check SharePoint list permissions** — Student needs Contribute access to PrintRequests
+2. **Verify list columns exist** — All required columns must be present in SharePoint
+3. **Check network/browser** — Have student refresh the page and try again
+4. **Review browser console** — Press F12 → Console tab for technical errors
+
+**For debugging**, you can temporarily change `frmSubmit.OnFailure` to show the technical error:
+```powerfx
+// TEMPORARY - for debugging only
+Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
+```
+
+---
+
 # Quick Reference Card
 
 ## Key Variables
@@ -2304,7 +2907,11 @@ Reset(ddDiscipline);
 
 | From | To | Formula |
 |------|-----|---------|
+| scrHome | scrSubmit | `Navigate(scrSubmit, ScreenTransition.Fade)` |
+| scrHome | scrMyRequests | `Navigate(scrMyRequests, ScreenTransition.Fade)` |
+| scrSubmit | scrHome | `Navigate(scrHome, ScreenTransition.Fade)` |
 | scrSubmit | scrMyRequests | `Navigate(scrMyRequests, ScreenTransition.Fade)` |
+| scrMyRequests | scrHome | `Navigate(scrHome, ScreenTransition.Fade)` |
 | scrMyRequests | scrSubmit | `Navigate(scrSubmit, ScreenTransition.Fade)` |
 
 ## Status Actions Available
@@ -2418,6 +3025,23 @@ Reset(dpDueDate);
 Reset(txtNotes);
 
 Navigate(scrMyRequests, ScreenTransition.Fade)
+```
+
+## Form OnFailure (Simple Error Message)
+
+```powerfx
+Set(varIsLoading, false);
+Notify(
+    "Something went wrong. Please try again or ask staff for help.",
+    NotificationType.Error,
+    5000
+)
+```
+
+## Validation Message Text
+
+```powerfx
+"Please fill in all required fields before submitting."
 ```
 
 ## My Requests Gallery Items
