@@ -1,4 +1,4 @@
-# Student Print Portal — Canvas App (Tablet)
+# Student Portal — Canvas App (Tablet)
 
 **⏱️ Time Required:** 4-6 hours (can be done in multiple sessions)  
 **🎯 Goal:** Students can submit 3D print requests with file attachments and track their submissions through a clean, professional interface
@@ -166,7 +166,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 4. Under "Create your apps", click **Start with a blank canvas**.
 5. In the popup "Start with a blank canvas", click **Tablet size** (right option).
 6. Enter these settings:
-   - **App name:** `Student Print Portal`
+   - **App name:** `Student Portal`
 7. Click **Create**.
 
 > 💡 **Why Tablet?** Students typically submit print requests from computers where their 3D model files are stored. Tablet layout (1024×768) provides comfortable form entry on desktop while still working on mobile devices.
@@ -237,15 +237,15 @@ Set(varMeName, User().FullName);
 
 // === UI STATE VARIABLES ===
 // Current screen/page
-Set(varCurrentScreen, "Submit");
+Set(varCurrentScreen, "Home");
 
 // === MODAL CONTROLS ===
 // These control which modal is visible (0 = hidden, ID = visible for that item)
 Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
 
-// Currently selected item for modals
-Set(varSelectedItem, Blank());
+// Currently selected item for modals (typed blank so Power Apps knows the schema)
+Set(varSelectedItem, LookUp(PrintRequests, false));
 
 // === FORM STATE ===
 // Track if form has been submitted successfully
@@ -447,96 +447,87 @@ Before you start building the UI, understand the modular structure of the app:
 
 This app uses a **container-based architecture** for clean organization and easy maintenance. Each major section is wrapped in a container.
 
+> 📐 **Tree View Order:** In Power Apps, items at the **TOP** of the tree appear **IN FRONT** visually. Items at the **BOTTOM** appear **BEHIND**. The trees below show the order as it appears in Power Apps (first-created at bottom, last-created at top).
+
 ```
 ▼ App
 ▼ scrHome                           ← Screen 1: Landing/Welcome Screen (StartScreen)
-    ▼ conHeader                     ← Header container
-        recHeaderBg                 ← Dark gray background
-        imgLogo                     ← FabLab/LSU logo (optional)
-        lblHeaderTitle              ← "3D Print Portal"
-    ▼ conWelcome                    ← Welcome message container
-        lblWelcome                  ← "Welcome, [Name]!"
-        lblSubtitle                 ← "What would you like to do today?"
-    ▼ conActionCards                ← Container for the two option cards
-        ▼ conSubmitCard             ← Left card - Submit New Request
-            recSubmitCardBg
-            icnSubmit               ← 3D printer icon
-            lblSubmitTitle          ← "Submit New Request"
-            lblSubmitDesc           ← Description text
-            btnGetStarted           ← "GET STARTED" button
-        lblOrDivider                ← "OR" text between cards
-        ▼ conRequestsCard           ← Right card - My Requests
-            recRequestsCardBg
-            icnRequests             ← List/clipboard icon
-            lblRequestsTitle        ← "My Requests"
+    ▼ conNavBarHome                 ← (created 5th - TOP of tree = in front)
+        lblPortalName               ← "Student Portal" (created 2nd inside)
+        recNavBgHome                ← Dark background (created 1st inside - behind)
+    lblHelpText                     ← "Need help?" (created 4th)
+    ▼ conActionCards                ← (created 3rd)
+        ▼ conRequestsCard           ← Right card (created 3rd inside)
+            btnViewRequests         ← "VIEW REQUESTS" (created last - top)
             lblRequestsDesc         ← Description text
-            btnViewRequests         ← "VIEW REQUESTS" button
-    ▼ conFooter                     ← Help info at bottom
-        lblHelpText                 ← "Need help? Visit Room 145..."
-    ▼ conNavBarHome                 ← Navigation bar (minimal on home)
-        recNavBgHome
-        lblPortalName               ← "Student 3D Print Portal"
+            lblRequestsTitle        ← "My Requests"
+            icnRequests             ← List icon
+            recRequestsCardBg       ← Card background (created 1st - behind)
+        lblOrDivider                ← "OR" divider (created 2nd inside)
+        ▼ conSubmitCard             ← Left card (created 1st inside)
+            btnGetStarted           ← "GET STARTED" (created last - top)
+            lblSubmitDesc           ← Description text
+            lblSubmitTitle          ← "Submit New Request"
+            icnSubmit               ← Printer icon
+            recSubmitCardBg         ← Card background (created 1st - behind)
+    ▼ conWelcome                    ← (created 2nd)
+        lblSubtitle                 ← "What would you like..." (created 2nd - top)
+        lblWelcome                  ← "Welcome, [Name]!" (created 1st - behind)
+    ▼ conHeaderHome                 ← (created 1st - BOTTOM of tree = behind)
+        lblHeaderTitleHome          ← "Student Portal" (created 2nd - top)
+        recHeaderBgHome             ← Dark gray background (created 1st - behind)
 
 ▼ scrSubmit                         ← Screen 2: Submit Request Form
-    ▼ conLoadingOverlay             ← Loading overlay (Visible: varIsLoading)
-        lblLoadingText
-        recLoadingBg
-        recLoadingOverlay
-    ▼ conHeader                     ← Header container (reusable pattern)
-        lblHeaderTitle              ← "Submit Request"
-        recHeaderBg                 ← Dark gray background
-        btnBackHome                 ← Back to home button
-    ▼ conFormArea                   ← Scrollable form container
-        ▼ frmSubmit                 ← EditForm control (connected to PrintRequests)
-            Title_DataCard          ← Hidden (auto-generated title)
-            Student_DataCard        ← Auto-filled from user
-            StudentEmail_DataCard   ← Auto-filled from user
-            TigerCardNumber_DataCard ← Required input
-            CourseNumber_DataCard   ← Optional
-            Discipline_DataCard     ← Dropdown
-            ProjectType_DataCard    ← Dropdown
-            Method_DataCard         ← Dropdown (controls cascading)
-            Printer_DataCard        ← Cascading dropdown
-            Color_DataCard          ← Cascading dropdown
-            DueDate_DataCard        ← Date picker
-            Notes_DataCard          ← Multiline text
-            Attachments_DataCard    ← Native file attachments!
-            Status_DataCard         ← Hidden, defaults to "Uploaded"
-        lblFileWarning              ← File naming instructions
-        btnSubmit                   ← Submit button
-    ▼ conNavBar                     ← Navigation container (reusable pattern)
-        recNavBg                    ← Dark background
-        btnNavHome                  ← "Home"
-        btnNavSubmit                ← "Submit" (active)
+    ▼ conLoadingOverlay             ← (created last - TOP = in front when visible)
+        recLoadingOverlay           ← Semi-transparent overlay (bottom)
+        recLoadingBg                ← White box
+        lblLoadingText              ← "Submitting..." (top)
+    ▼ conNavBar                     ← Navigation bar
         btnNavMyRequests            ← "My Requests"
+        btnNavSubmit                ← "Submit" (active)
+        btnNavHome                  ← "Home"
+        recNavBg                    ← Dark background (bottom)
+    ▼ conFormArea                   ← Scrollable form container
+        btnSubmit                   ← Submit button (top)
+        lblFileWarning              ← File naming instructions
+        ▼ frmSubmit                 ← EditForm (auto-generates DataCards)
+            Attachments_DataCard
+            Notes_DataCard
+            DueDate_DataCard
+            Color_DataCard
+            Printer_DataCard
+            Method_DataCard
+            ProjectType_DataCard
+            Discipline_DataCard
+            CourseNumber_DataCard
+            TigerCardNumber_DataCard
+            StudentEmail_DataCard
+            Student_DataCard
+            Title_DataCard          ← (bottom)
+            Status_DataCard
+    ▼ conHeader                     ← (created first - BOTTOM = behind)
+        lblHeaderTitle              ← "Submit Request" (top)
+        recHeaderBg                 ← Dark gray background (bottom)
 
 ▼ scrMyRequests                     ← Screen 3: My Requests List
-    ▼ conLoadingOverlay2            ← Loading overlay (same pattern)
-        ...
-    ▼ conConfirmModal               ← Confirm estimate modal (Visible: varShowConfirmModal > 0)
-        recModalOverlay
-        ▼ conModalContent
-            lblModalTitle
-            lblEstimateCost
-            lblEstimateTime
-            btnConfirm
-            btnCancelModal
-    ▼ conCancelModal                ← Cancel request modal (Visible: varShowCancelModal > 0)
-        ...
-    ▼ conHeader2                    ← Header container (same pattern)
-        lblHeaderTitle2
-        recHeaderBg2
-        btnRefresh
-        btnBackHome2                ← Back to home button
-    ▼ conGalleryArea                ← Gallery container
-        galMyRequests               ← Gallery of user's requests
-            ... card template ...
-        lblEmptyState               ← "No requests" message
-    ▼ conNavBar2                    ← Navigation container (same pattern)
-        recNavBg2
-        btnNavHome2                 ← "Home"
-        btnNavSubmit2               ← "Submit"
+    ▼ conCancelModal                ← (TOP - modals in front when visible)
+        ... modal contents ...
+    ▼ conConfirmModal
+        ... modal contents ...
+    ▼ conLoadingOverlay2
+        ... loading contents ...
+    ▼ conNavBar2                    ← Navigation bar
         btnNavMyRequests2           ← "My Requests" (active)
+        btnNavSubmit2               ← "Submit"
+        btnNavHome2                 ← "Home"
+        recNavBg2                   ← Dark background (bottom)
+    ▼ conGalleryArea                ← Gallery container
+        lblEmptyState               ← "No requests" message
+        galMyRequests               ← Gallery of user's requests
+    ▼ conHeader2                    ← (created first - BOTTOM = behind)
+        btnRefresh                  ← Refresh button
+        lblHeaderTitle2             ← "My Print Requests"
+        recHeaderBg2                ← Dark background (bottom)
 ```
 
 ### Why Containers?
@@ -634,7 +625,7 @@ We use **prefixes** to identify control types at a glance:
 
 | Property | Value |
 |----------|-------|
-| Text | `"3D Print Portal"` |
+| Text | `"Student Portal"` |
 | X | `(Parent.Width - Self.Width) / 2` |
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `300` |
@@ -669,7 +660,7 @@ We use **prefixes** to identify control types at a glance:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Welcome, " & varMeName & "!"` |
+| Text | `"Welcome, " & First(Split(varMeName, " ")).Value & "!"` |
 | X | `0` |
 | Y | `0` |
 | Width | `Parent.Width` |
@@ -1004,7 +995,7 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Student 3D Print Portal"` |
+| Text | `"Student Portal"` |
 | X | `0` |
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `Parent.Width` |
@@ -1018,33 +1009,37 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 
 ### ✅ Step 4 Checklist (Home Screen)
 
-Your Tree view should now look like:
+Your Tree view should now look like this (first-created at bottom, last-created at top):
 
 ```
 ▼ scrHome
-    ▼ conHeaderHome
-        recHeaderBgHome
-        lblHeaderTitleHome
-    ▼ conWelcome
-        lblWelcome
-        lblSubtitle
-    ▼ conActionCards
-        ▼ conSubmitCard
-            icnSubmit
-            lblSubmitTitle
-            lblSubmitDesc
-            btnGetStarted
-        lblOrDivider
-        ▼ conRequestsCard
-            icnRequests
-            lblRequestsTitle
-            lblRequestsDesc
-            btnViewRequests
-    lblHelpText
-    ▼ conNavBarHome
-        recNavBgHome
+    ▼ conNavBarHome                 ← created last (top = in front)
         lblPortalName
+        recNavBgHome
+    lblHelpText
+    ▼ conActionCards
+        ▼ conRequestsCard           ← created after conSubmitCard
+            btnViewRequests
+            lblRequestsDesc
+            lblRequestsTitle
+            icnRequests
+            recRequestsCardBg       ← background at bottom
+        lblOrDivider
+        ▼ conSubmitCard             ← created first inside conActionCards
+            btnGetStarted
+            lblSubmitDesc
+            lblSubmitTitle
+            icnSubmit
+            recSubmitCardBg         ← background at bottom
+    ▼ conWelcome
+        lblSubtitle
+        lblWelcome
+    ▼ conHeaderHome                 ← created first (bottom = behind)
+        lblHeaderTitleHome
+        recHeaderBgHome             ← background at bottom
 ```
+
+> 💡 **Tree view order:** Items at the TOP of the tree appear IN FRONT visually. Items at the BOTTOM appear BEHIND. This is why backgrounds (rectangles) should be created first — they appear at the bottom of each container.
 
 ---
 
@@ -1665,38 +1660,41 @@ Notify(
 
 ### ✅ Step 6 Checklist
 
-Your Tree view should now look like:
+Your Tree view should now look like (first-created at bottom, last-created at top):
 
 ```
 ▼ scrSubmit
-    ▼ conLoadingOverlay
-        ...
-    ▼ conHeader
-        recHeaderBg
-        lblHeaderTitle
-    ▼ conFormArea
-        ▼ frmSubmit
-            Student_DataCard
-            StudentEmail_DataCard
-            TigerCardNumber_DataCard
-            CourseNumber_DataCard
-            Discipline_DataCard
-            ProjectType_DataCard
-            Method_DataCard
-            Printer_DataCard
-            Color_DataCard
-            DueDate_DataCard
-            Notes_DataCard
-            Attachments_DataCard
-            Status_DataCard (hidden)
-            Title_DataCard (hidden)
-        lblFileWarning
-        lblValidationMessage         ← NEW: Shows missing required fields
-        btnSubmit
+    ▼ conLoadingOverlay             ← created last (TOP = in front when visible)
+        lblLoadingText
+        recLoadingBg
+        recLoadingOverlay           ← background at bottom
     ▼ conNavBar
-        recNavBg
-        btnNavSubmit
         btnNavMyRequests
+        btnNavSubmit
+        btnNavHome
+        recNavBg                    ← background at bottom
+    ▼ conFormArea
+        btnSubmit                   ← top of form area
+        lblValidationMessage
+        lblFileWarning
+        ▼ frmSubmit
+            Attachments_DataCard
+            Notes_DataCard
+            DueDate_DataCard
+            Color_DataCard
+            Printer_DataCard
+            Method_DataCard
+            ProjectType_DataCard
+            Discipline_DataCard
+            CourseNumber_DataCard
+            TigerCardNumber_DataCard
+            StudentEmail_DataCard
+            Student_DataCard
+            Status_DataCard (hidden)
+            Title_DataCard (hidden) ← bottom of form
+    ▼ conHeader                     ← created first (BOTTOM = behind)
+        lblHeaderTitle
+        recHeaderBg                 ← background at bottom
 ```
 
 ---
@@ -2750,7 +2748,7 @@ Have staff move a request through different statuses and verify:
 ### Get the App Web Link
 
 1. Go to [make.powerapps.com](https://make.powerapps.com)
-2. Find **Student Print Portal** in your apps
+2. Find **Student Portal** in your apps
 3. Click the **...** menu → **Details**
 4. Copy the **Web link** (looks like: `https://apps.powerapps.com/play/e/.../a/...`)
 
@@ -2953,10 +2951,10 @@ Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
 // === UI STATE ===
-Set(varCurrentScreen, "Submit");
+Set(varCurrentScreen, "Home");
 Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
-Set(varSelectedItem, Blank());
+Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
 Set(varFormSubmitted, false);
 Set(varIsLoading, false);
 
