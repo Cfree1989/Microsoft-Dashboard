@@ -2034,7 +2034,10 @@ Notify("Requests refreshed!", NotificationType.Information)
 | Width | `Parent.Width` |
 | Height | `Parent.Height - 170` |
 | TemplatePadding | `8` |
-| TemplateSize | `200` |
+| **WrapCount** | `3` |
+| TemplateSize | `280` |
+
+> 💡 **WrapCount = 3** creates a grid layout with 3 cards per row! Each card will be approximately 330px wide on a 1024px tablet screen.
 
 4. Set the **Items** property:
 
@@ -2354,10 +2357,6 @@ ThisItem.Status.Value in ["Ready to Print", "Printing", "Completed", "Paid & Pic
 | Width | `Parent.Width - 40` |
 | Height | `450` |
 | Fill | `Color.White` |
-| RadiusTopLeft | `12` |
-| RadiusTopRight | `12` |
-| RadiusBottomLeft | `12` |
-| RadiusBottomRight | `12` |
 
 ### Modal Title
 
@@ -2596,10 +2595,6 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | Width | `Parent.Width - 60` |
 | Height | `300` |
 | Fill | `Color.White` |
-| RadiusTopLeft | `12` |
-| RadiusTopRight | `12` |
-| RadiusBottomLeft | `12` |
-| RadiusBottomRight | `12` |
 
 ### Modal Title
 
@@ -2674,7 +2669,6 @@ Patch(
     LookUp(PrintRequests, ID = varShowCancelModal),
     {
         Status: {Value: "Rejected"},
-        RejectionReason: {Value: "Other"},
         Notes: "Cancelled by student before staff review."
     }
 );
@@ -3229,7 +3223,6 @@ Patch(
     LookUp(PrintRequests, ID = varShowCancelModal),
     {
         Status: {Value: "Rejected"},
-        RejectionReason: {Value: "Other"},
         Notes: "Cancelled by student before staff review."
     }
 );
