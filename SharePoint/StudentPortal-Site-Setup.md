@@ -227,41 +227,178 @@ Your current Home page contains staff-focused content (TigerCASH Log, Schedule, 
 
 ### 4.1: Create Home Page (Student Landing)
 
-Create a new student-facing Home page that will become the site's default landing page.
+Create a new student-facing Home page that will become the site's default landing page. This page mirrors the Moodle landing page design using SharePoint's native web parts with section backgrounds to create a card-like appearance.
 
-**To create a modern Site page:**
+**Page Structure Overview:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  SECTION 1: Title (no background)                   │
+│  └─ Text: "Digital Fabrication Laboratory" (H1)     │
+├─────────────────────────────────────────────────────┤
+│  SECTION 2: Hero Card (Neutral background)          │
+│  └─ Image: Lab photo                                │
+│  └─ Text: Welcome paragraph                         │
+├────────────────────┬────────────────────────────────┤
+│  SECTION 3: Two columns (Neutral background)        │
+│  LEFT COLUMN       │  RIGHT COLUMN                  │
+│  - Subtractive     │  - Software                    │
+│  - Additive        │  - Location                    │
+│                    │  - Lab Hours                   │
+│                    │  - Contact                     │
+├────────────────────┴────────────────────────────────┤
+│  SECTION 4: Footer Callout (Neutral background)     │
+│  └─ Text: Faculty consultation notice (centered)    │
+├─────────────────────────────────────────────────────┤
+│  SECTION 5: Quick Links (no background)             │
+│  └─ Links to other pages                            │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Step 1: Create the Page
 
 1. Go to the **site home** (click site name "Digital Fabrication Lab" in header)
 2. Click **+ New** in the top command bar
 3. Select **Page**
-4. The **Template gallery: Pages** will appear with pre-built templates
+4. In the **Template gallery**, click **Create blank** (top right)
+5. Click the page title area and type: `Home`
 
-5. Click **Create blank** (top right) for full control over the layout
-6. Click the page title area and type: `Home`
+#### Step 2: Add Title Section
 
-**Add content to the blank page:**
+1. The page starts with a default section. Click the **+** to add a web part
+2. Select **Text**
+3. Type: `Digital Fabrication Laboratory`
+4. Select the text and format it:
+   - Click the **Heading 1** style (or use the formatting dropdown)
+   - Click **Center align** in the toolbar
 
-7. **Add a Hero section (optional):**
-   - Click **+** → **Hero**
-   - Click **Change image** → Upload your lab banner photo
-   - Update any text overlays with your lab name/tagline
+#### Step 3: Add Hero Card Section (Lab Image + Welcome Text)
 
-8. **Add welcome text:**
-   - Click **+** → **Text**
-   - Add placeholder for now:
-   
-   ```
-   [PLACEHOLDER: Migrate welcome content from Moodle HTML]
-   
-   Welcome to the Digital Fabrication Laboratory...
-   ```
+1. Hover below the title section and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
 
-9. **Add Quick Links Section:**
-   - Click **+** → **Quick links**
-   - Select **Compact** or **Grid** layout
-   - Add links to other pages (will complete after creating all pages)
+**Add the Lab Image:**
 
-10. Click **Publish** (or **Save as draft** until all pages are ready)
+6. Click **+** inside the new section → Select **Image**
+7. Click **Upload** → Select your lab photo (the black & white fabrication lab image)
+8. After upload, click on the image and resize if needed (use corner handles)
+
+**Add the Welcome Paragraph:**
+
+9. Click **+** below the image → Select **Text**
+10. Paste the following welcome text:
+
+```
+Welcome to the Digital Fabrication Laboratory, a space dedicated to empowering students and faculty to explore ideas and conduct research. Our well-equipped lab provides the necessary area and equipment to work with a diverse range of materials, from foam and wood to mild steel and engineering resins. Our dedicated staff is here to support you at every step of the way. Whether you need assistance with 3D modeling, have questions about CNC, or seek guidance in designing and building a project from start to finish, we are happy to help. The Fabrication Lab plays a vital role in advancing education, fostering recruitment, and driving research in digital fabrication technology across various disciplines within the College of Art + Design and beyond.
+```
+
+#### Step 4: Add Equipment & Info Section (Two Columns)
+
+1. Hover below the hero section and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **Two columns**
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
+
+**Left Column - Machines:**
+
+6. Click **+** in the **left column** → Select **Text**
+7. Add the following content (use Heading 2 for titles, bullet list for items):
+
+```
+Subtractive Machines
+
+• CNC Router 4'x8'
+• CNC Plasma 4'x4'
+• Tormach CNC Mill
+• Formech Vacuum Former
+• Multiprocess Welder
+
+Additive Machines
+
+• Form 3+ (2) Resin
+• Form Fuse 1+ 30w SLS
+• Prusa MK4S (6)
+• Prusa XL 2 toolhead (2)
+• Raise3D Pro 2 Plus (2)
+• Markforged Onyx Pro
+• Potterbot 9 Ceramic 3D Printer
+```
+
+8. Format "Subtractive Machines" and "Additive Machines" as **Heading 2**
+9. Format the machine lists as **bullet lists** (select text → click bullet icon)
+
+**Right Column - Info:**
+
+10. Click **+** in the **right column** → Select **Text**
+11. Add the following content:
+
+```
+Software
+
+• Fusion
+• Rhino
+• PrusaSlicer
+• Preform
+
+Location
+
+Art Building 123
+Atkinson 145
+
+Lab Hours
+
+Monday – Friday
+8:30-4:30
+
+Contact
+
+coad-fablab@lsu.edu
+```
+
+12. Format "Software", "Location", "Lab Hours", and "Contact" as **Heading 2**
+13. Format the software list as a **bullet list**
+
+#### Step 5: Add Footer Callout Section
+
+1. Hover below the two-column section and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
+
+6. Click **+** inside the section → Select **Text**
+7. Type: `Consultations are required for all faculty looking to conduct class projects through the Lab.`
+8. Select the text and format it:
+   - Click **Bold**
+   - Click **Center align**
+
+#### Step 6: Add Quick Links Section
+
+1. Hover below the footer callout and click the **+** line to add a new section
+2. Leave the background as **None** (default)
+3. Click **+** → Select **Quick links**
+4. In the properties panel, select **Grid** or **Compact** layout
+5. Add links to other pages (complete after creating all pages in Step 4.2):
+
+| Title | URL | Suggested Icon |
+|-------|-----|----------------|
+| Subtractive Manufacturing | /SitePages/Subtractive.aspx | Tool or Gear |
+| Additive Manufacturing | /SitePages/Additive.aspx | Cube or Printer |
+| Resources | /SitePages/Resources.aspx | Document |
+| Lab Rules | /SitePages/Lab-Rules.aspx | Book |
+| Safety | /SitePages/Safety.aspx | Shield |
+
+#### Step 7: Publish the Page
+
+1. Review the page layout - verify all sections have correct backgrounds
+2. Click **Publish** in the top-right corner
+3. Click **Publish** again to confirm
+
+> 💡 **Tip:** The Neutral background on sections creates the "card" appearance from the Moodle design. While SharePoint doesn't support rounded corners or shadows natively, the gray backgrounds provide clear visual separation between content areas.
 
 > 💡 **For all remaining pages:** Use **Create blank** in the Template gallery (simpler content pages don't need a template).
 
