@@ -319,11 +319,11 @@ Subtractive Machines
 
 Additive Machines
 
-• Form 2 (2) Resin
 • Form 3+ (2) Resin
-• Prusa MK4 (5)
+• Form Fuse 1+ 30w SLS
+• Prusa MK4S (6)
+• Prusa XL 2 toolhead (2)
 • Raise3D Pro 2 Plus (2)
-• Ultimaker S5
 • Markforged Onyx Pro
 • Potterbot 9 Ceramic 3D Printer
 ```
