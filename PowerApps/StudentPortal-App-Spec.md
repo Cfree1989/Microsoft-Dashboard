@@ -490,9 +490,9 @@ This app uses a **container-based architecture** for clean organization and easy
         recNavBg                    ← Dark background (bottom)
     ▼ conFormArea                   ← Scrollable form container
         btnSubmit                   ← Submit button (top)
-        lblFileWarning              ← File naming instructions
         ▼ frmSubmit                 ← EditForm (auto-generates DataCards)
-            Attachments_DataCard1
+            ▼ Attachments_DataCard1
+                lblFileWarning      ← File naming instructions (inside Attachments)
             Notes_DataCard1
             DueDate_DataCard1
             Color_DataCard1
@@ -1642,15 +1642,16 @@ If(
 
 ### 6E: Add File Warning Label
 
-63. With `conFormArea` selected (not frmSubmit), click **+ Insert** → **Text label**.
-64. **Rename it:** `lblFileWarning`
-65. Set these properties:
+63. Expand `Attachments_DataCard1` in Tree view and select it.
+64. Click **+ Insert** → **Text label**.
+65. **Rename it:** `lblFileWarning`
+66. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| X | `varSpacingXL` |
-| Y | `frmSubmit.Y + frmSubmit.Height + varSpacingMD` |
-| Width | `Parent.Width - (varSpacingXL * 2)` |
+| X | `varSpacingMD` |
+| Y | `DataCardKey.Y + DataCardKey.Height + varSpacingMD` |
+| Width | `Parent.Width - (varSpacingMD * 2)` |
 | Height | `180` |
 | Overflow | `Overflow.Scroll` |
 | Fill | `RGBA(255, 244, 206, 1)` |
@@ -1664,7 +1665,7 @@ If(
 | BorderColor | `varColorWarning` |
 | BorderThickness | `1` |
 
-66. Set **Text:**
+67. Set **Text:**
 
 ```powerfx
 "IMPORTANT: File Naming Requirement
@@ -1684,15 +1685,15 @@ Files not following this format will be rejected."
 
 ### 6F: Add Submit Button
 
-67. Click **+ Insert** → **Button**.
-68. **Rename it:** `btnSubmit`
-69. Set these properties:
+68. Click **+ Insert** → **Button**.
+69. **Rename it:** `btnSubmit`
+70. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"SUBMIT REQUEST"` |
 | X | `varSpacingXL` |
-| Y | `lblFileWarning.Y + lblFileWarning.Height + varSpacingMD` |
+| Y | `frmSubmit.Y + frmSubmit.Height + varSpacingMD` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `varButtonHeight` |
 | Fill | `varColorPrimary` |
@@ -1708,7 +1709,7 @@ Files not following this format will be rejected."
 | PressedFill | `varColorPrimaryPressed` |
 | DisabledFill | `varColorDisabled` |
 
-70. Set **DisplayMode** (validates required fields):
+71. Set **DisplayMode** (validates required fields):
 
 ```powerfx
 If(
@@ -1720,7 +1721,7 @@ If(
 
 > 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled. `frmSubmit.Valid` returns true when the form is ready to submit.
 
-71. Set **OnSelect:**
+72. Set **OnSelect:**
 
 ```powerfx
 Set(varIsLoading, true);
@@ -1733,9 +1734,9 @@ SubmitForm(frmSubmit)
 
 This label shows students exactly which fields need attention when the form isn't valid.
 
-72. Click **+ Insert** → **Text label**.
-73. **Rename it:** `lblValidationMessage`
-74. Set these properties:
+73. Click **+ Insert** → **Text label**.
+74. **Rename it:** `lblValidationMessage`
+75. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1754,12 +1755,8 @@ This label shows students exactly which fields need attention when the form isn'
 | PaddingRight | `varSpacingMD` |
 | BorderColor | `varColorDanger` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `varRadiusXSmall` |
-| RadiusTopRight | `varRadiusXSmall` |
-| RadiusBottomLeft | `varRadiusXSmall` |
-| RadiusBottomRight | `varRadiusXSmall` |
 
-75. Set **Text:**
+76. Set **Text:**
 
 ```powerfx
 "Please fill in all required fields before submitting."
@@ -1771,8 +1768,8 @@ This label shows students exactly which fields need attention when the form isn'
 
 ### 6H: Configure Form Events
 
-76. Click on `frmSubmit` in Tree view.
-77. Set **OnSuccess:**
+77. Click on `frmSubmit` in Tree view.
+78. Set **OnSuccess:**
 
 ```powerfx
 Set(varIsLoading, false);
@@ -1781,7 +1778,7 @@ ResetForm(frmSubmit);
 Navigate(scrMyRequests, ScreenTransition.Fade)
 ```
 
-78. Set **OnFailure:**
+79. Set **OnFailure:**
 
 ```powerfx
 Set(varIsLoading, false);
@@ -1814,9 +1811,9 @@ Your Tree view should now look like (first-created at bottom, last-created at to
     ▼ conFormArea
         btnSubmit                   ← top of form area
         lblValidationMessage
-        lblFileWarning
         ▼ frmSubmit
-            Attachments_DataCard1
+            ▼ Attachments_DataCard1
+                lblFileWarning      ← inside Attachments card
             Notes_DataCard1
             DueDate_DataCard1
             Color_DataCard1
@@ -2096,10 +2093,6 @@ Now add controls **inside** the gallery template.
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
 
 #### Request ID (ReqKey)
 
@@ -2131,7 +2124,7 @@ Now add controls **inside** the gallery template.
 | X | `Parent.TemplateWidth - 150` |
 | Y | `10` |
 | Width | `120` |
-| Height | `28` |
+| Height | `40` |
 | Size | `10` |
 | RadiusTopLeft | `14` |
 | RadiusTopRight | `14` |
@@ -2300,7 +2293,7 @@ Switch(
     "Printing", "Your print is currently in progress!",
     "Completed", "Your print is ready for pickup!\n📍 Room 145 Atkinson Hall\n💳 Payment: TigerCASH only",
     "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, "mmm d, yyyy"),
-    "Rejected", "❌ Rejected: " & ThisItem.RejectionReason.Value,
+    "Rejected", "❌ Request rejected",
     ""
 )
 ```
