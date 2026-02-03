@@ -787,7 +787,22 @@ Before embedding the app, ensure:
 4. Copy the **Web link** URL
    - Format: `https://apps.powerapps.com/play/e/[environment-id]/a/[app-id]`
 
-### 10.3: Embed the App on Additive Page
+### 10.3: Choose Your Integration Approach
+
+You have two options for integrating the Student Portal app on the Additive page:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Embedded App** | All-in-one experience, no tab switching | Can look cramped, slower page load |
+| **Button Link** | Cleaner page layout, app opens full-screen | Requires tab/window switch |
+
+**Option A: Embed the App Directly (below)**
+
+**Option B: Use a Button Link** — See **Step 12.6** for instructions on adding a "3D Print Submission" button that opens the app in a new tab. This approach is recommended if you prefer a cleaner page layout.
+
+---
+
+#### Option A: Embed the App on Additive Page
 
 1. Go to **Site contents** → **Site Pages**
 2. Open **Additive.aspx**
@@ -859,6 +874,248 @@ Or use the direct app link: [YOUR APP LINK]
 
 Questions? Email coad-fablab@lsu.edu
 ```
+
+---
+
+## Step 12: Building the Additive Page Content
+
+This section provides detailed instructions for building out the Additive page to match the Moodle-style layout with card-based sections containing 3D printing information, pricing, and the submission button.
+
+### Page Structure Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SECTION 1: Title (no background)                               │
+│  └─ Text: "Additive" (H1, centered)                             │
+├─────────────────────────────┬───────────────────────────────────┤
+│  SECTION 2: Two columns 2:1 (Neutral background)                │
+│  LEFT (60%)                 │  RIGHT (40%)                      │
+│  - Image: 3D printers photo │  - Quick Links: Design guides     │
+│  - Text: Area description   │    (List layout)                  │
+├─────────────────────────────┼───────────────────────────────────┤
+│  SECTION 3: Two columns 1:1 (Neutral background)                │
+│  LEFT (50%)                 │  RIGHT (50%)                      │
+│  - Pricing info             │  - Printer Dimensions             │
+│  - FDM/SLA rates            │  - Build volumes                  │
+├─────────────────────────────┼───────────────────────────────────┤
+│  SECTION 4: Two columns 1:1 (Neutral background)                │
+│  LEFT (50%)                 │  RIGHT (50%)                      │
+│  - 3D Print Job Process     │  - Model Checklist                │
+│  - 12-step numbered list    │  - 9-item numbered list           │
+├─────────────────────────────┴───────────────────────────────────┤
+│  SECTION 5: One column (no background)                          │
+│  └─ Button: "3D Print Submission" (centered, links to app)      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12.1: Edit the Additive Page
+
+1. Go to **Site contents** → **Site Pages**
+2. Open **Additive.aspx**
+3. Click **Edit** in the toolbar
+
+### 12.2: Add Title Section
+
+1. The page starts with a default section
+2. Click **+** to add a web part → Select **Text**
+3. Type: `Additive`
+4. Select the text and format:
+   - Click **Heading 1** style
+   - Click **Center align**
+
+### 12.3: Add Hero Section (Image + Design Links)
+
+**Create the section:**
+
+1. Hover below the title and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **Two columns (2:1 ratio)** — this gives 66%/33% split
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
+
+**Left Column - Image and Description:**
+
+6. Click **+** in the left column → Select **Image**
+7. Upload your 3D printers photo (the black & white lab image)
+8. Click **+** below the image → Select **Text**
+9. Paste the description:
+
+```
+The Additive area within the Fabrication Lab is dedicated to all things 3D printing, offering a space ideal for small to medium-sized projects. This area is especially suitable for intricate or organic designs that may be challenging to create by hand. Our 3D printers can handle a diverse range of materials, ensuring we can cater to your specific project requirements with precision.
+```
+
+**Right Column - Design Guide Links:**
+
+10. Click **+** in the right column → Select **Quick links**
+11. In the properties panel, select **List** layout
+12. Click **+ Add links** and add each guide:
+
+| Title | URL |
+|-------|-----|
+| Design Guidelines for 3D Printing | [Your SharePoint/OneDrive link] |
+| Designing for 3D Printing | [Your SharePoint/OneDrive link] |
+| 3D Printing Best Practices | [Your SharePoint/OneDrive link] |
+| Prusa Modeling for 3D Printing | https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135 |
+| Preparing Rhino Files for 3D Printing | [Your SharePoint/OneDrive link] |
+| Rhino 3D Printing Checks | [Your SharePoint/OneDrive link] |
+| 3D Printing for Architecture | [Your SharePoint/OneDrive link] |
+| 3D Printing for Interior Design | [Your SharePoint/OneDrive link] |
+| Form 3 SLA Design Guide | [Your SharePoint/OneDrive link] |
+| Form Fuse Design Guide | [Your SharePoint/OneDrive link] |
+
+13. Click on the Quick Links web part title area and change it to: `Designing for 3D Printing`
+
+### 12.4: Add Pricing and Printer Dimensions Section
+
+**Create the section:**
+
+1. Hover below the hero section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **Two columns (1:1 ratio)**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Left Column - Pricing:**
+
+6. Click **+** in the left column → Select **Text**
+7. Add the following content:
+
+```
+Pricing
+
+$3 Minimum on all 3D prints
+
+FDM (Filament):
+• PLA: $0.10 per gram
+• Markforged PLA: $0.15 per gram
+
+SLA (Resin):
+• Standard Resin: $0.30 per ml
+```
+
+8. Format "Pricing" as **Heading 2**
+9. Format "$3 Minimum on all 3D prints" as **Bold** and **Center aligned**
+10. Format "FDM (Filament):" and "SLA (Resin):" as **Bold**
+
+**Right Column - Printer Dimensions:**
+
+11. Click **+** in the right column → Select **Text**
+12. Add the following content:
+
+```
+Printer Dimensions
+
+FDM (Filament):
+• Prusa MK4S: 9.84" × 8.3" × 8.6" (250 × 210 × 220 mm)
+• Prusa XL: 14.17" × 14.17" × 14.17" (360 × 360 × 360 mm)
+• Raise3D Pro 2 Plus: 12" × 12" × 23.8" (305 × 305 × 605 mm)
+
+SLA (Resin):
+• Formlabs Form 3: 5.7" × 5.7" × 7.3" (145 × 145 × 175 mm)
+```
+
+13. Format "Printer Dimensions" as **Heading 2**
+14. Format "FDM (Filament):" and "SLA (Resin):" as **Bold**
+
+### 12.5: Add Process and Checklist Section
+
+**Create the section:**
+
+1. Hover below the pricing section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **Two columns (1:1 ratio)**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Left Column - 3D Print Job Process:**
+
+6. Click **+** in the left column → Select **Text**
+7. Add the following content:
+
+```
+3D Print Job Process
+
+1. Read the content and look through the guides on this page.
+2. Fill out the Form below.
+3. Ensure that files are sent in .3MF, .STL, or .OBJ format.
+4. Use the following file naming format: firstandlastname_printertype_materialcolor_classnumber
+   (e.g., johnsmith_filament_blue_ARCH4031)
+5. Fill out the form below and wait for an email with a link to upload your file.
+6. Once the file is correctly submitted, we will verify if it is printable.
+7. If the file is not printable, we will alert you and provide recommendations for fixes.
+8. When the file is ready, we will slice your model and provide a price quote.
+9. Printing will not proceed until you agree to the price.
+10. We will print your job using the most suitable 3D printer.
+11. Upon completion, we will notify you via email about pickup.
+12. Payment is required at the time of pickup via TigerCASH, check, or grant code.
+```
+
+8. Format "3D Print Job Process" as **Heading 2**
+9. Format the steps as a **Numbered list**
+10. Format the example "(e.g., johnsmith_filament_blue_ARCH4031)" as *Italic*
+
+**Right Column - Model Checklist:**
+
+11. Click **+** in the right column → Select **Text**
+12. Add the following content:
+
+```
+Model Checklist
+
+1. Did you submit your file with the correct name format?
+2. Has the model been broken down to reduce support material?
+3. Is it a valid Closed Solid Polysurface or closed mesh (Type in "What" into the command bar in Rhino to check validity)?
+4. Is the model scaled to the correct size? .STL and .OBJ MUST be exported and scaled in metric units otherwise the scale will be wrong.
+5. Does the scaled size fit within the build volume? (You can select your model and type in "Bounding Box" to double-check the dimensions)
+6. Is your model at least 1/16" thick when scaled fit on a printer bed?
+7. You can include many items in one file. We simply arrange it ourselves to fit on the printers.
+8. Ensure that the file contains ONLY what you want printed. Export selected geometry and save it as .3mf, if possible, to ensure accuracy. If it says a plugin failed then save the geometry you want printed as a new Rhino file and proceed to export from there.
+9. Send us ONE SINGLE file whenever possible. Multiple files as a last resort.
+```
+
+13. Format "Model Checklist" as **Heading 2**
+14. Format the items as a **Numbered list**
+15. Format "MUST" and "ONLY" as **Bold** for emphasis
+
+### 12.6: Add Submission Button Section
+
+**Create the section:**
+
+1. Hover below the process section and click **+** to add a new section
+2. Leave the background as **None** (default) — this makes the button stand out
+
+**Add the Button:**
+
+3. Click **+** → Search for and select **Button**
+4. Configure the button:
+   - **Label**: `3D Print Submission`
+   - **Link**: Paste your Student Portal app URL
+     - Example: `https://apps.powerapps.com/play/e/default-[environment-id]/a/[app-id]?tenantId=[tenant-id]`
+5. Click **Alignment** → Select **Center**
+
+> **Note:** The button opens the Student Portal app in a new tab/window, providing a cleaner experience than embedding the app directly on the page.
+
+### 12.7: Publish the Page
+
+1. Review all sections — verify backgrounds are set correctly
+2. Check that all links work (Quick Links, Button)
+3. Click **Republish** in the top-right corner
+
+### 12.8: Verification Checklist
+
+After building the page, verify:
+
+- [ ] Title "Additive" displays centered at top
+- [ ] Hero section shows image on left, Quick Links on right
+- [ ] All design guide links work correctly
+- [ ] Pricing section displays FDM and SLA rates
+- [ ] Printer dimensions show all machine build volumes
+- [ ] 3D Print Job Process shows all 12 steps
+- [ ] Model Checklist shows all 9 items
+- [ ] "3D Print Submission" button is centered
+- [ ] Button opens the Student Portal app when clicked
+- [ ] All card sections have neutral (gray) backgrounds
+- [ ] Page looks professional and matches the intended design
 
 ---
 
