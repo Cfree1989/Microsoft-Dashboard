@@ -1,35 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, List, Home, RefreshCw, Upload, FileText, ChevronDown, Paperclip, AlertTriangle } from "lucide-react"
-
-// Microsoft Fluent Design Color Palette
-const colors = {
-  primary: "rgb(56, 96, 178)",
-  primaryHover: "rgb(76, 116, 198)",
-  success: "rgb(16, 124, 16)",
-  successHover: "rgb(36, 144, 36)",
-  warning: "rgb(255, 185, 0)",
-  danger: "rgb(209, 52, 56)",
-  info: "rgb(70, 130, 220)",
-  header: "rgb(45, 45, 48)",
-  text: "rgb(50, 50, 50)",
-  textMuted: "rgb(100, 100, 100)",
-  textLight: "rgb(150, 150, 150)",
-  bg: "rgb(248, 248, 248)",
-  bgCard: "rgb(255, 255, 255)",
-  border: "rgb(200, 200, 200)",
-  borderLight: "rgb(220, 220, 220)",
-  // Status colors
-  uploaded: "rgb(70, 130, 220)",
-  pending: "rgb(255, 185, 0)",
-  readyToPrint: "rgb(16, 124, 16)",
-  printing: "rgb(107, 105, 214)",
-  completed: "rgb(0, 78, 140)",
-  paidPickedUp: "rgb(0, 158, 73)",
-  rejected: "rgb(209, 52, 56)",
-  archived: "rgb(96, 94, 92)",
-}
+import { Plus, List, RefreshCw, ChevronDown, Paperclip, AlertTriangle, Home, FileText, ChevronLeft, X, Check, Printer } from "lucide-react"
 
 type Screen = "home" | "submit" | "myRequests"
 
@@ -37,93 +9,102 @@ export default function StudentPortalDesign() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home")
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="mx-auto max-w-6xl">
-        {/* Design Title */}
-        <div className="mb-8 text-center">
-          <h1 className="font-sans text-3xl font-semibold text-foreground">
+    <div className="min-h-screen bg-[#1a1a1a] p-6 md:p-10">
+      <div className="mx-auto max-w-[1100px]">
+        {/* Design Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-white">
             Student Portal - Power Apps Design
           </h1>
-          <p className="mt-2 font-sans text-muted-foreground">
-            Microsoft Fluent Design System | Tablet Layout (1024x768)
+          <p className="mt-1 text-sm text-neutral-400">
+            Microsoft Fluent Design | Tablet Layout (1024 x 768)
           </p>
         </div>
 
-        {/* Screen Selector */}
-        <div className="mb-6 flex justify-center gap-4">
-          <button
-            onClick={() => setCurrentScreen("home")}
-            className={`rounded-md px-6 py-2 font-sans text-sm font-medium transition-colors ${
-              currentScreen === "home"
-                ? "bg-[rgb(56,96,178)] text-white"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Screen 1: Home
-          </button>
-          <button
-            onClick={() => setCurrentScreen("submit")}
-            className={`rounded-md px-6 py-2 font-sans text-sm font-medium transition-colors ${
-              currentScreen === "submit"
-                ? "bg-[rgb(56,96,178)] text-white"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Screen 2: Submit Request
-          </button>
-          <button
-            onClick={() => setCurrentScreen("myRequests")}
-            className={`rounded-md px-6 py-2 font-sans text-sm font-medium transition-colors ${
-              currentScreen === "myRequests"
-                ? "bg-[rgb(56,96,178)] text-white"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Screen 3: My Requests
-          </button>
+        {/* Screen Selector Tabs */}
+        <div className="mb-4 flex gap-1 rounded-lg bg-[#2a2a2a] p-1">
+          {[
+            { id: "home", label: "Home" },
+            { id: "submit", label: "Submit Request" },
+            { id: "myRequests", label: "My Requests" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setCurrentScreen(tab.id as Screen)}
+              className={`flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-all ${
+                currentScreen === tab.id
+                  ? "bg-[#3860B2] text-white shadow-lg"
+                  : "text-neutral-400 hover:bg-[#3a3a3a] hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Power Apps Canvas Container */}
-        <div className="mx-auto overflow-hidden rounded-lg border border-border shadow-lg" style={{ width: 1024, height: 768 }}>
-          {currentScreen === "home" && <HomeScreen onNavigate={setCurrentScreen} />}
-          {currentScreen === "submit" && <SubmitScreen onNavigate={setCurrentScreen} />}
-          {currentScreen === "myRequests" && <MyRequestsScreen onNavigate={setCurrentScreen} />}
-        </div>
-
-        {/* Design Notes */}
-        <div className="mt-8 rounded-lg bg-muted p-6">
-          <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Design Specifications</h2>
-          <div className="grid grid-cols-3 gap-6 text-sm">
-            <div>
-              <h3 className="mb-2 font-semibold text-foreground">Typography</h3>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>Font: Segoe UI</li>
-                <li>App Title: 18px Semibold</li>
-                <li>Body: 11-12px Normal</li>
-                <li>Buttons: 12-14px Semibold</li>
-              </ul>
+        {/* Power Apps Device Frame */}
+        <div className="overflow-hidden rounded-xl bg-[#2d2d30] shadow-2xl">
+          {/* Device Top Bar */}
+          <div className="flex items-center justify-between bg-[#1e1e1e] px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <div className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <div className="h-3 w-3 rounded-full bg-[#28c840]" />
             </div>
-            <div>
-              <h3 className="mb-2 font-semibold text-foreground">Colors</h3>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>Primary: #3860B2</li>
-                <li>Success: #107C10</li>
-                <li>Header: #2D2D30</li>
-                <li>Background: #F8F8F8</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-2 font-semibold text-foreground">Layout</h3>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>Canvas: 1024x768 (Tablet)</li>
-                <li>Header Height: 60px</li>
-                <li>Nav Height: 60px</li>
-                <li>Corner Radius: 4-12px</li>
-              </ul>
+            <span className="text-xs text-neutral-500">Power Apps Studio - Student Portal</span>
+            <div className="w-14" />
+          </div>
+          
+          {/* Canvas Container */}
+          <div className="flex items-center justify-center bg-[#404040] p-6">
+            <div 
+              className="overflow-hidden rounded-lg shadow-2xl"
+              style={{ 
+                width: 1024, 
+                height: 768,
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+              }}
+            >
+              {currentScreen === "home" && <HomeScreen onNavigate={setCurrentScreen} />}
+              {currentScreen === "submit" && <SubmitScreen onNavigate={setCurrentScreen} />}
+              {currentScreen === "myRequests" && <MyRequestsScreen onNavigate={setCurrentScreen} />}
             </div>
           </div>
         </div>
+
+        {/* Design Specs Panel */}
+        <div className="mt-6 grid grid-cols-4 gap-4 rounded-xl bg-[#2a2a2a] p-5">
+          <SpecCard 
+            title="Typography" 
+            items={["Segoe UI", "Headers: 18px Semibold", "Body: 11-12px", "Buttons: 12-14px Bold"]} 
+          />
+          <SpecCard 
+            title="Primary Colors" 
+            items={["Primary: #3860B2", "Success: #107C10", "Warning: #FFB900", "Danger: #D13438"]} 
+          />
+          <SpecCard 
+            title="Neutrals" 
+            items={["Header: #2D2D30", "Background: #F8F8F8", "Card: #FFFFFF", "Border: #C8C8C8"]} 
+          />
+          <SpecCard 
+            title="Layout" 
+            items={["Canvas: 1024 x 768", "Header: 60px", "Nav Bar: 60px", "Radius: 4-12px"]} 
+          />
+        </div>
       </div>
+    </div>
+  )
+}
+
+function SpecCard({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h3>
+      <ul className="space-y-1">
+        {items.map((item, i) => (
+          <li key={i} className="text-sm text-neutral-300">{item}</li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -133,63 +114,66 @@ export default function StudentPortalDesign() {
 // ============================================
 function HomeScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
   return (
-    <div className="flex h-full flex-col font-sans" style={{ backgroundColor: colors.bg }}>
+    <div className="flex h-full flex-col" style={{ fontFamily: "'Segoe UI', sans-serif", backgroundColor: "#f8f8f8" }}>
       {/* Header */}
-      <header className="flex h-[60px] items-center justify-center" style={{ backgroundColor: colors.header }}>
-        <h1 className="text-lg font-semibold text-white">Student Portal</h1>
+      <header 
+        className="flex h-[60px] items-center justify-center"
+        style={{ backgroundColor: "#2d2d30" }}
+      >
+        <h1 className="text-[18px] font-semibold text-white tracking-wide">Student Portal</h1>
       </header>
 
-      {/* Content Area */}
-      <main className="flex flex-1 flex-col items-center px-5 pt-8">
+      {/* Main Content */}
+      <main className="flex flex-1 flex-col items-center justify-center px-8">
         {/* Welcome Section */}
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold" style={{ color: colors.text }}>
+        <div className="mb-10 text-center">
+          <h2 className="text-[28px] font-semibold" style={{ color: "#323232" }}>
             Welcome, John!
           </h2>
-          <p className="mt-1 text-sm" style={{ color: colors.textMuted }}>
+          <p className="mt-2 text-[14px]" style={{ color: "#646464" }}>
             What would you like to do today?
           </p>
         </div>
 
         {/* Action Cards */}
-        <div className="flex w-full max-w-[984px] items-center justify-center gap-0">
+        <div className="flex items-center gap-0">
           {/* Submit New Request Card */}
           <div
-            className="flex w-[430px] flex-col items-center rounded-lg border p-6"
+            className="flex w-[400px] flex-col items-center rounded-xl p-8"
             style={{
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              height: 350,
+              backgroundColor: "#ffffff",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
+              height: 340,
             }}
           >
             <div
-              className="mt-4 flex h-20 w-20 items-center justify-center rounded-full"
-              style={{ backgroundColor: `${colors.primary}15` }}
+              className="flex h-[80px] w-[80px] items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(56, 96, 178, 0.1)" }}
             >
-              <Plus className="h-10 w-10" style={{ color: colors.primary }} />
+              <Plus className="h-10 w-10" style={{ color: "#3860B2" }} strokeWidth={1.5} />
             </div>
-            <h3 className="mt-5 text-base font-semibold" style={{ color: colors.text }}>
+            <h3 className="mt-6 text-[16px] font-semibold" style={{ color: "#323232" }}>
               Submit New Request
             </h3>
-            <p className="mt-2 text-center text-xs" style={{ color: colors.textMuted }}>
-              Upload your 3D model file and submit a new print request
+            <p className="mt-3 text-center text-[12px] leading-relaxed px-4" style={{ color: "#646464" }}>
+              Upload your 3D model file and submit a new print request to the FabLab
             </p>
             <button
               onClick={() => onNavigate("submit")}
-              className="mt-auto w-full rounded-md py-3 text-sm font-bold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: colors.primary }}
+              className="mt-auto w-full rounded-md py-3.5 text-[13px] font-bold uppercase tracking-wide text-white transition-all hover:opacity-90"
+              style={{ backgroundColor: "#3860B2" }}
             >
-              GET STARTED
+              Get Started
             </button>
           </div>
 
           {/* OR Divider */}
           <div
-            className="z-10 -mx-6 flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold"
+            className="z-10 -mx-5 flex h-11 w-11 items-center justify-center rounded-full text-[11px] font-bold"
             style={{
-              backgroundColor: colors.bg,
-              borderColor: colors.borderLight,
-              color: colors.textMuted,
+              backgroundColor: "#f8f8f8",
+              border: "2px solid #e0e0e0",
+              color: "#969696",
             }}
           >
             OR
@@ -197,45 +181,48 @@ function HomeScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
 
           {/* My Requests Card */}
           <div
-            className="flex w-[430px] flex-col items-center rounded-lg border p-6"
+            className="flex w-[400px] flex-col items-center rounded-xl p-8"
             style={{
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              height: 350,
+              backgroundColor: "#ffffff",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
+              height: 340,
             }}
           >
             <div
-              className="mt-4 flex h-20 w-20 items-center justify-center rounded-full"
-              style={{ backgroundColor: `${colors.success}15` }}
+              className="flex h-[80px] w-[80px] items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(16, 124, 16, 0.1)" }}
             >
-              <List className="h-10 w-10" style={{ color: colors.success }} />
+              <List className="h-10 w-10" style={{ color: "#107C10" }} strokeWidth={1.5} />
             </div>
-            <h3 className="mt-5 text-base font-semibold" style={{ color: colors.text }}>
+            <h3 className="mt-6 text-[16px] font-semibold" style={{ color: "#323232" }}>
               My Requests
             </h3>
-            <p className="mt-2 text-center text-xs" style={{ color: colors.textMuted }}>
-              View status, confirm estimates, or manage your existing requests
+            <p className="mt-3 text-center text-[12px] leading-relaxed px-4" style={{ color: "#646464" }}>
+              View status, confirm estimates, or manage your existing print requests
             </p>
             <button
               onClick={() => onNavigate("myRequests")}
-              className="mt-auto w-full rounded-md py-3 text-sm font-bold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: colors.success }}
+              className="mt-auto w-full rounded-md py-3.5 text-[13px] font-bold uppercase tracking-wide text-white transition-all hover:opacity-90"
+              style={{ backgroundColor: "#107C10" }}
             >
-              VIEW REQUESTS
+              View Requests
             </button>
           </div>
         </div>
 
         {/* Help Footer */}
-        <p className="mt-auto pb-4 text-xs" style={{ color: colors.textMuted }}>
+        <p className="mt-12 text-[11px]" style={{ color: "#969696" }}>
           Need help? Visit Room 145 Atkinson Hall or email fablab@lsu.edu
         </p>
       </main>
 
       {/* Navigation Bar */}
-      <nav className="flex h-[60px] items-center justify-center" style={{ backgroundColor: colors.header }}>
-        <span className="text-xs" style={{ color: colors.textLight }}>
-          Student Portal
+      <nav 
+        className="flex h-[60px] items-center justify-center"
+        style={{ backgroundColor: "#2d2d30" }}
+      >
+        <span className="text-[11px] tracking-wide" style={{ color: "#969696" }}>
+          FabLab 3D Print Request System
         </span>
       </nav>
     </div>
@@ -247,42 +234,62 @@ function HomeScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
 // ============================================
 function SubmitScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
   return (
-    <div className="flex h-full flex-col font-sans" style={{ backgroundColor: colors.bg }}>
+    <div className="flex h-full flex-col" style={{ fontFamily: "'Segoe UI', sans-serif", backgroundColor: "#f8f8f8" }}>
       {/* Header */}
-      <header className="flex h-[60px] items-center px-5" style={{ backgroundColor: colors.header }}>
-        <h1 className="text-lg font-semibold text-white">Submit 3D Print Request</h1>
+      <header 
+        className="flex h-[60px] items-center gap-4 px-5"
+        style={{ backgroundColor: "#2d2d30" }}
+      >
+        <button 
+          onClick={() => onNavigate("home")}
+          className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-white/10"
+        >
+          <ChevronLeft className="h-5 w-5 text-white" />
+        </button>
+        <h1 className="text-[18px] font-semibold text-white">Submit 3D Print Request</h1>
       </header>
 
-      {/* Form Area */}
-      <main className="flex-1 overflow-y-auto px-5 py-5">
+      {/* Scrollable Form Area */}
+      <main className="flex-1 overflow-y-auto px-5 py-4">
         <div
-          className="rounded-lg border p-5"
-          style={{ backgroundColor: colors.bgCard, borderColor: colors.borderLight }}
+          className="rounded-lg p-5"
+          style={{ 
+            backgroundColor: "#ffffff",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+          }}
         >
-          {/* Form Fields Grid */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            {/* Student Name */}
+          {/* Form Grid */}
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+            {/* Student */}
             <FormField label="Student" required>
               <SelectInput placeholder="Search for your name..." />
             </FormField>
 
-            {/* Student Email */}
+            {/* Email */}
             <FormField label="Student Email" required>
               <TextInput value="john.doe@lsu.edu" disabled />
             </FormField>
 
-            {/* Tiger Card Number */}
+            {/* Tiger Card */}
             <FormField label="Tiger Card Number" required>
-              <TextInput placeholder="16-digit POS number from Tiger Card" />
-              <div className="mt-2 flex items-center gap-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
-                <div className="h-16 w-24 rounded border border-dashed border-amber-400 bg-amber-100 flex items-center justify-center text-[10px] text-amber-600">
-                  Tiger Card Image
+              <TextInput placeholder="16-digit POS number" />
+              <div 
+                className="mt-2 flex items-center gap-3 rounded-md p-2.5"
+                style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFE082" }}
+              >
+                <div 
+                  className="flex h-12 w-20 items-center justify-center rounded border-2 border-dashed text-[9px] font-medium"
+                  style={{ borderColor: "#FFB300", color: "#F57C00", backgroundColor: "#FFF3E0" }}
+                >
+                  Tiger Card
                 </div>
-                <span>Find the 16-digit POS number on the back of your card</span>
+                <span className="text-[11px]" style={{ color: "#E65100" }}>
+                  Find the 16-digit POS number on the back
+                </span>
               </div>
             </FormField>
 
-            {/* Course Number */}
+            {/* Course */}
             <FormField label="Course Number">
               <TextInput placeholder="e.g., 2001, 4000" />
             </FormField>
@@ -299,7 +306,7 @@ function SubmitScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) 
 
             {/* Method */}
             <FormField label="Method" required>
-              <SelectInput placeholder="Select method..." value="Filament" />
+              <SelectInput value="Filament" />
             </FormField>
 
             {/* Printer */}
@@ -317,45 +324,42 @@ function SubmitScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) 
               <TextInput type="date" />
             </FormField>
 
-            {/* Notes - Full Width */}
+            {/* Notes */}
             <div className="col-span-2">
               <FormField label="Notes">
                 <textarea
-                  className="w-full rounded border px-3 py-2 text-sm outline-none transition-colors focus:border-[rgb(56,96,178)]"
-                  style={{ borderColor: colors.border, minHeight: 60 }}
+                  className="w-full rounded-md border px-3 py-2.5 text-[12px] outline-none transition-colors focus:border-[#3860B2]"
+                  style={{ borderColor: "#c8c8c8", minHeight: 60, resize: "none" }}
                   placeholder="Special instructions, scaling notes, questions for staff..."
                 />
               </FormField>
             </div>
 
-            {/* Attachments - Full Width */}
+            {/* Attachments */}
             <div className="col-span-2">
-              <FormField label="Attachments">
+              <FormField label="Attachments" required>
                 <div
-                  className="flex items-center gap-3 rounded border-2 border-dashed p-4"
-                  style={{ borderColor: colors.border }}
+                  className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed p-5 transition-colors hover:bg-gray-50"
+                  style={{ borderColor: "#c8c8c8" }}
                 >
-                  <Paperclip className="h-5 w-5" style={{ color: colors.textMuted }} />
-                  <span className="text-sm" style={{ color: colors.textMuted }}>
+                  <Paperclip className="h-5 w-5" style={{ color: "#969696" }} />
+                  <span className="text-[12px]" style={{ color: "#646464" }}>
                     Click to attach files or drag and drop
                   </span>
                 </div>
-                {/* File Warning */}
+                {/* Warning Banner */}
                 <div
-                  className="mt-3 rounded border p-3 text-xs"
-                  style={{
-                    backgroundColor: "rgb(255, 244, 206)",
-                    borderColor: colors.warning,
-                    color: "rgb(102, 77, 3)",
-                  }}
+                  className="mt-3 rounded-md p-3"
+                  style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFB900" }}
                 >
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold">IMPORTANT: File Naming Requirement</p>
-                      <p className="mt-1">Your files MUST be named: FirstLast_Method_Color</p>
-                      <p className="mt-1">Examples: JaneDoe_Filament_Blue.stl, MikeSmith_Resin_Clear.3mf</p>
-                      <p className="mt-1">Accepted formats: .stl, .obj, .3mf, .idea, .form</p>
+                  <div className="flex gap-2.5">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: "#F57C00" }} />
+                    <div className="text-[11px]" style={{ color: "#5D4037" }}>
+                      <p className="font-bold">IMPORTANT: File Naming Requirement</p>
+                      <p className="mt-1">Your files MUST be named: <span className="font-semibold">FirstLast_Method_Color</span></p>
+                      <p className="mt-0.5 text-[10px]" style={{ color: "#795548" }}>
+                        Example: JaneDoe_Filament_Blue.stl | Accepted: .stl, .obj, .3mf, .idea, .form
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -365,10 +369,10 @@ function SubmitScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) 
 
           {/* Submit Button */}
           <button
-            className="mt-6 w-full rounded-md py-3.5 text-sm font-bold text-white transition-colors hover:opacity-90"
-            style={{ backgroundColor: colors.primary }}
+            className="mt-5 w-full rounded-md py-4 text-[14px] font-bold uppercase tracking-wide text-white transition-all hover:opacity-90"
+            style={{ backgroundColor: "#3860B2" }}
           >
-            SUBMIT REQUEST
+            Submit Request
           </button>
         </div>
       </main>
@@ -387,98 +391,166 @@ function MyRequestsScreen({ onNavigate }: { onNavigate: (screen: Screen) => void
     {
       id: "PR-2024-0042",
       status: "Pending",
-      statusColor: colors.pending,
-      textDark: true,
+      statusBg: "#FFB900",
+      statusText: "#323232",
       date: "Jan 15, 2024",
       method: "Filament",
       printer: "Prusa MK4S",
       color: "Blue",
-      estimatedCost: "$4.50",
+      cost: "$4.50",
       showConfirm: true,
     },
     {
       id: "PR-2024-0038",
       status: "Printing",
-      statusColor: colors.printing,
-      textDark: false,
+      statusBg: "#6B69D6",
+      statusText: "#ffffff",
       date: "Jan 12, 2024",
       method: "Filament",
       printer: "Prusa XL",
       color: "Black",
-      estimatedCost: "$8.25",
+      cost: "$8.25",
       showConfirm: false,
     },
     {
       id: "PR-2024-0035",
       status: "Completed",
-      statusColor: colors.completed,
-      textDark: false,
+      statusBg: "#004E8C",
+      statusText: "#ffffff",
       date: "Jan 10, 2024",
       method: "Resin",
       printer: "Form 3",
       color: "Gray",
-      estimatedCost: "$12.00",
+      cost: "$12.00",
       showConfirm: false,
     },
     {
       id: "PR-2024-0031",
       status: "Paid & Picked Up",
-      statusColor: colors.paidPickedUp,
-      textDark: false,
+      statusBg: "#009E49",
+      statusText: "#ffffff",
       date: "Jan 8, 2024",
       method: "Filament",
       printer: "Prusa MK4S",
       color: "Red",
-      estimatedCost: "$3.75",
+      cost: "$3.75",
       showConfirm: false,
     },
     {
       id: "PR-2024-0028",
       status: "Uploaded",
-      statusColor: colors.uploaded,
-      textDark: false,
+      statusBg: "#4682DC",
+      statusText: "#ffffff",
       date: "Jan 5, 2024",
       method: "Filament",
-      printer: "Raised3D Pro 2 Plus",
+      printer: "Raised3D Pro 2",
       color: "White",
-      estimatedCost: "Pending",
+      cost: "Pending",
       showConfirm: false,
     },
     {
       id: "PR-2024-0022",
       status: "Rejected",
-      statusColor: colors.rejected,
-      textDark: false,
+      statusBg: "#D13438",
+      statusText: "#ffffff",
       date: "Jan 2, 2024",
       method: "Resin",
       printer: "Form 3",
       color: "Clear",
-      estimatedCost: "-",
+      cost: "-",
       showConfirm: false,
     },
   ]
 
   return (
-    <div className="flex h-full flex-col font-sans" style={{ backgroundColor: colors.bg }}>
+    <div className="flex h-full flex-col" style={{ fontFamily: "'Segoe UI', sans-serif", backgroundColor: "#f8f8f8" }}>
       {/* Header */}
-      <header
+      <header 
         className="flex h-[60px] items-center justify-between px-5"
-        style={{ backgroundColor: colors.header }}
+        style={{ backgroundColor: "#2d2d30" }}
       >
-        <h1 className="text-lg font-semibold text-white">My Print Requests</h1>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => onNavigate("home")}
+            className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-white/10"
+          >
+            <ChevronLeft className="h-5 w-5 text-white" />
+          </button>
+          <h1 className="text-[18px] font-semibold text-white">My Print Requests</h1>
+        </div>
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors hover:opacity-90"
-          style={{ backgroundColor: colors.primary }}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-white transition-colors"
+          style={{ backgroundColor: "#3860B2" }}
         >
-          <RefreshCw className="h-5 w-5" />
+          <RefreshCw className="h-4 w-4" />
         </button>
       </header>
 
-      {/* Request Cards Grid */}
+      {/* Request Cards */}
       <main className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-3 gap-4">
-          {mockRequests.map((request) => (
-            <RequestCard key={request.id} {...request} />
+        <div className="grid grid-cols-3 gap-3">
+          {mockRequests.map((req) => (
+            <div 
+              key={req.id}
+              className="rounded-lg p-4"
+              style={{ 
+                backgroundColor: "#ffffff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+              }}
+            >
+              {/* Card Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "#323232" }}>{req.id}</p>
+                  <p className="text-[10px]" style={{ color: "#969696" }}>Submitted: {req.date}</p>
+                </div>
+                <span
+                  className="rounded-full px-2.5 py-1 text-[9px] font-bold uppercase"
+                  style={{ backgroundColor: req.statusBg, color: req.statusText }}
+                >
+                  {req.status}
+                </span>
+              </div>
+
+              {/* Details */}
+              <div className="mt-3 space-y-0.5">
+                <p className="text-[11px]" style={{ color: "#646464" }}>
+                  <span className="font-medium">{req.method}</span> | {req.printer}
+                </p>
+                <p className="text-[11px]" style={{ color: "#646464" }}>
+                  Color: {req.color}
+                </p>
+              </div>
+
+              {/* Cost */}
+              <div 
+                className="mt-3 flex items-center justify-between border-t pt-3"
+                style={{ borderColor: "#e8e8e8" }}
+              >
+                <span className="text-[10px]" style={{ color: "#969696" }}>Est. Cost:</span>
+                <span className="text-[14px] font-bold" style={{ color: "#323232" }}>{req.cost}</span>
+              </div>
+
+              {/* Confirm/Cancel Buttons */}
+              {req.showConfirm && (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[11px] font-bold uppercase text-white"
+                    style={{ backgroundColor: "#107C10" }}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Confirm
+                  </button>
+                  <button
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[11px] font-bold uppercase text-white"
+                    style={{ backgroundColor: "#D13438" }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </main>
@@ -500,50 +572,35 @@ function NavBar({
   currentScreen: Screen
   onNavigate: (screen: Screen) => void
 }) {
-  return (
-    <nav
-      className="flex h-[60px] items-center justify-center gap-4 px-5"
-      style={{ backgroundColor: colors.header }}
-    >
-      <NavButton
-        label="Home"
-        active={currentScreen === "home"}
-        onClick={() => onNavigate("home")}
-      />
-      <NavButton
-        label="New Request"
-        active={currentScreen === "submit"}
-        onClick={() => onNavigate("submit")}
-      />
-      <NavButton
-        label="My Requests"
-        active={currentScreen === "myRequests"}
-        onClick={() => onNavigate("myRequests")}
-      />
-    </nav>
-  )
-}
+  const navItems = [
+    { id: "home", label: "Home", icon: Home },
+    { id: "submit", label: "New Request", icon: Plus },
+    { id: "myRequests", label: "My Requests", icon: List },
+  ]
 
-function NavButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
   return (
-    <button
-      onClick={onClick}
-      className="rounded-md px-8 py-2.5 text-xs font-medium text-white transition-colors"
-      style={{
-        backgroundColor: active ? colors.info : "rgb(60, 60, 65)",
-        fontWeight: active ? 600 : 400,
-      }}
+    <nav 
+      className="flex h-[60px] items-center justify-center gap-2 px-4"
+      style={{ backgroundColor: "#2d2d30" }}
     >
-      {label}
-    </button>
+      {navItems.map((item) => {
+        const Icon = item.icon
+        const isActive = currentScreen === item.id
+        return (
+          <button
+            key={item.id}
+            onClick={() => onNavigate(item.id as Screen)}
+            className="flex items-center gap-2 rounded-md px-5 py-2.5 text-[12px] font-medium text-white transition-colors"
+            style={{
+              backgroundColor: isActive ? "#4682DC" : "#3c3c41",
+            }}
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -558,9 +615,9 @@ function FormField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium" style={{ color: colors.text }}>
+      <label className="mb-1.5 block text-[11px] font-semibold" style={{ color: "#323232" }}>
         {label}
-        {required && <span style={{ color: colors.danger }}> *</span>}
+        {required && <span style={{ color: "#D13438" }}> *</span>}
       </label>
       {children}
     </div>
@@ -581,8 +638,8 @@ function TextInput({
   return (
     <input
       type={type}
-      className="w-full rounded border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[rgb(56,96,178)] disabled:bg-gray-100"
-      style={{ borderColor: colors.border, color: colors.text }}
+      className="w-full rounded-md border px-3 py-2.5 text-[12px] outline-none transition-colors focus:border-[#3860B2] disabled:cursor-not-allowed disabled:bg-[#f5f5f5]"
+      style={{ borderColor: "#c8c8c8", color: "#323232" }}
       placeholder={placeholder}
       defaultValue={value}
       disabled={disabled}
@@ -593,99 +650,11 @@ function TextInput({
 function SelectInput({ placeholder, value }: { placeholder?: string; value?: string }) {
   return (
     <div
-      className="flex w-full items-center justify-between rounded border px-3 py-2.5 text-sm"
-      style={{ borderColor: colors.border }}
+      className="flex w-full cursor-pointer items-center justify-between rounded-md border px-3 py-2.5 text-[12px]"
+      style={{ borderColor: "#c8c8c8" }}
     >
-      <span style={{ color: value ? colors.text : colors.textLight }}>{value || placeholder}</span>
-      <ChevronDown className="h-4 w-4" style={{ color: colors.textMuted }} />
-    </div>
-  )
-}
-
-function RequestCard({
-  id,
-  status,
-  statusColor,
-  textDark,
-  date,
-  method,
-  printer,
-  color,
-  estimatedCost,
-  showConfirm,
-}: {
-  id: string
-  status: string
-  statusColor: string
-  textDark: boolean
-  date: string
-  method: string
-  printer: string
-  color: string
-  estimatedCost: string
-  showConfirm: boolean
-}) {
-  return (
-    <div
-      className="rounded-lg border p-4"
-      style={{ backgroundColor: colors.bgCard, borderColor: colors.borderLight }}
-    >
-      {/* Header Row */}
-      <div className="mb-3 flex items-start justify-between">
-        <div>
-          <p className="text-sm font-semibold" style={{ color: colors.text }}>
-            {id}
-          </p>
-          <p className="text-xs" style={{ color: colors.textMuted }}>
-            Submitted: {date}
-          </p>
-        </div>
-        <span
-          className="rounded-full px-3 py-1 text-[10px] font-semibold"
-          style={{
-            backgroundColor: statusColor,
-            color: textDark ? colors.text : "white",
-          }}
-        >
-          {status}
-        </span>
-      </div>
-
-      {/* Details */}
-      <p className="text-xs" style={{ color: colors.textMuted }}>
-        {method} | {printer}
-      </p>
-      <p className="text-xs" style={{ color: colors.textMuted }}>
-        Color: {color}
-      </p>
-
-      {/* Cost */}
-      <div className="mt-3 flex items-center justify-between border-t pt-3" style={{ borderColor: colors.borderLight }}>
-        <span className="text-xs" style={{ color: colors.textMuted }}>
-          Estimated Cost:
-        </span>
-        <span className="text-sm font-semibold" style={{ color: colors.text }}>
-          {estimatedCost}
-        </span>
-      </div>
-
-      {/* Action Buttons */}
-      {showConfirm && (
-        <div className="mt-3 flex gap-2">
-          <button
-            className="flex-1 rounded py-2 text-xs font-semibold text-white"
-            style={{ backgroundColor: colors.success }}
-          >
-            CONFIRM
-          </button>
-          <button
-            className="flex-1 rounded py-2 text-xs font-semibold text-white"
-            style={{ backgroundColor: colors.danger }}
-          >
-            CANCEL
-          </button>
-        </div>
-      )}
+      <span style={{ color: value ? "#323232" : "#969696" }}>{value || placeholder}</span>
+      <ChevronDown className="h-4 w-4" style={{ color: "#969696" }} />
     </div>
   )
 }
