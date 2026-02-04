@@ -503,7 +503,7 @@ NEXT STEPS:
 • You'll receive updates as your request progresses through our queue
 • Estimated review time: 1-2 business days
 
-<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View all your requests</a>
+<a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8">View your requests in Student Portal</a>
 
 ---
 This is an automated message from the Digital Fabrication Lab.
@@ -578,17 +578,17 @@ Add this text to your SharePoint form so users know the file naming requirements
 
 ## URL Reference Guide
 
-**Replace these with your actual SharePoint URLs:**
+**Replace these with your actual URLs:**
 
 - **Site root:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-- **Item details link:** `/Lists/PrintRequests/DispForm.aspx?ID=@{triggerOutputs()?['body/ID']}`
-- **My Requests view:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
+- **Student Portal app:** `https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8`
 
-**To get your My Requests view URL:**
-1. In SharePoint, open the `PrintRequests` list
-2. Switch to the "My Requests" view
-3. Copy the full browser URL
-4. Use this URL in email templates
+**To get your Student Portal app URL:**
+1. Go to [make.powerapps.com](https://make.powerapps.com)
+2. Find **Student Portal** in your apps
+3. Click **...** menu → **Details**
+4. Copy the **Web link**
+5. Use this URL in email templates for student-facing links
 
 ---
 

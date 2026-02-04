@@ -2243,7 +2243,7 @@ Set(varSelectedItem, ThisItem);
 Set(varShowConfirmModal, ThisItem.ID)
 ```
 
-#### Action: Cancel Request Button (Uploaded status only)
+#### Action: Cancel Request Button (Before printing starts)
 
 35. Click **+ Insert** → **Button**.
 36. **Rename it:** `btnCancelRequest`
@@ -2265,7 +2265,7 @@ Set(varShowConfirmModal, ThisItem.ID)
 | RadiusTopRight | `4` |
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
-| Visible | `ThisItem.Status.Value = "Uploaded"` |
+| Visible | `ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]` |
 
 38. Set **OnSelect:**
 
@@ -2294,7 +2294,6 @@ Set(varShowCancelModal, ThisItem.ID)
 ```powerfx
 Switch(
     ThisItem.Status.Value,
-    "Ready to Print", "Your request is in the print queue. You'll be notified when printing starts.",
     "Printing", "Your print is currently in progress!",
     "Completed", "Your print is ready for pickup!\n📍 Room 145 Atkinson Hall\n💳 Payment: TigerCASH only",
     "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, "mmm d, yyyy"),
@@ -2307,7 +2306,7 @@ Switch(
 43. Set **Visible:**
 
 ```powerfx
-ThisItem.Status.Value in ["Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
+ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
 ```
 
 ---
@@ -2673,7 +2672,7 @@ Patch(
     {
         Status: {Value: "Canceled"},
         LastAction: {Value: "Canceled by Student"},
-        Notes: "Canceled by student before staff review."
+        Notes: "Canceled by student before printing."
     }
 );
 
@@ -3050,8 +3049,8 @@ Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
 | Status | Student Actions |
 |--------|----------------|
 | Uploaded | Cancel Request |
-| Pending | Confirm Estimate |
-| Ready to Print | View only |
+| Pending | Confirm Estimate, Cancel Request |
+| Ready to Print | Cancel Request |
 | Printing | View only |
 | Completed | View only (pickup info shown) |
 | Paid & Picked Up | View only |
@@ -3229,7 +3228,7 @@ Patch(
     {
         Status: {Value: "Canceled"},
         LastAction: {Value: "Canceled by Student"},
-        Notes: "Canceled by student before staff review."
+        Notes: "Canceled by student before printing."
     }
 );
 

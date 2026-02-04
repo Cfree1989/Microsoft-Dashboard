@@ -1405,6 +1405,304 @@ After building the page, verify:
 
 ---
 
+## Step 14: Building the Subtractive Page Content
+
+This section provides detailed instructions for building out the Subtractive page to match the Moodle-style layout with card-based sections containing CNC/subtractive manufacturing information, pricing, and the job submission process.
+
+### Page Structure Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SECTION 1: Title (no background)                               │
+│  └─ Text: "Subtractive" (H1, centered)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 2: Hero (Neutral background)                           │
+│  └─ Image: CNC Plasma Cutter photo                              │
+│  └─ Text: Area description paragraph                            │
+├─────────────────────────────┬───────────────────────────────────┤
+│  SECTION 3: Two columns 1:1 (Neutral background)                │
+│  LEFT (50%)                 │  RIGHT (50%)                      │
+│  - Available Machines       │  - Pricing                        │
+│  - 4 machines with specs    │  - Student/Faculty/Outside rates  │
+├─────────────────────────────┴───────────────────────────────────┤
+│  SECTION 4: One column (Neutral background)                     │
+│  └─ CNC Job Process                                             │
+│  └─ 11-step numbered list                                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 14.1: Edit the Subtractive Page
+
+1. Go to **Site contents** → **Site Pages**
+2. Open **Subtractive.aspx**
+3. Click **Edit** in the toolbar
+
+### 14.2: Add Title Section
+
+1. The page starts with a default section
+2. Click **+** to add a web part → Select **Text**
+3. Type: `Subtractive`
+4. Select the text and format:
+   - Click **Heading 1** style
+   - Click **Center align**
+
+### 14.3: Add Hero Section (Image + Description)
+
+**Create the section:**
+
+1. Hover below the title and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
+
+**Add the Image:**
+
+6. Click **+** inside the section → Select **Image**
+7. Upload your CNC Plasma Cutter photo
+8. After upload, resize if needed (use corner handles)
+
+**Add the Description:**
+
+9. Click **+** below the image → Select **Text**
+10. Paste the description:
+
+```
+The Subtractive area of the Fabrication Lab is where cutting and shaping takes place. These machines work with a broad range of materials, from wood and foam to metal and plastic. Almost anything can be created using these machines. Please stop by and let us take a look at your project.
+```
+
+### 14.4: Add Available Machines and Pricing Section
+
+**Create the section:**
+
+1. Hover below the hero section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **Two columns (1:1 ratio)**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Left Column - Available Machines:**
+
+6. Click **+** in the left column → Select **Text**
+7. Add the following content:
+
+```
+Available Machines
+
+Forest Scientific HS 4x8 CNC Router
+Capable of cutting 4'x8'x10.5" material.
+Materials: MDF, Plywood, Foam, Plastics
+
+Lonestar Spitfire 4x4 CNC Plasma Cutter
+Capable of cutting 4'x4'x5/8" material.
+Materials: Mild Steel, Stainless Steel (All Sheets MUST Be Flat)
+
+Formech 686 Vacuum Former
+Used to vacuum form thin sheets of plastic.
+
+Multimatic 200 Multiprocess Welder
+Offers Tig, Mig, and Arc welding options.
+```
+
+8. Format "Available Machines" as **Heading 2**
+9. Format each machine name (Forest Scientific, Lonestar Spitfire, etc.) as **Bold**
+
+**Right Column - Pricing:**
+
+10. Click **+** in the right column → Select **Text**
+11. Add the following content:
+
+```
+Pricing
+
+Students:
+• $20 per hour
+
+Faculty:
+• $35 per hour
+
+Outside Jobs:
+• $60 per hour
+```
+
+12. Format "Pricing" as **Heading 2**
+13. Format "Students:", "Faculty:", and "Outside Jobs:" as **Bold**
+14. Format the rates as **bullet lists**
+
+### 14.5: Add CNC Job Process Section
+
+**Create the section:**
+
+1. Hover below the machines/pricing section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Add the content:**
+
+6. Click **+** → Select **Text**
+7. Add the following content:
+
+```
+CNC Job Process
+
+1. Visit Art Building room 123 for a consultation.
+2. If you have a 3D model, please provide a .3dm, .STEP, or .f3d file.
+3. If you have a 2D model please provide a .DXF file.
+4. Present your project scope and provide either a CAD model or reference images.
+5. We will confirm your expectations and provide a price estimate (materials to be provided by the client).
+6. We will proceed only after you accept the price estimate.
+7. Using your provided model or creating one from scratch, we will generate toolpaths for the required machine.
+8. Before making the first cut, you will have the opportunity to verify all the details in person.
+9. Once verified, we will mill your project and provide you with ready-to-assemble pieces, ensuring that tabs are removed if necessary.
+10. You will receive an email notification regarding project pickup.
+11. Payment is required at the time of pickup, and you can use TigerCASH, provide a check to the front office, or use a grant code.
+```
+
+8. Format "CNC Job Process" as **Heading 2**
+9. Format the steps as a **Numbered list**
+
+### 14.6: Publish the Page
+
+1. Review all sections — verify backgrounds are set correctly
+2. Click **Republish** in the top-right corner
+
+### 14.7: Verification Checklist
+
+After building the page, verify:
+
+- [ ] Title "Subtractive" displays centered at top
+- [ ] Hero section shows CNC image with description below
+- [ ] Available Machines section lists all 4 machines with specifications
+- [ ] Pricing section shows Student/Faculty/Outside rates
+- [ ] CNC Job Process shows all 11 steps
+- [ ] All card sections have neutral (gray) backgrounds
+- [ ] Page looks professional and matches the intended design
+
+---
+
+## Step 15: Building the Class Project Policy Page Content
+
+This section provides instructions for building the Class Project Policy page, which informs faculty about the consultation requirement for class-wide projects using the Fabrication Lab.
+
+### Page Structure Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SECTION 1: Title (no background)                               │
+│  └─ Text: "Class Project Policy" (H1, centered)                 │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 2: Policy Card (Neutral background)                    │
+│  └─ Image: Tormach CNC machine photo                            │
+│  └─ Text: Consultation requirement paragraph                    │
+│  └─ Text: "Please Submit One Form Per Course" (centered, bold)  │
+│  └─ Button: "Class Project Form" (centered, links to MS Forms)  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 15.1: Create the Class Project Policy Page
+
+First, create the page if it doesn't exist:
+
+1. From the site home, click **+ New** → **Page**
+2. In the Template gallery, click **Create blank** (top right)
+3. Name the page: `Class Project Policy`
+4. Continue to edit (don't publish yet)
+
+### 15.2: Add Title Section
+
+1. The page starts with a default section
+2. Click **+** to add a web part → Select **Text**
+3. Type: `Class Project Policy`
+4. Select the text and format:
+   - Click **Heading 1** style
+   - Click **Center align**
+
+### 15.3: Add Policy Card Section
+
+**Create the section:**
+
+1. Hover below the title and click the **+** line to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral** (light gray)
+5. Click **Apply**
+
+**Add the Image:**
+
+6. Click **+** inside the section → Select **Image**
+7. Upload the Tormach CNC machine photo
+8. After upload, resize if needed (use corner handles)
+
+**Add the Policy Description:**
+
+9. Click **+** below the image → Select **Text**
+10. Paste the description:
+
+```
+To ensure the success of class-wide projects utilizing the Fabrication Lab, we require a 30-minute consultation at the beginning of each semester. This consultation helps us support your project's needs, reduce errors and waste, prioritize safety, and set realistic expectations. After the consultation, we will schedule the project on the lab calendar.
+```
+
+11. Press Enter twice to add spacing, then add:
+
+```
+If a consultation is not scheduled and completed by the second week of the semester, we will not be able to accommodate your project or class.
+```
+
+12. Select the second paragraph (the warning) and format as **Bold**
+
+**Add the Form Instructions:**
+
+13. Click **+** below the policy text → Select **Text**
+14. Type: `Please Submit One Form Per Course`
+15. Select the text and format:
+    - Click **Bold**
+    - Click **Underline**
+    - Click **Center align**
+
+**Add the Form Button:**
+
+16. Click **+** below the instructions → Select **Button**
+17. Configure the button:
+    - **Label**: `Class Project Form`
+    - **Link**: `https://forms.office.com/r/Zqzn6yZ64S`
+18. Click **Alignment** → Select **Center**
+
+### 15.4: Update Navigation
+
+Add this page to the site navigation:
+
+1. Click **Edit** at the bottom of the left navigation panel
+2. Click **+ Add link**
+3. Enter:
+   - **Label**: `Class Project Policy`
+   - **URL**: `/SitePages/Class-Project-Policy.aspx`
+4. Leave **Audiences** blank (visible to everyone)
+5. Drag to position it appropriately (after Lab Rules or Safety)
+6. Click **Save**
+
+### 15.5: Publish the Page
+
+1. Review all sections — verify backgrounds are set correctly
+2. Click **Publish** in the top-right corner
+
+### 15.6: Verification Checklist
+
+After building the page, verify:
+
+- [ ] Title "Class Project Policy" displays centered at top
+- [ ] Hero section shows Tormach CNC image
+- [ ] Consultation policy paragraph displays correctly
+- [ ] Deadline warning is bold
+- [ ] "Please Submit One Form Per Course" is bold, underlined, and centered
+- [ ] "Class Project Form" button is centered
+- [ ] Button opens the Microsoft Forms link when clicked
+- [ ] Card section has neutral (gray) background
+- [ ] Page is added to site navigation
+
+---
+
 ## Troubleshooting
 
 ### Students Can See Staff Navigation Items

@@ -704,7 +704,7 @@ Some display names differ from internal field names. Always use internal names i
    • Final cost may differ slightly based on actual material used
    • Bring your student ID for pickup
 
-   <a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx">View My Requests</a>
+   <a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8">View My Requests in Student Portal</a>
 
    If you have any questions, feel free to contact us!
 
@@ -904,10 +904,13 @@ ESTIMATE DETAILS:
 
 TO CONFIRM THIS ESTIMATE:
 
-<a href="https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/EditForm.aspx?ID=@{outputs('Get_Current_Pending_Data')?['body/ID']}">View and Confirm Your Request</a>
+<a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8">Open Student Portal</a>
 
-When the form opens, you'll see a green confirmation panel at the top.
-Just click "I CONFIRM THIS ESTIMATE" and you're done!
+1. Click the link above to open the Student Portal
+2. Click "VIEW REQUESTS" to see your print requests
+3. Find your request showing "Pending" status with the estimate
+4. Click the green "CONFIRM ESTIMATE" button on your request card
+5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"
 
 If you have any questions or concerns about the estimate, please contact us before confirming.
 
@@ -922,23 +925,25 @@ Location: Room 145 Atkinson Hall
 This is an automated message from the LSU Digital Fabrication Lab.
 ```
 
-**✅ DIRECT ITEM LINK:** The confirmation link now opens the **specific request** directly in Edit mode. This approach:
-- Uses SharePoint's built-in authentication (no HTTP trigger issues)
-- Opens the exact item—no hunting through a list
-- Shows the confirmation panel immediately (Power Apps form required)
-- Single click to confirm after opening
+**✅ STUDENT PORTAL APP LINK:** The confirmation link opens the **Student Portal Power App** where students can view and confirm their estimates. This approach:
+- Uses Power Apps' built-in authentication (consistent with submission experience)
+- Students see all their requests in a familiar interface
+- Confirmation modal provides clear cost details before confirming
+- Same app used for both submission and confirmation
 
 **📋 How it works:**
-1. Student clicks link → Opens **their specific request** in Edit mode
-2. Confirmation panel appears (green box with cost details + "I CONFIRM" button)
-3. Student clicks "I CONFIRM THIS ESTIMATE" button
-4. Power Apps Patch updates StudentConfirmed → Form closes
-5. PR-Audit flow detects the change → Updates Status to "Ready to Print" → Logs confirmation
+1. Student clicks link → Opens **Student Portal** app
+2. Student clicks "VIEW REQUESTS" from the home screen
+3. Student finds their request card showing "Pending" status with estimate
+4. Student clicks green "CONFIRM ESTIMATE" button on the card
+5. Confirmation modal appears with cost details + "I CONFIRM THIS ESTIMATE" button
+6. Power Apps Patch updates StudentConfirmed → Modal closes
+7. PR-Audit flow detects the change → Updates Status to "Ready to Print" → Logs confirmation
 
 **⚠️ Prerequisites:** Before using this email, ensure you've completed:
 - Added StudentConfirmed field to PrintRequests list
-- Built the Confirmation Panel in Power Apps (see `StudentForm-Instructions.md` Step 8C)
-- The Power Apps form must be set as the default list form
+- Built and published the Student Portal Power App (see `StudentPortal-App-Spec.md`)
+- The confirmation modal is built into the `scrMyRequests` screen (Step 10 of StudentPortal-App-Spec.md)
 
 **Action 4: Log Estimate Email Sent**
 1. **+ Add an action** → **Create item** (SharePoint)
@@ -1242,9 +1247,9 @@ Update these sections in the email templates for your lab:
 - [ ] StudentConfirmed field exists in SharePoint with default "No"
 - [ ] Power Apps confirmation panel built (Step 8C in StudentForm-Instructions.md)
 - [ ] Status change to "Pending" sends estimate email to student
-- [ ] Estimate email contains **direct item link** (EditForm.aspx?ID=...)
-- [ ] Clicking link opens the specific request in Edit mode
-- [ ] Confirmation panel appears (green box with cost details)
+- [ ] Estimate email contains **Student Portal app link**
+- [ ] Clicking link opens the Student Portal Power App
+- [ ] Student can navigate to My Requests and find their pending request
 - [ ] Clicking "I CONFIRM THIS ESTIMATE" button works
 - [ ] StudentConfirmed = "Yes" + Status = "Pending" → Status updates to "Ready to Print"
 - [ ] Confirmation creates audit log entry with Student actor

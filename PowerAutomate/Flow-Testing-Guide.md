@@ -1234,9 +1234,9 @@ AuditLog email entry: [ ] Yes  [ ] No
   - [ ] Estimated Cost: $20.00
   - [ ] Print Time: 5 hours
   - [ ] Color information
-  - [ ] Confirmation instructions with link to "My Requests" view
+  - [ ] Confirmation instructions with link to Student Portal app
   - [ ] Warning: "WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION"
-- [ ] Link to My Requests view present
+- [ ] Link to Student Portal app present
 
 **Actual Result:**
 ```
@@ -2132,7 +2132,7 @@ Duplicates: [ ] Yes  [ ] No (should be No)
 
 **Email Workflow:**
 - [ ] Estimate email sent when Status → Pending
-- [ ] Email contains confirmation link
+- [ ] Email contains Student Portal app link for confirmation
 
 **Status Workflow:**
 - [ ] StudentConfirmed = Yes + Status = Pending triggers Flow B
@@ -2831,7 +2831,8 @@ Based on Power Automate documentation:
 - **Site:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 - **PrintRequests List:** `/Lists/PrintRequests`
 - **AuditLog List:** `/Lists/AuditLog`
-- **My Requests View:** `/Lists/PrintRequests/My%20Requests.aspx`
+- **My Requests View (SharePoint):** `/Lists/PrintRequests/My%20Requests.aspx`
+- **Student Portal App:** `https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8`
 
 ### Flow Documentation Links
 
