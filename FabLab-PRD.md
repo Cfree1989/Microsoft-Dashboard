@@ -477,7 +477,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Notes** (Multiple lines text) - Additional instructions
 
 **Staff-Only Fields - Estimates & Processing (14):**
-- **Status** (Choice) - Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived
+- **Status** (Choice) - Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Canceled; Archived
 - **Priority** (Choice) - Low; Normal; High; Rush
 - **AssignedTo** (Person) - Optional field for manual assignment if needed (not used in automated workflows)
 - **EstimatedTime** (Number, Display: EstHours) - Time estimation in hours
@@ -488,7 +488,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **StudentConfirmed** (Yes/No, Default: No) - Student approval of cost estimate
 - **NeedsAttention** (Yes/No, Default: No) - Flags items requiring staff review
 - **Expanded** (Yes/No, Default: No) - Power Apps UI state for collapsed/expanded view
-- **LastAction** (Choice) - Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; System
+- **LastAction** (Choice) - Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; Canceled by Student; System
 - **LastActionBy** (Single line text) - High-level action attribution (stores "System" or staff name)
 - **LastActionAt** (Date and Time) - Audit timestamp
 

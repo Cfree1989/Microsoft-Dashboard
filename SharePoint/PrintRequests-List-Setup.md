@@ -248,6 +248,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - Completed
    - Paid & Picked Up
    - Rejected
+   - Canceled
    - Archived
 5. **Default value:** Uploaded
 6. **Require that this column contains information:** Yes
@@ -363,6 +364,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - Assigned
    - Email Sent
    - Rejected
+   - Canceled by Student
    - System
 5. Click **Save**
 
@@ -544,7 +546,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 14 staff processing columns added
 - [ ] All 5 payment recording columns added
-- [ ] Status has all 8 choices with default "Uploaded"
+- [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin
 - [ ] Printer has all 4 printer options with dimensions

@@ -20,7 +20,7 @@
         "margin": "4px 4px 4px 4px",
         "font-weight": "600",
         "color": "=if(@currentField == 'Pending', '#000000', '#ffffff')",
-        "background-color": "=if(@currentField == 'Uploaded', '#4682DC', if(@currentField == 'Pending', '#FFB900', if(@currentField == 'Ready to Print', '#107C10', if(@currentField == 'Printing', '#6B69D6', if(@currentField == 'Completed', '#004E8C', if(@currentField == 'Paid & Picked Up', '#009E49', if(@currentField == 'Rejected', '#D13438', if(@currentField == 'Archived', '#605E5C', '#333333'))))))))"
+        "background-color": "=if(@currentField == 'Uploaded', '#4682DC', if(@currentField == 'Pending', '#FFB900', if(@currentField == 'Ready to Print', '#107C10', if(@currentField == 'Printing', '#6B69D6', if(@currentField == 'Completed', '#004E8C', if(@currentField == 'Paid & Picked Up', '#009E49', if(@currentField == 'Rejected', '#D13438', if(@currentField == 'Canceled', '#8A8886', if(@currentField == 'Archived', '#605E5C', '#333333')))))))))"
       },
       "children": [
         {

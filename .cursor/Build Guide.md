@@ -200,14 +200,14 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 **Staff-Only Fields** (hidden from students, managed by staff):
 | Column (Display Name) | Type | Choices / Notes |
 |---|---|---|
-| Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Archived (Default: Uploaded) |
+| Status | Choice | Uploaded; Pending; Ready to Print; Printing; Completed; Paid & Picked Up; Rejected; Canceled; Archived (Default: Uploaded) |
 | Priority | Choice | Low; Normal; High; Rush |
 | AssignedTo | Person | Optional manual assignment |
 | EstimatedTime | Number | Staff estimation (print time in hours) |
 | EstimatedWeight | Number | Staff estimation (weight in grams) |
 | EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.20/gram, $3.00 minimum) |
 | StaffNotes | Multiple lines of text | Staff-only |
-| LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Printing; Completed; Picked Up; Comment Added; Email Sent |
+| LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Canceled by Student; Printing; Completed; Picked Up; Comment Added; Email Sent |
 | LastActionBy | Person | Who did it |
 | LastActionAt | Date and Time | Timestamp |
 | NeedsAttention | Yes/No | Flags items requiring staff review (Default: No) |
@@ -297,6 +297,7 @@ Add this additional column to the `PrintRequests` list for structured rejection 
         { "operator": "==", "operands": [ "@currentField", "Completed" ] }, "#004E8C",
         { "operator": "==", "operands": [ "@currentField", "Paid & Picked Up" ] }, "#009E49",
         { "operator": "==", "operands": [ "@currentField", "Rejected" ] }, "#D13438",
+        { "operator": "==", "operands": [ "@currentField", "Canceled" ] }, "#8A8886",
         { "operator": "==", "operands": [ "@currentField", "Archived" ] }, "#605E5C",
         "#333333"
       ]

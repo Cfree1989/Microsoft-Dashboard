@@ -311,7 +311,7 @@ Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0
 
 // === STATUS DEFINITIONS ===
 // All possible statuses in the system
-Set(varStatuses, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Archived"]);
+Set(varStatuses, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled", "Archived"]);
 
 // Statuses shown in the main queue (active work)
 Set(varQuickQueue, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed"]);
@@ -814,11 +814,12 @@ Table(
     {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
     {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
     {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
 ```
 
-5. Set **TemplateSize:** `165`
+5. Set **TemplateSize:** `145`
 6. Set **TemplatePadding:** `3`
 
 
@@ -833,12 +834,12 @@ Table(
 |----------|-------|
 | X | `3` |
 | Y | `5` |
-| Width | `158` |
+| Width | `138` |
 | Height | `40` |
-| Size | `11` |
+| Size | `10` |
 | BorderRadius | `20` |
 
-> 💡 **Why these sizes?** 8 tabs × 165px = 1320px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits.
+> 💡 **Why these sizes?** 9 tabs × 145px = 1305px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 10 ensures "Paid & Picked Up" fits.
 
 14. Set the button's **Text** property (type directly to avoid quote issues):
 
@@ -6447,6 +6448,7 @@ Table(
     {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
     {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
     {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
 ```

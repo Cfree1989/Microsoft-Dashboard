@@ -117,6 +117,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Completed | Dark Blue | `RGBA(0, 78, 140, 1)` |
 | Paid & Picked Up | Teal | `RGBA(0, 158, 73, 1)` |
 | Rejected | Red | `RGBA(209, 52, 56, 1)` |
+| Canceled | Gray | `RGBA(138, 136, 134, 1)` |
 | Archived | Gray | `RGBA(96, 94, 92, 1)` |
 
 ### Button Styles
@@ -325,6 +326,7 @@ Set(varStatusColors, Table(
     {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
     {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
     {Status: "Rejected", Color: varColorDanger},
+    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
 ```
@@ -2297,6 +2299,7 @@ Switch(
     "Completed", "Your print is ready for pickup!\n📍 Room 145 Atkinson Hall\n💳 Payment: TigerCASH only",
     "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, "mmm d, yyyy"),
     "Rejected", "❌ Request rejected",
+    "Canceled", "Request canceled by you",
     ""
 )
 ```
@@ -2304,7 +2307,7 @@ Switch(
 43. Set **Visible:**
 
 ```powerfx
-ThisItem.Status.Value in ["Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected"]
+ThisItem.Status.Value in ["Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
 ```
 
 ---
@@ -2663,13 +2666,14 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 21. Set **OnSelect:**
 
 ```powerfx
-// Update status to Rejected with student cancellation reason
+// Update status to Canceled (student-initiated cancellation)
 Patch(
     PrintRequests,
     LookUp(PrintRequests, ID = varShowCancelModal),
     {
-        Status: {Value: "Rejected"},
-        Notes: "Cancelled by student before staff review."
+        Status: {Value: "Canceled"},
+        LastAction: {Value: "Canceled by Student"},
+        Notes: "Canceled by student before staff review."
     }
 );
 
@@ -2678,7 +2682,7 @@ Set(varShowCancelModal, 0);
 Set(varSelectedItem, Blank());
 
 // Show confirmation
-Notify("Request cancelled successfully.", NotificationType.Information);
+Notify("Request canceled successfully.", NotificationType.Information);
 
 // Refresh
 Refresh(PrintRequests)
@@ -2845,7 +2849,7 @@ scrHome
 2. Verify:
    - [ ] Modal appears with warning
    - [ ] Click "No, Keep Request" → modal closes
-   - [ ] Click "Yes, Cancel Request" → request status changes to Rejected
+   - [ ] Click "Yes, Cancel Request" → request status changes to Canceled
 
 ### Test 5: Estimate Confirmation
 
@@ -3104,6 +3108,7 @@ Set(varStatusColors, Table(
     {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
     {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
     {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
 ```
@@ -3222,14 +3227,15 @@ Patch(
     PrintRequests,
     LookUp(PrintRequests, ID = varShowCancelModal),
     {
-        Status: {Value: "Rejected"},
-        Notes: "Cancelled by student before staff review."
+        Status: {Value: "Canceled"},
+        LastAction: {Value: "Canceled by Student"},
+        Notes: "Canceled by student before staff review."
     }
 );
 
 Set(varShowCancelModal, 0);
 Set(varSelectedItem, Blank());
-Notify("Request cancelled successfully.", NotificationType.Information);
+Notify("Request canceled successfully.", NotificationType.Information);
 Refresh(PrintRequests)
 ```
 

@@ -68,6 +68,7 @@ The AuditLog list provides complete tracking for all actions, changes, and syste
    - Completed
    - Email Sent
    - Rejected
+   - Canceled by Student
    - System
 5. **Require that this column contains information:** Yes
 6. Click **Save**
@@ -216,7 +217,7 @@ The AuditLog list provides complete tracking for all actions, changes, and syste
 | Title | Single line | Yes | Human-readable action summary |
 | RequestID | Number | Yes | Links to PrintRequests.ID |
 | ReqKey | Single line | No | Request identifier (REQ-00001) |
-| Action | Choice | Yes | Created; Updated; Status Change; File Added; Comment Added; Assigned; Approved; Picked Up; Started; Completed; Email Sent; Rejected; System |
+| Action | Choice | Yes | Created; Updated; Status Change; File Added; Comment Added; Assigned; Approved; Picked Up; Started; Completed; Email Sent; Rejected; Canceled by Student; System |
 | ActionAt | DateTime | Yes | When action occurred (UTC) |
 | FieldName | Single line | No | Which field changed |
 | OldValue | Multi-line | No | Previous value before change |
