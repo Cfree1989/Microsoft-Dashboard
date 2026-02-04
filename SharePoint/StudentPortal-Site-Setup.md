@@ -421,6 +421,7 @@ Create all remaining pages as blank placeholders. Content will be added later by
 |-----------|-------------------|
 | Subtractive | /SitePages/Subtractive.aspx |
 | Additive | /SitePages/Additive.aspx |
+| 3D Scanning | /SitePages/3D-Scanning.aspx |
 | Resources | /SitePages/Resources.aspx |
 | Feedback | /SitePages/Feedback.aspx |
 | Lab Rules | /SitePages/Lab-Rules.aspx |
@@ -429,6 +430,8 @@ Create all remaining pages as blank placeholders. Content will be added later by
 > 💡 **Tip:** You can leave pages completely blank or add a simple "Content coming soon" text placeholder.
 >
 > 📱 **Note:** The Additive page will include the Student Print Portal app (see Step 10), which handles both print request submission and tracking.
+>
+> 📍 **Note:** The 3D Scanning page is a resource/redirect page — the FabLab doesn't have scanning equipment, but this page directs users to campus resources (see Step 13).
 
 ---
 
@@ -485,6 +488,7 @@ Add these items visible to **everyone** (students and staff):
 | Home | `/SitePages/Home.aspx` | Everyone (leave blank) |
 | Subtractive | `/SitePages/Subtractive.aspx` | Everyone (leave blank) |
 | Additive | `/SitePages/Additive.aspx` | Everyone (leave blank) |
+| 3D Scanning | `/SitePages/3D-Scanning.aspx` | Everyone (leave blank) |
 | Resources | `/SitePages/Resources.aspx` | Everyone (leave blank) |
 | Feedback | `/SitePages/Feedback.aspx` | Everyone (leave blank) |
 | Lab Rules | `/SitePages/Lab-Rules.aspx` | Everyone (leave blank) |
@@ -527,6 +531,7 @@ Add these items visible to **everyone** (students and staff):
    Home
    Subtractive
    Additive                (includes Student Print Portal app)
+   3D Scanning             (campus scanning resources)
    Resources
    Feedback
    Lab Rules
@@ -676,6 +681,7 @@ If you previously used a document library for file submissions:
 | Staff Hub | /SitePages/Staff-Hub.aspx | Staff operations (renamed from original Home) | Staff Only |
 | Subtractive | /SitePages/Subtractive.aspx | CNC/laser information | Everyone |
 | Additive | /SitePages/Additive.aspx | 3D printing info + Student Print Portal app | Everyone |
+| 3D Scanning | /SitePages/3D-Scanning.aspx | Campus scanning resources directory | Everyone |
 | Resources | /SitePages/Resources.aspx | Downloads and tutorials | Everyone |
 | Feedback | /SitePages/Feedback.aspx | Survey/contact form | Everyone |
 | Lab Rules | /SitePages/Lab-Rules.aspx | Usage policies | Everyone |
@@ -704,6 +710,7 @@ If you previously used a document library for file submissions:
 | Home | Everyone | Page (Student landing) |
 | Subtractive | Everyone | Page |
 | Additive | Everyone | Page (includes Student Print Portal app) |
+| 3D Scanning | Everyone | Page (campus scanning resources) |
 | Resources | Everyone | Page |
 | Feedback | Everyone | Page |
 | Lab Rules | Everyone | Page |
@@ -1116,6 +1123,285 @@ After building the page, verify:
 - [ ] Button opens the Student Portal app when clicked
 - [ ] All card sections have neutral (gray) backgrounds
 - [ ] Page looks professional and matches the intended design
+
+---
+
+## Step 13: Building the 3D Scanning Page Content
+
+The 3D Scanning page is a **resource directory** — your FabLab doesn't have scanning equipment, but this page helps direct users to the various campus resources available for 3D scanning, photogrammetry, and drone capture.
+
+### Page Structure Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SECTION 1: Title + Intro (no background)                       │
+│  └─ Text: "3D Scanning" (H1) + intro paragraph                  │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 2: Scanners (Neutral background)                       │
+│  └─ Table or formatted list of scanning equipment               │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 3: Accessories (Neutral background)                    │
+│  └─ Table or formatted list of accessories                      │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 4: Scale Guide (Neutral background)                    │
+│  └─ Recommendations by project size (S, M, L, XL)               │
+├─────────────────────────────────────────────────────────────────┤
+│  SECTION 5: Rules (Neutral background)                          │
+│  └─ Drone certification requirements                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.1: Edit the 3D Scanning Page
+
+1. Go to **Site contents** → **Site Pages**
+2. Open **3D-Scanning.aspx**
+3. Click **Edit** in the toolbar
+
+### 13.2: Add Title and Introduction Section
+
+1. Click **+** to add a web part → Select **Text**
+2. Type: `3D Scanning`
+3. Select the text and format as **Heading 1**, **Center aligned**
+4. Press Enter and add an introduction paragraph:
+
+```
+The FabLab does not currently have 3D scanning equipment. However, several departments across campus have scanning resources available. This page provides a directory of equipment, locations, and contacts to help you find the right scanning solution for your project.
+```
+
+### 13.3: Add Scanners Section
+
+**Create the section:**
+
+1. Hover below the intro and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Add the content:**
+
+6. Click **+** → Select **Text**
+7. Add the following content:
+
+```
+Scanners
+
+Faro Focus
+• Type: Terrestrial laser scanner
+• Acquired: 2017
+• Location: ART 106
+• Manager: CoAD / Brendan Harmon
+• Notes: Near end of life; batteries no longer manufactured
+
+Faro Focus Premium
+• Type: Terrestrial laser scanner
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio
+• Manager: Digital Art / DMAE
+• Notes: Reservations managed with Cheqroom
+
+Faro Freestyle 2
+• Type: Handheld 3D laser scanner
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio
+• Manager: Digital Art / DMAE
+• Notes: Reservations managed with Cheqroom; No longer supported
+
+Faro ScanPlan
+• Type: Handheld 2D laser scanner
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio
+• Manager: Digital Art / DMAE
+• Notes: Reservations managed with Cheqroom; No longer supported
+
+DJI Matrice 300 RTK
+• Type: Drone (quadcopter)
+• Sensors: L1 lidar & P1 camera
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio
+• Manager: Digital Art / DMAE
+• Notes: Reservations managed with Cheqroom
+
+DJI Phantom 4 (x3)
+• Type: Drone (quadcopter)
+• Sensors: Built-in camera
+• Acquired: 2019
+• Location: CxC
+• Manager: CxC / Josef Horacek
+• Notes: Reservations managed by CxC; Students can use after training
+```
+
+8. Format "Scanners" as **Heading 2**
+9. Format each scanner name (Faro Focus, etc.) as **Bold**
+
+### 13.4: Add Accessories Section
+
+**Create the section:**
+
+1. Hover below the scanners section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Add the content:**
+
+6. Click **+** → Select **Text**
+7. Add the following content:
+
+```
+Accessories
+
+Registration targets
+• Type: Spherical targets for terrestrial laser scanning
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio
+• Manager: Digital Art / DMAE
+
+Prism poles for targets
+• Type: Bipods and centering rods for targets for terrestrial laser scanning
+• Acquired: 2024
+• Location: ART 106
+• Manager: Landscape Architecture / Brendan Harmon
+
+Kangur-Lift
+• Type: Pneumatic mast for terrestrial laser scanner
+• Acquired: 2022
+• Location: DMC 2072: Digital Twinning Studio / ART 106
+• Manager: Digital Art / DMAE
+• Notes: Reservations managed with Cheqroom
+
+Giant elevating tripod
+• Type: Giant elevating tripod for terrestrial laser scanner
+• Acquired: 2020
+• Location: ART 106
+• Manager: Landscape Architecture / Brendan Harmon
+```
+
+8. Format "Accessories" as **Heading 2**
+9. Format each accessory name as **Bold**
+
+### 13.5: Add Scale Guide Section
+
+This section helps users choose the right approach based on their project size.
+
+**Create the section:**
+
+1. Hover below the accessories section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Add the content:**
+
+6. Click **+** → Select **Text**
+7. Add the following content:
+
+```
+Scanning by Scale
+
+S — Object (small items)
+
+Photogrammetry / Lidar
+• Equipment: Phone / Camera
+• Apps: Polycam / Record3D / Kiri Engine
+• Software: Metashape / RealityCapture
+• Format: Point cloud / mesh
+
+Neural rendering
+• Equipment: Phone / Camera
+• Apps: LumaAI
+• Software: Nerfstudio
+• Format: Nerf / 3D gaussian splat, point cloud / mesh
+
+M — Furniture / Sculpture / Interiors
+
+Terrestrial laser scanning
+• Equipment: Faro Focus Premium
+• Software: Faro Scene
+• Accessory: Registration targets on prism poles (optional)
+• Format: Point cloud / mesh
+
+L — Structures / Trees
+
+Terrestrial laser scanning
+• Equipment: Faro Focus Premium
+• Accessory: Pneumatic mast / elevating tripod + registration targets on prism poles
+• Software: Faro Scene
+• Format: Point cloud / mesh
+
+XL — Building / Landscape
+
+Drone photogrammetry
+• Equipment: DJI Phantom / DJI Matrice + P1 camera
+• Accessory: Ground control points (recommended)
+• Software: Metashape Pro
+• Format: Point cloud / mesh / raster
+
+Drone lidar
+• Equipment: DJI Matrice + L1 lidar
+• Accessory: LSU C4G RTN corrections / DJI D-RTK GNSS base station
+• Software: DJI Terra
+• Format: Point cloud / mesh / raster
+```
+
+8. Format "Scanning by Scale" as **Heading 2**
+9. Format each scale heading (S — Object, M — Furniture, etc.) as **Heading 3** or **Bold**
+10. Format the method names (Photogrammetry / Lidar, Neural rendering, etc.) as **Bold**
+
+### 13.6: Add Rules Section
+
+**Create the section:**
+
+1. Hover below the scale section and click **+** to add a new section
+2. Click the section divider → **Edit section**
+3. Under **Layout**, select **One column**
+4. Under **Background**, select **Neutral**
+5. Click **Apply**
+
+**Add the content:**
+
+6. Click **+** → Select **Text**
+7. Add the following content:
+
+```
+Rules
+
+Drones
+
+All drone operations require FAA Remote Pilot Certificate (Part 107).
+
+Operations must be supervised by a certified pilot in command.
+
+Certified Pilots:
+• Brendan Harmon
+• Brent Fortenberry
+
+Contact one of the certified pilots before planning any drone capture project.
+```
+
+8. Format "Rules" as **Heading 2**
+9. Format "Drones" as **Heading 3** or **Bold**
+10. Format the FAA requirement as **Bold** for emphasis
+
+### 13.7: Publish the Page
+
+1. Review all sections — verify backgrounds are set correctly
+2. Click **Republish** in the top-right corner
+
+### 13.8: Verification Checklist
+
+After building the page, verify:
+
+- [ ] Title "3D Scanning" displays centered at top
+- [ ] Introduction explains this is a resource directory
+- [ ] Scanners section lists all 6 pieces of equipment
+- [ ] Accessories section lists all 4 items
+- [ ] Scale guide shows all 4 size categories (S, M, L, XL)
+- [ ] Rules section displays drone certification requirements
+- [ ] All card sections have neutral (gray) backgrounds
+- [ ] Page is easy to scan and find relevant information
 
 ---
 
