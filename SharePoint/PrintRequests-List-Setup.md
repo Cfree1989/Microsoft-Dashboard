@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 33 total fields (13 student-facing + 14 staff processing + 6 payment recording)
+- 34 total fields (13 student-facing + 14 staff processing + 7 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -387,7 +387,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 ---
 
-## Step 4B: Add Payment Recording Columns (5)
+## Step 4B: Add Payment Recording Columns (7)
 
 These columns capture actual payment details when a print is picked up.
 
@@ -438,6 +438,26 @@ These columns capture actual payment details when a print is picked up.
 3. **Description:** `Indicates student provided their own printing material for 70% discount`
 4. **Default value:** No
 5. Click **Save**
+
+### Column 33: PaymentType (Choice)
+
+1. Click **+ Add column** → **Choice**
+2. **Name:** `PaymentType`
+3. **Description:** `Payment method used (TigerCASH, Check, or Grant/Program Code)`
+4. **Choices:**
+   - TigerCASH
+   - Check
+   - Code
+5. **Default value:** TigerCASH
+6. **Require that this column contains information:** No
+7. Click **Save**
+
+> 💡 **Payment Types:**
+> - **TigerCASH** - Standard campus payment system (most common)
+> - **Check** - Paper check payment
+> - **Code** - Grant or program code (e.g., GRANT-12345, PROG-67890)
+>
+> The Transaction Number field stores the relevant reference for each type (receipt number, check number, or grant/program code).
 
 ---
 
@@ -537,12 +557,13 @@ These columns capture actual payment details when a print is picked up.
 
 | Column | Type | Required | Default | Purpose |
 |--------|------|----------|---------|---------|
-| TransactionNumber | Single line | No | - | TigerCASH transaction/receipt number |
+| TransactionNumber | Single line | No | - | Reference number (receipt, check, or grant/program code) |
 | FinalWeight | Number | No | - | Actual weight of finished print (grams) |
 | FinalCost | Currency | No | - | Actual cost charged (from FinalWeight) |
 | PaymentDate | Date | No | - | Date payment was recorded |
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
 | StudentOwnMaterial | Yes/No | No | No | Student provided own material (70% discount) |
+| PaymentType | Choice | No | TigerCASH | Payment method (TigerCASH, Check, Code) |
 
 ---
 
@@ -554,7 +575,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] Version history enabled
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 14 staff processing columns added
-- [ ] All 6 payment recording columns added
+- [ ] All 7 payment recording columns added
 - [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin

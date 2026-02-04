@@ -350,7 +350,7 @@ Set(varIsLoading, false);
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
-Set(varResinRate, 0.20);       // $ per gram for resin printing  
+Set(varResinRate, 0.30);       // $ per gram for resin printing  
 Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
 // === STYLING / THEMING ===
@@ -3579,7 +3579,9 @@ scrDashboard
     ├── txtPaymentWeight      ← Weight input (pre-filled with EstimatedWeight)
     ├── lblPaymentWeightLabel ← "Final Weight (grams): *"
     ├── txtPaymentTransaction ← Transaction number input (required)
-    ├── lblPaymentTransLabel  ← "Transaction Number: *"
+    ├── lblPaymentTransLabel  ← "Transaction Number: *" (dynamic based on payment type)
+    ├── ddPaymentType         ← Payment type dropdown (TigerCASH, Check, Code)
+    ├── lblPaymentTypeLabel   ← "Payment Type: *"
     ├── ddPaymentStaff        ← Staff dropdown
     ├── lblPaymentStaffLabel  ← "Performing Action As: *"
     ├── lblPaymentStudent     ← Student name and estimated vs final info
@@ -3726,28 +3728,79 @@ scrDashboard
 
 ---
 
-### Transaction Label (lblPaymentTransLabel)
+### Payment Type Label (lblPaymentTypeLabel)
 
 21. Click **+ Insert** → **Text label**.
-22. **Rename it:** `lblPaymentTransLabel`
+22. **Rename it:** `lblPaymentTypeLabel`
 23. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Transaction Number: *"` |
+| Text | `"Payment Type: *"` |
+| X | `recPaymentModal.X + 340` |
+| Y | `recPaymentModal.Y + 105` |
+| Width | `180` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Payment Type Dropdown (ddPaymentType)
+
+24. Click **+ Insert** → **Drop down**.
+25. **Rename it:** `ddPaymentType`
+26. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `["TigerCASH", "Check", "Code"]` |
+| X | `recPaymentModal.X + 340` |
+| Y | `recPaymentModal.Y + 130` |
+| Width | `180` |
+| Height | `36` |
+| Default | `"TigerCASH"` |
+
+> 💡 **Payment Types:**
+> - **TigerCASH** - Standard campus payment (receipt number)
+> - **Check** - Paper check payment (check number)
+> - **Code** - Grant or program code (e.g., GRANT-12345)
+
+---
+
+### Transaction Label (lblPaymentTransLabel)
+
+27. Click **+ Insert** → **Text label**.
+28. **Rename it:** `lblPaymentTransLabel`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | See formula below |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 180` |
 | Width | `250` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
 
+Set **Text** (dynamic based on payment type):
+
+```powerfx
+Switch(
+    ddPaymentType.Selected.Value,
+    "TigerCASH", "Transaction Number: *",
+    "Check", "Check Number: *",
+    "Code", "Grant/Program Code: *",
+    "Reference Number: *"
+)
+```
+
 ---
 
 ### Transaction Input (txtPaymentTransaction)
 
-24. Click **+ Insert** → **Text input**.
-25. **Rename it:** `txtPaymentTransaction`
-26. Set properties:
+30. Click **+ Insert** → **Text input**.
+31. **Rename it:** `txtPaymentTransaction`
+32. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3755,15 +3808,27 @@ scrDashboard
 | Y | `recPaymentModal.Y + 205` |
 | Width | `250` |
 | Height | `36` |
-| HintText | `"TigerCASH receipt number"` |
+| HintText | See formula below |
+
+Set **HintText** (dynamic based on payment type):
+
+```powerfx
+Switch(
+    ddPaymentType.Selected.Value,
+    "TigerCASH", "TigerCASH receipt number",
+    "Check", "Check number",
+    "Code", "e.g. GRANT-12345",
+    "Reference number"
+)
+```
 
 ---
 
 ### Weight Label (lblPaymentWeightLabel)
 
-27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblPaymentWeightLabel`
-29. Set properties:
+33. Click **+ Insert** → **Text label**.
+34. **Rename it:** `lblPaymentWeightLabel`
+35. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3778,9 +3843,9 @@ scrDashboard
 
 ### Weight Input (txtPaymentWeight)
 
-30. Click **+ Insert** → **Text input**.
-31. **Rename it:** `txtPaymentWeight`
-32. Set properties:
+36. Click **+ Insert** → **Text input**.
+37. **Rename it:** `txtPaymentWeight`
+38. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3791,7 +3856,7 @@ scrDashboard
 | Height | `36` |
 | HintText | `"Weight in grams"` |
 
-33. Set **Default:**
+39. Set **Default:**
 - none.
 
 > 💡 **Pre-fill:** The weight input pre-fills with the estimated weight. Staff should update this with the actual measured weight of the finished print.
@@ -3800,9 +3865,9 @@ scrDashboard
 
 ### Cost Label (lblPaymentCostLabel)
 
-34. Click **+ Insert** → **Text label**.
-35. **Rename it:** `lblPaymentCostLabel`
-36. Set properties:
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblPaymentCostLabel`
+42. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3818,9 +3883,9 @@ scrDashboard
 
 ### Cost Value Display (lblPaymentCostValue)
 
-37. Click **+ Insert** → **Text label**.
-38. **Rename it:** `lblPaymentCostValue`
-39. Set properties:
+43. Click **+ Insert** → **Text label**.
+44. **Rename it:** `lblPaymentCostValue`
+45. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3865,9 +3930,9 @@ If(
 
 > 💡 **Use Case:** When students provide their own filament/resin, they receive a 70% discount (pay only 30% of normal cost). This is recorded in the SharePoint `StudentOwnMaterial` field for tracking.
 
-41. Click **+ Insert** → **Checkbox**.
-42. **Rename it:** `chkOwnMaterial`
-43. Set properties:
+46. Click **+ Insert** → **Checkbox**.
+47. **Rename it:** `chkOwnMaterial`
+48. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3885,9 +3950,9 @@ If(
 
 ### Date Label (lblPaymentDateLabel)
 
-41. Click **+ Insert** → **Text label**.
-42. **Rename it:** `lblPaymentDateLabel`
-43. Set properties:
+49. Click **+ Insert** → **Text label**.
+50. **Rename it:** `lblPaymentDateLabel`
+51. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3902,9 +3967,9 @@ If(
 
 ### Date Picker (dpPaymentDate)
 
-44. Click **+ Insert** → **Date picker**.
-45. **Rename it:** `dpPaymentDate`
-46. Set properties:
+52. Click **+ Insert** → **Date picker**.
+53. **Rename it:** `dpPaymentDate`
+54. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3918,9 +3983,9 @@ If(
 
 ### Notes Label (lblPaymentNotesLabel)
 
-47. Click **+ Insert** → **Text label**.
-48. **Rename it:** `lblPaymentNotesLabel`
-49. Set properties:
+55. Click **+ Insert** → **Text label**.
+56. **Rename it:** `lblPaymentNotesLabel`
+57. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3935,9 +4000,9 @@ If(
 
 ### Notes Text Input (txtPaymentNotes)
 
-50. Click **+ Insert** → **Text input**.
-51. **Rename it:** `txtPaymentNotes`
-52. Set properties:
+58. Click **+ Insert** → **Text input**.
+59. **Rename it:** `txtPaymentNotes`
+60. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3954,9 +4019,9 @@ If(
 
 > 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later.
 
-53. Click **+ Insert** → **Checkbox**.
-54. **Rename it:** `chkPartialPickup`
-55. Set properties:
+61. Click **+ Insert** → **Checkbox**.
+62. **Rename it:** `chkPartialPickup`
+63. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3974,9 +4039,9 @@ If(
 
 ### Cancel Button (btnPaymentCancel)
 
-56. Click **+ Insert** → **Button**.
-57. **Rename it:** `btnPaymentCancel`
-58. Set properties:
+64. Click **+ Insert** → **Button**.
+65. **Rename it:** `btnPaymentCancel`
+66. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3988,7 +4053,7 @@ If(
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
 
-59. Set **OnSelect:**
+67. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -3999,16 +4064,17 @@ Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
-Reset(chkPartialPickup)
+Reset(chkPartialPickup);
+Reset(ddPaymentType)
 ```
 
 ---
 
 ### Confirm Payment Button (btnPaymentConfirm)
 
-60. Click **+ Insert** → **Button**.
-61. **Rename it:** `btnPaymentConfirm`
-62. Set properties:
+68. Click **+ Insert** → **Button**.
+69. **Rename it:** `btnPaymentConfirm`
+70. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -4022,7 +4088,7 @@ Reset(chkPartialPickup)
 
 > 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
 
-63. Set **DisplayMode:**
+71. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -4036,7 +4102,7 @@ If(
 )
 ```
 
-64. Set **OnSelect:**
+72. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -4059,7 +4125,8 @@ Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * 0.30, varBaseCost));
 // Build payment record string (used for both partial and full)
 Set(varPaymentRecord,
     "PAYMENT by " & ddPaymentStaff.Selected.MemberName &
-    ": Trans#=" & txtPaymentTransaction.Text & 
+    ": Type=" & ddPaymentType.Selected.Value &
+    ", Ref#=" & txtPaymentTransaction.Text & 
     ", Weight=" & txtPaymentWeight.Text & "g" &
     ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
     If(chkOwnMaterial.Value, " (OWN MATERIAL - 70% off)", "") &
@@ -4074,6 +4141,7 @@ If(
     // PARTIAL PICKUP: Keep status as Completed, append to PaymentNotes
     Patch(PrintRequests, varSelectedItem, {
         // Status stays "Completed" - don't change it
+        PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
         PaymentNotes: Concatenate(
             If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
             varPaymentRecord
@@ -4096,6 +4164,7 @@ If(
     // FULL PICKUP: Change status to Paid & Picked Up, record final details
     Patch(PrintRequests, varSelectedItem, {
         Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+        PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
         TransactionNumber: txtPaymentTransaction.Text,
         FinalWeight: Value(txtPaymentWeight.Text),
         FinalCost: varFinalCost,
@@ -4149,6 +4218,7 @@ Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
+Reset(ddPaymentType);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
@@ -6431,7 +6501,7 @@ Notify("Changes saved!", NotificationType.Success)
 | `varIsStaff` | App.OnStart | Staff member check |
 | `colStaff` | App.OnStart | Active staff collection |
 | `varFilamentRate` | App.OnStart | Filament price per gram ($0.10) |
-| `varResinRate` | App.OnStart | Resin price per gram ($0.20) |
+| `varResinRate` | App.OnStart | Resin price per gram ($0.30) |
 | `varMinimumCost` | App.OnStart | Minimum charge ($3.00) |
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
@@ -6475,7 +6545,7 @@ LastActionBy: {
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `varFilamentRate` | `0.10` | $ per gram for filament |
-| `varResinRate` | `0.20` | $ per gram for resin |
+| `varResinRate` | `0.30` | $ per gram for resin |
 | `varMinimumCost` | `3.00` | Minimum charge |
 
 **For Estimates (Approval Modal):**
