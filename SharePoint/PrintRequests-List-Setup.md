@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 32 total fields (13 student-facing + 14 staff processing + 5 payment recording)
+- 33 total fields (13 student-facing + 14 staff processing + 6 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -431,6 +431,14 @@ These columns capture actual payment details when a print is picked up.
 4. **Type of text:** Plain text
 5. Click **Save**
 
+### Column 32: StudentOwnMaterial (Yes/No)
+
+1. Click **+ Add column** → **Yes/No**
+2. **Name:** `StudentOwnMaterial`
+3. **Description:** `Indicates student provided their own printing material for 70% discount`
+4. **Default value:** No
+5. Click **Save**
+
 ---
 
 ## Step 5: Add Status Color Formatting
@@ -534,6 +542,7 @@ These columns capture actual payment details when a print is picked up.
 | FinalCost | Currency | No | - | Actual cost charged (from FinalWeight) |
 | PaymentDate | Date | No | - | Date payment was recorded |
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
+| StudentOwnMaterial | Yes/No | No | No | Student provided own material (70% discount) |
 
 ---
 
@@ -545,7 +554,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] Version history enabled
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 14 staff processing columns added
-- [ ] All 5 payment recording columns added
+- [ ] All 6 payment recording columns added
 - [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin

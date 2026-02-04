@@ -156,7 +156,7 @@ Use **Parent-relative sizing** for responsive layouts:
 | Rejection | 600 | 610 | Multiple checkboxes |
 | Archive | 500 | 400 | Simple confirmation |
 | Details | 550 | 620 | Multiple dropdowns |
-| Payment | 550 | 630 | Includes partial pickup |
+| Payment | 550 | 660 | Includes own material discount + partial pickup |
 | Files | 500 | 450 | Attachment form |
 | Message | 600 | 500 | Text input area |
 
@@ -1381,6 +1381,40 @@ These labels show additional info when the card is expanded. All have the same V
 | Color | `RGBA(50, 50, 50, 1)` |
 | Visible | `true` |
 
+#### Transaction Row (Y = 245) - Paid & Picked Up Only
+
+> 💡 **Conditional Display:** These labels only appear for jobs with status "Paid & Picked Up" that have a transaction number recorded.
+
+63. Click **+ Insert** → **Text label**.
+64. **Rename it:** `lblTransactionLabel`
+65. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Transaction #:"` |
+| X | `12` |
+| Y | `245` |
+| Width | `80` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.TransactionNumber)` |
+
+66. Click **+ Insert** → **Text label**.
+67. **Rename it:** `lblTransactionValue`
+68. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.TransactionNumber` |
+| X | `95` |
+| Y | `245` |
+| Width | `200` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.TransactionNumber)` |
+
 ---
 
 ### ✅ Step 7 Checklist
@@ -1389,6 +1423,8 @@ Your gallery template should now contain these controls (Z-order: top = front):
 
 ```
 ▼ galJobCards
+    lblTransactionValue            ← Paid & Picked Up only
+    lblTransactionLabel            ← Paid & Picked Up only
     lblCourse
     lblCourseLabel
     lblProjectType
@@ -1419,6 +1455,7 @@ Each card displays:
 - Estimates (weight, time, cost) — visible after approval
 - View Notes button (opens Notes Modal)
 - Expandable additional details
+- Transaction number (for Paid & Picked Up jobs only)
 
 
 ---
@@ -3528,9 +3565,10 @@ scrDashboard
     ├── chkPartialPickup      ← Partial pickup checkbox (keeps status as Completed)
     ├── txtPaymentNotes       ← Multi-line text input
     ├── lblPaymentNotesLabel  ← "Payment Notes (optional):"
+    ├── chkOwnMaterial        ← Own material checkbox (70% discount)
     ├── dpPaymentDate         ← Date picker (default: Today())
     ├── lblPaymentDateLabel   ← "Payment Date: *"
-    ├── lblPaymentCostValue   ← Auto-calculated cost display
+    ├── lblPaymentCostValue   ← Auto-calculated cost display (reflects discount)
     ├── lblPaymentCostLabel   ← "Final Cost:"
     ├── txtPaymentWeight      ← Weight input (pre-filled with EstimatedWeight)
     ├── lblPaymentWeightLabel ← "Final Weight (grams): *"
@@ -3591,9 +3629,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - 630) / 2` |
+| Y | `(Parent.Height - 660) / 2` |
 | Width | `550` |
-| Height | `630` |
+| Height | `660` |
 | Fill | `Color.White` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -3793,22 +3831,49 @@ scrDashboard
 ```powerfx
 If(
     IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
-    "$" & Text(
-        Max(
-            varMinimumCost,
-            Value(txtPaymentWeight.Text) * If(
-                varSelectedItem.Method.Value = "Resin",
-                varResinRate,
-                varFilamentRate
+    With(
+        {
+            baseCost: Max(
+                varMinimumCost,
+                Value(txtPaymentWeight.Text) * If(
+                    varSelectedItem.Method.Value = "Resin",
+                    varResinRate,
+                    varFilamentRate
+                )
             )
-        ),
-        "[$-en-US]#,##0.00"
+        },
+        "$" & Text(
+            If(chkOwnMaterial.Value, baseCost * 0.30, baseCost),
+            "[$-en-US]#,##0.00"
+        ) & If(chkOwnMaterial.Value, " (70% off)", "")
     ),
     "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
 )
 ```
 
-> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart
+> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart. When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount).
+
+---
+
+### Own Material Checkbox (chkOwnMaterial)
+
+> 💡 **Use Case:** When students provide their own filament/resin, they receive a 70% discount (pay only 30% of normal cost). This is recorded in the SharePoint `StudentOwnMaterial` field for tracking.
+
+41. Click **+ Insert** → **Checkbox**.
+42. **Rename it:** `chkOwnMaterial`
+43. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student provided own material (70% discount)"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 400` |
+| Width | `510` |
+| Height | `32` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `RGBA(0, 158, 73, 1)` |
+
+> 💰 **Discount Logic:** When checked, the `lblPaymentCostValue` display and final cost calculation both apply a 70% discount (multiply by 0.30).
 
 ---
 
@@ -3855,7 +3920,7 @@ If(
 |----------|-------|
 | Text | `"Payment Notes (optional):"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 410` |
+| Y | `recPaymentModal.Y + 440` |
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3872,7 +3937,7 @@ If(
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 435` |
+| Y | `recPaymentModal.Y + 465` |
 | Width | `510` |
 | Height | `60` |
 | HintText | `"Any discrepancies, special circumstances..."` |
@@ -3891,7 +3956,7 @@ If(
 |----------|-------|
 | Text | `"Partial Pickup — Student will return for remaining items"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 505` |
+| Y | `recPaymentModal.Y + 535` |
 | Width | `510` |
 | Height | `32` |
 | FontItalic | `true` |
@@ -3911,7 +3976,7 @@ If(
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recPaymentModal.X + 250` |
-| Y | `recPaymentModal.Y + 570` |
+| Y | `recPaymentModal.Y + 580` |
 | Width | `120` |
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
@@ -3927,6 +3992,7 @@ Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
+Reset(chkOwnMaterial);
 Reset(chkPartialPickup)
 ```
 
@@ -3942,7 +4008,7 @@ Reset(chkPartialPickup)
 |----------|-------|
 | Text | `If(chkPartialPickup.Value, "✓ Record Partial Payment", "✓ Record Payment")` |
 | X | `recPaymentModal.X + 380` |
-| Y | `recPaymentModal.Y + 570` |
+| Y | `recPaymentModal.Y + 580` |
 | Width | `150` |
 | Height | `36` |
 | Fill | `If(chkPartialPickup.Value, RGBA(255, 140, 0, 1), RGBA(0, 158, 73, 1))` |
@@ -3971,8 +4037,8 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Recording payment...");
 
-// Calculate cost from weight picked up
-Set(varFinalCost, 
+// Calculate cost from weight picked up (with discount if own material)
+Set(varBaseCost, 
     Max(
         varMinimumCost,
         Value(txtPaymentWeight.Text) * If(
@@ -3982,6 +4048,7 @@ Set(varFinalCost,
         )
     )
 );
+Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * 0.30, varBaseCost));
 
 // Build payment record string (used for both partial and full)
 Set(varPaymentRecord,
@@ -3989,6 +4056,7 @@ Set(varPaymentRecord,
     ": Trans#=" & txtPaymentTransaction.Text & 
     ", Weight=" & txtPaymentWeight.Text & "g" &
     ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
+    If(chkOwnMaterial.Value, " (OWN MATERIAL - 70% off)", "") &
     If(chkPartialPickup.Value, " (PARTIAL)", "") &
     If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
     " - " & Text(Now(), "mm/dd/yyyy")
@@ -4025,6 +4093,7 @@ If(
         TransactionNumber: txtPaymentTransaction.Text,
         FinalWeight: Value(txtPaymentWeight.Text),
         FinalCost: varFinalCost,
+        StudentOwnMaterial: chkOwnMaterial.Value,
         PaymentDate: dpPaymentDate.SelectedDate,
         PaymentNotes: Concatenate(
             If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
@@ -4072,6 +4141,7 @@ Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
+Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
 
 // === HIDE LOADING ===
@@ -4083,7 +4153,9 @@ Set(varLoadingMessage, "")
 > - Status remains "Completed" (job stays visible in queue)
 > - Payment details appended to PaymentNotes (creates a log)
 > - Staff can process another pickup later
-> - Final pickup (unchecked) records to FinalWeight/FinalCost fields
+> - Final pickup (unchecked) records to FinalWeight/FinalCost/StudentOwnMaterial fields
+>
+> 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
 
 ---
 
@@ -6359,7 +6431,8 @@ Notify("Changes saved!", NotificationType.Success)
 | `varSelectedItem` | Button click | Item for modal |
 | `varActor` | Screen.OnVisible | Current user Person record (available for quick Patch operations) |
 | `varShowPaymentModal` | btnPickedUp click | Controls payment modal visibility |
-| `varFinalCost` | Payment modal confirm | Calculated from FinalWeight |
+| `varBaseCost` | Payment modal confirm | Base cost before discount |
+| `varFinalCost` | Payment modal confirm | Final cost (with 70% discount if own material) |
 
 ## Person Field Format
 
@@ -6408,10 +6481,14 @@ Max(varMinimumCost, EstimatedWeight * If(Method = "Resin", varResinRate, varFila
 **For Finals (Payment Modal):**
 ```powerfx
 // FinalCost from FinalWeight (actual measured weight)
-Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilamentRate))
+// With own material discount: multiply by 0.30 when chkOwnMaterial.Value is true
+Set(varBaseCost, Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilamentRate)));
+Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * 0.30, varBaseCost))
 ```
 
 > 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
+>
+> 💡 **Own Material Discount:** When student provides their own filament/resin, check `chkOwnMaterial` for a 70% discount (student pays 30% of normal cost). This is saved to the `StudentOwnMaterial` field.
 
 > 💡 **Changing Prices:** To update pricing, only change the values in `App.OnStart`. All modals reference these variables automatically.
 
