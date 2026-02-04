@@ -1154,17 +1154,23 @@ Switch(
 
 ```powerfx
 If(
-    !IsBlank(ThisItem.EstimatedWeight),
-    "⚖ " & Text(ThisItem.EstimatedWeight) & "g" &
-    If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
-    If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
-    ""
+    ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.FinalCost),
+    // After payment: show final weight and cost only
+    "⚖ " & Text(ThisItem.FinalWeight) & "g · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
+    // Before payment: show estimates
+    If(
+        !IsBlank(ThisItem.EstimatedWeight),
+        "⚖ " & Text(ThisItem.EstimatedWeight) & "g" &
+        If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
+        If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
+        ""
+    )
 )
 ```
 
-28. Set **Visible:** `!IsBlank(ThisItem.EstimatedWeight)`
+28. Set **Visible:** `!IsBlank(ThisItem.EstimatedWeight) || !IsBlank(ThisItem.FinalWeight)`
 
-> 💡 **When it shows:** This label only appears after approval, when EstimatedWeight has been set. Displays weight, optional print time, and calculated cost.
+> 💡 **When it shows:** Before payment, displays estimated weight, time, and cost. After payment (status = "Paid & Picked Up"), displays final weight and cost instead.
 
 ---
 
