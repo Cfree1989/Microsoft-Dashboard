@@ -2112,8 +2112,9 @@ Patch(PrintRequests, varSelectedItem, {
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "REJECTED by " & ddRejectStaff.Selected.MemberName & ": " & 
-        varRejectionReasons & txtRejectComments.Text & " - " & Text(Now(), "mm/dd/yyyy")
+        "REJECTED by " & 
+        With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+        ": " & varRejectionReasons & txtRejectComments.Text & " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -2609,10 +2610,11 @@ IfError(
         EstimatedCost: varCalculatedCost,
         StaffNotes: Concatenate(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-            "APPROVED by " & ddApprovalStaff.Selected.MemberName &
+            "APPROVED by " & 
+            With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
             ": Weight=" & txtEstimatedWeight.Text & "g, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
             If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
-            " - " & Text(Now(), "mm/dd/yyyy")
+            " - " & Text(Now(), "m/d h:mmam/pm")
         )
     }),
     // ERROR: Patch failed
@@ -2907,9 +2909,10 @@ Patch(PrintRequests, varSelectedItem, {
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "ARCHIVED by " & ddArchiveStaff.Selected.MemberName &
+        "ARCHIVED by " & 
+        With({n: ddArchiveStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
         If(!IsBlank(txtArchiveReason.Text), ": " & txtArchiveReason.Text, "") &
-        " - " & Text(Now(), "mm/dd/yyyy")
+        " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -3507,7 +3510,9 @@ Patch(
         LastActionAt: Now(),
         StaffNotes: Concatenate(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-            "UPDATED by " & ddDetailsStaff.Selected.MemberName & ": " & varChangeDesc & " - " & Text(Now(), "mm/dd/yyyy")
+            "UPDATED by " & 
+            With({n: ddDetailsStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+            ": " & varChangeDesc & " - " & Text(Now(), "m/d h:mmam/pm")
         )
     }
 );
@@ -4124,7 +4129,8 @@ Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * 0.30, varBaseCost));
 
 // Build payment record string (used for both partial and full)
 Set(varPaymentRecord,
-    "PAYMENT by " & ddPaymentStaff.Selected.MemberName &
+    "PAYMENT by " & 
+    With({n: ddPaymentStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
     ": Type=" & ddPaymentType.Selected.Value &
     ", Ref#=" & txtPaymentTransaction.Text & 
     ", Weight=" & txtPaymentWeight.Text & "g" &
@@ -4132,7 +4138,7 @@ Set(varPaymentRecord,
     If(chkOwnMaterial.Value, " (OWN MATERIAL - 70% off)", "") &
     If(chkPartialPickup.Value, " (PARTIAL)", "") &
     If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
-    " - " & Text(Now(), "mm/dd/yyyy")
+    " - " & Text(Now(), "m/d h:mmam/pm")
 );
 
 // Update SharePoint item - conditional on partial pickup
@@ -4442,7 +4448,7 @@ Reset(ddNotesStaff)
 
 | Property | Value |
 |----------|-------|
-| Default | `If(IsBlank(varSelectedItem.StaffNotes), "None", varSelectedItem.StaffNotes)` |
+| Default | See formula below |
 | X | `recNotesModal.X + 20` |
 | Y | `recNotesModal.Y + 172` |
 | Width | `510` |
@@ -4454,7 +4460,81 @@ Reset(ddNotesStaff)
 | FontItalic | `IsBlank(varSelectedItem.StaffNotes)` |
 | BorderColor | `RGBA(200, 200, 200, 1)` |
 
-> 💡 **Note:** Using a Text Input with `DisplayMode.View` provides automatic scrollbars when content overflows. This displays the `StaffNotes` field which includes system audit entries (APPROVED by..., REJECTED by..., etc.) and any manual notes added by staff.
+30. Set **Default** (the display parsing formula):
+
+```powerfx
+If(
+    IsBlank(varSelectedItem.StaffNotes),
+    "None",
+    Concat(
+        ForAll(
+            Split(varSelectedItem.StaffNotes, " | ") As entry,
+            With(
+                {
+                    text: entry.Value,
+                    dashParts: Split(entry.Value, " - ")
+                },
+                With(
+                    {
+                        datetime: Last(dashParts).Value,
+                        beforeDatetime: Left(text, Len(text) - Len(Last(dashParts).Value) - 3),
+                        byPos: Find(" by ", text),
+                        colonPos: Find(":", text)
+                    },
+                    With(
+                        {
+                            action: If(byPos > 0, Upper(Left(text, byPos - 1)), "NOTE"),
+                            rawName: If(
+                                byPos > 0,
+                                Trim(Mid(text, byPos + 4, colonPos - byPos - 4)),
+                                Trim(Left(text, colonPos - 1))
+                            ),
+                            details: Trim(Mid(beforeDatetime, colonPos + 2, Len(beforeDatetime) - colonPos - 1))
+                        },
+                        With(
+                            {
+                                // Convert any name to "First L." format
+                                shortName: If(
+                                    Find(" ", rawName) > 0,
+                                    Left(rawName, Find(" ", rawName) - 1) & " " & Left(Last(Split(rawName, " ")).Value, 1) & ".",
+                                    rawName
+                                )
+                            },
+                            datetime & " - " & action & Char(10) &
+                            shortName & Char(10) &
+                            If(
+                                Len(details) > 0,
+                                If(
+                                    action = "NOTE",
+                                    // Manual note - quote the whole thing
+                                    """" & details & """",
+                                    // Action entry - only quote the comment part after " - " if present
+                                    If(
+                                        Find(" - ", details) > 0,
+                                        Left(details, Find(" - ", details) - 1) & " - """ & Mid(details, Find(" - ", details) + 3, Len(details)) & """",
+                                        details
+                                    )
+                                ),
+                                ""
+                            ) &
+                            Char(10)
+                        )
+                    )
+                )
+            )
+        ),
+        Value,
+        Char(10)
+    )
+)
+```
+
+> 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
+> - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED")
+> - Line 2: Staff name (e.g., "Lauren V.")
+> - Line 3: Details/comments
+>
+> The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
 
 ---
 
@@ -4596,9 +4676,9 @@ If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disab
 Patch(PrintRequests, varSelectedItem,
 {
     StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & Char(10)),
-        First(Split(ddNotesStaff.Selected.MemberName, " ")).Value & ": " &
-        txtAddNote.Text & " - " & Text(Now(), "mm/dd/yyyy")
+        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+        ": " & txtAddNote.Text & " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -4612,7 +4692,7 @@ Reset(txtAddNote);
 Notify("Note added successfully!", NotificationType.Success)
 ```
 
-> 💡 **Note Format:** Manual notes are prefixed with the staff member's first name and include a timestamp. This distinguishes them from system-generated entries like "APPROVED by..." which don't have the prefix.
+> 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
 
 ---
 
@@ -5998,7 +6078,7 @@ Set(varSelectedItem, Blank())
 
 | Property | Value |
 |----------|-------|
-| Text | `ThisItem.Author.DisplayName & " • " & Text(ThisItem.SentAt, "mmm dd, yyyy h:mm AM/PM")` |
+| Text | `With({n: ThisItem.Author.DisplayName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") & " • " & Text(ThisItem.SentAt, "m/d h:mmam/pm")` |
 | X | `recVMsgBg.X + 32` |
 | Y | `6` |
 | Width | `300` |
