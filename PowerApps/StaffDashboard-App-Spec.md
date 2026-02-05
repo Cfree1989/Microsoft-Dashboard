@@ -5979,7 +5979,7 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| Text | `"Messages - " & varSelectedItem.ReqKey` |
+| Text | `varSelectedItem.Student.DisplayName & " (" & varSelectedItem.ReqKey & ")"` |
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 15` |
 | Width | `400` |
@@ -6031,7 +6031,7 @@ Set(varSelectedItem, Blank())
 | Y | `recViewMsgModal.Y + 55` |
 | Width | `560` |
 | Height | `420` |
-| TemplateSize | `100` |
+| TemplateSize | `70` |
 | TemplatePadding | `4` |
 | ShowScrollbar | `true` |
 
@@ -6061,7 +6061,7 @@ Set(varSelectedItem, Blank())
 
 | Property | Value |
 |----------|-------|
-| Icon | `If(ThisItem.Direction.Value = "Outbound", Icon.Send, Icon.Mail)` |
+| Icon | `If(ThisItem.Direction.Value = "Outbound", Icon.ChevronRight, Icon.ChevronLeft)` |
 | X | `recVMsgBg.X + 10` |
 | Y | `8` |
 | Width | `16` |
@@ -6078,7 +6078,7 @@ Set(varSelectedItem, Blank())
 
 | Property | Value |
 |----------|-------|
-| Text | `With({n: ThisItem.Author.DisplayName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") & " • " & Text(ThisItem.SentAt, "m/d h:mmam/pm")` |
+| Text | `With({n: ThisItem.Author0.DisplayName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") & " • " & Text(ThisItem.SentAt, "m/d h:mmam/pm")` |
 | X | `recVMsgBg.X + 32` |
 | Y | `6` |
 | Width | `300` |
@@ -6198,10 +6198,14 @@ UpdateIf(
     ReadByStaff = false,
     {ReadByStaff: true}
 );
+
+// Clear NeedsAttention flag on the print request
+Patch(PrintRequests, varSelectedItem, {NeedsAttention: false});
+
 Notify("Messages marked as read", NotificationType.Success)
 ```
 
-> **Note:** This button only appears when there are unread inbound messages. After clicking, it disappears and the unread badge on the job card also updates.
+> **Note:** This button only appears when there are unread inbound messages. After clicking, it disappears, the NeedsAttention flag is cleared, and the unread badge on the job card also updates.
 
 ---
 
