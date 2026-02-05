@@ -6067,6 +6067,7 @@ Set(varSelectedItem, Blank())
 | Width | `16` |
 | Height | `16` |
 | Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))` |
+| DisplayMode | `DisplayMode.View` |
 
 ---
 
