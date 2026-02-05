@@ -1777,3 +1777,73 @@ When ready to migrate content from Moodle, for each page:
 
 > 📱 **Note for Additive page:** After migrating 3D printing content from Moodle, add the Student Print Portal app at the bottom of the page (see Step 10). This gives students both educational content and print request functionality in one place.
 
+---
+
+## Appendix A: Lab Rules Page Content
+
+Use the following content when building the Lab Rules page. Copy each section into SharePoint Text web parts.
+
+---
+
+**To ensure a safe and productive environment in the Fabrication Lab, please adhere to the following rules. For detailed hazard information and OSHA guidelines, see the Safety page.**
+
+---
+
+### General Safety Rules
+
+- **PPE Required:** Safety glasses (Z87+) at all times; hearing protection when CNC Router is running; gloves as specified for tasks.
+- **Proper Attire:** No loose hair, clothing, or jewelry. Wear long pants and closed-toed shoes.
+- **No Food or Drink:** Unsealed or uncovered food and drinks are not allowed.
+
+---
+
+### Additive/Subtractive Labs
+
+- **Authorized Access Only:** Only trained and authorized users may operate lab equipment. Do not use equipment you are not trained on.
+- **Machine Operation:**
+  - Follow all operating procedures for each machine.
+  - Do not leave machines unattended while in operation.
+  - Report malfunctioning equipment to lab staff immediately.
+- **File Submission:** See the Additive or Subtractive page for file requirements and submission procedures.
+
+---
+
+### Usage Etiquette
+
+- **Time Management:** Be mindful of time on machines. Book in advance if required and arrive on time.
+- **Shared Resources:**
+  - Do not monopolize equipment or resources.
+  - Return tools and materials to their proper place.
+  - Do not remove anything from the lab, including unpaid prints.
+  - 3D prints and milled work are lab property until paid for.
+  - Do not place bags, drinks, or food on machines.
+- **Lab Access:** Use the lab during designated hours only. No unauthorized persons.
+
+---
+
+### Communication and Reporting
+
+- Report issues or concerns to lab staff promptly.
+- Provide feedback to help improve lab operations.
+
+---
+
+### Housekeeping
+
+- Keep work areas clean and free of debris.
+- Dispose of waste properly; address spills immediately.
+- See Safety page for detailed spill and chemical disposal procedures.
+
+---
+
+### Emergency Procedures
+
+- **Emergency Exits:** Know the location of exits and evacuation routes.
+- **Fire Extinguishers:** Know their locations and how to use them.
+- **First Aid:** Be aware of first aid kit locations.
+- **Emergency Contacts:** See Safety page for contact numbers.
+
+---
+
+**Stay safe and happy fabricating!**
+
