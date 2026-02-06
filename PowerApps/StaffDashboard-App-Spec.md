@@ -3043,6 +3043,8 @@ scrDashboard
 └── conDetailsModal            ← CONTAINER (set Visible here only!)
     ├── btnDetailsConfirm      ← Save Changes button
     ├── btnDetailsCancel       ← Cancel button
+    ├── txtDetailsTransaction  ← Transaction number input (only shows for paid items)
+    ├── lblDetailsTransLabel   ← "Transaction #:"
     ├── lblDetailsCostValue    ← Auto-calculated cost display
     ├── lblDetailsCostLabel    ← "Calculated Cost:"
     ├── txtDetailsHours        ← Hours number input
@@ -3479,11 +3481,51 @@ With(
 
 ---
 
+### Transaction Number Label (lblDetailsTransLabel)
+
+62. Click **+ Insert** → **Text label**.
+63. **Rename it:** `lblDetailsTransLabel`
+64. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Transaction #:"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 395` |
+| Width | `130` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Visible | `varSelectedItem.Status.Value in ["Paid & Picked Up", "Archived"]` |
+
+> 💡 **Conditional visibility:** This field only appears on "Paid & Picked Up" and "Archived" tabs where a transaction number has been recorded. This allows staff to correct typos in the transaction number.
+
+---
+
+### Transaction Number Input (txtDetailsTransaction)
+
+65. Click **+ Insert** → **Text input**.
+66. **Rename it:** `txtDetailsTransaction`
+67. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 418` |
+| Width | `200` |
+| Height | `36` |
+| HintText | `"e.g., 123"` |
+| Default | `Coalesce(varSelectedItem.TransactionNumber, "")` |
+| Visible | `varSelectedItem.Status.Value in ["Paid & Picked Up", "Archived"]` |
+
+> 💡 **Why this matters:** If a transaction number was entered incorrectly during payment recording, staff can fix it here without having to undo the entire payment process.
+
+---
+
 ### Cancel Button (btnDetailsCancel)
 
-62. Click **+ Insert** → **Button**.
-63. **Rename it:** `btnDetailsCancel`
-64. Set properties:
+68. Click **+ Insert** → **Button**.
+69. **Rename it:** `btnDetailsCancel`
+70. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3495,7 +3537,7 @@ With(
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
 
-65. Set **OnSelect:**
+71. Set **OnSelect:**
 
 ```powerfx
 Set(varShowDetailsModal, 0);
@@ -3505,16 +3547,17 @@ Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
-Reset(txtDetailsHours)
+Reset(txtDetailsHours);
+Reset(txtDetailsTransaction)
 ```
 
 ---
 
 ### Save Changes Button (btnDetailsConfirm)
 
-66. Click **+ Insert** → **Button**.
-67. **Rename it:** `btnDetailsConfirm`
-68. Set properties:
+72. Click **+ Insert** → **Button**.
+73. **Rename it:** `btnDetailsConfirm`
+74. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -3526,7 +3569,7 @@ Reset(txtDetailsHours)
 | Fill | `RGBA(0, 120, 212, 1)` |
 | Color | `Color.White` |
 
-69. Set **DisplayMode:**
+75. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -3537,16 +3580,17 @@ If(
         (!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value) ||
         (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value) ||
         (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0)) ||
-        (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0))
+        (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0)) ||
+        (!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""))
     ),
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> 💡 Button is enabled only when staff is selected AND at least one field is being changed.
+> 💡 Button is enabled only when staff is selected AND at least one field is being changed (including transaction number for paid items).
 
-70. Set **OnSelect:**
+76. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -3570,6 +3614,8 @@ If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
 If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
+If(!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Transaction#: " & Coalesce(varSelectedItem.TransactionNumber, "(none)") & " → " & txtDetailsTransaction.Text));
 
 // Update SharePoint item
 // Using LookUp to get fresh record avoids concurrency conflicts
@@ -3583,6 +3629,7 @@ Patch(
         EstimatedWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight),
         EstimatedTime: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstimatedTime),
         EstimatedCost: varNewCost,
+        TransactionNumber: If(!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""), txtDetailsTransaction.Text, varSelectedItem.TransactionNumber),
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
         LastActionBy: {
             Claims: "i:0#.f|membership|" & ddDetailsStaff.Selected.MemberEmail,
@@ -3624,6 +3671,7 @@ Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
 Reset(txtDetailsHours);
+Reset(txtDetailsTransaction);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
@@ -3631,6 +3679,8 @@ Set(varLoadingMessage, "")
 ```
 
 > 💡 **Cost recalculation:** When weight or method changes, cost is automatically recalculated using: `Max(varMinimumCost, weight × rate)` where rate is `varFilamentRate` for Filament and `varResinRate` for Resin (configured in App.OnStart)
+
+> 💡 **Transaction number editing:** The transaction number field only appears for items that have already been paid (have a TransactionNumber value). This allows staff to correct typos without undoing the entire payment.
 
 ---
 
