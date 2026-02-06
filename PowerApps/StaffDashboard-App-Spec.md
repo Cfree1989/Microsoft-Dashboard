@@ -2612,7 +2612,7 @@ IfError(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
             "APPROVED by " & 
             With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-            ": Weight=" & txtEstimatedWeight.Text & "g, Cost=$" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+            ": " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
             If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
             " - " & Text(Now(), "m/d h:mmam/pm")
         )
@@ -3479,13 +3479,13 @@ Set(varChangeDesc, "");
 If(!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value,
     Set(varChangeDesc, "Method: " & varSelectedItem.Method.Value & " → " & ddDetailsMethod.Selected.Value));
 If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value,
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value));
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value));
 If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
 If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
 If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0),
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & " | ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
 
 // Update SharePoint item
 Patch(
@@ -4535,6 +4535,8 @@ If(
 > - Line 3: Details/comments
 >
 > The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
+>
+> ⚠️ **Critical — use `Last(Split())` for timestamp extraction.** Do NOT try to manually calculate the position of the last ` - ` using `Mid`/`Find`/`Len` arithmetic (e.g., `Len(text) - Find(" - ", Mid(text, Len(text) - 20, 20)) - 18`). This approach is error-prone because the offset math must account for the `Mid` start position, the 1-based indexing of `Find`, and the 3-character length of ` - `. Getting any of these wrong causes `datetime` to absorb part of the note content and `details` to be truncated — producing garbled output where the tail of the details text appears on the datetime line. The `Last(Split(text, " - "))` approach avoids all of this by letting Power Apps find the last segment automatically.
 
 ---
 
@@ -4693,6 +4695,8 @@ Notify("Note added successfully!", NotificationType.Success)
 ```
 
 > 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
+>
+> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
 ---
 
