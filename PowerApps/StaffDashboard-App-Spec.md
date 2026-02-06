@@ -26,7 +26,8 @@
 14. [Building the Archive Modal](#step-12-building-the-archive-modal)
 15. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
 16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
-17. [Building the Notes Modal](#step-13-building-the-notes-modal)
+17. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
+18. [Building the Notes Modal](#step-13-building-the-notes-modal)
 18. [Adding Search and Filters](#step-14-adding-search-and-filters)
 18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
 19. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
@@ -339,6 +340,7 @@ Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
 Set(varShowNotesModal, 0);
 Set(varShowViewMessagesModal, 0);
+Set(varShowRevertModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -392,6 +394,7 @@ Set(varLoadingMessage, "")
 | `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varShowNotesModal` | ID of item for notes modal (0=hidden) | Number |
 | `varShowViewMessagesModal` | ID of item for view messages modal (0=hidden) | Number |
+| `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
@@ -551,6 +554,19 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblDetailsTitle
         recDetailsModal
         recDetailsOverlay
+    ▼ conRevertModal                  ← Step 12D (Revert Status Modal Container)
+        btnRevertConfirm
+        btnRevertCancel
+        txtRevertReason
+        lblRevertReasonLabel
+        ddRevertTarget
+        lblRevertTargetLabel
+        lblRevertCurrentStatus
+        ddRevertStaff
+        lblRevertStaffLabel
+        lblRevertTitle
+        recRevertModal
+        recRevertOverlay
     ▼ conArchiveModal                 ← Step 12 (Archive Modal Container)
         btnArchiveConfirm
         btnArchiveCancel
@@ -610,6 +626,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnViewMessages               ← Step 16B (opens View Messages Modal)
         lblMessagesHeader             ← Step 16B
         btnFiles                      ← Step 16
+        btnRevert                     ← Step 9 (revert status for Printing/Completed)
         btnEditDetails                ← Step 12B
         btnPickedUp                   ← Step 9
         btnComplete                   ← Step 9
@@ -1629,7 +1646,14 @@ Set(varSelectedItem, ThisItem)
 16. Set **OnSelect:**
 
 ```powerfx
-Patch(PrintRequests, ThisItem, {
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Starting print...");
+
+// Store reference to current item before async operations
+Set(varCurrentItem, ThisItem);
+
+Patch(PrintRequests, varCurrentItem, {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Printing"),
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionAt: Now(),
@@ -1644,17 +1668,23 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),      // RequestID
-    "Status Change",        // Action
-    "Status",               // FieldName
-    "Printing",             // NewValue
-    varMeEmail              // ActorEmail
+    Text(varCurrentItem.ID),      // RequestID
+    "Status Change",              // Action
+    "Status",                     // FieldName
+    "Printing",                   // NewValue
+    varMeEmail                    // ActorEmail
 );
 
-Notify("Print started!", NotificationType.Success)
+Notify("Print started!", NotificationType.Success);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 > 💡 **Flow C Parameters:** Pass 5 parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The flow auto-populates ClientApp ("Power Apps") and Notes.
+
+> 💡 **Loading Overlay:** The loading state prevents double-clicks during the Patch and Flow operations, ensuring data consistency.
 
 ### Complete Printing Button (btnComplete)
 
@@ -1676,7 +1706,14 @@ Notify("Print started!", NotificationType.Success)
 20. Set **OnSelect:**
 
 ```powerfx
-Patch(PrintRequests, ThisItem, {
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Completing print...");
+
+// Store reference to current item before async operations
+Set(varCurrentItem, ThisItem);
+
+Patch(PrintRequests, varCurrentItem, {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionAt: Now(),
@@ -1691,14 +1728,18 @@ Patch(PrintRequests, ThisItem, {
 });
 
 'Flow-(C)-Action-LogAction'.Run(
-    Text(ThisItem.ID),      // RequestID
-    "Status Change",        // Action
-    "Status",               // FieldName
-    "Completed",            // NewValue
-    varMeEmail              // ActorEmail
+    Text(varCurrentItem.ID),      // RequestID
+    "Status Change",              // Action
+    "Status",                     // FieldName
+    "Completed",                  // NewValue
+    varMeEmail                    // ActorEmail
 );
 
-Notify("Marked as completed!", NotificationType.Success)
+Notify("Marked as completed!", NotificationType.Success);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 ### Picked Up Button (btnPickedUp)
@@ -1749,7 +1790,7 @@ Set(varSelectedItem, ThisItem)
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
 | Size | `9` |
-| Visible | `Not(ThisItem.Status.Value in ["Pending", "Uploaded"])` |
+| Visible | `ThisItem.Status.Value <> "Pending"` |
 
 28. Set **OnSelect:**
 
@@ -1758,7 +1799,47 @@ Set(varShowDetailsModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **Visibility:** Available on ALL status tabs except Pending and Uploaded. New submissions need to be reviewed and assigned estimates first before details can be edited. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
+> 💡 **Visibility:** Available on ALL status tabs except Pending. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
+
+### Revert Status Button (btnRevert)
+
+29. Click **+ Insert** → **Button**.
+30. **Rename it:** `btnRevert`
+31. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"↩️"` |
+| X | `Parent.TemplateWidth - 70` |
+| Y | `6` |
+| Width | `28` |
+| Height | `28` |
+| Fill | `Transparent` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| HoverFill | `RGBA(0, 0, 0, 0.05)` |
+| PressedFill | `RGBA(0, 0, 0, 0.1)` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `14` |
+| RadiusTopRight | `14` |
+| RadiusBottomLeft | `14` |
+| RadiusBottomRight | `14` |
+| Size | `12` |
+| PaddingTop | `0` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| Visible | `ThisItem.Status.Value in ["Printing", "Completed"]` |
+
+32. Set **OnSelect:**
+
+```powerfx
+Set(varShowRevertModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
+
+> 💡 **Styling:** This is a subtle icon-only button with transparent background, similar to the lightbulb icon. It only shows a light hover effect when moused over, keeping the card clean.
+
+> 💡 **Purpose:** Allows staff to move a job backwards in the workflow (e.g., from "Printing" back to "Ready to Print"). Opens the Revert Modal (Step 12D) where staff must provide a reason for the status change.
 
 ---
 
@@ -2951,9 +3032,9 @@ Set(varLoadingMessage, "")
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
-> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending and Uploaded statuses). Changing Method automatically resets the Printer dropdown to show compatible printers only.
+> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). Changing Method automatically resets the Printer dropdown to show compatible printers only.
 
-> ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending and Uploaded. New submissions need initial review and estimate assignment before details can be edited. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
+> ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
 
 ### Control Hierarchy (Container-Based)
 
@@ -4243,6 +4324,363 @@ Set(varLoadingMessage, "")
 > - Final pickup (unchecked) records to FinalWeight/FinalCost/StudentOwnMaterial fields
 >
 > 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
+
+---
+
+# STEP 12D: Building the Revert Status Modal
+
+**What you're doing:** Creating a modal that allows staff to move a job backwards in the workflow (e.g., from "Printing" back to "Ready to Print" if there's a printer issue). This is useful when prints fail, need to be redone, or were accidentally moved forward.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Valid Revert Transitions
+
+| Current Status | Can Revert To | Use Case |
+|----------------|---------------|----------|
+| Printing | Ready to Print | Printer jam, wrong filament, need to reassign |
+| Completed | Printing | Print has defect, needs reprint |
+| Completed | Ready to Print | Complete redo needed |
+
+> ⚠️ **Note:** "Paid & Picked Up" cannot be reverted since a financial transaction has been completed.
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conRevertModal               ← CONTAINER (set Visible here only!)
+    ├── btnRevertConfirm         ← Confirm Revert button
+    ├── btnRevertCancel          ← Cancel button
+    ├── txtRevertReason          ← Reason text input (required)
+    ├── lblRevertReasonLabel     ← "Reason for Revert: *"
+    ├── ddRevertTarget           ← Target status dropdown
+    ├── lblRevertTargetLabel     ← "Revert To: *"
+    ├── lblRevertCurrentStatus   ← Shows current status
+    ├── ddRevertStaff            ← Staff dropdown
+    ├── lblRevertStaffLabel      ← "Performing Action As: *"
+    ├── lblRevertTitle           ← "Revert Status - REQ-00042"
+    ├── recRevertModal           ← White modal box
+    └── recRevertOverlay         ← Dark semi-transparent background
+```
+
+---
+
+### Modal Container (conRevertModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conRevertModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowRevertModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recRevertOverlay)
+
+5. With `conRevertModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recRevertOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+
+---
+
+### Modal Content Box (recRevertModal)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recRevertModal`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 450) / 2` |
+| Y | `(Parent.Height - 380) / 2` |
+| Width | `450` |
+| Height | `380` |
+| Fill | `Color.White` |
+
+---
+
+### Modal Title (lblRevertTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblRevertTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Revert Status - " & varSelectedItem.ReqKey` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 15` |
+| Width | `410` |
+| Height | `30` |
+| Size | `16` |
+| FontWeight | `FontWeight.Bold` |
+| Color | `RGBA(50, 49, 48, 1)` |
+
+---
+
+### Staff Dropdown Label (lblRevertStaffLabel)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblRevertStaffLabel`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 55` |
+| Width | `200` |
+| Height | `20` |
+| Size | `11` |
+| Color | `RGBA(50, 49, 48, 1)` |
+
+---
+
+### Staff Dropdown (ddRevertStaff)
+
+17. Click **+ Insert** → **Combo box**.
+18. **Rename it:** `ddRevertStaff`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 75` |
+| Width | `410` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+
+> ⚠️ **Important:** You must **Run OnStart** first before setting DisplayFields. Otherwise Power Apps will auto-change it to `["ComplianceAssetId"]` because it doesn't recognize the collection columns yet.
+
+---
+
+### Current Status Display (lblRevertCurrentStatus)
+
+20. Click **+ Insert** → **Text label**.
+21. **Rename it:** `lblRevertCurrentStatus`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Current Status: " & varSelectedItem.Status.Value` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 120` |
+| Width | `410` |
+| Height | `25` |
+| Size | `12` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `RGBA(107, 105, 214, 1)` |
+
+---
+
+### Target Status Label (lblRevertTargetLabel)
+
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblRevertTargetLabel`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Revert To: *"` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 150` |
+| Width | `200` |
+| Height | `20` |
+| Size | `11` |
+| Color | `RGBA(50, 49, 48, 1)` |
+
+---
+
+### Target Status Dropdown (ddRevertTarget)
+
+26. Click **+ Insert** → **Drop down**.
+27. **Rename it:** `ddRevertTarget`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 170` |
+| Width | `410` |
+| Height | `35` |
+
+29. Set **Items:**
+
+```powerfx
+If(
+    varSelectedItem.Status.Value = "Printing",
+    Table({Value: "Ready to Print"}),
+    varSelectedItem.Status.Value = "Completed",
+    Table({Value: "Printing"}, {Value: "Ready to Print"}),
+    Blank()
+)
+```
+
+> 💡 **Dynamic Options:** The dropdown shows only valid revert targets based on the current status. "Printing" can only go back to "Ready to Print", while "Completed" can go back to either "Printing" or "Ready to Print".
+
+---
+
+### Reason Label (lblRevertReasonLabel)
+
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblRevertReasonLabel`
+32. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Reason for Revert: *"` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 215` |
+| Width | `200` |
+| Height | `20` |
+| Size | `11` |
+| Color | `RGBA(50, 49, 48, 1)` |
+
+---
+
+### Reason Text Input (txtRevertReason)
+
+33. Click **+ Insert** → **Text input**.
+34. **Rename it:** `txtRevertReason`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `""` |
+| HintText | `"e.g., Printer jammed, need to restart print"` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 235` |
+| Width | `410` |
+| Height | `70` |
+| Mode | `TextMode.MultiLine` |
+
+---
+
+### Cancel Button (btnRevertCancel)
+
+36. Click **+ Insert** → **Button**.
+37. **Rename it:** `btnRevertCancel`
+38. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recRevertModal.X + 20` |
+| Y | `recRevertModal.Y + 325` |
+| Width | `195` |
+| Height | `40` |
+| Fill | `RGBA(243, 242, 241, 1)` |
+| Color | `RGBA(50, 49, 48, 1)` |
+
+39. Set **OnSelect:**
+
+```powerfx
+Set(varShowRevertModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddRevertStaff);
+Reset(ddRevertTarget);
+Reset(txtRevertReason)
+```
+
+---
+
+### Confirm Button (btnRevertConfirm)
+
+40. Click **+ Insert** → **Button**.
+41. **Rename it:** `btnRevertConfirm`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"↩️ Confirm Revert"` |
+| X | `recRevertModal.X + 235` |
+| Y | `recRevertModal.Y + 325` |
+| Width | `195` |
+| Height | `40` |
+| Fill | `RGBA(138, 136, 134, 1)` |
+| Color | `Color.White` |
+| DisplayMode | `If(IsBlank(ddRevertStaff.Selected) Or IsBlank(txtRevertReason.Text) Or Len(Trim(txtRevertReason.Text)) < 5, DisplayMode.Disabled, DisplayMode.Edit)` |
+
+> 💡 **Validation:** The confirm button is disabled until: (1) a staff member is selected, and (2) at least 5 characters are entered in the reason field. This ensures proper documentation of who performed the action and why.
+
+43. Set **OnSelect:**
+
+```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Reverting status...");
+
+// Update SharePoint item
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+    Status: LookUp(Choices(PrintRequests.Status), Value = ddRevertTarget.Selected.Value),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionAt: Now(),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & ddRevertStaff.Selected.MemberEmail,
+        Discipline: "",
+        DisplayName: ddRevertStaff.Selected.MemberName,
+        Email: ddRevertStaff.Selected.MemberEmail,
+        JobTitle: "",
+        Picture: ""
+    },
+    StaffNotes: Concatenate(
+        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        "REVERTED from " & varSelectedItem.Status.Value & " to " & ddRevertTarget.Selected.Value &
+        " by " & 
+        With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+        " on " & Text(Now(), "mm/dd/yy") & ": " & txtRevertReason.Text
+    )
+});
+
+// Log to audit flow
+'Flow-(C)-Action-LogAction'.Run(
+    Text(varSelectedItem.ID),                    // RequestID
+    "Status Change",                             // Action
+    "Status",                                    // FieldName
+    ddRevertTarget.Selected.Value,               // NewValue
+    ddRevertStaff.Selected.MemberEmail           // ActorEmail
+);
+
+Notify(
+    "Status reverted to " & ddRevertTarget.Selected.Value, 
+    NotificationType.Success
+);
+
+// Close modal and reset
+Set(varShowRevertModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddRevertStaff);
+Reset(ddRevertTarget);
+Reset(txtRevertReason);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
+```
+
+> 💡 **Audit Trail:** The revert action is logged in two places:
+> - **StaffNotes field:** Human-readable entry like "REVERTED from Printing to Ready to Print by John D. on 02/06/26: Printer jammed"
+> - **Flow C audit log:** Machine-readable entry for reporting and compliance
 
 ---
 
