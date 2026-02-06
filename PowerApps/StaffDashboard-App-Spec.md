@@ -2097,7 +2097,8 @@ Set(varRejectionReasons,
 );
 
 // Update the SharePoint item
-Patch(PrintRequests, varSelectedItem, {
+// Using LookUp to get fresh record avoids concurrency conflicts
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
@@ -2591,8 +2592,9 @@ Set(varCalculatedCost,
 
 // Update SharePoint item with error handling
 // ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names
+// Using LookUp to get fresh record avoids concurrency conflicts
 IfError(
-    Patch(PrintRequests, varSelectedItem, {
+    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
         NeedsAttention: false,
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
@@ -2894,7 +2896,8 @@ Set(varIsLoading, true);
 Set(varLoadingMessage, "Archiving request...");
 
 // Update SharePoint item
-Patch(PrintRequests, varSelectedItem, {
+// Using LookUp to get fresh record avoids concurrency conflicts
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
     NeedsAttention: false,
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
@@ -3488,9 +3491,10 @@ If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(va
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
 
 // Update SharePoint item
+// Using LookUp to get fresh record avoids concurrency conflicts
 Patch(
     PrintRequests,
-    varSelectedItem,
+    LookUp(PrintRequests, ID = varSelectedItem.ID),
     {
         Method: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected, varSelectedItem.Method),
         Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
@@ -4142,10 +4146,11 @@ Set(varPaymentRecord,
 );
 
 // Update SharePoint item - conditional on partial pickup
+// Using LookUp to get fresh record avoids concurrency conflicts
 If(
     chkPartialPickup.Value,
     // PARTIAL PICKUP: Keep status as Completed, append to PaymentNotes
-    Patch(PrintRequests, varSelectedItem, {
+    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         // Status stays "Completed" - don't change it
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
         PaymentNotes: Concatenate(
@@ -4168,7 +4173,7 @@ If(
         )
     }),
     // FULL PICKUP: Change status to Paid & Picked Up, record final details
-    Patch(PrintRequests, varSelectedItem, {
+    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
         TransactionNumber: txtPaymentTransaction.Text,
@@ -4675,7 +4680,8 @@ If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disab
 
 ```powerfx
 // Append the new note to StaffNotes with staff name and timestamp
-Patch(PrintRequests, varSelectedItem,
+// Using LookUp to get fresh record avoids concurrency conflicts
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID),
 {
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
@@ -5798,9 +5804,10 @@ Patch(
 );
 
 // Update PrintRequest to mark last action
+// Using LookUp to get fresh record avoids concurrency conflicts
 Patch(
     PrintRequests,
-    varSelectedItem,
+    LookUp(PrintRequests, ID = varSelectedItem.ID),
     {
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
         LastActionBy: {
@@ -6205,7 +6212,8 @@ UpdateIf(
 );
 
 // Clear NeedsAttention flag on the print request
-Patch(PrintRequests, varSelectedItem, {NeedsAttention: false});
+// Using LookUp to get fresh record avoids concurrency conflicts
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {NeedsAttention: false});
 
 Notify("Messages marked as read", NotificationType.Success)
 ```
