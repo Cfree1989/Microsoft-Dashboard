@@ -81,14 +81,14 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| App Title | `Font.'Segoe UI'` | 18 | Semibold |
-| Screen Headers | `Font.'Segoe UI'` | 18 | Semibold |
-| Section Headers | `Font.'Segoe UI'` | 12 | Semibold |
-| Body Text | `Font.'Segoe UI'` | 11 | Normal |
-| Labels/Hints | `Font.'Segoe UI'` | 10 | Normal |
-| Buttons | `Font.'Segoe UI'` | 12-14 | Semibold |
+| App Title | `Font.'Open Sans'` | 18 | Semibold |
+| Screen Headers | `Font.'Open Sans'` | 18 | Semibold |
+| Section Headers | `Font.'Open Sans'` | 12 | Semibold |
+| Body Text | `Font.'Open Sans'` | 11 | Normal |
+| Labels/Hints | `Font.'Open Sans'` | 10 | Normal |
+| Buttons | `Font.'Open Sans'` | 12-14 | Semibold |
 
-> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the app. Use `varAppFont` variable instead of hardcoding.
+> ⚠️ **Consistency Rule:** Always use `Font.'Open Sans'` throughout the app. Use `varAppFont` variable instead of hardcoding.
 
 ### Color Palette (Matching Staff Dashboard)
 
@@ -268,7 +268,7 @@ Set(varMinimumCost, 3.00);
 // Matches Staff Dashboard styling - change these once to update the entire app!
 
 // --- FONT ---
-Set(varAppFont, Font.'Segoe UI');
+Set(varAppFont, Font.'Open Sans');
 
 // --- COLORS: Primary Palette (Staff Dashboard) ---
 Set(varColorPrimary, RGBA(56, 96, 178, 1));        // Primary Blue - buttons, active elements
@@ -350,7 +350,7 @@ Use these variables in your control properties instead of hardcoding values. Thi
 | Instead of... | Use... |
 |---------------|--------|
 | `RGBA(70, 29, 124, 1)` | `varColorPrimary` |
-| `Font.'Segoe UI'` | `varAppFont` |
+| `Font.'Open Sans'` | `varAppFont` |
 | `RadiusTopLeft: 8` | `RadiusTopLeft: varRadiusMedium` |
 | `Height: 45` | `Height: varInputHeight` |
 
@@ -358,7 +358,7 @@ Use these variables in your control properties instead of hardcoding values. Thi
 
 ```powerfx
 // Before (hardcoded)
-Font: Font.'Segoe UI'
+Font: Font.'Open Sans'
 Height: 45
 BorderColor: RGBA(200, 200, 200, 1)
 FocusedBorderColor: RGBA(70, 29, 124, 1)
@@ -456,7 +456,9 @@ This app uses a **container-based architecture** for clean organization and easy
 ▼ App
 ▼ scrHome                           ← Screen 1: Landing/Welcome Screen (StartScreen)
     ▼ conNavBarHome                 ← (created 5th - TOP of tree = in front)
-        lblPortalName               ← "Student Portal" (created 2nd inside)
+        btnNavMyRequestsHome        ← "My Requests" (created 4th - top)
+        btnNavSubmitHome            ← "New Request" (created 3rd)
+        btnNavHomeActive            ← "Home" active (created 2nd)
         recNavBgHome                ← Dark background (created 1st inside - behind)
     lblHelpText                     ← "Need help?" (created 4th)
     ▼ conActionCards                ← (created 3rd)
@@ -989,23 +991,88 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 67. **Rename it:** `recNavBgHome`
 68. Set: **X:** `0`, **Y:** `0`, **Width:** `Parent.Width`, **Height:** `Parent.Height`, **Fill:** `varColorHeader`
 
-#### Add Portal Name Label
+#### Add Home Nav Button (Active)
 
-69. Click **+ Insert** → **Text label**.
-70. **Rename it:** `lblPortalName`
+69. Click **+ Insert** → **Button**.
+70. **Rename it:** `btnNavHomeActive`
 71. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Student Portal"` |
-| X | `0` |
+| Text | `"Home"` |
+| X | `varSpacingXL` |
 | Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `Parent.Width` |
-| Height | `20` |
+| Width | `(Parent.Width - 80) / 3` |
+| Height | `varButtonHeightSmall` |
+| Fill | `varColorInfo` |
+| Color | `Color.White` |
 | Font | `varAppFont` |
-| Size | `11` |
-| Color | `RGBA(150, 150, 150, 1)` |
-| Align | `Align.Center` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+72. Set **OnSelect:** `// Already on this screen`
+
+#### Add New Request Nav Button (Inactive)
+
+73. Click **+ Insert** → **Button**.
+74. **Rename it:** `btnNavSubmitHome`
+75. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"New Request"` |
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 80) / 3` |
+| Height | `varButtonHeightSmall` |
+| Fill | `RGBA(60, 60, 65, 1)` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Normal` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+76. Set **OnSelect:**
+
+```powerfx
+Navigate(scrSubmit, ScreenTransition.Fade)
+```
+
+#### Add My Requests Nav Button (Inactive)
+
+77. Click **+ Insert** → **Button**.
+78. **Rename it:** `btnNavMyRequestsHome`
+79. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"My Requests"` |
+| X | `Parent.Width - Self.Width - varSpacingXL` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `(Parent.Width - 80) / 3` |
+| Height | `varButtonHeightSmall` |
+| Fill | `RGBA(60, 60, 65, 1)` |
+| Color | `Color.White` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Normal` |
+| Size | `12` |
+| RadiusTopLeft | `varRadiusSmall` |
+| RadiusTopRight | `varRadiusSmall` |
+| RadiusBottomLeft | `varRadiusSmall` |
+| RadiusBottomRight | `varRadiusSmall` |
+
+80. Set **OnSelect:**
+
+```powerfx
+Navigate(scrMyRequests, ScreenTransition.Fade)
+```
 
 ---
 
@@ -1016,7 +1083,9 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 ```
 ▼ scrHome
     ▼ conNavBarHome                 ← created last (top = in front)
-        lblPortalName
+        btnNavMyRequestsHome
+        btnNavSubmitHome
+        btnNavHomeActive
         recNavBgHome
     lblHelpText
     ▼ conActionCards
@@ -2112,7 +2181,7 @@ Now add controls **inside** the gallery template.
 | Y | `12` |
 | Width | `150` |
 | Height | `24` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
 | Color | `RGBA(50, 50, 50, 1)` |
@@ -2226,7 +2295,7 @@ Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find
 | Height | `45` |
 | Fill | `RGBA(16, 124, 16, 1)` |
 | Color | `Color.White` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `13` |
 | RadiusTopLeft | `6` |
@@ -2373,7 +2442,7 @@ ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected
 | Y | `recConfirmModal.Y + 20` |
 | Width | `recConfirmModal.Width - 40` |
 | Height | `35` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `18` |
 | Color | `RGBA(16, 124, 16, 1)` |
@@ -2406,7 +2475,7 @@ ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected
 | Y | `recConfirmModal.Y + 100` |
 | Width | `recConfirmModal.Width - 40` |
 | Height | `50` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `28` |
 | Color | `varColorPrimary` |
@@ -2611,7 +2680,7 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | Y | `recCancelModal.Y + 20` |
 | Width | `recCancelModal.Width - 40` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `18` |
 | Color | `RGBA(209, 52, 56, 1)` |
@@ -2719,33 +2788,29 @@ Set(varSelectedItem, Blank())
 
 # STEP 12: Adding Navigation
 
-Navigation is built into each screen. The Home screen uses card buttons, while other screens use a bottom navigation bar.
+Navigation is built into each screen. All three screens use a consistent bottom navigation bar with Home, New Request, and My Requests buttons. The active screen's button is highlighted with `varColorInfo`.
 
 ### Screen Navigation Summary
 
-| Screen | Navigation | Actions |
-|--------|------------|---------|
-| `scrHome` | Two card buttons | `btnGetStarted` → `scrSubmit`, `btnViewRequests` → `scrMyRequests` |
-| `scrSubmit` | Bottom nav bar | `btnNavHome` → `scrHome`, `btnNavMyRequests` → `scrMyRequests` |
-| `scrMyRequests` | Bottom nav bar | `btnNavHome2` → `scrHome`, `btnNavSubmit2` → `scrSubmit` |
+| Screen | Navigation | Active Button | Actions |
+|--------|------------|---------------|---------|
+| `scrHome` | Bottom nav bar (`conNavBarHome`) | `btnNavHomeActive` (Home) | `btnNavSubmitHome` → `scrSubmit`, `btnNavMyRequestsHome` → `scrMyRequests` |
+| `scrSubmit` | Bottom nav bar (`conNavBar`) | `btnNavSubmit` (New Request) | `btnNavHome` → `scrHome`, `btnNavMyRequests` → `scrMyRequests` |
+| `scrMyRequests` | Bottom nav bar (`conNavBar2`) | `btnNavMyRequests2` (My Requests) | `btnNavHome2` → `scrHome`, `btnNavSubmit2` → `scrSubmit` |
 
-### Navigation Bar Updates (scrSubmit and scrMyRequests)
+> The Home screen also has card buttons (`btnGetStarted` → `scrSubmit`, `btnViewRequests` → `scrMyRequests`) for quick navigation from the landing page.
 
-The navigation bars on scrSubmit and scrMyRequests should include a Home button. Update them:
+### Navigation Bar Consistency
 
-#### On scrSubmit - Add Home Button
+All three screens share the same bottom nav bar pattern:
 
-1. Add a button `btnNavHome` to `conNavBar`:
-   - **Text:** `"Home"`
-   - **OnSelect:** `Navigate(scrHome, ScreenTransition.Fade)`
-   - Position it to the left of the existing buttons
+| Element | Left Button | Center Button | Right Button |
+|---------|-------------|---------------|--------------|
+| Text | `"Home"` | `"New Request"` | `"My Requests"` |
+| Active Fill | `varColorInfo` | `varColorInfo` | `varColorInfo` |
+| Inactive Fill | `RGBA(60, 60, 65, 1)` | `RGBA(60, 60, 65, 1)` | `RGBA(60, 60, 65, 1)` |
 
-#### On scrMyRequests - Add Home Button
-
-2. Add a button `btnNavHome2` to `conNavBar2`:
-   - **Text:** `"Home"`
-   - **OnSelect:** `Navigate(scrHome, ScreenTransition.Fade)`
-   - Position it to the left of the existing buttons
+The active button on each screen uses `varColorInfo` fill and `FontWeight.Semibold`, while inactive buttons use the dark gray fill and `FontWeight.Normal`.
 
 ### Set Default Screen
 
@@ -3096,7 +3161,7 @@ Set(varResinRate, 0.20);
 Set(varMinimumCost, 3.00);
 
 // === STYLING ===
-Set(varAppFont, Font.'Segoe UI');
+Set(varAppFont, Font.'Open Sans');
 
 // === STATUS COLORS ===
 Set(varStatusColors, Table(

@@ -86,14 +86,14 @@ This app follows consistent design patterns for a professional appearance:
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| App Title | `Font.'Segoe UI'` | 18 | Semibold |
-| Modal Titles | `Font.'Segoe UI'` | 20 | Semibold |
-| Section Headers | `Font.'Segoe UI'` | 11-12 | Semibold |
-| Body Text | `Font.'Segoe UI'` | 10-11 | Normal |
-| Labels/Hints | `Font.'Segoe UI'` | 8-10 | Normal |
-| Buttons | `Font.'Segoe UI'` | 10-13 | Normal |
+| App Title | `Font.'Open Sans'` | 18 | Semibold |
+| Modal Titles | `Font.'Open Sans'` | 20 | Semibold |
+| Section Headers | `Font.'Open Sans'` | 11-12 | Semibold |
+| Body Text | `Font.'Open Sans'` | 10-11 | Normal |
+| Labels/Hints | `Font.'Open Sans'` | 8-10 | Normal |
+| Buttons | `Font.'Open Sans'` | 10-13 | Normal |
 
-> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the app. Avoid mixing fonts like `Font.'Open Sans'` — stick to the Microsoft design language.
+> ⚠️ **Consistency Rule:** Always use `Font.'Open Sans'` throughout the app. Avoid mixing fonts like `Font.'Open Sans'` — stick to the Microsoft design language.
 
 ### Color Palette
 
@@ -355,7 +355,7 @@ Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
 // === STYLING / THEMING ===
 // Centralized font setting - use varAppFont in controls for easy bulk updates
-Set(varAppFont, Font.'Segoe UI');
+Set(varAppFont, Font.'Open Sans');
 
 Set(varLoadingMessage, "")
 ```
@@ -400,7 +400,7 @@ Set(varLoadingMessage, "")
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
 
-> 💡 **Styling Tip:** Use `varAppFont` in control Font properties instead of hardcoding `Font.'Segoe UI'`. This lets you change the app-wide font with a single edit in OnStart.
+> 💡 **Styling Tip:** Use `varAppFont` in control Font properties instead of hardcoding `Font.'Open Sans'`. This lets you change the app-wide font with a single edit in OnStart.
 
 > ⚠️ **Important:** Variables holding records (`varSelectedItem`, `varSelectedActor`) must be initialized with `LookUp(TableName, false)` instead of `Blank()`. This tells PowerApps the expected data type while returning an empty value.
 
@@ -712,7 +712,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 | Y | `15` |
 | Width | `300` |
 | Height | `30` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 | Size | `18` |
 | Color | `Color.White` |
 
@@ -989,7 +989,7 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Y | `8` |
 | Width | `Parent.TemplateWidth - 50` |
 | Height | `24` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 | Size | `14` |
 | Color | `RGBA(50, 50, 50, 1)` |
 
@@ -1221,7 +1221,7 @@ Set(varSelectedItem, ThisItem)
 | Y | `165` |
 | Width | `150` |
 | Height | `20` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
 | Visible | `true` |
@@ -1781,7 +1781,7 @@ Set(varSelectedItem, ThisItem)
 | Size | `14` |
 | Align | `Align.Center` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | Visible | `CountRows(galJobCards.AllItems) = 0` |
 
 > 💡 **How it works:** The label is centered on screen and only appears when the gallery has zero items. When a user selects a status tab with no matching requests, they'll see "No Uploaded requests found" (or whichever status is selected) instead of empty space.
@@ -1894,7 +1894,7 @@ scrDashboard
 | Y | `recRejectModal.Y + 20` |
 | Width | `560` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(209, 52, 56, 1)` |
@@ -2252,7 +2252,7 @@ scrDashboard
 | Y | `recApprovalModal.Y + 20` |
 | Width | `560` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(16, 124, 16, 1)` |
@@ -2747,7 +2747,7 @@ scrDashboard
 | Y | `recArchiveModal.Y + 20` |
 | Width | `460` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(100, 100, 100, 1)` |
@@ -3051,7 +3051,7 @@ scrDashboard
 | Y | `recDetailsModal.Y + 20` |
 | Width | `460` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 120, 212, 1)` |
@@ -3666,7 +3666,7 @@ scrDashboard
 | Y | `recPaymentModal.Y + 20` |
 | Width | `510` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 158, 73, 1)` |
@@ -4339,7 +4339,7 @@ scrDashboard
 | Y | `recNotesModal.Y + 20` |
 | Width | `480` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `18` |
 | Color | `RGBA(50, 50, 50, 1)` |
@@ -5109,7 +5109,7 @@ Set(varShowAddFileModal, ThisItem.ID)
 | Y | `recFileModal.Y + 20` |
 | Width | `460` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 120, 212, 1)` |
@@ -5325,7 +5325,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `260` |
 | Width | `200` |
 | Height | `20` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
 | Visible | `true` |
@@ -5511,7 +5511,7 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 20` |
 | Width | `400` |
 | Height | `30` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(70, 130, 220, 1)` |
@@ -5531,7 +5531,7 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 55` |
 | Width | `560` |
 | Height | `25` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
 
@@ -5550,7 +5550,7 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 90` |
 | Width | `200` |
 | Height | `20` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
@@ -5589,7 +5589,7 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 165` |
 | Width | `150` |
 | Height | `20` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
@@ -5627,7 +5627,7 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 240` |
 | Width | `150` |
 | Height | `20` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 | Color | `RGBA(50, 50, 50, 1)` |
@@ -5984,7 +5984,7 @@ scrDashboard
 | Y | `recViewMsgModal.Y + 15` |
 | Width | `400` |
 | Height | `30` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 | Size | `18` |
 | Color | `RGBA(70, 130, 220, 1)` |
 
@@ -6086,7 +6086,7 @@ Set(varSelectedItem, Blank())
 | Height | `18` |
 | Size | `10` |
 | Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
-| Font | `Font.'Segoe UI Semibold'` |
+| Font | `Font.'Open Sans Semibold'` |
 
 ---
 

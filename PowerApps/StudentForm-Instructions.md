@@ -73,14 +73,14 @@ This form follows consistent design patterns for a professional appearance that 
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| Form Header | `Font.'Segoe UI'` | 20 | Semibold |
-| Section Headers | `Font.'Segoe UI'` | 14 | Semibold |
-| Field Labels | `Font.'Segoe UI'` | 11 | Normal |
-| Input Text | `Font.'Segoe UI'` | 11 | Normal |
-| Help Text/Hints | `Font.'Segoe UI'` | 9 | Normal |
-| Warning Labels | `Font.'Segoe UI'` | 10 | Semibold |
+| Form Header | `Font.'Open Sans'` | 20 | Semibold |
+| Section Headers | `Font.'Open Sans'` | 14 | Semibold |
+| Field Labels | `Font.'Open Sans'` | 11 | Normal |
+| Input Text | `Font.'Open Sans'` | 11 | Normal |
+| Help Text/Hints | `Font.'Open Sans'` | 9 | Normal |
+| Warning Labels | `Font.'Open Sans'` | 10 | Semibold |
 
-> ⚠️ **Consistency Rule:** Always use `Font.'Segoe UI'` throughout the form. This is the Microsoft design language and matches SharePoint's native styling.
+> ⚠️ **Consistency Rule:** Always use `Font.'Open Sans'` throughout the form. This is the Microsoft design language and matches SharePoint's native styling.
 
 ## Color Palette
 
@@ -505,7 +505,7 @@ We'll repurpose the Title field's DataCard to hold our header elements.
 | Y | `20` |
 | Width | `Parent.Width - 40` |
 | Height | `40` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `22` |
 | Color | `Color.White` |
@@ -1084,7 +1084,7 @@ With `lblFileWarning` selected, set these properties in the **Advanced** tab:
 |----------|-------|
 | Fill | `RGBA(255, 244, 206, 1)` |
 | Color | `RGBA(102, 77, 3, 1)` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `11` |
 | PaddingTop | `10` |
@@ -1180,7 +1180,7 @@ With `btnSubmit` selected, set these properties:
 | HoverFill | `RGBA(90, 49, 144, 1)` |
 | PressedFill | `RGBA(50, 19, 104, 1)` |
 | DisabledFill | `RGBA(166, 166, 166, 1)` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
 | BorderRadius | `8` |
@@ -1425,7 +1425,7 @@ If you previously built an inline confirmation panel, remove it:
 | Y | `recConfirmModal.Y + 20` |
 | Width | `recConfirmModal.Width - 40` |
 | Height | `35` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `16` |
 | Color | `RGBA(46, 125, 50, 1)` |
@@ -1549,7 +1549,7 @@ This is the main action—a prominent button that confirms the estimate.
 | Color | `Color.White` |
 | HoverFill | `RGBA(56, 142, 60, 1)` |
 | PressedFill | `RGBA(27, 94, 32, 1)` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
 | BorderRadius | `8` |
@@ -1590,7 +1590,7 @@ RequestHide()
 | Color | `Color.White` |
 | HoverFill | `RGBA(120, 120, 120, 1)` |
 | PressedFill | `RGBA(100, 100, 100, 1)` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | BorderRadius | `8` |
 
 4. Set the **OnSelect** property:
@@ -1617,7 +1617,7 @@ Set(varShowConfirmModal, false)
 | Width | `recConfirmModal.Width - 40` |
 | Height | `35` |
 | Size | `10` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 | Color | `RGBA(100, 100, 100, 1)` |
 | Align | `Align.Center` |
 
@@ -1857,7 +1857,7 @@ For validation error display:
 |----------|-------|
 | Color | `RGBA(209, 52, 56, 1)` |
 | Size | `9` |
-| Font | `Font.'Segoe UI'` |
+| Font | `Font.'Open Sans'` |
 
 ## 9F. Ensure Consistent Font Usage
 
@@ -1865,9 +1865,9 @@ Go through each label and input control to verify:
 
 | Control Type | Font Property |
 |--------------|---------------|
-| All Labels | `Font.'Segoe UI'` |
-| All TextInputs | `Font.'Segoe UI'` |
-| All ComboBoxes | `Font.'Segoe UI'` |
+| All Labels | `Font.'Open Sans'` |
+| All TextInputs | `Font.'Open Sans'` |
+| All ComboBoxes | `Font.'Open Sans'` |
 
 ### Verification
 
@@ -1876,7 +1876,7 @@ After completing this step:
 - [ ] Header doesn't overlap form content
 - [ ] Required field indicators are visible
 - [ ] Error messages use consistent styling
-- [ ] All text uses Segoe UI font
+- [ ] All text uses Open Sans font
 
 ---
 
