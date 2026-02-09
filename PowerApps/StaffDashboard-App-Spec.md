@@ -4439,7 +4439,11 @@ If(
     Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         // Status stays "Completed" - don't change it
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
-        TransactionNumber: txtPaymentTransaction.Text,
+        TransactionNumber: If(
+            IsBlank(varSelectedItem.TransactionNumber),
+            txtPaymentTransaction.Text,
+            varSelectedItem.TransactionNumber & ", " & txtPaymentTransaction.Text
+        ),
         PaymentNotes: Concatenate(
             If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
             varPaymentRecord
@@ -4463,7 +4467,11 @@ If(
     Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
-        TransactionNumber: txtPaymentTransaction.Text,
+        TransactionNumber: If(
+            IsBlank(varSelectedItem.TransactionNumber),
+            txtPaymentTransaction.Text,
+            varSelectedItem.TransactionNumber & ", " & txtPaymentTransaction.Text
+        ),
         FinalWeight: Value(txtPaymentWeight.Text),
         FinalCost: varFinalCost,
         StudentOwnMaterial: chkOwnMaterial.Value,
