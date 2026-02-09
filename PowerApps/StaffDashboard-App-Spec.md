@@ -1406,7 +1406,7 @@ These labels show additional info when the card is expanded. All have the same V
 
 #### Transaction Row (Y = 245) - Paid & Picked Up Only
 
-> 💡 **Conditional Display:** These labels only appear for jobs with status "Paid & Picked Up" that have a transaction number recorded.
+> 💡 **Conditional Display:** These labels appear on ANY status tab when a transaction number exists. This ensures staff can always see payment info even if a job is reverted back in the workflow (e.g., partial payment collected, then job sent back to "Printing").
 
 63. Click **+ Insert** → **Text label**.
 64. **Rename it:** `lblTransactionLabel`
@@ -1421,7 +1421,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.TransactionNumber)` |
+| Visible | `!IsBlank(ThisItem.TransactionNumber)` |
 
 66. Click **+ Insert** → **Text label**.
 67. **Rename it:** `lblTransactionValue`
@@ -1436,11 +1436,11 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.TransactionNumber)` |
+| Visible | `!IsBlank(ThisItem.TransactionNumber)` |
 
 #### Payment History Row (Y = 265) - Completed Items with Prior Payments
 
-> 💡 **Conditional Display:** This label appears for "Completed", "Paid & Picked Up", and "Archived" jobs that have payment history in PaymentNotes. This helps staff see prior payments when reviewing jobs or processing additional pickups.
+> 💡 **Conditional Display:** This label appears on ANY status tab when PaymentNotes exist. This ensures staff can always see payment history even if a job is reverted back in the workflow (e.g., partial payment collected, then job sent back to "Printing").
 
 69. Click **+ Insert** → **Text label**.
 70. **Rename it:** `lblPaymentHistoryLabel`
@@ -1455,7 +1455,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `ThisItem.Status.Value in ["Completed", "Paid & Picked Up", "Archived"] && !IsBlank(ThisItem.PaymentNotes)` |
+| Visible | `!IsBlank(ThisItem.PaymentNotes)` |
 
 72. Click **+ Insert** → **Text label**.
 73. **Rename it:** `lblPaymentHistoryValue`
@@ -1470,7 +1470,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(50, 50, 50, 1)` |
-| Visible | `ThisItem.Status.Value in ["Completed", "Paid & Picked Up", "Archived"] && !IsBlank(ThisItem.PaymentNotes)` |
+| Visible | `!IsBlank(ThisItem.PaymentNotes)` |
 
 Set **Text** (count payments and show total):
 
@@ -1491,10 +1491,10 @@ Your gallery template should now contain these controls (Z-order: top = front):
 
 ```
 ▼ galJobCards
-    lblPaymentHistoryValue         ← Completed with prior payments only
-    lblPaymentHistoryLabel         ← Completed with prior payments only
-    lblTransactionValue            ← Paid & Picked Up only
-    lblTransactionLabel            ← Paid & Picked Up only
+    lblPaymentHistoryValue         ← Any status with PaymentNotes
+    lblPaymentHistoryLabel         ← Any status with PaymentNotes
+    lblTransactionValue            ← Any status with TransactionNumber
+    lblTransactionLabel            ← Any status with TransactionNumber
     lblCourse
     lblCourseLabel
     lblProjectType
@@ -3543,9 +3543,9 @@ With(
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
-| Visible | `varSelectedItem.Status.Value in ["Paid & Picked Up", "Archived"]` |
+| Visible | `!IsBlank(varSelectedItem.TransactionNumber)` |
 
-> 💡 **Conditional visibility:** This field only appears on "Paid & Picked Up" and "Archived" tabs where a transaction number has been recorded. This allows staff to correct typos in the transaction number.
+> 💡 **Conditional visibility:** This field appears whenever a transaction number exists, regardless of status. This allows staff to correct typos even if a job has been reverted back in the workflow.
 
 ---
 
@@ -3563,9 +3563,9 @@ With(
 | Height | `36` |
 | HintText | `"e.g., 123"` |
 | Default | `Coalesce(varSelectedItem.TransactionNumber, "")` |
-| Visible | `varSelectedItem.Status.Value in ["Paid & Picked Up", "Archived"]` |
+| Visible | `!IsBlank(varSelectedItem.TransactionNumber)` |
 
-> 💡 **Why this matters:** If a transaction number was entered incorrectly during payment recording, staff can fix it here without having to undo the entire payment process.
+> 💡 **Why this matters:** If a transaction number was entered incorrectly during payment recording, staff can fix it here without having to undo the entire payment process. Shows on any status where a transaction exists.
 
 ---
 
@@ -3655,7 +3655,10 @@ Set(varChangeDesc, "");
 If(!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value,
     Set(varChangeDesc, "Method: " & varSelectedItem.Method.Value & " → " & ddDetailsMethod.Selected.Value));
 If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value,
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Printer: " & varSelectedItem.Printer.Value & " → " & ddDetailsPrinter.Selected.Value));
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Printer: " & 
+        Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & 
+        " → " & 
+        Trim(If(Find("(", ddDetailsPrinter.Selected.Value) > 0, Left(ddDetailsPrinter.Selected.Value, Find("(", ddDetailsPrinter.Selected.Value) - 1), ddDetailsPrinter.Selected.Value))));
 If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
 If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
@@ -4217,11 +4220,54 @@ If(
 Concat(
     ForAll(
         Split(varSelectedItem.PaymentNotes, " | ") As entry,
-        "• " & entry.Value & Char(10)
+        With(
+            {
+                text: entry.Value,
+                colonPos: Find(":", entry.Value),
+                hashPos: Find("#", entry.Value)
+            },
+            With(
+                {
+                    staffName: If(colonPos > 0, Left(text, Max(0, colonPos - 1)), ""),
+                    datetime: Last(Split(text, " - ")).Value,
+                    // Everything between ":" and the last " - " is the payment details
+                    middlePart: If(colonPos > 0, 
+                        Trim(Mid(text, colonPos + 2, Max(0, Len(text) - colonPos - Len(Last(Split(text, " - ")).Value) - 4))),
+                        "")
+                },
+                With(
+                    {
+                        // Split middle part at "#" to get amount and transaction+note
+                        amountPart: If(hashPos > colonPos, Trim(Mid(text, colonPos + 2, Max(0, hashPos - colonPos - 2))), middlePart),
+                        afterHash: If(hashPos > 0, Trim(Mid(text, hashPos + 1, Max(0, Len(text) - hashPos - Len(Last(Split(text, " - ")).Value) - 3))), ""),
+                        isPartial: Find("partial", text) > 0
+                    },
+                    With(
+                        {
+                            transNum: If(Find(" ", afterHash) > 0, Left(afterHash, Find(" ", afterHash) - 1), afterHash),
+                            noteText: If(Find(" - ", afterHash) > 0, Trim(Mid(afterHash, Find(" - ", afterHash) + 3, Len(afterHash))), "")
+                        },
+                        datetime & " - " & If(isPartial, "PARTIAL PAYMENT", "PAYMENT") & Char(10) &
+                        staffName & Char(10) &
+                        "Transaction #" & transNum & " - " & amountPart & 
+                        If(!IsBlank(noteText), " - """ & noteText & """", "") &
+                        Char(10) & Char(10)
+                    )
+                )
+            )
+        )
     ),
     Value
 )
 ```
+
+> 💡 **Formatted display:** Each payment entry is parsed and displayed to match the Staff Notes format:
+> ```
+> 2/9 11:21AM - PARTIAL PAYMENT
+> Conrad F.
+> Transaction #150 - $6.00 partial (60g) - "Picking up part so they can work on it while the rest finishes."
+> ```
+> This makes it consistent with how Staff Notes & Activity entries are displayed.
 
 > 💡 **Why this matters:** Staff can see exactly what payments have been recorded before processing another partial or final pickup. This prevents confusion about what's already been collected.
 
@@ -4392,6 +4438,7 @@ If(
     Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         // Status stays "Completed" - don't change it
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
+        TransactionNumber: txtPaymentTransaction.Text,
         PaymentNotes: Concatenate(
             If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
             varPaymentRecord
@@ -4477,6 +4524,7 @@ Set(varLoadingMessage, "")
 
 > 💡 **Partial Pickup Behavior:**
 > - Status remains "Completed" (job stays visible in queue)
+> - TransactionNumber is updated (so it displays on the job card)
 > - Payment details appended to PaymentNotes (creates a log)
 > - Staff can process another pickup later
 > - Final pickup (unchecked) records to FinalWeight/FinalCost/StudentOwnMaterial fields
@@ -4809,10 +4857,10 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     },
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "REVERTED from " & varSelectedItem.Status.Value & " to " & ddRevertTarget.Selected.Value &
-        " by " & 
+        "REVERTED by " &
         With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        " on " & Text(Now(), "mm/dd/yy") & ": " & txtRevertReason.Text
+        ": " & varSelectedItem.Status.Value & " → " & ddRevertTarget.Selected.Value & 
+        " - " & txtRevertReason.Text & " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -4843,7 +4891,7 @@ Set(varLoadingMessage, "")
 ```
 
 > 💡 **Audit Trail:** The revert action is logged in two places:
-> - **StaffNotes field:** Human-readable entry like "REVERTED from Printing to Ready to Print by John D. on 02/06/26: Printer jammed"
+> - **StaffNotes field:** Human-readable entry like "REVERTED by John D.: Printing → Ready to Print - Printer jammed - 2/6 2:45pm"
 > - **Flow C audit log:** Machine-readable entry for reporting and compliance
 
 ---
