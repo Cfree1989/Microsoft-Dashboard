@@ -3851,7 +3851,7 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| Text | `"💳 Record Payment - " & varSelectedItem.ReqKey` |
+| Text | `If(varSelectedItem.Status.Value = "Printing", "Partial Payment - ", "Record Payment - ") & varSelectedItem.ReqKey` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 20` |
 | Width | `510` |
@@ -4283,7 +4283,7 @@ Concat(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Notes (optional):"` |
+| Text | `If(varSelectedItem.Status.Value = "Printing", "Partial Payment Notes (optional):", "Payment Notes (optional):")` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 525, 440)` |
 | Width | `300` |
