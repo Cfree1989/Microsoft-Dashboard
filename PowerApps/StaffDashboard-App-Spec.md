@@ -1438,6 +1438,51 @@ These labels show additional info when the card is expanded. All have the same V
 | Color | `RGBA(50, 50, 50, 1)` |
 | Visible | `ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.TransactionNumber)` |
 
+#### Payment History Row (Y = 265) - Completed Items with Prior Payments
+
+> 💡 **Conditional Display:** This label appears for "Completed", "Paid & Picked Up", and "Archived" jobs that have payment history in PaymentNotes. This helps staff see prior payments when reviewing jobs or processing additional pickups.
+
+69. Click **+ Insert** → **Text label**.
+70. **Rename it:** `lblPaymentHistoryLabel`
+71. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Prior Payments:"` |
+| X | `12` |
+| Y | `265` |
+| Width | `85` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Visible | `ThisItem.Status.Value in ["Completed", "Paid & Picked Up", "Archived"] && !IsBlank(ThisItem.PaymentNotes)` |
+
+72. Click **+ Insert** → **Text label**.
+73. **Rename it:** `lblPaymentHistoryValue`
+74. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | See formula below |
+| X | `100` |
+| Y | `265` |
+| Width | `200` |
+| Height | `20` |
+| Size | `10` |
+| Color | `RGBA(50, 50, 50, 1)` |
+| Visible | `ThisItem.Status.Value in ["Completed", "Paid & Picked Up", "Archived"] && !IsBlank(ThisItem.PaymentNotes)` |
+
+Set **Text** (count payments and show total):
+
+```powerfx
+With(
+    {payments: Split(ThisItem.PaymentNotes, " | ")},
+    Text(CountRows(payments)) & " payment" & If(CountRows(payments) > 1, "s", "") & " recorded"
+)
+```
+
+> 💡 **Why this matters:** When staff opens the Payment Modal for a partial pickup, they can see at a glance that prior payments exist. The full payment history is shown in the Payment Modal itself.
+
 ---
 
 ### ✅ Step 7 Checklist
@@ -1446,6 +1491,8 @@ Your gallery template should now contain these controls (Z-order: top = front):
 
 ```
 ▼ galJobCards
+    lblPaymentHistoryValue         ← Completed with prior payments only
+    lblPaymentHistoryLabel         ← Completed with prior payments only
     lblTransactionValue            ← Paid & Picked Up only
     lblTransactionLabel            ← Paid & Picked Up only
     lblCourse
@@ -1479,6 +1526,7 @@ Each card displays:
 - View Notes button (opens Notes Modal)
 - Expandable additional details
 - Transaction number (for Paid & Picked Up jobs only)
+- Prior payment count (for Completed jobs with partial payments)
 
 
 ---
@@ -3711,6 +3759,8 @@ scrDashboard
     ├── chkPartialPickup      ← Partial pickup checkbox (keeps status as Completed)
     ├── txtPaymentNotes       ← Multi-line text input
     ├── lblPaymentNotesLabel  ← "Payment Notes (optional):"
+    ├── txtPaymentHistory     ← Prior payments display (conditional)
+    ├── lblPaymentHistoryHeader ← "⚠️ Prior Payments" (conditional)
     ├── chkOwnMaterial        ← Own material checkbox (70% discount)
     ├── dpPaymentDate         ← Date picker (default: Today())
     ├── lblPaymentDateLabel   ← "Payment Date: *"
@@ -3726,7 +3776,7 @@ scrDashboard
     ├── lblPaymentStaffLabel  ← "Performing Action As: *"
     ├── lblPaymentStudent     ← Student name and estimated vs final info
     ├── lblPaymentTitle       ← "Record Payment - REQ-00042"
-    ├── recPaymentModal       ← White modal box
+    ├── recPaymentModal       ← White modal box (dynamic height)
     └── recPaymentOverlay     ← Dark semi-transparent background
 ```
 
@@ -3777,14 +3827,16 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - 660) / 2` |
+| Y | `(Parent.Height - If(!IsBlank(varSelectedItem.PaymentNotes), 740, 650)) / 2` |
 | Width | `550` |
-| Height | `660` |
+| Height | `If(!IsBlank(varSelectedItem.PaymentNotes), 740, 650)` |
 | Fill | `Color.White` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
+
+> 💡 **Dynamic Height:** The modal grows taller (740px vs 650px) when there are prior payments to display. This ensures the payment history section fits without crowding other controls.
 
 ---
 
@@ -4121,17 +4173,73 @@ If(
 
 ---
 
-### Notes Label (lblPaymentNotesLabel)
+### Payment History Section (Conditional)
+
+> 💡 **Conditional Display:** This section only appears when there are prior payments recorded in PaymentNotes (indicating partial payments were already made). It shows staff what has already been collected before they process another payment.
 
 55. Click **+ Insert** → **Text label**.
-56. **Rename it:** `lblPaymentNotesLabel`
+56. **Rename it:** `lblPaymentHistoryHeader`
 57. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"⚠️ Prior Payments on This Job"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 440` |
+| Width | `510` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `RGBA(180, 100, 0, 1)` |
+| Visible | `!IsBlank(varSelectedItem.PaymentNotes)` |
+
+58. Click **+ Insert** → **Text input**.
+59. **Rename it:** `txtPaymentHistory`
+60. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 462` |
+| Width | `510` |
+| Height | `55` |
+| Mode | `TextMode.MultiLine` |
+| DisplayMode | `DisplayMode.View` |
+| Size | `10` |
+| Color | `RGBA(80, 80, 80, 1)` |
+| Fill | `RGBA(255, 248, 230, 1)` |
+| BorderColor | `RGBA(220, 180, 100, 1)` |
+| Visible | `!IsBlank(varSelectedItem.PaymentNotes)` |
+
+61. Set **Default** (parse and display payment history):
+
+```powerfx
+Concat(
+    ForAll(
+        Split(varSelectedItem.PaymentNotes, " | ") As entry,
+        "• " & entry.Value & Char(10)
+    ),
+    Value
+)
+```
+
+> 💡 **Why this matters:** Staff can see exactly what payments have been recorded before processing another partial or final pickup. This prevents confusion about what's already been collected.
+
+---
+
+### Notes Label (lblPaymentNotesLabel)
+
+> ⚠️ **Dynamic Y Position:** This control and all controls below it shift down when payment history is visible.
+
+62. Click **+ Insert** → **Text label**.
+63. **Rename it:** `lblPaymentNotesLabel`
+64. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Payment Notes (optional):"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 440` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 525, 440)` |
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -4140,17 +4248,17 @@ If(
 
 ### Notes Text Input (txtPaymentNotes)
 
-58. Click **+ Insert** → **Text input**.
-59. **Rename it:** `txtPaymentNotes`
-60. Set properties:
+65. Click **+ Insert** → **Text input**.
+66. **Rename it:** `txtPaymentNotes`
+67. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 465` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 547, 462)` |
 | Width | `510` |
-| Height | `60` |
+| Height | `50` |
 | HintText | `"Any discrepancies, special circumstances..."` |
 
 ---
@@ -4159,15 +4267,15 @@ If(
 
 > 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later.
 
-61. Click **+ Insert** → **Checkbox**.
-62. **Rename it:** `chkPartialPickup`
-63. Set properties:
+68. Click **+ Insert** → **Checkbox**.
+69. **Rename it:** `chkPartialPickup`
+70. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Partial Pickup — Student will return for remaining items"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 535` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 605, 520)` |
 | Width | `510` |
 | Height | `32` |
 | FontItalic | `true` |
@@ -4179,21 +4287,21 @@ If(
 
 ### Cancel Button (btnPaymentCancel)
 
-64. Click **+ Insert** → **Button**.
-65. **Rename it:** `btnPaymentCancel`
-66. Set properties:
+71. Click **+ Insert** → **Button**.
+72. **Rename it:** `btnPaymentCancel`
+73. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recPaymentModal.X + 250` |
-| Y | `recPaymentModal.Y + 580` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
 | Width | `120` |
 | Height | `36` |
 | Fill | `RGBA(150, 150, 150, 1)` |
 | Color | `Color.White` |
 
-67. Set **OnSelect:**
+74. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -4212,15 +4320,15 @@ Reset(ddPaymentType)
 
 ### Confirm Payment Button (btnPaymentConfirm)
 
-68. Click **+ Insert** → **Button**.
-69. **Rename it:** `btnPaymentConfirm`
-70. Set properties:
+75. Click **+ Insert** → **Button**.
+76. **Rename it:** `btnPaymentConfirm`
+77. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `If(chkPartialPickup.Value, "✓ Record Partial Payment", "✓ Record Payment")` |
 | X | `recPaymentModal.X + 380` |
-| Y | `recPaymentModal.Y + 580` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
 | Width | `150` |
 | Height | `36` |
 | Fill | `If(chkPartialPickup.Value, RGBA(255, 140, 0, 1), RGBA(0, 158, 73, 1))` |
@@ -4228,7 +4336,7 @@ Reset(ddPaymentType)
 
 > 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
 
-71. Set **DisplayMode:**
+78. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -4242,7 +4350,7 @@ If(
 )
 ```
 
-72. Set **OnSelect:**
+79. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -4263,15 +4371,15 @@ Set(varBaseCost,
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * 0.30, varBaseCost));
 
 // Build payment record string (used for both partial and full)
+// Format matches other staff notes: "Name: details - timestamp"
 Set(varPaymentRecord,
-    "PAYMENT by " & 
     With({n: ddPaymentStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-    ": Type=" & ddPaymentType.Selected.Value &
-    ", Ref#=" & txtPaymentTransaction.Text & 
-    ", Weight=" & txtPaymentWeight.Text & "g" &
-    ", Cost=$" & Text(varFinalCost, "[$-en-US]#,##0.00") &
-    If(chkOwnMaterial.Value, " (OWN MATERIAL - 70% off)", "") &
-    If(chkPartialPickup.Value, " (PARTIAL)", "") &
+    ": " & 
+    Text(varFinalCost, "[$-en-US]$#,##0.00") & 
+    If(chkPartialPickup.Value, " partial", "") &
+    " (" & txtPaymentWeight.Text & "g" &
+    If(chkOwnMaterial.Value, ", own material", "") &
+    ") #" & txtPaymentTransaction.Text &
     If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
     " - " & Text(Now(), "m/d h:mmam/pm")
 );
@@ -4374,6 +4482,12 @@ Set(varLoadingMessage, "")
 > - Final pickup (unchecked) records to FinalWeight/FinalCost/StudentOwnMaterial fields
 >
 > 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
+>
+> 💡 **Payment Note Format:** Payment notes use a simplified format that matches other staff notes:
+> ```
+> Ian R.: $10.80 partial (36g) #150 - 2/6 2:54pm
+> ```
+> This is cleaner than the previous verbose format and displays consistently in the Staff Notes & Activity section.
 
 ---
 
