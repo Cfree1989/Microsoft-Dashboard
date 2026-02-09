@@ -1984,6 +1984,396 @@ BLOCKED: _____ / 12
 **Critical Issues Found:**
 _____________________________________________
 
+**Proceed to Flow F Tests:** [ ] Yes  [ ] No
+
+---
+
+## Flow F Tests (PR-Cleanup)
+
+### Test Summary
+
+**Flow Name:** `PR-Cleanup: Audit retention`  
+**Trigger:** Recurrence (Scheduled - Weekly)  
+**Estimated Time:** 30 minutes
+
+### Prerequisites
+
+Before testing Flow F, ensure:
+- [ ] Flow F created and saved (not necessarily enabled)
+- [ ] AuditLog list accessible
+- [ ] PrintRequests list accessible
+- [ ] Can manually edit `LastActionAt` field in SharePoint
+
+### Unit Tests
+
+---
+
+#### TEST F-001: Flow Schedule Configuration
+
+**Objective:** Verify the flow is configured to run weekly at the correct time.
+
+**Test Steps:**
+1. Go to Power Automate → My flows
+2. Find "PR-Cleanup: Audit retention"
+3. Click to view flow details
+4. Check the Recurrence trigger configuration
+
+**Expected Result:**
+- [ ] Frequency: Week
+- [ ] Interval: 1
+- [ ] On these days: Sunday
+- [ ] At these hours: 3
+- [ ] Time zone: Central Time (US & Canada)
+
+**Actual Result:**
+```
+Frequency: _______________
+Interval: _______________
+Day: _______________
+Hour: _______________
+Time zone: _______________
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-002: Cutoff Date Calculations
+
+**Objective:** Verify the Compose actions calculate correct cutoff dates.
+
+**Test Steps:**
+1. Run flow manually (Power Automate → My flows → Run)
+2. Wait for completion
+3. View run history
+4. Check outputs of "Calculate 1 Month Cutoff" and "Calculate 12 Month Cutoff"
+
+**Expected Result:**
+- [ ] 1 Month Cutoff: Date approximately 30 days before current date
+- [ ] 12 Month Cutoff: Date approximately 365 days before current date
+- [ ] Both dates in ISO 8601 format (e.g., 2025-01-15T03:00:00Z)
+
+**Actual Result:**
+```
+1 Month Cutoff: _______________
+12 Month Cutoff: _______________
+Format correct: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-003: Get Rejected Requests Filter
+
+**Objective:** Verify the filter correctly identifies Rejected requests past retention.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Rejected"
+- [ ] Manually set LastActionAt to 35 days ago in SharePoint
+
+**Test Steps:**
+1. Create or identify a test request
+2. Set Status to "Rejected" via SharePoint
+3. Edit LastActionAt to a date 35 days ago (past 30-day retention)
+4. Run flow manually
+5. Check "Get Rejected Requests Past Retention" action output
+
+**Expected Result:**
+- [ ] Test request appears in the output
+- [ ] Only requests with Status = "Rejected" are returned
+- [ ] Only requests with LastActionAt older than 30 days are returned
+
+**Actual Result:**
+```
+Test request found: [ ] Yes  [ ] No
+Total requests returned: _______________
+Unexpected requests: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-004: Get Canceled Requests Filter
+
+**Objective:** Verify the filter correctly identifies Canceled requests past retention.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Canceled"
+- [ ] Manually set LastActionAt to 35 days ago
+
+**Test Steps:**
+1. Create or identify a test request
+2. Set Status to "Canceled"
+3. Edit LastActionAt to 35 days ago
+4. Run flow manually
+5. Check "Get Canceled Requests Past Retention" action output
+
+**Expected Result:**
+- [ ] Test request appears in the output
+- [ ] Only Canceled requests returned
+- [ ] Only requests older than 30 days returned
+
+**Actual Result:**
+```
+Test request found: [ ] Yes  [ ] No
+Total requests returned: _______________
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-005: Get Archived Requests Filter (12-Month Retention)
+
+**Objective:** Verify the filter correctly identifies Archived requests past 12-month retention.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Archived"
+- [ ] Manually set LastActionAt to 370 days ago (past 365-day retention)
+
+**Test Steps:**
+1. Create or identify a test request
+2. Set Status to "Archived"
+3. Edit LastActionAt to 370 days ago
+4. Run flow manually
+5. Check "Get Archived Requests Past Retention" action output
+
+**Expected Result:**
+- [ ] Test request appears in the output
+- [ ] Only Archived requests returned
+- [ ] Only requests older than 365 days returned
+
+**Actual Result:**
+```
+Test request found: [ ] Yes  [ ] No
+Total requests returned: _______________
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-006: Archived Request NOT Deleted Before 12 Months
+
+**Objective:** Verify Archived requests within 12-month retention are NOT deleted.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Archived"
+- [ ] Set LastActionAt to 300 days ago (within 365-day retention)
+- [ ] Create associated AuditLog entries
+
+**Test Steps:**
+1. Create test request and set Status = "Archived"
+2. Set LastActionAt to 300 days ago
+3. Create 2-3 AuditLog entries for this RequestID
+4. Run flow manually
+5. Check if AuditLog entries still exist
+
+**Expected Result:**
+- [ ] Request NOT included in "Get Archived Requests Past Retention"
+- [ ] AuditLog entries for this request are NOT deleted
+- [ ] Archived counter shows 0 for this request
+
+**Actual Result:**
+```
+Request excluded from filter: [ ] Yes  [ ] No
+AuditLog entries preserved: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-007: AuditLog Entry Deletion
+
+**Objective:** Verify AuditLog entries are correctly deleted for eligible requests.
+
+**Prerequisites:**
+- [ ] Test request with Status = "Rejected", LastActionAt = 35 days ago
+- [ ] 3+ AuditLog entries exist for this RequestID
+
+**Test Steps:**
+1. Note the RequestID of test request
+2. Verify AuditLog entries exist: Filter by RequestID in SharePoint
+3. Run flow manually
+4. Wait for completion
+5. Check AuditLog for entries with that RequestID
+
+**Expected Result:**
+- [ ] All AuditLog entries for the test RequestID are deleted
+- [ ] No orphaned entries remain
+- [ ] RejectedCount variable incremented correctly
+
+**Actual Result:**
+```
+AuditLog entries before: _______________
+AuditLog entries after: _______________
+All deleted: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-008: PrintRequest Record Preserved
+
+**Objective:** Verify the PrintRequest record itself is NOT deleted (only AuditLog entries).
+
+**Prerequisites:**
+- [ ] Test request eligible for cleanup
+- [ ] AuditLog entries for this request
+
+**Test Steps:**
+1. Note the ID and ReqKey of test request
+2. Run flow manually
+3. After completion, check PrintRequests list for the record
+
+**Expected Result:**
+- [ ] PrintRequest record still exists
+- [ ] All fields intact (Status, StaffNotes, etc.)
+- [ ] Only AuditLog entries were deleted
+
+**Actual Result:**
+```
+PrintRequest exists: [ ] Yes  [ ] No
+StaffNotes preserved: [ ] Yes  [ ] No
+Status unchanged: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-009: Cleanup Summary Log Entry
+
+**Objective:** Verify the flow creates a summary log entry documenting the cleanup.
+
+**Test Steps:**
+1. Run flow manually
+2. Wait for completion
+3. Check AuditLog for "Audit Cleanup Run" entry
+
+**Expected Result:**
+- [ ] Entry created with Title = "Audit Cleanup Run"
+- [ ] Action = "System"
+- [ ] ActorRole = "System"
+- [ ] ClientApp = "Power Automate Scheduled"
+- [ ] Notes contains counts: "Deleted X audit entries (Rejected: Y, Canceled: Z, Archived: W)"
+- [ ] FlowRunId populated
+
+**Actual Result:**
+```
+Summary entry created: [ ] Yes  [ ] No
+Title correct: [ ] Yes  [ ] No
+Counts in Notes: _______________
+FlowRunId present: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-010: No Eligible Items (Empty Run)
+
+**Objective:** Verify flow completes successfully when no items need cleanup.
+
+**Prerequisites:**
+- [ ] No requests past retention periods (or test in clean environment)
+
+**Test Steps:**
+1. Ensure no requests meet cleanup criteria
+2. Run flow manually
+3. Check completion status and summary log
+
+**Expected Result:**
+- [ ] Flow completes without errors (green checkmarks)
+- [ ] Summary log shows "Deleted 0 audit entries"
+- [ ] No error notifications
+
+**Actual Result:**
+```
+Flow completed: [ ] Yes  [ ] No
+Summary shows 0: [ ] Yes  [ ] No
+Any errors: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-011: Large Batch Processing
+
+**Objective:** Verify flow handles multiple requests without throttling errors.
+
+**Prerequisites:**
+- [ ] 10+ test requests eligible for cleanup
+- [ ] Each with 5+ AuditLog entries
+
+**Test Steps:**
+1. Create or identify 10+ eligible requests
+2. Run flow manually
+3. Monitor for throttling errors (429)
+4. Check all entries deleted
+
+**Expected Result:**
+- [ ] Flow completes without throttling errors
+- [ ] All eligible AuditLog entries deleted
+- [ ] Summary count matches expected total
+
+**Actual Result:**
+```
+Total requests processed: _______________
+Total entries deleted: _______________
+Throttling errors: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-012: Error Recovery (Continue on Failure)
+
+**Objective:** Verify flow continues processing if individual deletions fail.
+
+**Test Steps:**
+1. Run flow with multiple eligible requests
+2. If a deletion fails (check run history), verify:
+   - Flow continues to next item
+   - Other deletions succeed
+   - Summary still created
+
+**Expected Result:**
+- [ ] Flow doesn't stop on individual failures
+- [ ] Other items still processed
+- [ ] Summary log created even with partial failures
+
+**Actual Result:**
+```
+Continued after error: [ ] Yes  [ ] No  [ ] N/A (no errors)
+Summary created: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+### Flow F Test Summary
+
+**Test Date:** _______________  
+**Tester:** _______________  
+**Flow Version:** _______________
+
+```
+PASSED: _____ / 12
+FAILED: _____ / 12
+BLOCKED: _____ / 12
+```
+
+**Critical Issues Found:**
+_____________________________________________
+
 **Proceed to Integration Tests:** [ ] Yes  [ ] No
 
 ---
@@ -2841,6 +3231,7 @@ Based on Power Automate documentation:
 - [Flow C (PR-Action): Log action](./Flow-(C)-Action-LogAction.md)
 - [Flow D (PR-Message): Send notifications](./Flow-(D)-Message-Notifications.md)
 - [Flow E (PR-Mailbox): Process inbound replies](./Flow-(E)-Mailbox-InboundReplies.md)
+- [Flow F (PR-Cleanup): Audit retention](./Flow-(F)-Cleanup-AuditRetention.md)
 
 ### Key Expressions Reference
 
@@ -2873,6 +3264,7 @@ Join: join(body('Format_Action'), '; ')
 |---------|------|--------|---------|
 | 1.0 | 2025-10-13 | System | Initial comprehensive test guide created |
 | 1.1 | 2025-12-17 | System | Cleaned up removed Flow F, Flow G references |
+| 1.2 | 2026-02-09 | System | Added Flow F (PR-Cleanup) test cases for audit retention |
 
 ---
 

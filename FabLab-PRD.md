@@ -402,6 +402,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
   - PR-Create flow (ReqKey + acknowledgment)
   - PR-Audit flow (change logging + email notifications)
   - PR-Action flow (staff action logging)
+  - PR-Cleanup flow (audit retention management) - *optional, can be added post-launch*
 - **Estimated Effort:** 3-4 hours
 - **Success Criteria:** All flows operational, emails sending, audit logging working
 
@@ -449,7 +450,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - ~~**Lab Hours Information:** Specific operating hours for inclusion in pickup notifications~~ **RESOLVED:** Monday-Friday 8:30 AM - 4:30 PM, Room 145 Atkinson Hall
 - ~~**Payment Process:** Integration with existing payment systems or manual process continuation~~ **RESOLVED:** TigerCASH only at pickup
 - **Staff Role Hierarchy:** Detailed role definitions beyond Manager/Technician/Student Worker
-- **File Retention Policy:** Long-term storage requirements for completed requests and audit logs
+- ~~**File Retention Policy:** Long-term storage requirements for completed requests and audit logs~~ **RESOLVED:** See Appendix F: Audit Retention Policy
 
 ---
 
@@ -963,6 +964,47 @@ This enables:
 - **No refunds:** Once printing begins (Status: Printing), cost is committed
 - **Bulk discounts:** Not currently offered (future consideration)
 - **Special materials:** Pricing subject to change for specialty filaments/resins
+
+### Appendix F: Audit Retention Policy
+
+**Purpose:** Manage AuditLog list size to maintain SharePoint performance while preserving audit trails for active and recent jobs.
+
+#### Retention Periods
+
+| Job Status | Retention Period | Rationale |
+|------------|------------------|-----------|
+| **Rejected** | 1 month after rejection | Short disputes window; student can resubmit corrected files |
+| **Canceled** | 1 month after cancellation | Student-initiated; minimal audit need |
+| **Archived** | 12 months after archive | Longest retention for completed work; covers academic year |
+
+**Active Jobs:** AuditLog entries for jobs in any other status (Uploaded, Pending, Ready to Print, Printing, Completed, Paid & Picked Up) are never deleted.
+
+#### What is Preserved
+
+Even after AuditLog entries are deleted:
+- **PrintRequest records** remain intact indefinitely
+- **StaffNotes field** preserves human-readable action history (e.g., "APPROVED by John D.: 45g, $1.35 - 2/6 2:30pm")
+- **Email records** remain in the shared mailbox sent folder
+- **Final field values** (Status, FinalCost, FinalWeight, etc.) are preserved
+
+#### Implementation
+
+**Flow F (PR-Cleanup)** runs weekly (Sunday 3 AM) to:
+1. Identify PrintRequests in terminal states past their retention period
+2. Delete associated AuditLog entries
+3. Log a summary entry documenting the cleanup
+
+See `PowerAutomate/Flow-(F)-Cleanup-AuditRetention.md` for implementation details.
+
+#### Capacity Planning
+
+| Scenario | Estimated AuditLog Size |
+|----------|------------------------|
+| Without cleanup | 3,000+ entries/semester (accumulating) |
+| With cleanup | 500-1,000 entries steady-state |
+| SharePoint threshold | 5,000 items (list view limit) |
+
+The retention policy keeps the AuditLog well under SharePoint's 5,000-item list view threshold.
 
 ---
 

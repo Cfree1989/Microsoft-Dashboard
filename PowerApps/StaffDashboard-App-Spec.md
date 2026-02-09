@@ -56,6 +56,8 @@ Before you start, make sure you have:
 
 > ⚠️ **IMPORTANT:** Complete Phases 1 and 2 (SharePoint + Flows) before building the Staff Console. The app depends on these being set up correctly.
 
+> 💡 **Optional:** Flow F (PR-Cleanup) handles automatic AuditLog retention and can be set up after the system is operational. See `PowerAutomate/Flow-(F)-Cleanup-AuditRetention.md`.
+
 ---
 
 ## ⚠️ CRITICAL: Curly Quotes Warning
