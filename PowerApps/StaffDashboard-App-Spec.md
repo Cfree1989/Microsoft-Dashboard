@@ -1798,7 +1798,7 @@ Set(varLoadingMessage, "")
 
 | Property | Value |
 |----------|-------|
-| Text | `If(ThisItem.Status.Value = "Printing", "Record Payment", "Picked Up")` |
+| Text | `If(ThisItem.Status.Value = "Printing", "Partial Payment", "Picked Up")` |
 | X | `12 + (Parent.TemplateWidth - 28) / 2 + 4` |
 | Y | `Parent.TemplateHeight - 50` |
 | Width | `(Parent.TemplateWidth - 28) / 2` |
