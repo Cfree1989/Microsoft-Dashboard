@@ -93,9 +93,11 @@
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 1 Month Cutoff`
 4. In **Inputs**, click **Expression** tab (fx) → Paste:
 ```
-addDays(utcNow(), -30)
+formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')
 ```
 5. Click **OK**
+
+> **Why formatDateTime?** SharePoint OData filters reject timestamps with high-precision fractional seconds. This formats the date as `2026-01-10T20:25:50Z` instead of `2026-01-10T20:25:50.0337128Z`.
 
 #### Action 2: Calculate 12-Month Cutoff
 1. Click **+ New step**
@@ -103,7 +105,7 @@ addDays(utcNow(), -30)
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 12 Month Cutoff`
 4. In **Inputs**, click **Expression** tab (fx) → Paste:
 ```
-addDays(utcNow(), -365)
+formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 ```
 5. Click **OK**
 
@@ -152,7 +154,7 @@ addDays(utcNow(), -365)
 
 **What this does:** Retrieves PrintRequests that have been in terminal states beyond their retention periods.
 
-> **Note:** SharePoint Choice fields require special OData syntax. Use the internal field name with `/Value` suffix.
+> **Note:** For Choice fields in SharePoint Online, use the field name directly (e.g., `Status eq 'Rejected'`). The `/Value` suffix is only needed for Lookup columns.
 
 **UI steps:**
 
@@ -171,13 +173,13 @@ addDays(utcNow(), -365)
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Filter Query:** Click in the box and paste:
-   ```
-   Status/Value eq 'Rejected' and LastActionAt lt '@{outputs('Calculate_1_Month_Cutoff')}'
-   ```
+   - **Filter Query:** Build this in parts (do NOT paste as one string):
+     1. Type: `Status eq 'Rejected' and LastActionAt lt '`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 1 Month Cutoff`
+     3. Type: `'` (closing single quote)
    - **Top Count:** `100` (process in batches to avoid throttling)
 
-> **⚠️ Important:** The `@{outputs('Calculate_1_Month_Cutoff')}` part will appear as a purple tag after you paste it. If it doesn't resolve, manually select the output from Dynamic content.
+> **⚠️ Important:** The date value must be wrapped in single quotes. The final filter should look like: `Status eq 'Rejected' and LastActionAt lt '[purple tag]'`
 
 #### Action 2: Get Canceled Requests Past Retention
 1. Click **+ New step**
@@ -194,10 +196,10 @@ addDays(utcNow(), -365)
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Filter Query:** Click in the box and paste:
-   ```
-   Status/Value eq 'Canceled' and LastActionAt lt '@{outputs('Calculate_1_Month_Cutoff')}'
-   ```
+   - **Filter Query:** Build this in parts:
+     1. Type: `Status eq 'Canceled' and LastActionAt lt '`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 1 Month Cutoff`
+     3. Type: `'` (closing single quote)
    - **Top Count:** `100`
 
 #### Action 3: Get Archived Requests Past Retention
@@ -215,10 +217,10 @@ addDays(utcNow(), -365)
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Filter Query:** Click in the box and paste:
-   ```
-   Status/Value eq 'Archived' and LastActionAt lt '@{outputs('Calculate_12_Month_Cutoff')}'
-   ```
+   - **Filter Query:** Build this in parts:
+     1. Type: `Status eq 'Archived' and LastActionAt lt '`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 12 Month Cutoff`
+     3. Type: `'` (closing single quote)
    - **Top Count:** `100`
 
 **Test Step 4:** Save → Run flow manually → Check that Get items actions return expected results (may be empty if no items meet criteria)
@@ -628,11 +630,12 @@ Recurrence (Weekly, Sunday 3 AM)
 - Error: "The query is not valid"
 
 **Fix:**
-1. Verify Choice field syntax uses `/Value`: `Status/Value eq 'Rejected'`
-2. Verify date comparison uses ISO format from Compose output
-3. Test filter in SharePoint REST API directly:
+1. For Choice fields, use direct syntax: `Status eq 'Rejected'` (NOT `Status/Value`)
+2. Verify date is formatted without fractional seconds (use `formatDateTime` in Compose)
+3. Ensure date value is wrapped in single quotes: `LastActionAt lt '2026-01-10T20:30:38Z'`
+4. Test filter in SharePoint REST API directly:
    ```
-   https://[site]/_api/web/lists/getbytitle('PrintRequests')/items?$filter=Status/Value eq 'Rejected'
+   https://[site]/_api/web/lists/getbytitle('PrintRequests')/items?$filter=Status eq 'Rejected'
    ```
 
 ---
@@ -672,11 +675,13 @@ To change retention periods, update the Compose expressions:
 
 | Period | Expression |
 |--------|------------|
-| 2 weeks | `addDays(utcNow(), -14)` |
-| 1 month | `addDays(utcNow(), -30)` |
-| 3 months | `addDays(utcNow(), -90)` |
-| 6 months | `addDays(utcNow(), -180)` |
-| 12 months | `addDays(utcNow(), -365)` |
+| 2 weeks | `formatDateTime(addDays(utcNow(), -14), 'yyyy-MM-ddTHH:mm:ssZ')` |
+| 1 month | `formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')` |
+| 3 months | `formatDateTime(addDays(utcNow(), -90), 'yyyy-MM-ddTHH:mm:ssZ')` |
+| 6 months | `formatDateTime(addDays(utcNow(), -180), 'yyyy-MM-ddTHH:mm:ssZ')` |
+| 12 months | `formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')` |
+
+> **Note:** The `formatDateTime` wrapper is required because SharePoint OData filters reject timestamps with fractional seconds.
 
 ### Monitoring
 
