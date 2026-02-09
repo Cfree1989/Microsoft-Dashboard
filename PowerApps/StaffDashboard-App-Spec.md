@@ -1798,14 +1798,14 @@ Set(varLoadingMessage, "")
 
 | Property | Value |
 |----------|-------|
-| Text | `"💰 Picked Up"` |
+| Text | `If(ThisItem.Status.Value = "Printing", "Record Payment", "Picked Up")` |
 | X | `12 + (Parent.TemplateWidth - 28) / 2 + 4` |
 | Y | `Parent.TemplateHeight - 50` |
 | Width | `(Parent.TemplateWidth - 28) / 2` |
 | Height | `32` |
 | Fill | `RGBA(0, 158, 73, 1)` |
 | Color | `Color.White` |
-| Visible | `ThisItem.Status.Value = "Completed"` |
+| Visible | `ThisItem.Status.Value in ["Printing", "Completed"]` |
 
 24. Set **OnSelect:**
 
@@ -1814,7 +1814,7 @@ Set(varShowPaymentModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **Note:** This opens the Payment Modal (built in Step 12C) where staff enters the transaction number, final weight, and payment details before marking as picked up.
+> 💡 **Note:** This opens the Payment Modal (built in Step 12C) where staff enters the transaction number, final weight, and payment details. When opened from "Printing" status, it records a partial payment (student picking up completed portions while the rest continues printing). When opened from "Completed" status, staff can choose partial or full pickup.
 
 ### Edit Details Button (btnEditDetails)
 
@@ -4311,7 +4311,7 @@ Concat(
 
 ### Partial Pickup Checkbox (chkPartialPickup)
 
-> 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later.
+> 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later. This checkbox only appears when the Payment Modal is opened from "Completed" status — when opened from "Printing" status, partial payment is automatic (the job continues printing).
 
 68. Click **+ Insert** → **Checkbox**.
 69. **Rename it:** `chkPartialPickup`
@@ -4326,8 +4326,9 @@ Concat(
 | Height | `32` |
 | FontItalic | `true` |
 | Color | `RGBA(150, 100, 0, 1)` |
+| Visible | `varSelectedItem.Status.Value = "Completed"` |
 
-> ⚠️ **Behavior:** When checked, the status stays "Completed" instead of changing to "Paid & Picked Up". Payment details are recorded in PaymentNotes, and staff can process additional payments when the student returns.
+> ⚠️ **Behavior:** When checked, the status stays "Completed" instead of changing to "Paid & Picked Up". Payment details are recorded in PaymentNotes, and staff can process additional payments when the student returns. When the modal is opened from "Printing" status, this checkbox is hidden because partial payment is automatic — the job continues printing.
 
 ---
 
@@ -4430,11 +4431,11 @@ Set(varPaymentRecord,
     " - " & Text(Now(), "m/d h:mmam/pm")
 );
 
-// Update SharePoint item - conditional on partial pickup
+// Update SharePoint item - conditional on partial pickup or Printing status
 // Using LookUp to get fresh record avoids concurrency conflicts
 If(
-    chkPartialPickup.Value,
-    // PARTIAL PICKUP: Keep status as Completed, append to PaymentNotes
+    chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing",
+    // PARTIAL PAYMENT: Keep status unchanged (Completed or Printing), append to PaymentNotes
     Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         // Status stays "Completed" - don't change it
         PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
@@ -4492,16 +4493,20 @@ If(
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),
-        If(chkPartialPickup.Value, "Partial Payment", "Status Change"),
-        If(chkPartialPickup.Value, "Payment", "Status"),
-        If(chkPartialPickup.Value, "Partial: $" & Text(varFinalCost, "[$-en-US]#,##0.00"), "Paid & Picked Up"),
+        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Partial Payment", "Status Change"),
+        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Payment", "Status"),
+        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Partial: $" & Text(varFinalCost, "[$-en-US]#,##0.00"), "Paid & Picked Up"),
         ddPaymentStaff.Selected.MemberEmail
     ),
     Notify("Could not log payment.", NotificationType.Error),
     If(
-        chkPartialPickup.Value,
-        Notify("Partial payment recorded! Job stays in Completed for remaining items.", NotificationType.Warning),
-        Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
+        varSelectedItem.Status.Value = "Printing",
+        Notify("Payment recorded! Job continues printing.", NotificationType.Success),
+        If(
+            chkPartialPickup.Value,
+            Notify("Partial payment recorded! Job stays in Completed for remaining items.", NotificationType.Warning),
+            Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
+        )
     )
 );
 
@@ -4522,12 +4527,18 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> 💡 **Partial Pickup Behavior:**
-> - Status remains "Completed" (job stays visible in queue)
+> 💡 **Partial Payment Behavior:**
+> 
+> | Source Status | Checkbox | Status After | Use Case |
+> |---------------|----------|--------------|----------|
+> | Printing | Hidden (forced partial) | Stays "Printing" | Student picks up completed portions while rest continues printing |
+> | Completed | Checked | Stays "Completed" | Student picks up some items, will return for rest |
+> | Completed | Unchecked | "Paid & Picked Up" | Full pickup, job complete |
+>
 > - TransactionNumber is updated (so it displays on the job card)
 > - Payment details appended to PaymentNotes (creates a log)
-> - Staff can process another pickup later
-> - Final pickup (unchecked) records to FinalWeight/FinalCost/StudentOwnMaterial fields
+> - Staff can process another pickup later for partial payments
+> - Final pickup (unchecked from Completed) records to FinalWeight/FinalCost/StudentOwnMaterial fields
 >
 > 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
 >
