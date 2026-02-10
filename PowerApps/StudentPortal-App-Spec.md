@@ -252,6 +252,8 @@ Set(varSelectedItem, LookUp(PrintRequests, false));
 // === FORM STATE ===
 // Track if form has been submitted successfully
 Set(varFormSubmitted, false);
+// Track if user attempted to submit (for showing validation errors)
+Set(varSubmitAttempted, false);
 
 // === LOADING STATE ===
 Set(varIsLoading, false);
@@ -505,7 +507,9 @@ This app uses a **container-based architecture** for clean organization and easy
             ProjectType_DataCard1
             Discipline_DataCard1
             Course Number_DataCard1
-            TigerCardNumber_DataCard1
+            ▼ TigerCardNumber_DataCard1
+                lblTigerCardError    ← 16-digit validation (styled banner)
+                imgTigerCardExample  ← Tiger Card example image
             StudentEmail_DataCard1
             Student_DataCard1
             Title_DataCard1          ← (bottom)
@@ -1525,6 +1529,7 @@ If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
 | Property | Value |
 |----------|-------|
 | HintText | `"16-digit POS number from Tiger Card"` |
+| MaxLength | `16` |
 
 26. Click on `TigerCardNumber_DataCard1` itself (the card, not the input).
 27. Set these properties:
@@ -1534,21 +1539,49 @@ If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
 | Required | `true` |
 | Height | `240` |
 
-> 💡 **Increased height** accommodates the example Tiger Card image below.
+> 💡 **Increased height** accommodates the example Tiger Card image and validation label below.
+
+#### Add TigerCard Validation Label
+
+This styled label provides real-time feedback when the TigerCard number isn't exactly 16 digits.
+
+28. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Text label**.
+29. **Rename it:** `lblTigerCardError`
+30. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `DataCardValue30.X` |
+| Y | `DataCardValue30.Y + DataCardValue30.Height + 4` |
+| Width | `DataCardValue30.Width` |
+| Height | `24` |
+| Align | `Align.Center` |
+| Fill | `RGBA(255, 235, 235, 1)` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| Size | `10` |
+| BorderColor | `varColorDanger` |
+| BorderThickness | `1` |
+| Text | `"Must be exactly 16 digits"` |
+| Visible | `!IsBlank(DataCardValue30.Text) && Len(DataCardValue30.Text) <> 16` |
+
+> 💡 **Styled Feedback:** This label matches the bottom validation banner style (pink background, red border) for visual consistency. It only appears when the user has typed something but it's not exactly 16 digits.
+
+> ⚠️ **Control Name:** The TextInput control inside `TigerCardNumber_DataCard1` is named `DataCardValue30` in this example. Your control may have a different number suffix (e.g., `DataCardValue5`, `DataCardValue12`). Check the Tree view to find the actual name and replace `DataCardValue30` accordingly.
 
 #### Add Tiger Card Example Image
 
 This image helps students locate the 16-digit POS number on their Tiger Card.
 
-28. First, **upload the Tiger Card image** to the app:
+31. First, **upload the Tiger Card image** to the app:
     - In the left panel, click the **Media** icon (mountain/image icon)
     - Click **+ Add media** → **Upload**
     - Select your Tiger Card example image (showing where the POS number is located)
     - After upload, it will appear in your Media list — note the name (e.g., `Example TigerCard`)
 
-29. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Media** → **Image**.
-30. **Rename it:** `imgTigerCardExample`
-31. Set these properties:
+32. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Media** → **Image**.
+33. **Rename it:** `imgTigerCardExample`
+34. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1565,9 +1598,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Course Number_DataCard1
 
-32. Expand `Course Number_DataCard1` in Tree view.
-33. Click on the **TextInput control inside**.
-34. Set these properties:
+35. Expand `Course Number_DataCard1` in Tree view.
+36. Click on the **TextInput control inside**.
+37. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1577,17 +1610,17 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Discipline_DataCard1
 
-35. Expand `Discipline_DataCard1` in Tree view.
-36. Click on the **ComboBox control inside** (named `DataCardValue6` or similar).
-37. Set these properties:
+38. Expand `Discipline_DataCard1` in Tree view.
+39. Click on the **ComboBox control inside** (named `DataCardValue6` or similar).
+40. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `Choices([@PrintRequests].Discipline)` |
 | DefaultSelectedItems | `Parent.Default` |
 
-38. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
-39. Set these properties:
+41. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
+42. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1597,17 +1630,17 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### ProjectType_DataCard1
 
-40. Expand `ProjectType_DataCard1` in Tree view.
-41. Click on the **ComboBox control inside** (named `DataCardValue7` or similar).
-42. Set these properties:
+43. Expand `ProjectType_DataCard1` in Tree view.
+44. Click on the **ComboBox control inside** (named `DataCardValue7` or similar).
+45. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `Choices([@PrintRequests].ProjectType)` |
 | DefaultSelectedItems | `Parent.Default` |
 
-43. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
-44. Set these properties:
+46. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
+47. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1617,17 +1650,17 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Method_DataCard1 (Controls Cascading)
 
-45. Expand `Method_DataCard1` in Tree view.
-46. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
-47. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
+48. Expand `Method_DataCard1` in Tree view.
+49. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
+50. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
 
 > 💡 If your control has a different name, replace `DataCardValue8` in the Printer and Color formulas below with your actual control name.
 
 #### Printer_DataCard1 (Cascading Filter)
 
-48. Expand `Printer_DataCard1` in Tree view.
-49. Click on the **ComboBox control inside**.
-50. Set **Items**:
+51. Expand `Printer_DataCard1` in Tree view.
+52. Click on the **ComboBox control inside**.
+53. Set **Items**:
 
 ```powerfx
 Filter(
@@ -1646,9 +1679,9 @@ Filter(
 
 #### Color_DataCard1 (Cascading Filter)
 
-51. Expand `Color_DataCard1` in Tree view.
-52. Click on the **ComboBox control inside**.
-53. Set **Items**:
+54. Expand `Color_DataCard1` in Tree view.
+55. Click on the **ComboBox control inside**.
+56. Set **Items**:
 
 ```powerfx
 Filter(
@@ -1665,11 +1698,23 @@ Filter(
 
 > 💡 **Cascading Logic:** Resin is limited to Black, White, Gray, Clear. Filament gets all colors.
 
+#### DueDate_DataCard1
+
+57. Expand `DueDate_DataCard1` in Tree view.
+58. Click on the **DatePicker control inside** (e.g., `DataCardValue11`).
+59. Set **DefaultDate** to default to today's date:
+
+```powerfx
+If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
+```
+
+> 💡 **Default to Today:** This sets the date picker to today's date for new submissions, while preserving the existing date when editing.
+
 #### Notes_DataCard1
 
-54. Expand `Notes_DataCard1` in Tree view.
-55. Click on the **TextInput control inside**.
-56. Set these properties:
+60. Expand `Notes_DataCard1` in Tree view.
+61. Click on the **TextInput control inside**.
+62. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1678,8 +1723,8 @@ Filter(
 
 #### Attachments_DataCard1
 
-57. Click on `Attachments_DataCard1` in Tree view.
-58. Set these properties:
+63. Click on `Attachments_DataCard1` in Tree view.
+64. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1689,15 +1734,15 @@ Filter(
 
 #### Status_DataCard1 (Hidden, Auto-Set)
 
-59. Click on `Status_DataCard1` in Tree view.
-60. Set these properties:
+65. Click on `Status_DataCard1` in Tree view.
+66. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Visible | `false` |
 
-61. Click on the **ComboBox control inside** `Status_DataCard1`.
-62. Set **DefaultSelectedItems:**
+67. Click on the **ComboBox control inside** `Status_DataCard1`.
+68. Set **DefaultSelectedItems:**
 
 ```powerfx
 If(
@@ -1713,10 +1758,10 @@ If(
 
 ### 6E: Add File Warning Label
 
-63. Expand `Attachments_DataCard1` in Tree view and select it.
-64. Click **+ Insert** → **Text label**.
-65. **Rename it:** `lblFileWarning`
-66. Set these properties:
+69. Expand `Attachments_DataCard1` in Tree view and select it.
+70. Click **+ Insert** → **Text label**.
+71. **Rename it:** `lblFileWarning`
+72. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1736,7 +1781,7 @@ If(
 | BorderColor | `varColorWarning` |
 | BorderThickness | `1` |
 
-67. Set **Text:**
+73. Set **Text:**
 
 ```powerfx
 "IMPORTANT: File Naming Requirement
@@ -1756,9 +1801,9 @@ Files not following this format will be rejected."
 
 ### 6F: Add Submit Button
 
-68. Click **+ Insert** → **Button**.
-69. **Rename it:** `btnSubmit`
-70. Set these properties:
+74. Click **+ Insert** → **Button**.
+75. **Rename it:** `btnSubmit`
+76. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1780,34 +1825,43 @@ Files not following this format will be rejected."
 | PressedFill | `varColorPrimaryPressed` |
 | DisabledFill | `varColorDisabled` |
 
-71. Set **DisplayMode** (validates required fields):
+77. Set **DisplayMode** (validates required fields and TigerCard length):
 
 ```powerfx
 If(
-    frmSubmit.Valid,
+    frmSubmit.Valid && Len(TigerCardNumber_DataCard1.Update) = 16,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled. `frmSubmit.Valid` returns true when the form is ready to submit.
+> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled via `frmSubmit.Valid`. We also check that the Tiger Card number is exactly 16 digits using the DataCard's `.Update` property, which contains the current value that would be submitted. This is more reliable than referencing the internal control name directly.
 
-72. Set **OnSelect:**
+78. Set **OnSelect:**
 
 ```powerfx
-Set(varIsLoading, true);
-SubmitForm(frmSubmit)
+// Track that user attempted to submit (for showing validation errors)
+Set(varSubmitAttempted, true);
+
+// Only proceed if form is valid
+If(
+    frmSubmit.Valid && Len(TigerCardNumber_DataCard1.Update) = 16,
+    Set(varIsLoading, true);
+    SubmitForm(frmSubmit)
+)
 ```
+
+> 💡 **Submit Attempt Tracking:** We set `varSubmitAttempted` to true when the user clicks Submit. This allows the validation message to only appear after they've tried to submit, not while they're still filling out the form.
 
 ---
 
 ### 6G: Add Validation Feedback Label
 
-This label shows students exactly which fields need attention when the form isn't valid.
+This label shows students exactly which fields need attention — but only after they try to submit.
 
-73. Click **+ Insert** → **Text label**.
-74. **Rename it:** `lblValidationMessage`
-75. Set these properties:
+79. Click **+ Insert** → **Text label**.
+80. **Rename it:** `lblValidationMessage`
+81. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1815,7 +1869,7 @@ This label shows students exactly which fields need attention when the form isn'
 | Y | `btnSubmit.Y - 40` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `32` |
-| Visible | `!frmSubmit.Valid` |
+| Align | `Align.Center` |
 | Fill | `RGBA(255, 235, 235, 1)` |
 | Color | `varColorDanger` |
 | Font | `varAppFont` |
@@ -1827,29 +1881,40 @@ This label shows students exactly which fields need attention when the form isn'
 | BorderColor | `varColorDanger` |
 | BorderThickness | `1` |
 
-76. Set **Text:**
+82. Set **Visible** (only show after submit attempt):
 
 ```powerfx
-"Please fill in all required fields before submitting."
+varSubmitAttempted && (!frmSubmit.Valid || Len(TigerCardNumber_DataCard1.Update) <> 16)
 ```
 
-> 💡 **Keep it simple:** A clear, friendly message is better than listing technical field names. The disabled Submit button already prevents submission, so this just explains why.
+83. Set **Text:**
+
+```powerfx
+If(
+    Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
+    "Tiger Card number must be exactly 16 digits.",
+    "Please fill in all required fields before submitting."
+)
+```
+
+> 💡 **Specific feedback:** When the Tiger Card number is the issue, we show a specific message. Otherwise, we show the general required fields message. This helps students understand exactly what needs to be fixed.
 
 ---
 
 ### 6H: Configure Form Events
 
-77. Click on `frmSubmit` in Tree view.
-78. Set **OnSuccess:**
+84. Click on `frmSubmit` in Tree view.
+85. Set **OnSuccess:**
 
 ```powerfx
 Set(varIsLoading, false);
+Set(varSubmitAttempted, false);  // Reset for next submission
 Notify("Request submitted successfully! You'll receive a confirmation email shortly.", NotificationType.Success);
 ResetForm(frmSubmit);
 Navigate(scrMyRequests, ScreenTransition.Fade)
 ```
 
-79. Set **OnFailure:**
+86. Set **OnFailure:**
 
 ```powerfx
 Set(varIsLoading, false);
@@ -1894,6 +1959,7 @@ Your Tree view should now look like (first-created at bottom, last-created at to
             Discipline_DataCard1
             Course Number_DataCard1
             ▼ TigerCardNumber_DataCard1
+                lblTigerCardError        ← 16-digit validation (styled banner)
                 imgTigerCardExample      ← Tiger Card example image
                 DataCardValue (TextInput)
                 DataCardKey (Label)
@@ -3153,6 +3219,7 @@ Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
 Set(varFormSubmitted, false);
+Set(varSubmitAttempted, false);  // For validation message display
 Set(varIsLoading, false);
 
 // === PRICING ===

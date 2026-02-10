@@ -37,6 +37,7 @@
     - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
     - [Step 17D: View Messages Modal](#step-17d-view-messages-modal) ← **NEW**
     - [Step 17E: Adding the Loading Overlay](#step-17e-adding-the-loading-overlay) ← **UX Enhancement**
+    - [Step 17F: Adding the Audio Notification System](#step-17f-adding-the-audio-notification-system) ← **NEW**
 21. [Publishing the App](#step-18-publishing-the-app)
 22. [Testing the App](#step-19-testing-the-app)
 23. [Troubleshooting](#troubleshooting)
@@ -351,6 +352,16 @@ Set(varSelectedItem, Blank());
 // Controls loading overlay visibility during async operations
 Set(varIsLoading, false);
 
+// === AUDIO NOTIFICATION SYSTEM ===
+// Trigger variable for playing notification sound
+Set(varPlaySound, false);
+
+// Load NeedsAttention items into a local collection (avoids delegation)
+ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+
+// Track count for change detection (CountRows on local collection is safe)
+Set(varPrevAttentionCount, CountRows(colNeedsAttention));
+
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
@@ -400,6 +411,9 @@ Set(varLoadingMessage, "")
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
+| `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
+| `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
+| `varPlaySound` | Trigger to play notification sound | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per gram for resin printing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
@@ -617,6 +631,8 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblRejectTitle
         recRejectModal
         recRejectOverlay
+    audNotification                   ← Step 17F (Audio notification - invisible)
+    tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
     btnClearFilters                   ← Step 14
     btnRefresh                        ← Step 14
     chkNeedsAttention                 ← Step 14
@@ -7070,6 +7086,241 @@ Notify("Changes saved!", NotificationType.Success)
 
 ---
 
+# STEP 17F: Adding the Audio Notification System
+
+**What you're doing:** Adding automatic data refresh and audio notifications so staff are alerted when new items need attention, without having to manually check or refresh the dashboard.
+
+> 💡 **Why this matters:** Student workers often miss when a print moves to "Needs Attention" status because there's no audible alert. This system plays a notification sound when new attention items appear, ensuring timely responses.
+
+---
+
+## Overview
+
+The audio notification system consists of two components:
+
+1. **Timer Control** — Automatically refreshes data every 30 seconds
+2. **Audio Control** — Plays a notification sound when triggered
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Timer (30s)  →  Refresh Data  →  Count NeedsAttention     │
+│                                          ↓                  │
+│                              Compare to Previous Count      │
+│                                          ↓                  │
+│                              If Increased → Play Sound      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Uploading the Notification Sound
+
+Before adding the Audio control, you need to upload a sound file to the app's Media library.
+
+### Instructions
+
+1. Find or create a notification sound file:
+   - Use a short (1-2 second) pleasant chime or bell tone
+   - Supported formats: `.mp3`, `.wav`, `.m4a`
+   - Avoid harsh or alarming sounds that could startle workers
+   - Free options: [Pixabay Sound Effects](https://pixabay.com/sound-effects/), [Freesound.org](https://freesound.org/)
+
+2. In Power Apps Studio, click the **Media** icon in the left panel (image icon).
+
+3. Click **+ Add media** → **Upload**.
+
+4. Select your notification sound file.
+
+5. After upload, the file will appear in your Media library as `notification_chime`.
+
+> 💡 **Note:** Power Apps removes the file extension in the Media library, so `notification_chime.mp3` becomes `notification_chime`.
+
+---
+
+## Adding the Timer Control (tmrAutoRefresh)
+
+The Timer control automatically refreshes data and checks for new NeedsAttention items.
+
+### Instructions
+
+1. Make sure you're on `scrDashboard` (not inside a gallery or container).
+
+2. Click **+ Insert** → **Input** → **Timer**.
+
+3. **Rename it:** `tmrAutoRefresh`
+
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Duration | `30000` |
+| Repeat | `true` |
+| AutoStart | `true` |
+| Visible | `false` |
+
+> ⚠️ **Important:** Set `Visible` to `false` — the timer doesn't need to be seen by users.
+
+5. Set **OnTimerEnd:**
+
+**⬇️ FORMULA: Paste into tmrAutoRefresh.OnTimerEnd**
+
+```powerfx
+// Refresh data from SharePoint
+Refresh(PrintRequests);
+
+// Reload NeedsAttention items into local collection (avoids delegation)
+ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+
+// Count from local collection (no delegation warning)
+Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+
+// If count increased, play notification sound
+If(
+    varCurrentAttentionCount > varPrevAttentionCount,
+    Set(varPlaySound, true)
+);
+
+// Update previous count for next comparison
+Set(varPrevAttentionCount, varCurrentAttentionCount)
+```
+
+> ⚠️ **Delegation Note:** We use `ClearCollect` to load NeedsAttention items into a local collection first, then `CountRows` on that collection. This avoids delegation warnings because `CountRows` on a local collection always works correctly. The `Filter` may show a delegation warning, but since NeedsAttention items are typically a small subset, this approach is reliable.
+
+### How It Works
+
+| Step | What Happens |
+|------|--------------|
+| 1 | Timer fires every 30 seconds |
+| 2 | `Refresh(PrintRequests)` fetches latest data from SharePoint |
+| 3 | Count current NeedsAttention items |
+| 4 | Compare to previous count stored in `varPrevAttentionCount` |
+| 5 | If count increased AND sound is enabled, set `varPlaySound = true` |
+| 6 | Update `varPrevAttentionCount` for next cycle |
+
+> 💡 **Why 30 seconds?** This balances responsiveness with SharePoint API limits. You can adjust the `Duration` value (in milliseconds) if needed — 45000 for 45 seconds, 60000 for 1 minute.
+
+---
+
+## Adding the Audio Control (audNotification)
+
+The Audio control plays the notification sound when triggered.
+
+### Instructions
+
+1. Click **+ Insert** → **Media** → **Audio**.
+
+2. **Rename it:** `audNotification`
+
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Media | `notification_chime` |
+| Start | `varPlaySound` |
+| Loop | `false` |
+| Visible | `false` |
+| AutoStart | `false` |
+
+4. Set **OnEnd:**
+
+**⬇️ FORMULA: Paste into audNotification.OnEnd**
+
+```powerfx
+Set(varPlaySound, false)
+```
+
+> ⚠️ **Critical:** The `OnEnd` formula resets `varPlaySound` to `false` after the sound finishes. Without this, the sound won't play again on the next trigger.
+
+### Understanding the Audio Control
+
+| Property | Purpose |
+|----------|---------|
+| `Media` | The sound file from your Media library |
+| `Start` | When `true`, the audio plays. Bound to `varPlaySound` |
+| `Loop` | Set to `false` — we only want one chime per notification |
+| `Visible` | Set to `false` — audio controls don't need to be visible |
+| `OnEnd` | Resets the trigger variable so sound can play again |
+
+> 💡 **Browser Autoplay Policy:** Most browsers require user interaction before playing audio. The first time a user opens the app, they may need to click somewhere on the page before audio will work. This is a browser security feature, not a Power Apps limitation.
+
+---
+
+## Control Placement in Tree View
+
+Add the new controls to your Tree view. The Timer and Audio controls are invisible and can be placed near the filter bar controls.
+
+```
+▼ scrDashboard
+    ▼ conLoadingOverlay               ← TOP (highest z-order)
+        ...
+    ▼ conMessageModal
+        ...
+    ▼ conViewMessagesModal
+        ...
+    ...other modal containers...
+    audNotification                   ← NEW: Audio control (invisible)
+    tmrAutoRefresh                    ← NEW: Timer control (invisible)
+    recFilterBar
+    txtSearch
+    chkNeedsAttention
+    lblNeedsAttention
+    btnRefresh
+    btnClearFilters
+    galJobCards
+    ...
+```
+
+> 💡 **Z-Order:** The Timer and Audio controls don't need specific z-ordering since they're invisible.
+
+---
+
+## Testing the Audio Notification System
+
+### Pre-Test Setup
+
+1. **Run OnStart:** Click the three dots next to "App" → "Run OnStart" to initialize the new variables.
+
+2. **Browser Interaction:** Click anywhere on the app canvas to satisfy browser autoplay requirements.
+
+### Test Checklist
+
+- [ ] Timer fires every 30 seconds (watch the data refresh)
+- [ ] Sound plays when a new NeedsAttention item appears
+- [ ] Sound does NOT play when count stays the same
+- [ ] Sound does NOT play when count decreases
+- [ ] App startup doesn't trigger a false positive sound
+
+### Manual Testing Steps
+
+1. **Test Auto-Refresh:**
+   - Open the app in Play mode (F5)
+   - Wait 30 seconds
+   - Verify the data refreshes (check tab counts or add a test item in SharePoint)
+
+2. **Test Sound Notification:**
+   - Open SharePoint and create a new PrintRequest with `NeedsAttention = Yes`
+   - Wait for the timer to fire (up to 30 seconds)
+   - Verify the notification sound plays
+
+3. **Test Sound Toggle:**
+   - Click the Sound Toggle button to disable sound
+   - Create another NeedsAttention item in SharePoint
+   - Verify NO sound plays
+   - Click the Sound Toggle button to re-enable
+   - Verify sound plays on next NeedsAttention increase
+
+### Troubleshooting
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Sound never plays | Browser autoplay blocked | Click anywhere on the app first |
+| Sound never plays | Wrong media file name | Check `audNotification.Media` matches your uploaded file name |
+| Sound plays on app start | Initial count comparison issue | Ensure `varPrevAttentionCount` is set in `App.OnStart` |
+| Timer doesn't fire | `AutoStart` is `false` | Set `tmrAutoRefresh.AutoStart = true` |
+| Sound plays repeatedly | `OnEnd` not resetting variable | Ensure `audNotification.OnEnd` sets `varPlaySound = false` |
+
+---
+
 # STEP 18: Publishing the App
 
 **What you're doing:** Saving and publishing your app so staff can use it.
@@ -7141,6 +7392,12 @@ Notify("Changes saved!", NotificationType.Success)
 - [ ] Picked Up → status changes to "Paid & Picked Up"
 - [ ] Lightbulb toggle works
 - [ ] Staff Notes save correctly
+
+#### Audio Notification System
+- [ ] Timer auto-refreshes data every 30 seconds
+- [ ] Sound plays when NeedsAttention count increases
+- [ ] Sound does NOT play when count stays same or decreases
+- [ ] No false positive sound on app startup
 
 ---
 
@@ -7236,6 +7493,43 @@ Notify("Changes saved!", NotificationType.Success)
 1. In Tree view, right-click the modal overlay
 2. Click **Reorder** → **Bring to front**
 3. Do the same for the modal content rectangle
+
+---
+
+## Problem: Audio notification never plays
+
+**Cause:** Browser autoplay policy blocks audio, or incorrect control configuration.
+
+**Solution:**
+1. **Browser autoplay:** Click anywhere on the app canvas first — browsers require user interaction before playing audio
+2. **Check Media property:** Ensure `audNotification.Media` matches your uploaded sound file name exactly
+3. **Check Start property:** Ensure `audNotification.Start` is set to `varPlaySound`
+4. **Check OnEnd:** Ensure `audNotification.OnEnd` contains `Set(varPlaySound, false)`
+5. **Check Timer:** Ensure `tmrAutoRefresh.AutoStart` is `true` and `Repeat` is `true`
+
+---
+
+## Problem: Audio plays on every timer tick
+
+**Cause:** `varPlaySound` not being reset after sound plays.
+
+**Solution:**
+1. Ensure `audNotification.OnEnd` contains: `Set(varPlaySound, false)`
+2. This resets the trigger so sound only plays when count actually increases
+
+---
+
+## Problem: Audio plays on app startup
+
+**Cause:** Initial count comparison detecting existing items as "new".
+
+**Solution:**
+1. Ensure `varPrevAttentionCount` is set in `App.OnStart` BEFORE the timer starts
+2. The OnStart formula should include:
+   ```powerfx
+   ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+   Set(varPrevAttentionCount, CountRows(colNeedsAttention));
+   ```
 
 ---
 
