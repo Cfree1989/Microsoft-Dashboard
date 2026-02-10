@@ -1501,20 +1501,29 @@ Now we'll customize each DataCard. For each DataCard below, **click on it in the
 | DefaultSelectedItems | `Parent.Default` |
 | DisplayMode | `Parent.DisplayMode` |
 | IsSearchable | `true` |
+| InputTextPlaceholder | `"Search for your name..."` |
+
+> 💡 **HintText vs InputTextPlaceholder:** TextInput controls use the `HintText` property for placeholder text, but ComboBox controls use `InputTextPlaceholder` instead. Both achieve the same visual result — showing gray placeholder text when the field is empty.
 
 > 💡 **Why not auto-fill?** SharePoint Person columns have complex type requirements that make auto-fill unreliable. Since `StudentEmail` auto-fills correctly and is used for filtering requests, letting students search and select their name is a simple, reliable approach.
 
 #### StudentEmail_DataCard1 (Auto-fill)
 
 19. Expand `StudentEmail_DataCard1` in Tree view.
-20. Click on the **TextInput control inside**.
-21. Set these properties:
+20. Click on `StudentEmail_DataCard1` itself (the card) and set:
+
+| Property | Value |
+|----------|-------|
+| DisplayName | `"Student Email"` |
+
+21. Click on the **TextInput control inside**.
+22. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | DisplayMode | `DisplayMode.View` |
 
-22. Set **Default:**
+23. Set **Default:**
 
 ```powerfx
 If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
@@ -1536,6 +1545,7 @@ If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
 
 | Property | Value |
 |----------|-------|
+| DisplayName | `"TigerCard Number"` |
 | Required | `true` |
 | Height | `240` |
 
@@ -1618,6 +1628,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].Discipline)` |
 | DefaultSelectedItems | `Parent.Default` |
+| InputTextPlaceholder | `"Select your discipline..."` |
 
 41. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
 42. Set these properties:
@@ -1638,12 +1649,14 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].ProjectType)` |
 | DefaultSelectedItems | `Parent.Default` |
+| InputTextPlaceholder | `"Select project type..."` |
 
 46. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
 47. Set these properties:
 
 | Property | Value |
 |----------|-------|
+| DisplayName | `"Project Type"` |
 | Required | `true` |
 
 > 💡 **Why required?** Project Type (e.g., Class Project, Personal, Research) helps staff understand urgency and billing context.
@@ -1653,14 +1666,19 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 48. Expand `Method_DataCard1` in Tree view.
 49. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
 50. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
+51. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| InputTextPlaceholder | `"Select printing method..."` |
 
 > 💡 If your control has a different name, replace `DataCardValue8` in the Printer and Color formulas below with your actual control name.
 
 #### Printer_DataCard1 (Cascading Filter)
 
-51. Expand `Printer_DataCard1` in Tree view.
-52. Click on the **ComboBox control inside**.
-53. Set **Items**:
+52. Expand `Printer_DataCard1` in Tree view.
+53. Click on the **ComboBox control inside**.
+54. Set **Items**:
 
 ```powerfx
 Filter(
@@ -1675,13 +1693,19 @@ Filter(
 )
 ```
 
+55. Set this additional property:
+
+| Property | Value |
+|----------|-------|
+| InputTextPlaceholder | `"Select a printer..."` |
+
 > 💡 **Cascading Logic:** Filament shows FDM printers, Resin shows only Form 3.
 
 #### Color_DataCard1 (Cascading Filter)
 
-54. Expand `Color_DataCard1` in Tree view.
-55. Click on the **ComboBox control inside**.
-56. Set **Items**:
+56. Expand `Color_DataCard1` in Tree view.
+57. Click on the **ComboBox control inside**.
+58. Set **Items**:
 
 ```powerfx
 Filter(
@@ -1696,13 +1720,25 @@ Filter(
 )
 ```
 
+59. Set this additional property:
+
+| Property | Value |
+|----------|-------|
+| InputTextPlaceholder | `"Select a color..."` |
+
 > 💡 **Cascading Logic:** Resin is limited to Black, White, Gray, Clear. Filament gets all colors.
 
 #### DueDate_DataCard1
 
-57. Expand `DueDate_DataCard1` in Tree view.
-58. Click on the **DatePicker control inside** (e.g., `DataCardValue11`).
-59. Set **DefaultDate** to default to today's date:
+57. Click on `DueDate_DataCard1` itself (the card) and set:
+
+| Property | Value |
+|----------|-------|
+| DisplayName | `"Due Date"` |
+
+58. Expand `DueDate_DataCard1` in Tree view.
+59. Click on the **DatePicker control inside** (e.g., `DataCardValue11`).
+60. Set **DefaultDate** to default to today's date:
 
 ```powerfx
 If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
@@ -1751,6 +1787,12 @@ If(
     Table(Parent.Default)
 )
 ```
+
+69. Set this additional property:
+
+| Property | Value |
+|----------|-------|
+| InputTextPlaceholder | `"Select status..."` |
 
 > This ensures new submissions always start with Status = "Uploaded".
 
