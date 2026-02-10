@@ -1639,6 +1639,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > 💡 **Why required?** Discipline helps staff prioritize requests and understand the academic context of each print job.
 
+> 📋 **SharePoint Discipline Choices:** The Discipline column in SharePoint should include all LSU colleges plus specific programs:
+> - Agriculture, Architecture, Art, Business, Coast & Environment, Computer Science, Engineering, Human Sciences & Education, Humanities & Social Sciences, Interior Design, Landscape Architecture, Law, Mass Communication, Music & Dramatic Arts, Personal, Science, Veterinary Medicine
+
 #### ProjectType_DataCard1
 
 43. Expand `ProjectType_DataCard1` in Tree view.
