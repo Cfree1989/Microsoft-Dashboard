@@ -1474,14 +1474,70 @@ These fields should NOT appear on the student form. Remove them:
 
 ---
 
-### 6D: Configure Individual DataCards
+### 6D: Add Important Information DataCard
+
+This warning card appears at the top of the form and scrolls with all the other fields, ensuring students see it before filling out the form.
+
+13. With `frmSubmit` selected, click **+ Insert** → **Input** → **Add a custom card** (or right-click on `frmSubmit` and select **New card** → **Blank card**).
+14. **Rename it:** `dcImportantInfo`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Width | `Parent.Width` |
+| Height | `200` |
+| Fill | `RGBA(255, 244, 206, 1)` |
+| BorderColor | `varColorWarning` |
+| BorderThickness | `1` |
+| DisplayMode | `DisplayMode.View` |
+
+> 💡 **Custom Card:** A blank/custom DataCard is not bound to any SharePoint column — it's just a container for displaying content within the form.
+
+16. With `dcImportantInfo` selected, click **+ Insert** → **Text label**.
+17. **Rename it:** `lblImportantInfo`
+18. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `varSpacingMD` |
+| Y | `varSpacingMD` |
+| Width | `Parent.Width - (varSpacingMD * 2)` |
+| Height | `Parent.Height - (varSpacingMD * 2)` |
+| Fill | `Transparent` |
+| Color | `RGBA(102, 77, 3, 1)` |
+| Font | `varAppFont` |
+| Size | `11` |
+
+19. Set **Text:**
+
+```powerfx
+"Important Information Before Submitting Your 3D Printing Request
+
+Before submitting your model for 3D printing, please ensure you have thoroughly reviewed our Additive Manufacturing Moodle page, read all the guides, and checked the checklist. If necessary, revisit and fix your model before submission. Your model must be scaled and simplified appropriately, often requiring a second version specifically optimized for 3D printing.
+
+We will not print models that are broken, messy, or too large. Your model must follow the rules and constraints of the machine. We will not fix or scale your model as we do not know your specific needs or project requirements. We print exactly what you send us; if the scale is wrong or you are unsatisfied with the product, it is your responsibility.
+
+We will gladly print another model for you at an additional cost. We are only responsible for print failures due to issues under our control."
+```
+
+> 💡 **Scrolls with form:** Because this is a DataCard inside `frmSubmit`, it will scroll along with all the other DataCards, ensuring students see it as they begin filling out the form.
+
+#### Position the Card at the Top
+
+20. In the **Edit fields** panel (click **Edit fields** in the Properties pane), drag `dcImportantInfo` to the **very top** of the field list, above Title.
+
+> ⚠️ **Field Order:** The order in the Edit fields panel determines the visual order in the form. Make sure this card appears first so students see the warning before any input fields.
+
+---
+
+### 6E: Configure Individual DataCards
 
 Now we'll customize each DataCard. For each DataCard below, **click on it in the Tree view** and set the properties shown.
 
 #### Title_DataCard1 (Hide)
 
-13. Click on `Title_DataCard1` in Tree view.
-14. Set these properties:
+20. Click on `Title_DataCard1` in Tree view.
+21. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1667,9 +1723,17 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 #### Method_DataCard1 (Controls Cascading)
 
 48. Expand `Method_DataCard1` in Tree view.
-49. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
-50. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
-51. Set these properties:
+49. Click on `Method_DataCard1` itself (the card) and set:
+
+| Property | Value |
+|----------|-------|
+| Height | `280` |
+
+> 💡 **Increased height** accommodates the method description label below the ComboBox.
+
+50. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
+51. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
+52. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1677,11 +1741,64 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > 💡 If your control has a different name, replace `DataCardValue8` in the Printer and Color formulas below with your actual control name.
 
+#### Add Method Description Label
+
+53. With `Method_DataCard1` expanded, click **+ Insert** → **Text label**.
+54. **Rename it:** `lblMethodInfo`
+55. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `DataCardValue8.X` |
+| Y | `DataCardValue8.Y + DataCardValue8.Height + 8` |
+| Width | `DataCardValue8.Width` |
+| Height | `180` |
+| Fill | `RGBA(240, 248, 255, 1)` |
+| Color | `varColorText` |
+| Font | `varAppFont` |
+| Size | `10` |
+| PaddingTop | `varSpacingMD` |
+| PaddingBottom | `varSpacingMD` |
+| PaddingLeft | `varSpacingMD` |
+| PaddingRight | `varSpacingMD` |
+| BorderColor | `varColorInfo` |
+| BorderThickness | `1` |
+
+56. Set **Text:**
+
+```powerfx
+"Choose the appropriate print method for your model:
+
+Filament:
+• Description: Good resolution, suitable for simpler models. Fast.
+• Best For: Medium items.
+• Cost: Least expensive.
+
+Resin:
+• Description: Super high resolution and detail. Slow.
+• Best For: Small items.
+• Cost: More expensive."
+
+
+```
+
+> 💡 **Purpose:** This helps students choose the right print method based on their model's size and detail requirements.
+
+> ⚠️ **Control Name:** The ComboBox control inside `Method_DataCard1` is named `DataCardValue8` in this example. Your control may have a different number suffix. Check the Tree view to find the actual name and replace `DataCardValue8` accordingly.
+
 #### Printer_DataCard1 (Cascading Filter)
 
-52. Expand `Printer_DataCard1` in Tree view.
-53. Click on the **ComboBox control inside**.
-54. Set **Items**:
+57. Expand `Printer_DataCard1` in Tree view.
+58. Click on `Printer_DataCard1` itself (the card) and set:
+
+| Property | Value |
+|----------|-------|
+| Height | `200` |
+
+> 💡 **Increased height** accommodates the dimensions warning label below the ComboBox.
+
+59. Click on the **ComboBox control inside**.
+60. Set **Items**:
 
 ```powerfx
 Filter(
@@ -1696,13 +1813,46 @@ Filter(
 )
 ```
 
-55. Set this additional property:
+61. Set this additional property:
 
 | Property | Value |
 |----------|-------|
 | InputTextPlaceholder | `"Select a printer..."` |
 
 > 💡 **Cascading Logic:** Filament shows FDM printers, Resin shows only Form 3.
+
+#### Add Printer Dimensions Warning Label
+
+62. With `Printer_DataCard1` expanded, click **+ Insert** → **Text label**.
+63. **Rename it:** `lblDimensionsWarning`
+64. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `DataCardValue9.X` |
+| Y | `DataCardValue9.Y + DataCardValue9.Height + 8` |
+| Width | `DataCardValue9.Width` |
+| Height | `90` |
+| Fill | `RGBA(255, 244, 206, 1)` |
+| Color | `RGBA(102, 77, 3, 1)` |
+| Font | `varAppFont` |
+| Size | `10` |
+| PaddingTop | `varSpacingSM` |
+| PaddingBottom | `varSpacingSM` |
+| PaddingLeft | `varSpacingMD` |
+| PaddingRight | `varSpacingMD` |
+| BorderColor | `varColorWarning` |
+| BorderThickness | `1` |
+
+65. Set **Text:**
+
+```powerfx
+"Ensure your model's dimensions are within the specified limits for the printer you plan to use. If your model is too large, consider scaling it down or splitting it into parts. For more guidance, refer to the design guides on our Moodle page.
+
+If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE exporting. If you do not the scale will not work correctly."
+```
+
+> ⚠️ **Control Name:** The ComboBox control inside `Printer_DataCard1` is named `DataCardValue9` in this example. Your control may have a different number suffix. Check the Tree view to find the actual name and replace `DataCardValue9` accordingly.
 
 #### Color_DataCard1 (Cascading Filter)
 
@@ -1768,8 +1918,11 @@ If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
 | Property | Value |
 |----------|-------|
 | Required | `false` |
+| Height | `280` |
 
 > ✅ **Native Attachments:** Because we're using EditForm with `SubmitForm()`, file attachments work automatically. No extra configuration needed!
+
+> 💡 **Increased height** accommodates the file warning label below the attachment control.
 
 #### Status_DataCard1 (Hidden, Auto-Set)
 
@@ -1801,7 +1954,7 @@ If(
 
 ---
 
-### 6E: Add File Warning Label
+### 6F: Add File Warning Label
 
 69. Expand `Attachments_DataCard1` in Tree view and select it.
 70. Click **+ Insert** → **Text label**.
@@ -1814,7 +1967,6 @@ If(
 | Y | `DataCardKey.Y + DataCardKey.Height + varSpacingMD` |
 | Width | `Parent.Width - (varSpacingMD * 2)` |
 | Height | `180` |
-| Overflow | `Overflow.Scroll` |
 | Fill | `RGBA(255, 244, 206, 1)` |
 | Color | `RGBA(102, 77, 3, 1)` |
 | Font | `varAppFont` |
@@ -1829,6 +1981,8 @@ If(
 73. Set **Text:**
 
 ```powerfx
+
+
 "IMPORTANT: File Naming Requirement
 
 Your files MUST be named: FirstLast_Method_Color
@@ -1839,12 +1993,14 @@ Examples:
 
 Accepted formats: .stl, .obj, .3mf, .idea, .form
 
-Files not following this format will be rejected."
+Files not following this format will be rejected.
+
+Send us ONE FILE with all of your parts and pieces. Do not upload multiple files at a time unless absolutely necessary."
 ```
 
 ---
 
-### 6F: Add Submit Button
+### 6G: Add Submit Button
 
 74. Click **+ Insert** → **Button**.
 75. **Rename it:** `btnSubmit`
@@ -1900,7 +2056,7 @@ If(
 
 ---
 
-### 6G: Add Validation Feedback Label
+### 6H: Add Validation Feedback Label
 
 This label shows students exactly which fields need attention — but only after they try to submit.
 
@@ -1946,7 +2102,7 @@ If(
 
 ---
 
-### 6H: Configure Form Events
+### 6I: Configure Form Events
 
 84. Click on `frmSubmit` in Tree view.
 85. Set **OnSuccess:**
