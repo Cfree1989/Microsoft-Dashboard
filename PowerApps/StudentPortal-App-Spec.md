@@ -1981,8 +1981,6 @@ If(
 73. Set **Text:**
 
 ```powerfx
-
-
 "IMPORTANT: File Naming Requirement
 
 Your files MUST be named: FirstLast_Method_Color
