@@ -1677,14 +1677,16 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 #### Discipline_DataCard1
 
 38. Expand `Discipline_DataCard1` in Tree view.
-39. Click on the **ComboBox control inside** (named `DataCardValue6` or similar).
+39. Click on the **ComboBox control inside** (named `DataCardValue6`).
 40. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `Choices([@PrintRequests].Department)` |
-| DefaultSelectedItems | `Parent.Default` |
-| InputTextPlaceholder | `"Select your discipline..."` |
+| DefaultSelectedItems | `Blank()` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| InputTextPlaceholder | `"Associated with course number"` |
 
 > ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
 
@@ -1698,20 +1700,24 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > 💡 **Why required?** Discipline helps staff prioritize requests and understand the academic context of each print job.
 
+> ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Department))`), the control may be corrupted. **Fix:** Delete `DataCardValue6`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue6`, and reapply the properties above.
+
 > 📋 **SharePoint Discipline Choices:** The Discipline column in SharePoint should include all LSU colleges plus specific programs:
 > - Agriculture, Architecture, Art, Business, Coast & Environment, Computer Science, Engineering, Human Sciences & Education, Humanities & Social Sciences, Interior Design, Landscape Architecture, Law, Mass Communication, Music & Dramatic Arts, Personal, Science, Veterinary Medicine
 
 #### ProjectType_DataCard1
 
 43. Expand `ProjectType_DataCard1` in Tree view.
-44. Click on the **ComboBox control inside** (named `DataCardValue7` or similar).
+44. Click on the **ComboBox control inside** (named `DataCardValue7`).
 45. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `Choices([@PrintRequests].ProjectType)` |
 | DefaultSelectedItems | `Parent.Default` |
-| InputTextPlaceholder | `"Select project type..."` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| InputTextPlaceholder | `"What's this for?"` |
 
 46. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
 47. Set these properties:
@@ -1722,6 +1728,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | Required | `true` |
 
 > 💡 **Why required?** Project Type (e.g., Class Project, Personal, Research) helps staff understand urgency and billing context.
+
+> ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.ProjectType))`), the control may be corrupted. **Fix:** Delete `DataCardValue7`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue7`, and reapply the properties above.
 
 #### Method_DataCard1 (Controls Cascading)
 
@@ -1734,15 +1742,21 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > 💡 **Increased height** accommodates the method description label below the ComboBox.
 
-50. Click on the **ComboBox control inside** (default name: `DataCardValue8`).
-51. **Verify the name** of this control matches `DataCardValue8` — this is referenced by Printer and Color cascading filters.
+50. Click on the **ComboBox control inside** (named `DataCardValue8`).
+51. **Verify the name** of this control is `DataCardValue8` — this is referenced by Printer and Color cascading filters.
 52. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| InputTextPlaceholder | `"Select printing method..."` |
+| Items | `Choices([@PrintRequests].Method)` |
+| DefaultSelectedItems | `Parent.Default` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| InputTextPlaceholder | `"What type of printer?"` |
 
-> 💡 If your control has a different name, replace `DataCardValue8` in the Printer and Color formulas below with your actual control name.
+> ⚠️ **Critical:** The Printer and Color dropdowns reference `DataCardValue8.Selected.Value` for cascading filters. If you rename this control, update those formulas accordingly.
+
+> ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Method))`), the control may be corrupted. **Fix:** Delete `DataCardValue8`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue8`, and reapply the properties above.
 
 #### Add Method Description Label
 
@@ -1800,8 +1814,18 @@ Resin:
 
 > 💡 **Increased height** accommodates the dimensions warning label below the ComboBox.
 
-59. Click on the **ComboBox control inside**.
-60. Set **Items**:
+59. Click on the **ComboBox control inside** (named `DataCardValue10`).
+60. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Items | *(see cascading formula below)* |
+| DefaultSelectedItems | `Parent.Default` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| InputTextPlaceholder | `"What size printer?"` |
+
+61. Set **Items** (cascading filter — shows printers based on Method selection in `DataCardValue8`):
 
 ```powerfx
 Filter(
@@ -1816,13 +1840,9 @@ Filter(
 )
 ```
 
-61. Set this additional property:
+> 💡 **Cascading Logic:** When Method (`DataCardValue8`) = "Filament" → shows FDM printers. When Method = "Resin" → shows only Form 3. When Method is blank → shows all printers.
 
-| Property | Value |
-|----------|-------|
-| InputTextPlaceholder | `"Select a printer..."` |
-
-> 💡 **Cascading Logic:** Filament shows FDM printers, Resin shows only Form 3.
+> ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Printer))`), the control may be corrupted. **Fix:** Delete `DataCardValue10`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue10`, and reapply the properties above.
 
 #### Add Printer Dimensions Warning Label
 
@@ -1832,9 +1852,9 @@ Filter(
 
 | Property | Value |
 |----------|-------|
-| X | `DataCardValue9.X` |
-| Y | `DataCardValue9.Y + DataCardValue9.Height + 8` |
-| Width | `DataCardValue9.Width` |
+| X | `DataCardValue10.X` |
+| Y | `DataCardValue10.Y + DataCardValue10.Height + 8` |
+| Width | `DataCardValue10.Width` |
 | Height | `90` |
 | Fill | `RGBA(255, 244, 206, 1)` |
 | Color | `RGBA(102, 77, 3, 1)` |
@@ -1855,13 +1875,21 @@ Filter(
 If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE exporting. If you do not the scale will not work correctly."
 ```
 
-> ⚠️ **Control Name:** The ComboBox control inside `Printer_DataCard1` is named `DataCardValue9` in this example. Your control may have a different number suffix. Check the Tree view to find the actual name and replace `DataCardValue9` accordingly.
-
 #### Color_DataCard1 (Cascading Filter)
 
-56. Expand `Color_DataCard1` in Tree view.
-57. Click on the **ComboBox control inside**.
-58. Set **Items**:
+66. Expand `Color_DataCard1` in Tree view.
+67. Click on the **ComboBox control inside** (named `DataCardValue9`).
+68. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Items | *(see cascading formula below)* |
+| DefaultSelectedItems | `Parent.Default` |
+| DisplayFields | `["Value"]` |
+| SearchFields | `["Value"]` |
+| InputTextPlaceholder | `""` |
+
+69. Set **Items** (cascading filter — shows colors based on Method selection in `DataCardValue8`):
 
 ```powerfx
 Filter(
@@ -1876,13 +1904,9 @@ Filter(
 )
 ```
 
-59. Set this additional property:
+> 💡 **Cascading Logic:** When Method (`DataCardValue8`) = "Resin" → shows only Black, White, Gray, Clear. When Method ≠ "Resin" (Filament or blank) → shows all colors.
 
-| Property | Value |
-|----------|-------|
-| InputTextPlaceholder | `"Select a color..."` |
-
-> 💡 **Cascading Logic:** Resin is limited to Black, White, Gray, Clear. Filament gets all colors.
+> ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Color))`), the control may be corrupted. **Fix:** Delete `DataCardValue9`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue9`, and reapply the properties above.
 
 #### DueDate_DataCard1
 
@@ -2196,9 +2220,9 @@ When configuring `Printer_DataCard1`'s ComboBox Items property, use this filter 
 Filter(
     Choices([@PrintRequests].Printer),
     If(
-        DataCardValueMethod.Selected.Value = "Filament",
+        DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
-        DataCardValueMethod.Selected.Value = "Resin",
+        DataCardValue8.Selected.Value = "Resin",
         Value = "Form 3 (5.7×5.7×7.3in)",
         true
     )
@@ -3301,6 +3325,36 @@ Choices([@PrintRequests].Department)
 | Discipline | `Department` | Column was renamed after creation |
 
 > 💡 **Tip:** Also ensure the DataCard's `DataField` property matches the internal name.
+
+---
+
+## Problem: ComboBox in form is empty but Choices() works outside form
+
+**Cause:** The ComboBox control inside the DataCard has become corrupted. This can happen after modifying certain properties like InputTextPlaceholder, DisplayName labels, or adding sibling controls. The control appears functional but silently fails to display items.
+
+**Diagnostic test:**
+1. Add a Label outside the form with: `CountRows(Choices(PrintRequests.Method))`
+2. Add a standalone ComboBox outside the form with: `Items: Choices(PrintRequests.Method)`
+3. If both work but the form ComboBox is empty, the control is corrupted.
+
+**Solution:** Recreate the ComboBox control:
+1. Note down all current property values (Items, DisplayFields, DefaultSelectedItems, etc.)
+2. Delete the corrupted ComboBox (e.g., `DataCardValue8`)
+3. With the DataCard selected, click **+ Insert** → **Input** → **Combo box**
+4. Rename the new ComboBox to match the original name (e.g., `DataCardValue8`)
+5. Reapply all properties from step 1
+6. If other controls reference this ComboBox (cascading filters), verify they still work
+
+**Expected control names in this app:**
+| DataCard | ComboBox Name |
+|----------|---------------|
+| Discipline_DataCard1 | `DataCardValue6` |
+| ProjectType_DataCard1 | `DataCardValue7` |
+| Method_DataCard1 | `DataCardValue8` |
+| Color_DataCard1 | `DataCardValue9` |
+| Printer_DataCard1 | `DataCardValue10` |
+
+> ⚠️ **Prevention:** When modifying form fields, avoid changing control names or certain internal properties. If dropdowns stop working after edits, try the recreate approach above.
 
 ---
 
