@@ -1563,7 +1563,9 @@ Now we'll customize each DataCard. For each DataCard below, **click on it in the
 
 > 💡 **Why not auto-fill?** SharePoint Person columns have complex type requirements that make auto-fill unreliable. Since `StudentEmail` auto-fills correctly and is used for filtering requests, letting students search and select their name is a simple, reliable approach.
 
-#### StudentEmail_DataCard1 (Auto-fill)
+#### StudentEmail_DataCard1 (Auto-fill) - CRITICAL FOR FILTERING
+
+> ⚠️ **This field is critical for the My Requests filter to work.** The `StudentEmail` field must be auto-populated from `User().Email` and locked from editing. Do NOT use the Student Person field's Email property.
 
 19. Expand `StudentEmail_DataCard1` in Tree view.
 20. Click on `StudentEmail_DataCard1` itself (the card) and set:
@@ -1571,6 +1573,9 @@ Now we'll customize each DataCard. For each DataCard below, **click on it in the
 | Property | Value |
 |----------|-------|
 | DisplayName | `"Student Email"` |
+| Update | `Lower(User().Email)` |
+
+> ⚠️ **CRITICAL: Set Update on the DataCard itself.** This ensures the correct email is saved regardless of what the TextInput shows. The `Update` property determines what actually gets written to SharePoint.
 
 21. Click on the **TextInput control inside**.
 22. Set these properties:
@@ -1582,8 +1587,10 @@ Now we'll customize each DataCard. For each DataCard below, **click on it in the
 23. Set **Default:**
 
 ```powerfx
-If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
+Lower(User().Email)
 ```
+
+> 💡 **Simplified Default:** We use `Lower(User().Email)` directly instead of checking FormMode. For new submissions, this shows the correct email. For viewing existing records, the DisplayMode.View prevents editing anyway.
 
 #### TigerCardNumber_DataCard1
 
@@ -2430,14 +2437,14 @@ Notify("Requests refreshed!", NotificationType.Information)
 SortByColumns(
     Filter(
         PrintRequests,
-        Lower(Student.Email) = varMeEmail
+        Lower(StudentEmail) = varMeEmail
     ),
     "Created",
     SortOrder.Descending
 )
 ```
 
-> 💡 **How it works:** This filters to show only requests where the Student email matches the logged-in user, sorted newest first.
+> 💡 **How it works:** This filters to show only requests where the `StudentEmail` field matches the logged-in user's email, sorted newest first. We use `StudentEmail` (which is auto-populated from `User().Email` on submission) rather than `Student.Claims` because the Student Person field requires manual selection and may not always match the submitting user.
 
 ### Empty State Label
 
@@ -3299,17 +3306,83 @@ For a simpler embed:
 
 ## Problem: "User not found" or empty gallery
 
-**Cause:** Email comparison is case-sensitive.
+**Cause:** The gallery filter doesn't match the logged-in user.
 
-**Solution:** Ensure you're using `Lower()` for email comparisons:
+**Solution:** Filter by the `StudentEmail` text field (which is auto-populated from `User().Email` on submission):
+
 ```powerfx
-Lower(Student.Email) = varMeEmail
+Filter(PrintRequests, Lower(StudentEmail) = varMeEmail)
 ```
 
-And in OnStart:
+And in OnStart, ensure email is lowercase:
 ```powerfx
 Set(varMeEmail, Lower(User().Email))
 ```
+
+> ⚠️ **Why NOT Claims?** The `Student` Person field requires manual selection by the student. If they select the wrong person or themselves under a different email alias, `Student.Claims` won't match. The `StudentEmail` field is auto-populated from `User().Email` and is reliable.
+
+---
+
+## Problem: Student sees empty "My Requests" but request exists in Staff Dashboard
+
+**Symptom:** A student submits a request, staff processes it, student receives email notification, but when they click through to view their request, the My Requests page is completely empty.
+
+**Common Causes:**
+
+1. **Wrong filter field:** Using `Student.Claims` instead of `StudentEmail`. The `Student` Person field requires manual selection, so `Student.Claims` may not match the submitting user.
+
+2. **Case sensitivity:** Email comparison is case-sensitive. Always use `Lower()` on both sides.
+
+3. **Email alias mismatch:** If using `Student.Email` instead of `StudentEmail`, universities with multiple email aliases can cause mismatches.
+
+**How to diagnose:**
+
+1. Add temporary debug labels to the My Requests screen:
+   ```powerfx
+   // Label showing current user info
+   "Your email: " & varMeEmail & " | Items found: " & CountRows(PrintRequests)
+   
+   // Label showing what's stored in first item
+   "First item StudentEmail: " & First(PrintRequests).StudentEmail
+   ```
+
+2. Compare what the student sees as "Your email" with what's stored in the SharePoint `StudentEmail` field for their request.
+
+3. If they're different, the filter won't match.
+
+**Solution (Recommended):**
+
+Use the `StudentEmail` text field for filtering. This field is auto-populated from `User().Email` on submission and is reliable:
+
+```powerfx
+SortByColumns(
+    Filter(
+        PrintRequests,
+        Lower(StudentEmail) = varMeEmail
+    ),
+    "Created",
+    SortOrder.Descending
+)
+```
+
+> ⚠️ **Why NOT `Student.Claims`?** The `Student` Person field requires manual selection from a dropdown. If the student selects the wrong person, or if the Student field is modified during processing (e.g., by staff approval), the Claims won't match. The `StudentEmail` text field is auto-populated and never modified, making it reliable for filtering.
+
+**Quick fix for existing records:**
+
+If a student can't see their request, manually edit it in SharePoint:
+1. Open the request item
+2. Verify the `StudentEmail` field matches the student's login email (check with them)
+3. If different, update it to match their actual login email
+4. Save the item
+
+**Prevention:**
+
+The submit form's `StudentEmail_DataCard1` must have its TextInput Default set to:
+```powerfx
+If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
+```
+
+This ensures the stored email always matches what the system sees when they log in.
 
 ---
 
@@ -3494,8 +3567,10 @@ Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
 
 **My Requests Gallery:**
 ```powerfx
-Filter(PrintRequests, Lower(Student.Email) = varMeEmail)
+Filter(PrintRequests, Lower(StudentEmail) = varMeEmail)
 ```
+
+> 💡 Uses `StudentEmail` (auto-populated on submission) rather than `Student.Claims` because the Student Person field requires manual selection and may not match the submitting user.
 
 **Printer by Method:**
 ```powerfx
@@ -3637,7 +3712,7 @@ Files not following this format will be rejected."
 SortByColumns(
     Filter(
         PrintRequests,
-        Lower(Student.Email) = varMeEmail
+        Lower(StudentEmail) = varMeEmail
     ),
     "Created",
     SortOrder.Descending
