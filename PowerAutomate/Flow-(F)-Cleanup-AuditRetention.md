@@ -283,7 +283,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 6. Click **Add an action**
 7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
-8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Audit Entry`
+8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Rejected Audit Entry`
 9. **Configure retry policy:**
    - Click **three dots (…)** → **Settings**
    - **Retry policy:** Select **Exponential interval**
@@ -369,7 +369,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 6. Click **Add an action**
 7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
-8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Audit Entry`
+8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled Audit Entry`
 9. **Configure retry policy:**
    - Click **three dots (…)** → **Settings**
    - **Retry policy:** Select **Exponential interval**
@@ -455,7 +455,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 6. Click **Add an action**
 7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
-8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Audit Entry`
+8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Archived Audit Entry`
 9. **Configure retry policy:**
    - Click **three dots (…)** → **Settings**
    - **Retry policy:** Select **Exponential interval**
@@ -558,19 +558,19 @@ Recurrence (Weekly, Sunday 3 AM)
 ├── Process Each Rejected Request
 │   └── Get AuditLog Entries for Rejected
 │       └── Delete Rejected Audit Entries
-│           ├── Delete Audit Entry
+│           ├── Delete Rejected Audit Entry
 │           └── Increment Rejected Count
 │
 ├── Process Each Canceled Request
 │   └── Get AuditLog Entries for Canceled
 │       └── Delete Canceled Audit Entries
-│           ├── Delete Audit Entry
+│           ├── Delete Canceled Audit Entry
 │           └── Increment Canceled Count
 │
 ├── Process Each Archived Request
 │   └── Get AuditLog Entries for Archived
 │       └── Delete Archived Audit Entries
-│           ├── Delete Audit Entry
+│           ├── Delete Archived Audit Entry
 │           └── Increment Archived Count
 │
 ├── Calculate Total Deleted
