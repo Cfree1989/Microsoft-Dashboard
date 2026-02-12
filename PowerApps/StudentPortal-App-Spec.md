@@ -1682,15 +1682,18 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 | Property | Value |
 |----------|-------|
-| Items | `Choices([@PrintRequests].Discipline)` |
+| Items | `Choices([@PrintRequests].Department)` |
 | DefaultSelectedItems | `Parent.Default` |
 | InputTextPlaceholder | `"Select your discipline..."` |
+
+> ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
 
 41. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
 42. Set these properties:
 
 | Property | Value |
 |----------|-------|
+| DataField | `"Department"` |
 | Required | `true` |
 
 > 💡 **Why required?** Discipline helps staff prioritize requests and understand the academic context of each print job.
@@ -3271,6 +3274,33 @@ Set(varMeEmail, Lower(User().Email))
 **Cause:** Formula references wrong control name.
 
 **Solution:** Verify the Method dropdown is named `ddMethod` and update the Printer/Color Items formulas to reference it correctly.
+
+---
+
+## Problem: Dropdown choices are empty (Choices() returns nothing)
+
+**Cause:** The `Choices()` function requires the SharePoint column's **internal name**, not its display name. If a column was renamed after creation, the internal name remains the original name.
+
+**How to find the internal name:**
+1. Go to SharePoint → List settings → Click on the column
+2. Look at the URL — it contains `Field=InternalName`
+3. Example: URL shows `Field=Department` even though display name is "Discipline"
+
+**Solution:** Use the internal name in your formula:
+```powerfx
+// Wrong - using display name:
+Choices([@PrintRequests].Discipline)
+
+// Correct - using internal name:
+Choices([@PrintRequests].Department)
+```
+
+**Common mismatches in this app:**
+| Display Name | Internal Name | Notes |
+|--------------|---------------|-------|
+| Discipline | `Department` | Column was renamed after creation |
+
+> 💡 **Tip:** Also ensure the DataCard's `DataField` property matches the internal name.
 
 ---
 
