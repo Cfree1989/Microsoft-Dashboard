@@ -1824,6 +1824,9 @@ Resin:
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What size printer?"` |
+| DisplayMode | `If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+> 💡 **Disabled Until Method Selected:** The Printer dropdown is disabled until the user selects a Method. This prevents invalid combinations and guides the user through the form in the correct order.
 
 61. Set **Items** (cascading filter — shows printers based on Method selection in `DataCardValue8`):
 
@@ -1888,6 +1891,9 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `""` |
+| DisplayMode | `If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+> 💡 **Disabled Until Method Selected:** The Color dropdown is disabled until the user selects a Method. This ensures the cascading filter shows the correct color options for the selected print method.
 
 69. Set **Items** (cascading filter — shows colors based on Method selection in `DataCardValue8`):
 
@@ -2212,6 +2218,8 @@ Your Tree view should now look like (first-created at bottom, last-created at to
 
 The Method, Printer, and Color fields work together with cascading filters:
 
+> 💡 **Important:** Both Printer and Color dropdowns are **disabled until Method is selected**. This guides users to select the print method first, ensuring the cascading filters show the correct options.
+
 #### Printer Filter Logic
 
 When configuring `Printer_DataCard1`'s ComboBox Items property, use this filter (replacing the control name with your actual Method control):
@@ -2253,6 +2261,18 @@ Filter(
 **Result:**
 - Filament → All colors available
 - Resin → Only Black, White, Gray, Clear (resin-compatible colors)
+
+#### DisplayMode (Disable Until Method Selected)
+
+Set this on both Printer and Color ComboBox controls to disable them until Method is selected:
+
+```powerfx
+If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)
+```
+
+**Result:**
+- Method blank → Printer and Color dropdowns are grayed out and unclickable
+- Method selected → Printer and Color dropdowns become active
 
 ---
 
@@ -3483,6 +3503,11 @@ Filter(
     Choices(PrintRequests.Printer),
     If(ddMethod.Selected.Value = "Filament", Value in [...], ddMethod.Selected.Value = "Resin", Value = "Form 3...", true)
 )
+```
+
+**Disable Printer/Color Until Method Selected:**
+```powerfx
+If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)
 ```
 
 ---
