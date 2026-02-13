@@ -670,7 +670,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
    - Your existing PR‑Audit flow will log file additions automatically; removals can be inferred in history.
 
 > **Staff File Management Workflow**: 
-> 1. **Filename Policy** (enforced by Flow A): Attachments must be named `FirstLast_Method_Color.ext` with extensions in `.stl, .obj, .3mf, .idea, .form` (≤150MB each). Invalid submissions are auto‑rejected.
+> 1. **File Validation** (enforced by Flow A): Attachments must have valid 3D file extensions: `.stl, .obj, .3mf, .idea, .form` (≤50MB each — PowerApps limit). Files with invalid extensions are auto-rejected.
 > 2. **Download and Process** valid attachments locally (no in‑place rename in SharePoint). Use your normal slicer workflow.
 >    - **No re-upload required** - work with local files throughout the process
 > 3. **Status Management**: Use Power Apps dashboard buttons to update request status as work progresses

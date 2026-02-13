@@ -72,7 +72,18 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 4. **Require that this column contains information:** Yes
 5. Click **Save**
 
-### Column 4: TigerCardNumber (Single line of text)
+### Column 4: StudentEntraId (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `StudentEntraId`
+3. **Description:** `Immutable Entra Object ID (GUID) for student identity verification`
+4. **Maximum number of characters:** 50
+5. **Require that this column contains information:** No
+6. Click **Save**
+
+> **Purpose:** This column stores the student's Entra Object ID (GUID), which is immutable and doesn't change even if the student's email aliases change. Used by Flow E to validate email sender identity, solving the UPN vs SMTP mismatch issue documented in Email Identity Solutions.md.
+
+### Column 5: TigerCardNumber (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `TigerCardNumber`
@@ -524,6 +535,7 @@ These columns capture actual payment details when a print is picked up.
 | ReqKey | Single line | No | - | Auto-generated unique ID (REQ-00042) |
 | Student | Person | Yes | - | Requester identification |
 | StudentEmail | Single line | Yes | - | Contact information |
+| StudentEntraId | Single line | No | - | Immutable Entra Object ID for sender validation |
 | TigerCardNumber | Single line | Yes | - | 16-digit POS number (NOT LSUID) for manual payment entry |
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |

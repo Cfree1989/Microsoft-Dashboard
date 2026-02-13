@@ -256,9 +256,11 @@ Continue with Steps 6+ (all remaining steps go in the YES branch of this conditi
 
 ---
 
-### Step 6: Validate Sender Email (Inside YES Branch of Step 5)
+### Step 6: Validate Sender Identity (Inside YES Branch of Step 5)
 
-**What this does:** Verifies the email sender matches the student on the request to prevent spoofing. This is a critical security check.
+**What this does:** Verifies the email sender is the student on the request using Entra Object ID (immutable GUID). This solves the UPN vs SMTP email mismatch issue where students have multiple email aliases.
+
+> **Why Entra Object ID?** Students may have multiple email aliases (e.g., `jsmith3@lsu.edu` and `john.smith@lsu.edu`). Email-based validation fails when students reply from a different alias. The Entra Object ID is immutable and remains the same regardless of which email alias is used.
 
 #### Step 6a: Get Request Record
 
@@ -270,19 +272,75 @@ Continue with Steps 6+ (all remaining steps go in the YES branch of this conditi
 4. Fill in:
    - **Inputs:** Click **Expression** tab (fx) → paste: `first(outputs('Get_Print_Request_by_ReqKey')?['body/value'])` → click **Update**
 
-#### Step 6b: Compare Sender to StudentEmail
+#### Step 6b: Extract Sender Email Address
+
+**UI steps:**
+1. Click **+ Add an action**
+2. Search for and select **Compose**
+3. Rename the action to: `Extract Sender Email`
+   - Click the **three dots (...)** → **Rename** → type `Extract Sender Email`
+4. Fill in:
+   - **Inputs:** Click **Expression** tab (fx) → paste this expression → click **Update**:
+
+```
+if(
+  contains(triggerOutputs()?['body/from'], '<'),
+  first(split(last(split(triggerOutputs()?['body/from'], '<')), '>')),
+  triggerOutputs()?['body/from']
+)
+```
+
+> **How this works:** The From field may be `"Jane Doe" <jane@lsu.edu>` or just `jane@lsu.edu`. This expression extracts just the email address from either format.
+
+#### Step 6c: Look Up Sender by Email
+
+**UI steps:**
+1. Click **+ Add an action**
+2. Search for and select **Search for users (V2)** (Office 365 Users)
+3. Rename the action to: `Search for Sender`
+   - Click the **three dots (...)** → **Rename** → type `Search for Sender`
+4. Fill in:
+   - **Search Term:** Click **Expression** tab (fx) → paste: `outputs('Extract_Sender_Email')` → click **Update**
+   - **Top:** Type `1`
+
+#### Step 6d: Get Sender Object ID
+
+**UI steps:**
+1. Click **+ Add an action**
+2. Search for and select **Compose**
+3. Rename the action to: `Get Sender Object ID`
+   - Click the **three dots (...)** → **Rename** → type `Get Sender Object ID`
+4. Fill in:
+   - **Inputs:** Click **Expression** tab (fx) → paste: `first(outputs('Search_for_Sender')?['body/value'])?['id']` → click **Update**
+
+#### Step 6e: Validate Sender is Student
 
 **UI steps:**
 1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename the condition to: `Validate Sender is Student`
    - Click the **three dots (...)** → **Rename** → type `Validate Sender is Student`
-4. Set up condition:
-   - **Left box:** Click **Expression** tab (fx) → paste: `toLower(triggerOutputs()?['body/from'])` → click **Update**
-   - **Middle:** Select **contains**
-   - **Right box:** Click **Expression** tab (fx) → paste: `toLower(outputs('Get_Request_Record')?['StudentEmail'])` → click **Update**
+4. Set up condition using this expression (handles both new and legacy records):
+   - **Left box:** Click **Expression** tab (fx) → paste this expression → click **Update**:
 
-> **Note:** We use `contains` rather than `equals` because the From field may include display name like `"Jane Doe" <janedoe@lsu.edu>`. The `toLower()` function ensures case-insensitive matching.
+```
+or(
+  equals(outputs('Get_Sender_Object_ID'), outputs('Get_Request_Record')?['StudentEntraId']),
+  and(
+    empty(outputs('Get_Request_Record')?['StudentEntraId']),
+    contains(toLower(triggerOutputs()?['body/from']), toLower(outputs('Get_Request_Record')?['StudentEmail']))
+  )
+)
+```
+
+   - **Middle:** Select **is equal to**
+   - **Right box:** Type `true`
+
+> **How this validation works:**
+> 1. **Primary check:** Sender's Entra Object ID matches `StudentEntraId` on the request
+> 2. **Fallback for legacy records:** If `StudentEntraId` is empty (older records), falls back to email comparison
+>
+> This ensures backward compatibility during the transition period while new records use the more reliable Object ID.
 
 #### NO Branch (Sender Mismatch — Log and Terminate)
 
@@ -305,18 +363,24 @@ Continue with Steps 6+ (all remaining steps go in the YES branch of this conditi
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
-   - **Title:** Type `Email Reply Rejected - Sender Mismatch`
+   - **Title:** Type `Email Reply Rejected - Identity Mismatch`
    - **RequestID:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['ID']` → click **Update**
    - **ReqKey:** Click **Expression** tab (fx) → paste: `outputs('Build_Full_ReqKey')` → click **Update**
    - **Action Value:** Type `Email Rejected`
-   - **FieldName:** Type `SenderEmail`
-   - **OldValue:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['StudentEmail']` → click **Update**
-   - **NewValue:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/from']` → click **Update**
+   - **FieldName:** Type `SenderIdentity`
+   - **OldValue:** Click **Expression** tab (fx) → paste this expression → click **Update**:
+```
+concat('EntraId:', coalesce(outputs('Get_Request_Record')?['StudentEntraId'], 'N/A'), ' Email:', outputs('Get_Request_Record')?['StudentEmail'])
+```
+   - **NewValue:** Click **Expression** tab (fx) → paste this expression → click **Update**:
+```
+concat('EntraId:', coalesce(outputs('Get_Sender_Object_ID'), 'N/A'), ' Email:', outputs('Extract_Sender_Email'))
+```
    - **ActorRole Value:** Select `System`
    - **ClientApp Value:** Type `Power Automate`
    - **ActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
    - **FlowRunId:** Click **Expression** tab (fx) → paste: `workflow()['run']['name']` → click **Update**
-   - **Notes:** Type `Email rejected: sender does not match student on record`
+   - **Notes:** Type `Email rejected: sender identity does not match student on record (Entra Object ID or email mismatch)`
 
 6. Click **+ Add an action** (after Log Sender Mismatch)
 7. Search for and select **Terminate**
@@ -324,7 +388,7 @@ Continue with Steps 6+ (all remaining steps go in the YES branch of this conditi
    - Click the **three dots (...)** → **Rename** → type `Stop Flow - Sender Mismatch`
 9. Fill in:
    - **Status:** Select `Succeeded`
-   - **Message (optional):** Type `Sender email does not match student on record`
+   - **Message (optional):** Type `Sender identity does not match student on record`
 
 #### YES Branch (Sender Validated)
 

@@ -36,7 +36,7 @@
 19. [Troubleshooting](#troubleshooting)
 20. [Quick Reference Card](#quick-reference-card)
 21. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
-22. [Reference: File Naming Convention](#reference-file-naming-convention) ← **Attachment naming rules**
+22. [Reference: File Requirements](#reference-file-requirements) ← **Accepted formats & size limits**
 
 ---
 
@@ -1678,6 +1678,27 @@ varMeEmail
 
 > 💡 **Why `varMeEmail`?** This displays the same SMTP email that gets saved to SharePoint. Since `varMeEmail` is already lowercase (set in `App.OnStart`), the gallery filter `StudentEmail = varMeEmail` works with a simple equality check, keeping the query **fully delegable** to SharePoint.
 
+#### StudentEntraId_DataCard1 (Hidden - Auto-fill)
+
+> **Purpose:** This hidden field stores the student's Entra Object ID (GUID), which is immutable and survives email/name changes. Used by Flow E to validate email sender identity, solving the UPN vs SMTP mismatch issue.
+
+28. In the Fields pane, click **+ Add field** and select `StudentEntraId`.
+29. Click on `StudentEntraId_DataCard1` itself (the DataCard).
+30. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Visible | `false` |
+| Update | `varMeEntraId` |
+
+**FORMULA: Paste into StudentEntraId_DataCard1.Update**
+
+```powerfx
+varMeEntraId
+```
+
+> 💡 **Why store Entra Object ID?** Even if a student's email changes (e.g., name change, alias switch), their Entra Object ID remains the same forever. Flow E uses this to verify that email replies come from the correct student, regardless of which email alias they reply from.
+
 #### TigerCardNumber_DataCard1
 
 28. Expand `TigerCardNumber_DataCard1` in Tree view.
@@ -2107,17 +2128,13 @@ If(
 93. Set **Text:**
 
 ```powerfx
-"IMPORTANT: File Naming Requirement
-
-Your files MUST be named: FirstLast_Method_Color
-
-Examples:
-  - JaneDoe_Filament_Blue.stl
-  - MikeSmith_Resin_Clear.3mf
+"IMPORTANT: File Requirements
 
 Accepted formats: .stl, .obj, .3mf, .idea, .form
+Maximum file size: 50MB per file
 
-Files not following this format will be rejected.
+Tip: Include your name and details in the filename for easy identification.
+Example: JaneDoe_Filament_Blue.stl
 
 Send us ONE FILE with all of your parts and pieces. Do not upload multiple files at a time unless absolutely necessary."
 ```
@@ -2387,7 +2404,22 @@ If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edi
 
 Because we're using EditForm with `SubmitForm()`, file attachments work **automatically**. The `Attachments_DataCard1` that was auto-generated handles all file upload functionality.
 
-> ✅ **No additional configuration needed** — just ensure the Attachments_DataCard1 is visible in the form.
+> ⚠️ **Required Configuration:** You must increase the `MaxAttachmentSize` property to allow files larger than the 10MB default. See Step 6E below.
+
+#### 6E: Configure MaxAttachmentSize (Required)
+
+The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D model files up to 50MB:
+
+1. In Tree view, expand `Attachments_DataCard1`
+2. Click on the **DataCardValue** control (the one with the paperclip icon — may be named `DataCardValue31` or similar)
+3. In the Properties pane on the right, find **MaxAttachmentSize**
+4. Set it to `50` (this is in MB)
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| MaxAttachmentSize | `50` | Maximum file size in MB (default is 10) |
+
+> **Why 50MB?** While SharePoint supports 250MB attachments, PowerApps has a practical ceiling of ~50MB for the Attachment control. Files larger than this may fail to upload or become corrupted. Most 3D model files (STL, OBJ, 3MF) are well under 50MB.
 
 ---
 
@@ -3963,18 +3995,7 @@ If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
 
 ---
 
-# Reference: File Naming Convention
-
-## Naming Format
-
-**Required format:** `FirstLast_Method_Color.extension`
-
-| Component | Description | Example |
-|-----------|-------------|---------|
-| FirstLast | Student's first and last name (no spaces) | `JaneDoe` |
-| Method | Print method selected | `Filament` or `Resin` |
-| Color | Filament/resin color selected | `Blue`, `Clear`, `Black` |
-| extension | One of the accepted file formats | `.stl`, `.3mf` |
+# Reference: File Requirements
 
 ## Accepted File Formats
 
@@ -3986,27 +4007,39 @@ If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
 | `.idea` | PrusaSlicer project file |
 | `.form` | Formlabs project file |
 
-## Valid Filenames
+## File Size Limit
 
-| Filename | Why It's Valid |
-|----------|----------------|
-| `JaneDoe_Filament_Blue.stl` | Correct format |
-| `MikeSmith_Resin_Clear.3mf` | Correct format |
-| `SarahOConnor_Filament_Red.obj` | Correct format |
-| `PatrickOBrien_Filament_Black.idea` | PrusaSlicer project file |
-| `MaryJane_Resin_Clear.form` | Formlabs project file |
+**Maximum:** 50MB per file
 
-## Invalid Filenames
+> **Important:** This limit is imposed by PowerApps, not SharePoint. While SharePoint supports files up to 250MB, the PowerApps Attachment control has a practical ceiling of ~50MB. The default `MaxAttachmentSize` property is only 10MB — you must explicitly increase it (see Step 6E below for configuration).
+>
+> If students receive errors uploading files under 50MB, verify that `MaxAttachmentSize` is set to `50` on the Attachments control.
 
-| Filename | Why It's Invalid |
-|----------|------------------|
-| `model.stl` | Missing student name, method, color |
-| `JaneDoe.stl` | Missing method and color |
-| `JaneDoe_Blue.stl` | Missing method |
-| `Jane Doe_Filament_Blue.stl` | Spaces in name (use `JaneDoe`) |
-| `project.pdf` | Invalid file type |
+## Recommended Naming (Optional)
 
-> **Note:** Flow A validates file types after submission. Files with invalid extensions will be flagged for staff review.
+While not required, descriptive filenames help staff identify and organize files:
+
+**Suggested format:** `Name_Method_Color.extension`
+
+| Filename | Notes |
+|----------|-------|
+| `JaneDoe_Filament_Blue.stl` | Easy to identify student and preferences |
+| `MikeSmith_Resin_Clear.3mf` | Includes all relevant info |
+| `Gear_Assembly_v2.stl` | Also acceptable - describes the model |
+
+## Valid vs Invalid Examples
+
+| Filename | Valid? | Notes |
+|----------|--------|-------|
+| `MyModel.stl` | ✅ Yes | Valid extension |
+| `project.3mf` | ✅ Yes | Valid extension |
+| `JaneDoe_Filament_Blue.obj` | ✅ Yes | Valid extension |
+| `design.form` | ✅ Yes | Valid extension |
+| `model.pdf` | ❌ No | Invalid file type |
+| `project.gcode` | ❌ No | Invalid file type |
+| `image.jpg` | ❌ No | Invalid file type |
+
+> **Note:** Flow A validates file extensions after submission. Files with invalid extensions are automatically rejected with an email notification to the student.
 
 ---
 

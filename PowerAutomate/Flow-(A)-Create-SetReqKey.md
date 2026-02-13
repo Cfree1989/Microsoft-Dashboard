@@ -297,6 +297,8 @@ and(
 6. In right box, type `true` (without quotes)
 7. Click **Save**
 
+> **How this validation works:** Checks for valid 3D file extension AND requires `FirstLast_Method_Color` naming format (exactly 3 underscore-separated parts, each non-empty). Files that don't match are auto-rejected with an explanatory email.
+
 
 #### 4f) True Branch (Green Box) — Valid Filename
 

@@ -194,9 +194,10 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
   - Case-insensitive extension matching
   
   **File Requirements:**
-  - Maximum file size: 150MB per file
+  - Maximum file size: 50MB per file (PowerApps Attachment control limit; SharePoint supports 250MB but PowerApps cannot)
   - At least one file must be attached
   - Multiple files allowed (all must pass validation)
+  - Note: PowerApps default is 10MB — must set `MaxAttachmentSize` to `50` on the Attachments control
   
   **Validation Workflow:**
   - Instant validation on submission (Flow A)
