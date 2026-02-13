@@ -313,6 +313,28 @@ if(
 4. Fill in:
    - **Inputs:** Click **Expression** tab (fx) → paste: `first(outputs('Search_for_Sender')?['body/value'])?['id']` → click **Update**
 
+#### Step 6d-2: Get Sender Display Name
+
+**UI steps:**
+1. Click **+ Add an action**
+2. Search for and select **Compose**
+3. Rename the action to: `Get Sender Display Name`
+   - Click the **three dots (...)** → **Rename** → type `Get Sender Display Name`
+4. Fill in:
+   - **Inputs:** Click **Expression** tab (fx) → paste: `first(outputs('Search_for_Sender')?['body/value'])?['displayName']` → click **Update**
+
+#### Step 6d-3: Get Sender UPN
+
+**UI steps:**
+1. Click **+ Add an action**
+2. Search for and select **Compose**
+3. Rename the action to: `Get Sender UPN`
+   - Click the **three dots (...)** → **Rename** → type `Get Sender UPN`
+4. Fill in:
+   - **Inputs:** Click **Expression** tab (fx) → paste: `first(outputs('Search_for_Sender')?['body/value'])?['userPrincipalName']` → click **Update**
+
+> **Why capture sender details?** We use these values later to set the Author field on the inbound message. Using the actual email sender's identity (rather than the Student field from PrintRequest) ensures the message shows the correct author name.
+
 #### Step 6e: Validate Sender is Student
 
 **UI steps:**
@@ -520,7 +542,14 @@ if(
 ```
 
    - **ReqKey:** Click **Expression** tab (fx) → paste: `outputs('Build_Full_ReqKey')` → click **Update**
-   - **Author Claims:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['Student']?['Claims']` → click **Update**
+   - **Author Claims:** Click **Expression** tab (fx) → paste this expression → click **Update**:
+
+```
+concat('i:0#.f|membership|', outputs('Get_Sender_UPN'))
+```
+
+> **Important:** We use the sender's UPN (captured in Step 6d-3) to build the Claims string, not the Student field from PrintRequest. This ensures the Author reflects who actually sent the email reply.
+
    - **AuthorRole Value:** Select `Student`
    - **SentAt:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/receivedDateTime']` → click **Update**
    - **ReadByStudent:** Select `Yes`
@@ -631,7 +660,7 @@ if(
    - **Action Value:** Select `Comment Added`
    - **FieldName:** Type `Direction`
    - **NewValue:** Type `Inbound`
-   - **Actor Claims:** Click **Expression** tab (fx) → paste: `outputs('Get_Request_Record')?['Student']?['Claims']` → click **Update**
+   - **Actor Claims:** Click **Expression** tab (fx) → paste: `concat('i:0#.f|membership|', outputs('Get_Sender_UPN'))` → click **Update**
    - **ActorRole Value:** Select `Student`
    - **ClientApp Value:** Type `Email`
    - **ActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
@@ -780,6 +809,15 @@ concat('Student replied via email. Thread: ', outputs('Create_Inbound_Message')?
 | Student Email | `outputs('Get_Request_Record')?['StudentEmail']` |
 | Student Claims | `outputs('Get_Request_Record')?['Student']?['Claims']` |
 | Check Results Exist | `length(outputs('Get_Print_Request_by_ReqKey')?['body/value'])` |
+
+### Sender Identity Outputs
+
+| Purpose | Expression |
+|---------|------------|
+| Sender Object ID | `outputs('Get_Sender_Object_ID')` |
+| Sender Display Name | `outputs('Get_Sender_Display_Name')` |
+| Sender UPN | `outputs('Get_Sender_UPN')` |
+| Sender Claims (for Author field) | `concat('i:0#.f|membership|', outputs('Get_Sender_UPN'))` |
 
 ### Threading Expressions
 
@@ -937,13 +975,20 @@ Step 5: Request found? --NO--> Stop Flow - Request Not Found
         | YES
 Step 6a: Get Request Record
         |
-Step 6b: Sender = StudentEmail? --NO--> Log Sender Mismatch + Stop Flow
+Step 6b: Extract Sender Email
+        |
+Step 6c: Search for Sender (Office 365 Users)
+        |
+Step 6d: Get Sender Object ID, Display Name, UPN
+        |
+Step 6e: Sender authorized? --NO--> Log Sender Mismatch + Stop Flow
         | YES
 Step 7: Get Existing Thread
         |
 Step 8: Clean Email Body
         |
 Step 9: Create Inbound Message
+  - Author: Sender (from Step 6d)
   - Direction: Inbound
   - ThreadID: existing or new
   - InReplyTo: parent MessageID
@@ -1012,9 +1057,14 @@ Use these exact names when renaming actions in Power Automate:
 | 5 | Condition | `Check Request Found` |
 | 5 (NO) | Terminate | `Stop Flow - Request Not Found` |
 | 6a | Compose | `Get Request Record` |
-| 6b | Condition | `Validate Sender is Student` |
-| 6b (NO) | Create item (SharePoint) | `Log Sender Mismatch` |
-| 6b (NO) | Terminate | `Stop Flow - Sender Mismatch` |
+| 6b | Compose | `Extract Sender Email` |
+| 6c | Search for users (Office 365) | `Search for Sender` |
+| 6d | Compose | `Get Sender Object ID` |
+| 6d-2 | Compose | `Get Sender Display Name` |
+| 6d-3 | Compose | `Get Sender UPN` |
+| 6e | Condition | `Validate Sender is Student` |
+| 6e (NO) | Create item (SharePoint) | `Log Sender Mismatch` |
+| 6e (NO) | Terminate | `Stop Flow - Sender Mismatch` |
 | 7 | Get items (SharePoint) | `Get Existing Thread` |
 | 8 | Compose | `Clean Email Body` |
 | 9 | Create item (SharePoint) | `Create Inbound Message` |
