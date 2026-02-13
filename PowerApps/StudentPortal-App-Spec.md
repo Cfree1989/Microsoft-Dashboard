@@ -186,9 +186,9 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 # STEP 2: Adding Data Connections
 
-**What you're doing:** Connecting your app to the SharePoint lists it needs.
+**What you're doing:** Connecting your app to the SharePoint lists and user identity services it needs.
 
-### Instructions
+### Add SharePoint Connection
 
 1. In the left panel, click the **Data** icon (cylinder icon, 4th from top).
 2. Click **+ Add data**.
@@ -209,10 +209,22 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
    - [x] **PrintRequests**
 10. Click **Connect**.
 
+### Add Office 365 Users Connector (Critical for User Identity)
+
+> ⚠️ **Why this connector?** Power Apps' built-in `User().Email` returns the **User Principal Name (UPN)**, which is the sign-in identifier (e.g., `jsmith3@lsu.edu`). However, SharePoint Person fields may resolve users by their **primary SMTP email** (e.g., `john.smith@lsu.edu`). This mismatch causes students' requests to "disappear" from the My Requests gallery. The Office 365 Users connector provides the actual SMTP email address, ensuring consistent user identification.
+
+11. Click **+ Add data** again.
+12. In the search box, type `Office 365 Users`.
+13. Click **Office 365 Users** from the list.
+14. If prompted, click **Connect** to authorize the connector.
+
+> 💡 **Note:** This connector requires admin consent in some tenants. If you see a permissions error, contact your Microsoft 365 administrator.
+
 ### Verification
 
 **In the Data panel**, you should see:
 - ✅ PrintRequests
+- ✅ Office365Users
 
 > 💡 **Note:** Students don't need access to AuditLog or Staff lists—those are staff-only.
 
@@ -233,9 +245,31 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 ```powerfx
 // === USER IDENTIFICATION ===
-// Cache user info for performance
-Set(varMeEmail, Lower(User().Email));
-Set(varMeName, User().FullName);
+// CRITICAL: Resolve user identity correctly for reliable "My Requests" filtering
+// 
+// WHY THIS MATTERS:
+// - User().Email returns the User Principal Name (UPN), e.g., "jsmith3@lsu.edu"
+// - SharePoint may store the primary SMTP email, e.g., "john.smith@lsu.edu"
+// - These can differ at universities with multiple email aliases per user
+// - Using the wrong one causes student requests to "disappear" from My Requests
+//
+// SOLUTION: Use Office365Users.MyProfileV2().mail for the actual SMTP address
+
+// Cache user profile from Office 365 Users connector (call once for performance)
+Set(varUserProfile, IfError(Office365Users.MyProfileV2(), Blank()));
+
+// Primary email: SMTP address from profile, fallback to UPN if unavailable
+Set(varMeEmail, Lower(Coalesce(varUserProfile.mail, User().Email)));
+
+// Display name: Profile name with fallback
+Set(varMeName, Coalesce(varUserProfile.displayName, User().FullName));
+
+// Entra Object ID: Immutable GUID - the most reliable long-term identifier
+// (Survives email changes, name changes, and domain migrations)
+Set(varMeEntraId, User().EntraObjectId);
+
+// UPN (for SharePoint Person field Claims - must use sign-in identifier)
+Set(varMeUPN, Lower(User().Email));
 
 // === UI STATE VARIABLES ===
 // Current screen/page
@@ -434,13 +468,21 @@ RadiusBottomRight: varRadiusXSmall
 
 | Variable | Purpose | Type |
 |----------|---------|------|
-| `varMeEmail` | Current user's email (lowercase) | Text |
+| `varUserProfile` | Cached Office 365 user profile (call once for performance) | Record |
+| `varMeEmail` | Current user's **SMTP email** (lowercase) — used for `StudentEmail` field | Text |
 | `varMeName` | Current user's display name | Text |
+| `varMeEntraId` | Current user's Entra Object ID (GUID) — immutable, survives email changes | Text |
+| `varMeUPN` | Current user's UPN (sign-in identifier) — used for Person field Claims | Text |
 | `varShowConfirmModal` | ID of item for estimate confirmation (0=hidden) | Number |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
 | `varStatusColors` | Status-to-color mapping table | Table |
+
+> 💡 **User Identity Variables Explained:**
+> - **`varMeEmail`** (SMTP): The primary email address (e.g., `john.smith@lsu.edu`). Used for the `StudentEmail` text field and gallery filtering.
+> - **`varMeUPN`** (UPN): The sign-in identifier (e.g., `jsmith3@lsu.edu`). Required for SharePoint Person field Claims.
+> - **`varMeEntraId`** (GUID): Immutable identifier that never changes. Best for long-term user matching if emails/names change.
 
 ---
 
@@ -1545,66 +1587,110 @@ Now we'll customize each DataCard. For each DataCard below, **click on it in the
 
 > Title will be auto-generated from the student name, method, and color.
 
-#### Student_DataCard1 (Student Selects)
+#### Student_DataCard1 (Auto-populated)
 
-15. Expand `Student_DataCard1` in Tree view.
-16. Click on the **ComboBox control inside** (default name: `DataCardValue3`).
-17. Set these properties:
+> ⚠️ **CRITICAL: Do NOT let students manually select their name.** Manual selection causes filter mismatches when students select the wrong person or can't find themselves in the list. The Student field must be auto-populated from the logged-in user's session.
 
-| Property | Value |
-|----------|-------|
-| Items | `Choices([@PrintRequests].Student)` |
-| DefaultSelectedItems | `Parent.Default` |
-| DisplayMode | `Parent.DisplayMode` |
-| IsSearchable | `true` |
-| InputTextPlaceholder | `"Search for your name..."` |
+15. Click on `Student_DataCard1` itself (the DataCard, not the control inside).
+16. Set the **Update** property:
 
-> 💡 **HintText vs InputTextPlaceholder:** TextInput controls use the `HintText` property for placeholder text, but ComboBox controls use `InputTextPlaceholder` instead. Both achieve the same visual result — showing gray placeholder text when the field is empty.
+**⬇️ FORMULA: Paste into Student_DataCard1.Update**
 
-> 💡 **Why not auto-fill?** SharePoint Person columns have complex type requirements that make auto-fill unreliable. Since `StudentEmail` auto-fills correctly and is used for filtering requests, letting students search and select their name is a simple, reliable approach.
+```powerfx
+{
+    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+    Claims: "i:0#.f|membership|" & varMeUPN,
+    DisplayName: varMeName,
+    Email: varMeEmail
+}
+```
 
-#### StudentEmail_DataCard1 (Auto-fill) - CRITICAL FOR FILTERING
-
-> ⚠️ **This field is critical for the My Requests filter to work.** The `StudentEmail` field must be auto-populated from `User().Email` and locked from editing. Do NOT use the Student Person field's Email property.
-
-19. Expand `StudentEmail_DataCard1` in Tree view.
-20. Click on `StudentEmail_DataCard1` itself (the card) and set:
-
-| Property | Value |
-|----------|-------|
-| DisplayName | `"Student Email"` |
-| Update | `Lower(User().Email)` |
-
-> ⚠️ **CRITICAL: Set Update on the DataCard itself.** This ensures the correct email is saved regardless of what the TextInput shows. The `Update` property determines what actually gets written to SharePoint.
-
-21. Click on the **TextInput control inside**.
-22. Set these properties:
+17. Set these properties on the DataCard:
 
 | Property | Value |
 |----------|-------|
 | DisplayMode | `DisplayMode.View` |
 
-23. Set **Default:**
+> 💡 **Why auto-populate?** This record structure tells SharePoint exactly who the current user is. The `Claims` value is the SharePoint user identifier, `DisplayName` shows the name, and `Email` stores the email. By locking to View mode, students cannot accidentally select the wrong person.
+
+> ⚠️ **Claims vs Email:** The `Claims` field **must use the UPN** (`varMeUPN`) because SharePoint resolves Person fields by the sign-in identifier. The `Email` field uses the **SMTP address** (`varMeEmail`) for display and notifications. These can be different in multi-alias environments (e.g., `jsmith3@lsu.edu` vs `john.smith@lsu.edu`).
+
+> ⚠️ **Note:** The `@odata.type` line must include the `@` symbol and quotes exactly as shown. If you get errors after pasting, check for curly quotes (see [Curly Quotes Warning](#-critical-curly-quotes-warning)).
+
+#### Hide the ComboBox, Add a Display Label
+
+Since students can't edit this field, we replace the ComboBox with a simple label showing their name.
+
+18. Expand `Student_DataCard1` in Tree view.
+19. Click on the **ComboBox control inside** (default name: `DataCardValue3`).
+20. Set **Visible** to:
 
 ```powerfx
-Lower(User().Email)
+false
 ```
 
-> 💡 **Simplified Default:** We use `Lower(User().Email)` directly instead of checking FormMode. For new submissions, this shows the correct email. For viewing existing records, the DisplayMode.View prevents editing anyway.
+21. With `Student_DataCard1` still expanded, click **+ Insert** → **Text label**.
+22. **Rename it:** `lblStudentName`
+23. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `varMeName` |
+| Font | `varAppFont` |
+| Color | `varColorText` |
+| X | `30` |
+| Y | `DataCardKey3.Y + DataCardKey3.Height + 5` |
+| Width | `Parent.Width - 60` |
+| Height | `40` |
+| Size | `12` |
+
+> 💡 **Why a label instead of the ComboBox?** The ComboBox requires the user to exist in SharePoint's People Picker choices, which may not include new users. A label simply shows `varMeName` (set in `App.OnStart`) and always works. The `Update` property on the DataCard handles saving the correct Person value regardless of what's displayed.
+
+#### StudentEmail_DataCard1 (Auto-fill) - CRITICAL FOR FILTERING
+
+> ⚠️ **This field is THE KEY to My Requests working correctly.** The `StudentEmail` field stores the user's **primary SMTP email address** (retrieved via Office 365 Users connector in `App.OnStart`). This is what the gallery filter matches against.
+
+24. Click on `StudentEmail_DataCard1` itself (the DataCard, not the TextInput inside).
+25. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| DisplayName | `"Student Email"` |
+| Update | `varMeEmail` |
+
+**⬇️ FORMULA: Paste into StudentEmail_DataCard1.Update**
+
+```powerfx
+varMeEmail
+```
+
+> ⚠️ **CRITICAL: Set Update on the DataCard itself, not the TextInput.** The `Update` property determines what actually gets written to SharePoint. By using `varMeEmail` (set in `App.OnStart` from `Office365Users.MyProfileV2().mail`), the correct SMTP email is always saved.
+
+> 💡 **Why `varMeEmail` instead of `User().Email`?** At universities like LSU, students have multiple email aliases (e.g., `jsmith3@lsu.edu` and `john.smith@lsu.edu`). `User().Email` returns the UPN (sign-in identifier), but SharePoint may resolve Person fields using the primary SMTP address. By consistently using the SMTP address from `varMeEmail`, the gallery filter `StudentEmail = varMeEmail` always matches correctly.
+
+26. Expand `StudentEmail_DataCard1` and click on the **TextInput control inside**.
+27. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `varMeEmail` |
+| DisplayMode | `DisplayMode.View` |
+
+> 💡 **Why `varMeEmail`?** This displays the same SMTP email that gets saved to SharePoint. Since `varMeEmail` is already lowercase (set in `App.OnStart`), the gallery filter `StudentEmail = varMeEmail` works with a simple equality check, keeping the query **fully delegable** to SharePoint.
 
 #### TigerCardNumber_DataCard1
 
-23. Expand `TigerCardNumber_DataCard1` in Tree view.
-24. Click on the **TextInput control inside**.
-25. Set these properties:
+28. Expand `TigerCardNumber_DataCard1` in Tree view.
+29. Click on the **TextInput control inside**.
+30. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | HintText | `"16-digit POS number from Tiger Card"` |
 | MaxLength | `16` |
 
-26. Click on `TigerCardNumber_DataCard1` itself (the card, not the input).
-27. Set these properties:
+31. Click on `TigerCardNumber_DataCard1` itself (the card, not the input).
+32. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1618,9 +1704,9 @@ Lower(User().Email)
 
 This styled label provides real-time feedback when the TigerCard number isn't exactly 16 digits.
 
-28. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Text label**.
-29. **Rename it:** `lblTigerCardError`
-30. Set these properties:
+33. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Text label**.
+34. **Rename it:** `lblTigerCardError`
+35. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1646,15 +1732,15 @@ This styled label provides real-time feedback when the TigerCard number isn't ex
 
 This image helps students locate the 16-digit POS number on their Tiger Card.
 
-31. First, **upload the Tiger Card image** to the app:
+36. First, **upload the Tiger Card image** to the app:
     - In the left panel, click the **Media** icon (mountain/image icon)
     - Click **+ Add media** → **Upload**
     - Select your Tiger Card example image (showing where the POS number is located)
     - After upload, it will appear in your Media list — note the name (e.g., `Example TigerCard`)
 
-32. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Media** → **Image**.
-33. **Rename it:** `imgTigerCardExample`
-34. Set these properties:
+37. With `TigerCardNumber_DataCard1` expanded, click **+ Insert** → **Media** → **Image**.
+38. **Rename it:** `imgTigerCardExample`
+39. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1671,9 +1757,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Course Number_DataCard1
 
-35. Expand `Course Number_DataCard1` in Tree view.
-36. Click on the **TextInput control inside**.
-37. Set these properties:
+40. Expand `Course Number_DataCard1` in Tree view.
+41. Click on the **TextInput control inside**.
+42. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1683,9 +1769,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Discipline_DataCard1
 
-38. Expand `Discipline_DataCard1` in Tree view.
-39. Click on the **ComboBox control inside** (named `DataCardValue6`).
-40. Set these properties:
+43. Expand `Discipline_DataCard1` in Tree view.
+44. Click on the **ComboBox control inside** (named `DataCardValue6`).
+45. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1697,8 +1783,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
 
-41. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
-42. Set these properties:
+46. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
+47. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1714,9 +1800,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### ProjectType_DataCard1
 
-43. Expand `ProjectType_DataCard1` in Tree view.
-44. Click on the **ComboBox control inside** (named `DataCardValue7`).
-45. Set these properties:
+48. Expand `ProjectType_DataCard1` in Tree view.
+49. Click on the **ComboBox control inside** (named `DataCardValue7`).
+50. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1726,8 +1812,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What's this for?"` |
 
-46. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
-47. Set these properties:
+51. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
+52. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1740,8 +1826,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Method_DataCard1 (Controls Cascading)
 
-48. Expand `Method_DataCard1` in Tree view.
-49. Click on `Method_DataCard1` itself (the card) and set:
+53. Expand `Method_DataCard1` in Tree view.
+54. Click on `Method_DataCard1` itself (the card) and set:
 
 | Property | Value |
 |----------|-------|
@@ -1749,9 +1835,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > 💡 **Increased height** accommodates the method description label below the ComboBox.
 
-50. Click on the **ComboBox control inside** (named `DataCardValue8`).
-51. **Verify the name** of this control is `DataCardValue8` — this is referenced by Printer and Color cascading filters.
-52. Set these properties:
+55. Click on the **ComboBox control inside** (named `DataCardValue8`).
+56. **Verify the name** of this control is `DataCardValue8` — this is referenced by Printer and Color cascading filters.
+57. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1767,9 +1853,9 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Add Method Description Label
 
-53. With `Method_DataCard1` expanded, click **+ Insert** → **Text label**.
-54. **Rename it:** `lblMethodInfo`
-55. Set these properties:
+58. With `Method_DataCard1` expanded, click **+ Insert** → **Text label**.
+59. **Rename it:** `lblMethodInfo`
+60. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1788,7 +1874,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | BorderColor | `varColorInfo` |
 | BorderThickness | `1` |
 
-56. Set **Text:**
+61. Set **Text:**
 
 ```powerfx
 "Choose the appropriate print method for your model:
@@ -1812,8 +1898,8 @@ Resin:
 
 #### Printer_DataCard1 (Cascading Filter)
 
-57. Expand `Printer_DataCard1` in Tree view.
-58. Click on `Printer_DataCard1` itself (the card) and set:
+62. Expand `Printer_DataCard1` in Tree view.
+63. Click on `Printer_DataCard1` itself (the card) and set:
 
 | Property | Value |
 |----------|-------|
@@ -1821,8 +1907,8 @@ Resin:
 
 > 💡 **Increased height** accommodates the dimensions warning label below the ComboBox.
 
-59. Click on the **ComboBox control inside** (named `DataCardValue10`).
-60. Set these properties:
+64. Click on the **ComboBox control inside** (named `DataCardValue10`).
+65. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1835,7 +1921,7 @@ Resin:
 
 > 💡 **Disabled Until Method Selected:** The Printer dropdown is disabled until the user selects a Method. This prevents invalid combinations and guides the user through the form in the correct order.
 
-61. Set **Items** (cascading filter — shows printers based on Method selection in `DataCardValue8`):
+66. Set **Items** (cascading filter — shows printers based on Method selection in `DataCardValue8`):
 
 ```powerfx
 Filter(
@@ -1856,9 +1942,9 @@ Filter(
 
 #### Add Printer Dimensions Warning Label
 
-62. With `Printer_DataCard1` expanded, click **+ Insert** → **Text label**.
-63. **Rename it:** `lblDimensionsWarning`
-64. Set these properties:
+67. With `Printer_DataCard1` expanded, click **+ Insert** → **Text label**.
+68. **Rename it:** `lblDimensionsWarning`
+69. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1877,7 +1963,7 @@ Filter(
 | BorderColor | `varColorWarning` |
 | BorderThickness | `1` |
 
-65. Set **Text:**
+70. Set **Text:**
 
 ```powerfx
 "Ensure your model's dimensions are within the specified limits for the printer you plan to use. If your model is too large, consider scaling it down or splitting it into parts. For more guidance, refer to the design guides on our Moodle page.
@@ -1887,9 +1973,9 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 
 #### Color_DataCard1 (Cascading Filter)
 
-66. Expand `Color_DataCard1` in Tree view.
-67. Click on the **ComboBox control inside** (named `DataCardValue9`).
-68. Set these properties:
+71. Expand `Color_DataCard1` in Tree view.
+72. Click on the **ComboBox control inside** (named `DataCardValue9`).
+73. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1902,7 +1988,7 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 
 > 💡 **Disabled Until Method Selected:** The Color dropdown is disabled until the user selects a Method. This ensures the cascading filter shows the correct color options for the selected print method.
 
-69. Set **Items** (cascading filter — shows colors based on Method selection in `DataCardValue8`):
+74. Set **Items** (cascading filter — shows colors based on Method selection in `DataCardValue8`):
 
 ```powerfx
 Filter(
@@ -1923,15 +2009,15 @@ Filter(
 
 #### DueDate_DataCard1
 
-57. Click on `DueDate_DataCard1` itself (the card) and set:
+75. Click on `DueDate_DataCard1` itself (the card) and set:
 
 | Property | Value |
 |----------|-------|
 | DisplayName | `"Due Date"` |
 
-58. Expand `DueDate_DataCard1` in Tree view.
-59. Click on the **DatePicker control inside** (e.g., `DataCardValue11`).
-60. Set **DefaultDate** to default to today's date:
+76. Expand `DueDate_DataCard1` in Tree view.
+77. Click on the **DatePicker control inside** (e.g., `DataCardValue11`).
+78. Set **DefaultDate** to default to today's date:
 
 ```powerfx
 If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
@@ -1941,9 +2027,9 @@ If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
 
 #### Notes_DataCard1
 
-60. Expand `Notes_DataCard1` in Tree view.
-61. Click on the **TextInput control inside**.
-62. Set these properties:
+79. Expand `Notes_DataCard1` in Tree view.
+80. Click on the **TextInput control inside**.
+81. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1952,8 +2038,8 @@ If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
 
 #### Attachments_DataCard1
 
-63. Click on `Attachments_DataCard1` in Tree view.
-64. Set these properties:
+82. Click on `Attachments_DataCard1` in Tree view.
+83. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -1966,15 +2052,15 @@ If(frmSubmit.Mode = FormMode.New, Today(), Parent.Default)
 
 #### Status_DataCard1 (Hidden, Auto-Set)
 
-65. Click on `Status_DataCard1` in Tree view.
-66. Set these properties:
+84. Click on `Status_DataCard1` in Tree view.
+85. Set these properties:
 
 | Property | Value |
 |----------|-------|
 | Visible | `false` |
 
-67. Click on the **ComboBox control inside** `Status_DataCard1`.
-68. Set **DefaultSelectedItems:**
+86. Click on the **ComboBox control inside** `Status_DataCard1`.
+87. Set **DefaultSelectedItems:**
 
 ```powerfx
 If(
@@ -1984,7 +2070,7 @@ If(
 )
 ```
 
-69. Set this additional property:
+88. Set this additional property:
 
 | Property | Value |
 |----------|-------|
@@ -1996,10 +2082,10 @@ If(
 
 ### 6F: Add File Warning Label
 
-69. Expand `Attachments_DataCard1` in Tree view and select it.
-70. Click **+ Insert** → **Text label**.
-71. **Rename it:** `lblFileWarning`
-72. Set these properties:
+89. Expand `Attachments_DataCard1` in Tree view and select it.
+90. Click **+ Insert** → **Text label**.
+91. **Rename it:** `lblFileWarning`
+92. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -2018,7 +2104,7 @@ If(
 | BorderColor | `varColorWarning` |
 | BorderThickness | `1` |
 
-73. Set **Text:**
+93. Set **Text:**
 
 ```powerfx
 "IMPORTANT: File Naming Requirement
@@ -2040,9 +2126,9 @@ Send us ONE FILE with all of your parts and pieces. Do not upload multiple files
 
 ### 6G: Add Submit Button
 
-74. Click **+ Insert** → **Button**.
-75. **Rename it:** `btnSubmit`
-76. Set these properties:
+94. Click **+ Insert** → **Button**.
+95. **Rename it:** `btnSubmit`
+96. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -2064,27 +2150,33 @@ Send us ONE FILE with all of your parts and pieces. Do not upload multiple files
 | PressedFill | `varColorPrimaryPressed` |
 | DisabledFill | `varColorDisabled` |
 
-77. Set **DisplayMode** (validates required fields and TigerCard length):
+97. Set **DisplayMode** (validates required fields, TigerCard length, and file attachment):
 
 ```powerfx
 If(
-    frmSubmit.Valid && Len(TigerCardNumber_DataCard1.Update) = 16,
+    frmSubmit.Valid && 
+    Len(TigerCardNumber_DataCard1.Update) = 16 &&
+    CountRows(DataCardValue31.Attachments) > 0,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled via `frmSubmit.Valid`. We also check that the Tiger Card number is exactly 16 digits using the DataCard's `.Update` property, which contains the current value that would be submitted. This is more reliable than referencing the internal control name directly.
+> ⚠️ **Control Name:** `DataCardValue31` is the Attachments control inside `Attachments_DataCard1`. Your number may differ — expand `Attachments_DataCard1` in Tree view to find the control with the paperclip icon.
 
-78. Set **OnSelect:**
+> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled via `frmSubmit.Valid`. We also check that the Tiger Card number is exactly 16 digits and that at least one file has been attached.
+
+98. Set **OnSelect:**
 
 ```powerfx
 // Track that user attempted to submit (for showing validation errors)
 Set(varSubmitAttempted, true);
 
-// Only proceed if form is valid
+// Only proceed if form is valid and file is attached
 If(
-    frmSubmit.Valid && Len(TigerCardNumber_DataCard1.Update) = 16,
+    frmSubmit.Valid && 
+    Len(TigerCardNumber_DataCard1.Update) = 16 &&
+    CountRows(DataCardValue31.Attachments) > 0,
     Set(varIsLoading, true);
     SubmitForm(frmSubmit)
 )
@@ -2098,9 +2190,9 @@ If(
 
 This label shows students exactly which fields need attention — but only after they try to submit.
 
-79. Click **+ Insert** → **Text label**.
-80. **Rename it:** `lblValidationMessage`
-81. Set these properties:
+99. Click **+ Insert** → **Text label**.
+100. **Rename it:** `lblValidationMessage`
+101. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -2120,30 +2212,36 @@ This label shows students exactly which fields need attention — but only after
 | BorderColor | `varColorDanger` |
 | BorderThickness | `1` |
 
-82. Set **Visible** (only show after submit attempt):
+102. Set **Visible** (only show after submit attempt):
 
 ```powerfx
-varSubmitAttempted && (!frmSubmit.Valid || Len(TigerCardNumber_DataCard1.Update) <> 16)
+varSubmitAttempted && (
+    !frmSubmit.Valid || 
+    Len(TigerCardNumber_DataCard1.Update) <> 16 ||
+    CountRows(DataCardValue31.Attachments) = 0
+)
 ```
 
-83. Set **Text:**
+103. Set **Text:**
 
 ```powerfx
 If(
+    CountRows(DataCardValue31.Attachments) = 0,
+    "Please attach your 3D model file before submitting.",
     Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
     "Tiger Card number must be exactly 16 digits.",
     "Please fill in all required fields before submitting."
 )
 ```
 
-> 💡 **Specific feedback:** When the Tiger Card number is the issue, we show a specific message. Otherwise, we show the general required fields message. This helps students understand exactly what needs to be fixed.
+> 💡 **Specific feedback:** The message prioritizes the most common issue (missing file attachment), then checks Tiger Card format, then falls back to general required fields. This helps students understand exactly what needs to be fixed.
 
 ---
 
 ### 6I: Configure Form Events
 
-84. Click on `frmSubmit` in Tree view.
-85. Set **OnSuccess:**
+104. Click on `frmSubmit` in Tree view.
+105. Set **OnSuccess:**
 
 ```powerfx
 Set(varIsLoading, false);
@@ -2153,18 +2251,18 @@ ResetForm(frmSubmit);
 Navigate(scrMyRequests, ScreenTransition.Fade)
 ```
 
-86. Set **OnFailure:**
+106. Set **OnFailure:**
 
 ```powerfx
 Set(varIsLoading, false);
 Notify(
-    "Something went wrong. Please try again or ask staff for help.",
+    "Error: " & frmSubmit.Error,
     NotificationType.Error,
     5000
 )
 ```
 
-> 💡 **Keep it simple:** Students don't need technical details. If submission fails after validation passes, it's likely a network or system issue — staff can investigate if needed.
+> 💡 **Show the actual error:** By displaying `frmSubmit.Error`, students (and staff) can see exactly what went wrong. Common errors include "List data validation failed" (check SharePoint column settings) or permission issues. This makes debugging much easier than a generic message.
 
 ---
 
@@ -2203,7 +2301,9 @@ Your Tree view should now look like (first-created at bottom, last-created at to
                 DataCardValue (TextInput)
                 DataCardKey (Label)
             StudentEmail_DataCard1
-            Student_DataCard1
+            ▼ Student_DataCard1
+                lblStudentName           ← displays varMeName
+                DataCardValue3 (hidden)  ← ComboBox hidden
             Status_DataCard1 (hidden)
             Title_DataCard1 (hidden) ← bottom of form
     ▼ conHeader                     ← created first (BOTTOM = behind)
@@ -2437,14 +2537,18 @@ Notify("Requests refreshed!", NotificationType.Information)
 SortByColumns(
     Filter(
         PrintRequests,
-        Lower(StudentEmail) = varMeEmail
+        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
     ),
     "Created",
     SortOrder.Descending
 )
 ```
 
-> 💡 **How it works:** This filters to show only requests where the `StudentEmail` field matches the logged-in user's email, sorted newest first. We use `StudentEmail` (which is auto-populated from `User().Email` on submission) rather than `Student.Claims` because the Student Person field requires manual selection and may not always match the submitting user.
+> 💡 **How it works:** This filters to show only requests where the `StudentEmail` field matches either the user's SMTP email (`varMeEmail`) OR their UPN (`varMeUPN`), sorted newest first.
+
+> ⚠️ **Why two conditions?** This handles the transition period where older records may have been saved with the UPN (e.g., `jsmith3@lsu.edu`) while new records use the SMTP address (e.g., `john.smith@lsu.edu`). Both identifiers point to the same student. After all legacy records are backfilled to use SMTP, you can simplify to just `StudentEmail = varMeEmail`.
+
+> 💡 **Delegation note:** The `||` (OR) operator with equality checks on text columns is fully delegable to SharePoint. The `Lower()` wrapper ensures case-insensitive matching for any legacy records that might have mixed case.
 
 ### Empty State Label
 
@@ -3306,20 +3410,33 @@ For a simpler embed:
 
 ## Problem: "User not found" or empty gallery
 
-**Cause:** The gallery filter doesn't match the logged-in user.
+**Cause:** The gallery filter doesn't match the logged-in user's email.
 
-**Solution:** Filter by the `StudentEmail` text field (which is auto-populated from `User().Email` on submission):
+**Root Cause (UPN vs SMTP Mismatch):**
+At universities like LSU, students have multiple email aliases:
+- **UPN (User Principal Name):** `jsmith3@lsu.edu` — the sign-in identifier returned by `User().Email`
+- **SMTP (Primary Email):** `john.smith@lsu.edu` — the email address used by SharePoint, Exchange, and displayed in profile
+
+If the app uses `User().Email` directly, it may save the UPN, but SharePoint's Person fields may resolve to the SMTP address. This mismatch causes the gallery filter to fail.
+
+**Solution:** Use `Office365Users.MyProfileV2().mail` to get the actual SMTP address:
 
 ```powerfx
-Filter(PrintRequests, Lower(StudentEmail) = varMeEmail)
+// In App.OnStart - retrieve SMTP email with fallback
+Set(varUserProfile, IfError(Office365Users.MyProfileV2(), Blank()));
+Set(varMeEmail, Lower(Coalesce(varUserProfile.mail, User().Email)));
+Set(varMeUPN, Lower(User().Email));
 ```
 
-And in OnStart, ensure email is lowercase:
+Then filter with fallback for both email formats:
 ```powerfx
-Set(varMeEmail, Lower(User().Email))
+Filter(
+    PrintRequests,
+    Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+)
 ```
 
-> ⚠️ **Why NOT Claims?** The `Student` Person field requires manual selection by the student. If they select the wrong person or themselves under a different email alias, `Student.Claims` won't match. The `StudentEmail` field is auto-populated from `User().Email` and is reliable.
+> ⚠️ **Why NOT Claims?** The `Student` Person field is auto-populated, but `StudentEmail` (a text field) remains the most reliable filter key because it's a simple text comparison and fully delegable.
 
 ---
 
@@ -3327,62 +3444,85 @@ Set(varMeEmail, Lower(User().Email))
 
 **Symptom:** A student submits a request, staff processes it, student receives email notification, but when they click through to view their request, the My Requests page is completely empty.
 
+**Root Cause: UPN vs SMTP Email Mismatch**
+
+This is almost always caused by the **User Principal Name (UPN) vs SMTP email mismatch**:
+
+| Identity Type | Example | Source |
+|--------------|---------|--------|
+| UPN (sign-in) | `jsmith3@lsu.edu` | `User().Email` returns this |
+| SMTP (primary email) | `john.smith@lsu.edu` | SharePoint/Exchange may store this |
+
+Both are valid email aliases for the same student, but if the record was saved with one format and the filter uses the other, **no match**.
+
 **Common Causes:**
 
-1. **Wrong filter field:** Using `Student.Claims` instead of `StudentEmail`. The `Student` Person field requires manual selection, so `Student.Claims` may not match the submitting user.
+1. **UPN vs SMTP mismatch:** The record was saved using `User().Email` (UPN), but `varMeEmail` now uses the SMTP address from `Office365Users.MyProfileV2().mail`. Or vice versa for legacy records.
 
-2. **Case sensitivity:** Email comparison is case-sensitive. Always use `Lower()` on both sides.
+2. **Case mismatch:** Email comparison is case-sensitive. Ensure both `StudentEmail` (saved) and `varMeEmail` (filter) are lowercase.
 
-3. **Email alias mismatch:** If using `Student.Email` instead of `StudentEmail`, universities with multiple email aliases can cause mismatches.
+3. **Office 365 Users connector not added:** If the connector wasn't added or consent failed, `varUserProfile.mail` may be blank, causing `varMeEmail` to fall back to UPN.
+
+4. **Old records with wrong email format:** Records created before implementing the SMTP fix may have UPN-based emails that don't match the new SMTP-based `varMeEmail`.
 
 **How to diagnose:**
 
 1. Add temporary debug labels to the My Requests screen:
    ```powerfx
-   // Label showing current user info
-   "Your email: " & varMeEmail & " | Items found: " & CountRows(PrintRequests)
+   // Label showing current user identity info
+   "SMTP: " & varMeEmail & " | UPN: " & varMeUPN & " | Entra ID: " & varMeEntraId
    
    // Label showing what's stored in first item
    "First item StudentEmail: " & First(PrintRequests).StudentEmail
    ```
 
-2. Compare what the student sees as "Your email" with what's stored in the SharePoint `StudentEmail` field for their request.
+2. Compare all three values. If `StudentEmail` matches `varMeUPN` but not `varMeEmail`, the record was saved with UPN.
 
-3. If they're different, the filter won't match.
+3. The dual-filter (`varMeEmail || varMeUPN`) should catch both formats.
 
 **Solution (Recommended):**
 
-Use the `StudentEmail` text field for filtering. This field is auto-populated from `User().Email` on submission and is reliable:
+Use a filter that matches BOTH email formats to handle the transition period:
 
 ```powerfx
 SortByColumns(
     Filter(
         PrintRequests,
-        Lower(StudentEmail) = varMeEmail
+        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
     ),
     "Created",
     SortOrder.Descending
 )
 ```
 
-> ⚠️ **Why NOT `Student.Claims`?** The `Student` Person field requires manual selection from a dropdown. If the student selects the wrong person, or if the Student field is modified during processing (e.g., by staff approval), the Claims won't match. The `StudentEmail` text field is auto-populated and never modified, making it reliable for filtering.
+> 💡 **Why two conditions?** This catches records saved with either the UPN or SMTP address. After backfilling legacy records, you can simplify to just `StudentEmail = varMeEmail`.
+
+> ⚠️ **Why `StudentEmail` instead of `Student.Claims`?** The `StudentEmail` text field is auto-populated and never modified, making it reliable for filtering. Text comparison is simpler and more delegable than Person field comparisons.
 
 **Quick fix for existing records:**
 
 If a student can't see their request, manually edit it in SharePoint:
-1. Open the request item
-2. Verify the `StudentEmail` field matches the student's login email (check with them)
-3. If different, update it to match their actual login email
+1. Open the request item in SharePoint
+2. Check the `StudentEmail` field value
+3. Update it to match either their SMTP email (preferred) or UPN
 4. Save the item
+
+**Long-term fix — Backfill via Power Automate:**
+
+Create a Power Automate flow to normalize all existing records:
+1. Trigger: Manual or scheduled
+2. Get all PrintRequests items
+3. For each item: Look up the user by current `StudentEmail`, get their SMTP from Graph API, update the field
+4. Optionally add a `StudentEntraId` column for future-proof matching
 
 **Prevention:**
 
-The submit form's `StudentEmail_DataCard1` must have its TextInput Default set to:
+Ensure `StudentEmail_DataCard1.Update` is set to:
 ```powerfx
-If(frmSubmit.Mode = FormMode.New, Lower(User().Email), Parent.Default)
+varMeEmail
 ```
 
-This ensures the stored email always matches what the system sees when they log in.
+This saves the SMTP email (retrieved from `Office365Users.MyProfileV2().mail` in `App.OnStart`) rather than the UPN.
 
 ---
 
@@ -3519,11 +3659,15 @@ Reset(ddDiscipline);
 3. **Check network/browser** — Have student refresh the page and try again
 4. **Review browser console** — Press F12 → Console tab for technical errors
 
-**For debugging**, you can temporarily change `frmSubmit.OnFailure` to show the technical error:
+**For debugging**, the `frmSubmit.OnFailure` now shows the actual error by default:
 ```powerfx
-// TEMPORARY - for debugging only
-Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
+Notify("Error: " & frmSubmit.Error, NotificationType.Error)
 ```
+
+Common error messages:
+- **"List data validation failed"** — Check SharePoint column Required/Validation settings
+- **"Access denied"** — Student doesn't have Contribute permission to PrintRequests list
+- **"The specified user could not be found"** — Student Person field format issue (check `Student_DataCard1.Update` formula)
 
 ---
 
@@ -3533,8 +3677,11 @@ Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
 
 | Variable | Type | Purpose |
 |----------|------|---------|
-| `varMeEmail` | Text | Current user's email (lowercase) |
+| `varUserProfile` | Record | Cached Office 365 user profile |
+| `varMeEmail` | Text | Current user's **SMTP email** (lowercase) — used for `StudentEmail` |
 | `varMeName` | Text | Current user's display name |
+| `varMeEntraId` | Text | Current user's Entra Object ID (GUID) — immutable identifier |
+| `varMeUPN` | Text | Current user's UPN (sign-in identifier) — used for Person field Claims |
 | `varShowConfirmModal` | Number | ID of item for confirmation (0=hidden) |
 | `varShowCancelModal` | Number | ID of item for cancellation (0=hidden) |
 | `varSelectedItem` | Record | Currently selected PrintRequest item |
@@ -3567,10 +3714,13 @@ Notify("Debug: " & frmSubmit.Error, NotificationType.Error)
 
 **My Requests Gallery:**
 ```powerfx
-Filter(PrintRequests, Lower(StudentEmail) = varMeEmail)
+Filter(
+    PrintRequests,
+    Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+)
 ```
 
-> 💡 Uses `StudentEmail` (auto-populated on submission) rather than `Student.Claims` because the Student Person field requires manual selection and may not match the submitting user.
+> 💡 Uses `StudentEmail` with dual-filter to match both SMTP email (`varMeEmail`) and UPN (`varMeUPN`). This handles legacy records that may use either format. After backfilling all records to SMTP, simplify to just `StudentEmail = varMeEmail`.
 
 **Printer by Method:**
 ```powerfx
@@ -3593,8 +3743,24 @@ If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edi
 
 ```powerfx
 // === USER IDENTIFICATION ===
-Set(varMeEmail, Lower(User().Email));
-Set(varMeName, User().FullName);
+// CRITICAL: Resolve user identity correctly for reliable "My Requests" filtering
+// User().Email returns UPN (sign-in identifier), which may differ from SMTP email
+// Office365Users.MyProfileV2().mail returns the actual SMTP address
+
+// Cache user profile from Office 365 Users connector (call once for performance)
+Set(varUserProfile, IfError(Office365Users.MyProfileV2(), Blank()));
+
+// Primary email: SMTP address from profile, fallback to UPN if unavailable
+Set(varMeEmail, Lower(Coalesce(varUserProfile.mail, User().Email)));
+
+// Display name: Profile name with fallback
+Set(varMeName, Coalesce(varUserProfile.displayName, User().FullName));
+
+// Entra Object ID: Immutable GUID (survives email/name changes)
+Set(varMeEntraId, User().EntraObjectId);
+
+// UPN (for SharePoint Person field Claims - must use sign-in identifier)
+Set(varMeUPN, Lower(User().Email));
 
 // === UI STATE ===
 Set(varCurrentScreen, "Home");
@@ -3640,10 +3806,10 @@ Patch(
         Student: {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             DisplayName: varMeName,
-            Claims: "i:0#.f|membership|" & varMeEmail,
-            Email: varMeEmail
+            Claims: "i:0#.f|membership|" & varMeUPN,  // Claims must use UPN (sign-in identifier)
+            Email: varMeEmail  // Email uses SMTP address
         },
-        StudentEmail: varMeEmail,
+        StudentEmail: varMeEmail,  // SMTP address for gallery filtering
         TigerCardNumber: txtTigerCard.Text,
         'Course Number': txtCourse.Text,
         Discipline: ddDiscipline.Selected,
@@ -3673,12 +3839,12 @@ Reset(txtNotes);
 Navigate(scrMyRequests, ScreenTransition.Fade)
 ```
 
-## Form OnFailure (Simple Error Message)
+## Form OnFailure (Show Actual Error)
 
 ```powerfx
 Set(varIsLoading, false);
 Notify(
-    "Something went wrong. Please try again or ask staff for help.",
+    "Error: " & frmSubmit.Error,
     NotificationType.Error,
     5000
 )
@@ -3712,7 +3878,7 @@ Files not following this format will be rejected."
 SortByColumns(
     Filter(
         PrintRequests,
-        Lower(StudentEmail) = varMeEmail
+        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
     ),
     "Created",
     SortOrder.Descending
