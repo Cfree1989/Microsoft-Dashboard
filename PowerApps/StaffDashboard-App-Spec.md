@@ -6781,12 +6781,14 @@ Set(varSelectedItem, Blank())
 
 | Property | Value |
 |----------|-------|
-| Text | `With({n: ThisItem.Author0.DisplayName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") & " • " & Text(ThisItem.SentAt, "m/d h:mmam/pm")` |
+| Text | `With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")` |
 | X | `recVMsgBg.X + 32` |
 | Y | `6` |
 | Width | `300` |
 | Height | `18` |
 | Size | `10` |
+
+> **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). Using `Author` would always show the logged-in user who created the record, not the staff member selected in the dropdown.
 | Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
 | Font | `Font.'Open Sans Semibold'` |
 
