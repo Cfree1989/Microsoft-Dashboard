@@ -94,14 +94,17 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 | Purpose | Color | RGBA | Variable |
 |---------|-------|------|----------|
-| Primary (Active) | Blue | `RGBA(56, 96, 178, 1)` | `varColorPrimary` |
+| Primary (Active) | Blue | `RGBA(70, 130, 220, 1)` | `varColorPrimary` |
 | Success | Green | `RGBA(16, 124, 16, 1)` | `varColorSuccess` |
-| Warning | Amber | `RGBA(255, 185, 0, 1)` | `varColorWarning` |
+| Warning | Orange | `RGBA(255, 140, 0, 1)` | `varColorWarning` |
 | Error/Danger | Red | `RGBA(209, 52, 56, 1)` | `varColorDanger` |
-| Info | Light Blue | `RGBA(70, 130, 220, 1)` | `varColorInfo` |
-| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | `varColorHeader` |
+| Neutral/Cancel | Gray | `RGBA(150, 150, 150, 1)` | `varColorNeutral` |
+| Info | Blue | `RGBA(70, 130, 220, 1)` | `varColorInfo` |
+| Header Background | Transparent | `Color.Transparent` | `varColorHeader` |
+| Nav Button Inactive | Gray | `RGBA(128, 128, 128, 1)` | `varNavBtnInactiveFill` |
+| Nav Button Hover | Dark Gray | `RGBA(90, 90, 90, 1)` | `varNavBtnHoverFill` |
 | Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | `varColorOverlay` |
-| Card Background | White | `Color.White` | `varColorBgCard` |
+| Card Background | Warm Cream | `RGBA(247, 237, 223, 1)` | `varColorBgCard` |
 | Muted Text | Gray | `RGBA(100, 100, 100, 1)` | `varColorTextMuted` |
 | Screen Background | Light Gray | `RGBA(248, 248, 248, 1)` | `varColorBg` |
 | Border | Gray | `RGBA(200, 200, 200, 1)` | `varColorBorder` |
@@ -124,10 +127,11 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 | Type | Fill | Color | Border |
 |------|------|-------|--------|
-| Primary Action | `varColorPrimary` | White | None |
-| Success Action | `varColorSuccess` | White | None |
-| Danger Action | `varColorDanger` | White | None |
-| Secondary/Outline | White | `varColorPrimary` | `varColorPrimary`, 1px |
+| Primary Action | `varColorPrimary` | White | None (No Border style) |
+| Success Action | `varColorSuccess` | White | None (No Border style) |
+| Danger Action | `varColorDanger` | White | None (No Border style) |
+| Secondary (Tinted) | `ColorFade([color], varSecondaryFade)` | `[color]` | None (No Border style) |
+| Cancel/Neutral | `varColorNeutral` | White | None (No Border style) |
 | Navigation (Active) | `varColorInfo` | White | None |
 | Navigation (Inactive) | `RGBA(60, 60, 65, 1)` | White | None |
 
@@ -136,9 +140,10 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Element Type | Radius | Variable | Examples |
 |--------------|--------|----------|----------|
 | Cards & Modals | `8` | `varRadiusMedium` | Request cards, confirmation modals |
-| Primary Buttons | `6` | `varRadiusSmall` | Submit, Confirm buttons |
+| Buttons | `4` | `varBtnBorderRadius` | All buttons (unified style) |
 | Input Fields | `4` | `varRadiusXSmall` | Text inputs, dropdowns |
 | Status Badges | `12` | `varRadiusPill` | Rounded pill badges |
+| Tab Buttons | `20` | `varBtnBorderRadiusPill` | Status tabs (pill shape) |
 
 ### Layout Dimensions (Tablet Format)
 
@@ -295,7 +300,7 @@ Set(varIsLoading, false);
 // === PRICING CONFIGURATION ===
 // For display purposes (estimates shown to students)
 Set(varFilamentRate, 0.10);
-Set(varResinRate, 0.20);
+Set(varResinRate, 0.30);
 Set(varMinimumCost, 3.00);
 
 // ============================================
@@ -306,28 +311,31 @@ Set(varMinimumCost, 3.00);
 // --- FONT ---
 Set(varAppFont, Font.'Open Sans');
 
-// --- COLORS: Primary Palette (Staff Dashboard) ---
-Set(varColorPrimary, RGBA(56, 96, 178, 1));        // Primary Blue - buttons, active elements
-Set(varColorPrimaryHover, RGBA(76, 116, 198, 1)); // Blue hover state
-Set(varColorPrimaryPressed, RGBA(36, 76, 158, 1)); // Blue pressed state
+// --- COLORS ---
+Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
+Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
+Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
 
 // --- COLORS: Semantic ---
-Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - confirm, success
-Set(varColorSuccessHover, RGBA(36, 144, 36, 1));   // Green hover
-Set(varColorDanger, RGBA(209, 52, 56, 1));         // Red - cancel, errors
-Set(varColorDangerHover, RGBA(229, 72, 76, 1));    // Red hover
-Set(varColorWarning, RGBA(255, 185, 0, 1));        // Amber - warnings, pending
-Set(varColorInfo, RGBA(70, 130, 220, 1));          // Blue - info, uploaded
+Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - approve/complete
+Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
+Set(varColorDanger, RGBA(209, 52, 56, 1));         // Red - reject/delete
+Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
+Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
+Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
+Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
 
 // --- COLORS: Neutrals (Staff Dashboard) ---
-Set(varColorHeader, RGBA(45, 45, 48, 1));          // Dark Gray - header background
+Set(varColorHeader, Color.Transparent);            // Invisible header background
+Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
+Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state (darker gray)
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
 Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
 Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
 Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
-Set(varColorBgCard, Color.White);                   // Card/modal background
+Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
 Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
-Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+Set(varColorBorderLight, RGBA(166, 166, 166, 1)); // Card borders
 Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
 Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
@@ -338,12 +346,45 @@ Set(varRadiusSmall, 6);     // Standard buttons
 Set(varRadiusXSmall, 4);    // Inputs, small buttons
 Set(varRadiusPill, 14);     // Status badges (pill shape)
 
+// --- BUTTON STYLING (Unified with Staff Dashboard) ---
+Set(varBtnBorderRadius, 4);                        // Standard corner radius
+Set(varBtnBorderRadiusPill, 20);                   // Pill shape for tabs
+Set(varBtnFontSize, 12);
+Set(varBtnHeight, 36);
+Set(varBtnHeightLarge, 50);                        // Large buttons (CTAs)
+Set(varBtnHeightSmall, 40);                        // Navigation buttons
+Set(varSecondaryFade, 70%);                        // Secondary button fill lightness
+
+// --- FOCUS STYLING ---
+// Consistent focus indicator for all interactive controls (buttons, inputs, dropdowns)
+Set(varFocusedBorderThickness, 2);
+
+// --- INPUT FIELD STYLING ---
+// Cleaner borders than Power Apps defaults - gray instead of themed colors
+Set(varInputBorderColor, RGBA(128, 128, 128, 1));  // Gray border
+Set(varInputBorderThickness, 1);                   // Thin border
+Set(varInputHoverFill, RGBA(255, 255, 255, 1));    // White on hover
+Set(varInputBorderRadius, 4);                      // Match button radius
+Set(varInputFontSize, 12);                         // Standard input text size
+
+// --- DROPDOWN/COMBOBOX STYLING ---
+// Custom chevron and selection colors for a polished look
+Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron background
+Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
+Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
+Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
+Set(varDropdownHoverFill, RGBA(186, 202, 226, 1));     // Light blue row hover
+Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
+Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
+Set(varDropdownSelectionFill, RGBA(255, 255, 255, 1)); // White selection background
+Set(varDropdownSelectionColor, RGBA(255, 255, 255, 1)); // White selection text
+
 // --- SIZING (Tablet Layout) ---
 Set(varHeaderHeight, 60);   // Top header bar
 Set(varNavHeight, 60);      // Bottom navigation bar
 Set(varInputHeight, 45);    // Standard input field height
-Set(varButtonHeight, 50);   // Primary button height
-Set(varButtonHeightSmall, 40); // Secondary button height
+Set(varButtonHeight, 50);   // Primary button height (legacy alias)
+Set(varButtonHeightSmall, 40); // Secondary button height (legacy alias)
 
 // --- SPACING ---
 Set(varSpacingXL, 20);      // Large padding (screen edges)
@@ -351,6 +392,24 @@ Set(varSpacingLG, 16);      // Card padding
 Set(varSpacingMD, 12);      // Form field gaps
 Set(varSpacingSM, 8);       // Small gaps
 Set(varSpacingXS, 4);       // Tiny gaps
+
+// === GALLERY DIMENSIONS ===
+Set(varRequestCardHeight, 280);                    // My Requests gallery template size
+
+// === CONTACT INFORMATION ===
+// Update these when location or contact details change
+Set(varSupportEmail, "coad-fablab@lsu.edu");
+Set(varPickupLocation, "Room 145 Atkinson Hall");
+Set(varPaymentMethod, "TigerCASH only");
+
+// === DATE/TIME FORMATS ===
+// Consistent date formatting across the app
+Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
+Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
+
+// === NAVIGATION ===
+// Screen transition effect - change to customize navigation feel
+Set(varScreenTransition, ScreenTransition.Fade);
 
 // === STATUS COLORS ===
 // Consistent with Staff Dashboard
@@ -429,10 +488,27 @@ RadiusBottomRight: varRadiusXSmall
 | `varColorTextMuted` | Medium gray | Secondary text |
 | `varColorTextLight` | Light gray | Hints, placeholders |
 | `varColorBg` | Off-white | Screen backgrounds |
-| `varColorBgCard` | White | Cards, modals |
+| `varColorBgCard` | Warm Cream | Cards, modals |
 | `varColorBorder` | Gray | Input borders |
 | `varColorBorderLight` | Light gray | Card borders |
 | `varColorDisabled` | Gray | Disabled controls |
+
+#### Input/Dropdown Styling
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `varFocusedBorderThickness` | 2 | Focus indicator for all controls |
+| `varInputBorderColor` | Gray | Input/dropdown borders |
+| `varInputBorderThickness` | 1 | Input border width |
+| `varInputHoverFill` | White | Input hover state |
+| `varInputBorderRadius` | 4 | Input corner radius |
+| `varInputFontSize` | 12 | Input text size |
+| `varChevronBackground` | Gray | Dropdown chevron bg |
+| `varChevronFill` | White | Dropdown chevron arrow |
+| `varChevronHoverFill` | Light gray | Dropdown hover arrow |
+| `varDropdownHoverFill` | Light blue | Dropdown row hover |
+| `varDropdownPressedFill` | Gray | Dropdown pressed state |
+| `varDropdownSelectionFill` | White | Selection background |
 
 #### Border Radius
 
@@ -478,6 +554,13 @@ RadiusBottomRight: varRadiusXSmall
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
 | `varStatusColors` | Status-to-color mapping table | Table |
+| `varRequestCardHeight` | My Requests gallery template size | Number |
+| `varSupportEmail` | Help/support email address | Text |
+| `varPickupLocation` | Physical pickup location | Text |
+| `varPaymentMethod` | Accepted payment method | Text |
+| `varDateFormatShort` | Short date format string | Text |
+| `varDateFormatFull` | Full date/time format string | Text |
+| `varScreenTransition` | Navigation transition effect | ScreenTransition |
 
 > 💡 **User Identity Variables Explained:**
 > - **`varMeEmail`** (SMTP): The primary email address (e.g., `john.smith@lsu.edu`). Used for the `StudentEmail` text field and gallery filtering.
@@ -523,8 +606,9 @@ This app uses a **container-based architecture** for clean organization and easy
         lblSubtitle                 ← "What would you like..." (created 2nd - top)
         lblWelcome                  ← "Welcome, [Name]!" (created 1st - behind)
     ▼ conHeaderHome                 ← (created 1st - BOTTOM of tree = behind)
-        lblHeaderTitleHome          ← "Student Portal" (created 2nd - top)
-        recHeaderBgHome             ← Dark gray background (created 1st - behind)
+        imgUserPhotoHome            ← User profile photo (top right)
+        lblHeaderTitleHome          ← "Student Portal" (centered)
+        recHeaderBgHome             ← Background (created 1st - behind)
 
 ▼ scrSubmit                         ← Screen 2: Submit Request Form
     ▼ conLoadingOverlay             ← (created last - TOP = in front when visible)
@@ -557,8 +641,9 @@ This app uses a **container-based architecture** for clean organization and easy
             Title_DataCard1          ← (bottom)
             Status_DataCard1
     ▼ conHeader                     ← (created first - BOTTOM = behind)
-        lblHeaderTitle              ← "Submit Request" (top)
-        recHeaderBg                 ← Dark gray background (bottom)
+        imgUserPhoto                ← User profile photo (top right)
+        lblHeaderTitle              ← "Submit Request"
+        recHeaderBg                 ← Background (bottom)
 
 ▼ scrMyRequests                     ← Screen 3: My Requests List
     ▼ conCancelModal                ← (TOP - modals in front when visible)
@@ -576,9 +661,10 @@ This app uses a **container-based architecture** for clean organization and easy
         lblEmptyState               ← "No requests" message
         galMyRequests               ← Gallery of user's requests
     ▼ conHeader2                    ← (created first - BOTTOM = behind)
-        btnRefresh                  ← Refresh button
+        btnRefresh                  ← Refresh button (top right)
+        imgUserPhoto2               ← User profile photo
         lblHeaderTitle2             ← "My Print Requests"
-        recHeaderBg2                ← Dark background (bottom)
+        recHeaderBg2                ← Background (bottom)
 ```
 
 ### Why Containers?
@@ -687,13 +773,34 @@ We use **prefixes** to identify control types at a glance:
 | Color | `Color.White` |
 | Align | `Align.Center` |
 
+#### Add User Profile Image
+
+13. Click **+ Insert** → **Media** → **Image**.
+14. **Rename it:** `imgUserPhotoHome`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Image | `Office365Users.UserPhotoV2(varMeUPN)` |
+| X | `Parent.Width - Self.Width - varSpacingMD` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `40` |
+| Height | `40` |
+| ImagePosition | `ImagePosition.Fill` |
+| RadiusTopLeft | `20` |
+| RadiusTopRight | `20` |
+| RadiusBottomLeft | `20` |
+| RadiusBottomRight | `20` |
+
+> 💡 **Circular Profile Photo:** The 20px radius on a 40x40 image creates a perfect circle. The image pulls the user's Microsoft 365 profile photo.
+
 ---
 
 ### 4B: Create Welcome Section
 
-13. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
-14. **Rename it:** `conWelcome`
-15. Set these properties:
+16. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+17. **Rename it:** `conWelcome`
+18. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -705,9 +812,9 @@ We use **prefixes** to identify control types at a glance:
 
 #### Add Welcome Label
 
-16. With `conWelcome` selected, click **+ Insert** → **Text label**.
-17. **Rename it:** `lblWelcome`
-18. Set these properties:
+19. With `conWelcome` selected, click **+ Insert** → **Text label**.
+20. **Rename it:** `lblWelcome`
+21. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -724,9 +831,9 @@ We use **prefixes** to identify control types at a glance:
 
 #### Add Subtitle Label
 
-19. Click **+ Insert** → **Text label**.
-20. **Rename it:** `lblSubtitle`
-21. Set these properties:
+22. Click **+ Insert** → **Text label**.
+23. **Rename it:** `lblSubtitle`
+24. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -744,9 +851,9 @@ We use **prefixes** to identify control types at a glance:
 
 ### 4C: Create Action Cards Container
 
-22. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
-23. **Rename it:** `conActionCards`
-24. Set these properties:
+25. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+26. **Rename it:** `conActionCards`
+27. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -760,8 +867,8 @@ We use **prefixes** to identify control types at a glance:
 
 ### 4D: Create "Submit New Request" Card (Left)
 
-25. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
-26. **Rename it:** `conSubmitCard`
+28. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
+29. **Rename it:** `conSubmitCard`
 27. Set these properties:
 
 | Property | Value |
@@ -780,9 +887,9 @@ We use **prefixes** to identify control types at a glance:
 
 #### Add Submit Icon
 
-28. With `conSubmitCard` selected, click **+ Insert** → **Icons** → **Add** (or use a relevant icon like "Upload" or "Document").
-29. **Rename it:** `icnSubmit`
-30. Set these properties:
+30. With `conSubmitCard` selected, click **+ Insert** → **Icons** → **Add** (or use a relevant icon like "Upload" or "Document").
+31. **Rename it:** `icnSubmit`
+32. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -795,9 +902,9 @@ We use **prefixes** to identify control types at a glance:
 
 #### Add Submit Title
 
-31. Click **+ Insert** → **Text label**.
-32. **Rename it:** `lblSubmitTitle`
-33. Set these properties:
+33. Click **+ Insert** → **Text label**.
+34. **Rename it:** `lblSubmitTitle`
+35. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -842,23 +949,26 @@ We use **prefixes** to identify control types at a glance:
 | X | `varSpacingLG` |
 | Y | `Parent.Height - 70` |
 | Width | `Parent.Width - (varSpacingLG * 2)` |
-| Height | `varButtonHeight` |
+| Height | `varBtnHeightLarge` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
-| RadiusTopLeft | `varRadiusSmall` |
-| RadiusTopRight | `varRadiusSmall` |
-| RadiusBottomLeft | `varRadiusSmall` |
-| RadiusBottomRight | `varRadiusSmall` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 40. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrSubmit, ScreenTransition.Fade)
+Navigate(scrSubmit, varScreenTransition)
 ```
 
 ---
@@ -976,23 +1086,26 @@ Navigate(scrSubmit, ScreenTransition.Fade)
 | X | `varSpacingLG` |
 | Y | `Parent.Height - 70` |
 | Width | `Parent.Width - (varSpacingLG * 2)` |
-| Height | `varButtonHeight` |
+| Height | `varBtnHeightLarge` |
 | Fill | `varColorSuccess` |
 | Color | `Color.White` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
-| RadiusTopLeft | `varRadiusSmall` |
-| RadiusTopRight | `varRadiusSmall` |
-| RadiusBottomLeft | `varRadiusSmall` |
-| RadiusBottomRight | `varRadiusSmall` |
-| HoverFill | `varColorSuccessHover` |
-| PressedFill | `RGBA(0, 100, 0, 1)` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 59. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrMyRequests, ScreenTransition.Fade)
+Navigate(scrMyRequests, varScreenTransition)
 ```
 
 ---
@@ -1005,7 +1118,7 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Need help? Visit Room 145 Atkinson Hall or email fablab@lsu.edu"` |
+| Text | `"Need help? Visit " & varPickupLocation & " or email " & varSupportEmail` |
 | X | `0` |
 | Y | `Parent.Height - varNavHeight - 50` |
 | Width | `Parent.Width` |
@@ -1054,7 +1167,9 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1075,11 +1190,13 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `(Parent.Width - 80) / 3` |
 | Height | `varButtonHeightSmall` |
-| Fill | `RGBA(60, 60, 65, 1)` |
+| Fill | `varNavBtnInactiveFill` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Normal` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1088,7 +1205,7 @@ Navigate(scrMyRequests, ScreenTransition.Fade)
 76. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrSubmit, ScreenTransition.Fade)
+Navigate(scrSubmit, varScreenTransition)
 ```
 
 #### Add My Requests Nav Button (Inactive)
@@ -1104,11 +1221,13 @@ Navigate(scrSubmit, ScreenTransition.Fade)
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `(Parent.Width - 80) / 3` |
 | Height | `varButtonHeightSmall` |
-| Fill | `RGBA(60, 60, 65, 1)` |
+| Fill | `varNavBtnInactiveFill` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Normal` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1117,7 +1236,7 @@ Navigate(scrSubmit, ScreenTransition.Fade)
 80. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrMyRequests, ScreenTransition.Fade)
+Navigate(scrMyRequests, varScreenTransition)
 ```
 
 ---
@@ -1152,6 +1271,7 @@ Your Tree view should now look like this (first-created at bottom, last-created 
         lblSubtitle
         lblWelcome
     ▼ conHeaderHome                 ← created first (bottom = behind)
+        imgUserPhotoHome            ← user profile photo
         lblHeaderTitleHome
         recHeaderBgHome             ← background at bottom
 ```
@@ -1217,12 +1337,33 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 | Text | `"Submit 3D Print Request"` |
 | X | `varSpacingXL` |
 | Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `Parent.Width - 40` |
+| Width | `Parent.Width - 80` |
 | Height | `30` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `18` |
 | Color | `Color.White` |
+
+#### Add User Profile Image
+
+13. Click **+ Insert** → **Media** → **Image**.
+14. **Rename it:** `imgUserPhoto`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Image | `Office365Users.UserPhotoV2(varMeUPN)` |
+| X | `Parent.Width - Self.Width - varSpacingMD` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `40` |
+| Height | `40` |
+| ImagePosition | `ImagePosition.Fill` |
+| RadiusTopLeft | `20` |
+| RadiusTopRight | `20` |
+| RadiusBottomLeft | `20` |
+| RadiusBottomRight | `20` |
+
+> 💡 **Circular Profile Photo:** Displays the current user's Microsoft 365 profile picture in the header.
 
 ---
 
@@ -1267,11 +1408,13 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `(Parent.Width - 80) / 3` |
 | Height | `varButtonHeightSmall` |
-| Fill | `RGBA(60, 60, 65, 1)` |
+| Fill | `varNavBtnInactiveFill` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Normal` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1280,7 +1423,7 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 22. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrHome, ScreenTransition.Fade)
+Navigate(scrHome, varScreenTransition)
 ```
 
 #### Add New Request Nav Button (Active)
@@ -1300,7 +1443,9 @@ Navigate(scrHome, ScreenTransition.Fade)
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1321,11 +1466,13 @@ Navigate(scrHome, ScreenTransition.Fade)
 | Y | `(Parent.Height - Self.Height) / 2` |
 | Width | `(Parent.Width - 80) / 3` |
 | Height | `varButtonHeightSmall` |
-| Fill | `RGBA(60, 60, 65, 1)` |
+| Fill | `varNavBtnInactiveFill` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Normal` |
-| Size | `12` |
+| Size | `varBtnFontSize` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusSmall` |
 | RadiusTopRight | `varRadiusSmall` |
 | RadiusBottomLeft | `varRadiusSmall` |
@@ -1334,7 +1481,7 @@ Navigate(scrHome, ScreenTransition.Fade)
 30. Set **OnSelect:**
 
 ```powerfx
-Navigate(scrMyRequests, ScreenTransition.Fade)
+Navigate(scrMyRequests, varScreenTransition)
 ```
 
 ---
@@ -1801,6 +1948,22 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"Associated with course number"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 
 > ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
 
@@ -1832,6 +1995,22 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What's this for?"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 
 51. Click on `ProjectType_DataCard1` itself (the card, not the ComboBox).
 52. Set these properties:
@@ -1867,6 +2046,22 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What type of printer?"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 
 > ⚠️ **Critical:** The Printer and Color dropdowns reference `DataCardValue8.Selected.Value` for cascading filters. If you rename this control, update those formulas accordingly.
 
@@ -1939,6 +2134,22 @@ Resin:
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What size printer?"` |
 | DisplayMode | `If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 
 > 💡 **Disabled Until Method Selected:** The Printer dropdown is disabled until the user selects a Method. This prevents invalid combinations and guides the user through the form in the correct order.
 
@@ -2006,6 +2217,22 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `""` |
 | DisplayMode | `If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 
 > 💡 **Disabled Until Method Selected:** The Color dropdown is disabled until the user selects a Method. This ensures the cascading filter shows the correct color options for the selected print method.
 
@@ -2153,19 +2380,22 @@ Send us ONE FILE with all of your parts and pieces. Do not upload multiple files
 | X | `varSpacingXL` |
 | Y | `frmSubmit.Y + frmSubmit.Height + varSpacingMD` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
-| Height | `varButtonHeight` |
+| Height | `varBtnHeightLarge` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| DisabledFill | `varColorDisabled` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
-| RadiusTopLeft | `varRadiusSmall` |
-| RadiusTopRight | `varRadiusSmall` |
-| RadiusBottomLeft | `varRadiusSmall` |
-| RadiusBottomRight | `varRadiusSmall` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
-| DisabledFill | `varColorDisabled` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 97. Set **DisplayMode** (validates required fields, TigerCard length, and file attachment):
 
@@ -2265,7 +2495,7 @@ Set(varIsLoading, false);
 Set(varSubmitAttempted, false);  // Reset for next submission
 Notify("Request submitted successfully! You'll receive a confirmation email shortly.", NotificationType.Success);
 ResetForm(frmSubmit);
-Navigate(scrMyRequests, ScreenTransition.Fade)
+Navigate(scrMyRequests, varScreenTransition)
 ```
 
 106. Set **OnFailure:**
@@ -2324,6 +2554,7 @@ Your Tree view should now look like (first-created at bottom, last-created at to
             Status_DataCard1 (hidden)
             Title_DataCard1 (hidden) ← bottom of form
     ▼ conHeader                     ← created first (BOTTOM = behind)
+        imgUserPhoto                ← user profile photo
         lblHeaderTitle
         recHeaderBg                 ← background at bottom
 ```
@@ -2473,11 +2704,32 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 | Size | `18` |
 | Color | `Color.White` |
 
+#### Add User Profile Image
+
+13. Click **+ Insert** → **Media** → **Image**.
+14. **Rename it:** `imgUserPhoto2`
+15. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Image | `Office365Users.UserPhotoV2(varMeUPN)` |
+| X | `Parent.Width - 100` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `40` |
+| Height | `40` |
+| ImagePosition | `ImagePosition.Fill` |
+| RadiusTopLeft | `20` |
+| RadiusTopRight | `20` |
+| RadiusBottomLeft | `20` |
+| RadiusBottomRight | `20` |
+
+> 💡 **Circular Profile Photo:** Positioned to the left of the refresh button.
+
 #### Add Refresh Button
 
-13. Click **+ Insert** → **Button**.
-14. **Rename it:** `btnRefresh`
-15. Set these properties:
+16. Click **+ Insert** → **Button**.
+17. **Rename it:** `btnRefresh`
+18. Set these properties:
 
 | Property | Value |
 |----------|-------|
@@ -2490,12 +2742,14 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 | Color | `Color.White` |
 | Font | `varAppFont` |
 | Size | `18` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varRadiusPill` |
 | RadiusTopRight | `varRadiusPill` |
 | RadiusBottomLeft | `varRadiusPill` |
 | RadiusBottomRight | `varRadiusPill` |
 
-16. Set **OnSelect:**
+19. Set **OnSelect:**
 
 ```powerfx
 Refresh(PrintRequests);
@@ -2508,16 +2762,27 @@ Notify("Requests refreshed!", NotificationType.Information)
 
 17. With `scrMyRequests` selected, click **+ Insert** → **Layout** → **Container**.
 18. **Rename it:** `conNavBar2`
-19. Copy the same structure from `conNavBar` on Screen 1, but swap active/inactive styles:
+19. Copy the same structure from `conNavBar` on Screen 2, but swap active/inactive styles:
 
 | Control | Property | Value |
 |---------|----------|-------|
 | `recNavBg2` | Fill | `varColorHeader` |
+| `btnNavHome2` | Fill | `varNavBtnInactiveFill` |
+| `btnNavHome2` | OnSelect | `Navigate(scrHome, varScreenTransition)` |
+| `btnNavHome2` | Size | `varBtnFontSize` |
+| `btnNavHome2` | BorderThickness | `0` |
+| `btnNavHome2` | FocusedBorderThickness | `varFocusedBorderThickness` |
 | `btnNavSubmit2` | Text | `"New Request"` |
-| `btnNavSubmit2` | Fill | `RGBA(60, 60, 65, 1)` (inactive) |
-| `btnNavSubmit2` | OnSelect | `Navigate(scrSubmit, ScreenTransition.Fade)` |
-| `btnNavMyRequests2` | Fill | `varColorInfo` (active) |
+| `btnNavSubmit2` | Fill | `varNavBtnInactiveFill` |
+| `btnNavSubmit2` | OnSelect | `Navigate(scrSubmit, varScreenTransition)` |
+| `btnNavSubmit2` | Size | `varBtnFontSize` |
+| `btnNavSubmit2` | BorderThickness | `0` |
+| `btnNavSubmit2` | FocusedBorderThickness | `varFocusedBorderThickness` |
+| `btnNavMyRequests2` | Fill | `varColorInfo` |
 | `btnNavMyRequests2` | OnSelect | `// Already on this screen` |
+| `btnNavMyRequests2` | Size | `varBtnFontSize` |
+| `btnNavMyRequests2` | BorderThickness | `0` |
+| `btnNavMyRequests2` | FocusedBorderThickness | `varFocusedBorderThickness` |
 
 ---
 
@@ -2557,7 +2822,7 @@ Notify("Requests refreshed!", NotificationType.Information)
 | Height | `Parent.Height - 170` |
 | TemplatePadding | `8` |
 | **WrapCount** | `3` |
-| TemplateSize | `280` |
+| TemplateSize | `varRequestCardHeight` |
 
 > 💡 **WrapCount = 3** creates a grid layout with 3 cards per row! Each card will be approximately 330px wide on a 1024px tablet screen.
 
@@ -2622,6 +2887,12 @@ Now add controls **inside** the gallery template.
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
+| RadiusTopLeft | `12` |
+| RadiusTopRight | `12` |
+| RadiusBottomLeft | `12` |
+| RadiusBottomRight | `12` |
+
+> 💡 **Styled Card:** The card uses `varColorBgCard` for a warm cream background with rounded corners.
 
 #### Request ID (ReqKey)
 
@@ -2681,7 +2952,7 @@ If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Submitted: " & Text(ThisItem.Created, "mmm d, yyyy")` |
+| Text | `"Submitted: " & Text(ThisItem.Created, varDateFormatShort)` |
 | X | `28` |
 | Y | `40` |
 | Width | `200` |
@@ -2748,16 +3019,20 @@ Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find
 | Y | `115` |
 | Width | `Parent.TemplateWidth - 60` |
 | Height | `45` |
-| Fill | `RGBA(16, 124, 16, 1)` |
+| Fill | `varColorSuccess` |
 | Color | `Color.White` |
-| Font | `Font.'Open Sans'` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `13` |
-| RadiusTopLeft | `6` |
-| RadiusTopRight | `6` |
-| RadiusBottomLeft | `6` |
-| RadiusBottomRight | `6` |
-| HoverFill | `RGBA(36, 144, 36, 1)` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 | Visible | `ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed` |
 
 34. Set **OnSelect:**
@@ -2780,15 +3055,19 @@ Set(varShowConfirmModal, ThisItem.ID)
 | Y | `165` |
 | Width | `150` |
 | Height | `28` |
-| Fill | `Color.White` |
-| Color | `RGBA(209, 52, 56, 1)` |
-| BorderColor | `RGBA(209, 52, 56, 1)` |
-| BorderThickness | `1` |
-| Size | `11` |
-| RadiusTopLeft | `4` |
-| RadiusTopRight | `4` |
-| RadiusBottomLeft | `4` |
-| RadiusBottomRight | `4` |
+| Fill | `ColorFade(varColorDanger, varSecondaryFade)` |
+| Color | `varColorDanger` |
+| HoverFill | `ColorFade(varColorDanger, 55%)` |
+| PressedFill | `ColorFade(varColorDanger, 45%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 | Visible | `ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]` |
 
 38. Set **OnSelect:**
@@ -2819,8 +3098,8 @@ Set(varShowCancelModal, ThisItem.ID)
 Switch(
     ThisItem.Status.Value,
     "Printing", "Your print is currently in progress!",
-    "Completed", "Your print is ready for pickup!\n📍 Room 145 Atkinson Hall\n💳 Payment: TigerCASH only",
-    "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, "mmm d, yyyy"),
+    "Completed", "Your print is ready for pickup!" & Char(10) & "📍 " & varPickupLocation & Char(10) & "💳 Payment: " & varPaymentMethod,
+    "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, varDateFormatShort),
     "Rejected", "❌ Request rejected",
     "Canceled", "Request canceled by you",
     ""
@@ -3001,17 +3280,21 @@ If(!IsBlank(varSelectedItem.EstimatedWeight), "Material: ~" & Text(varSelectedIt
 | X | `recConfirmModal.X + varSpacingXL` |
 | Y | `recConfirmModal.Y + 320` |
 | Width | `recConfirmModal.Width - 40` |
-| Height | `varButtonHeight` |
+| Height | `varBtnHeightLarge` |
 | Fill | `varColorSuccess` |
-| HoverFill | `varColorSuccessHover` |
 | Color | `Color.White` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `14` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 31. Set **OnSelect:**
 
@@ -3044,16 +3327,22 @@ Refresh(PrintRequests)
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recConfirmModal.X + 20` |
-| Y | `recConfirmModal.Y + 385` |
+| Y | `recConfirmModal.Y + 320 + varBtnHeightLarge + varSpacingMD` |
 | Width | `recConfirmModal.Width - 40` |
-| Height | `40` |
-| Fill | `RGBA(240, 240, 240, 1)` |
-| Color | `RGBA(100, 100, 100, 1)` |
-| Size | `12` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
+| Height | `varBtnHeight` |
+| Fill | `varColorNeutral` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 35. Set **OnSelect:**
 
@@ -3174,17 +3463,21 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | X | `recCancelModal.X + varSpacingXL` |
 | Y | `recCancelModal.Y + 160` |
 | Width | `recCancelModal.Width - 40` |
-| Height | `varInputHeight` |
+| Height | `varBtnHeight` |
 | Fill | `varColorDanger` |
-| HoverFill | `varColorDangerHover` |
 | Color | `Color.White` |
+| HoverFill | `ColorFade(varColorDanger, -15%)` |
+| PressedFill | `ColorFade(varColorDanger, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `13` |
-| RadiusTopLeft | `varRadiusSmall` |
-| RadiusTopRight | `varRadiusSmall` |
-| RadiusBottomLeft | `varRadiusSmall` |
-| RadiusBottomRight | `varRadiusSmall` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 21. Set **OnSelect:**
 
@@ -3221,16 +3514,22 @@ Refresh(PrintRequests)
 |----------|-------|
 | Text | `"No, Keep Request"` |
 | X | `recCancelModal.X + 20` |
-| Y | `recCancelModal.Y + 220` |
+| Y | `recCancelModal.Y + 160 + varBtnHeight + varSpacingXL` |
 | Width | `recCancelModal.Width - 40` |
-| Height | `40` |
-| Fill | `RGBA(240, 240, 240, 1)` |
-| Color | `RGBA(100, 100, 100, 1)` |
-| Size | `12` |
-| RadiusTopLeft | `6` |
-| RadiusTopRight | `6` |
-| RadiusBottomLeft | `6` |
-| RadiusBottomRight | `6` |
+| Height | `varBtnHeight` |
+| Fill | `varColorNeutral` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 25. Set **OnSelect:**
 
@@ -3723,12 +4022,12 @@ Common error messages:
 
 | From | To | Formula |
 |------|-----|---------|
-| scrHome | scrSubmit | `Navigate(scrSubmit, ScreenTransition.Fade)` |
-| scrHome | scrMyRequests | `Navigate(scrMyRequests, ScreenTransition.Fade)` |
-| scrSubmit | scrHome | `Navigate(scrHome, ScreenTransition.Fade)` |
-| scrSubmit | scrMyRequests | `Navigate(scrMyRequests, ScreenTransition.Fade)` |
-| scrMyRequests | scrHome | `Navigate(scrHome, ScreenTransition.Fade)` |
-| scrMyRequests | scrSubmit | `Navigate(scrSubmit, ScreenTransition.Fade)` |
+| scrHome | scrSubmit | `Navigate(scrSubmit, varScreenTransition)` |
+| scrHome | scrMyRequests | `Navigate(scrMyRequests, varScreenTransition)` |
+| scrSubmit | scrHome | `Navigate(scrHome, varScreenTransition)` |
+| scrSubmit | scrMyRequests | `Navigate(scrMyRequests, varScreenTransition)` |
+| scrMyRequests | scrHome | `Navigate(scrHome, varScreenTransition)` |
+| scrMyRequests | scrSubmit | `Navigate(scrSubmit, varScreenTransition)` |
 
 ## Status Actions Available
 
@@ -3805,7 +4104,7 @@ Set(varIsLoading, false);
 
 // === PRICING ===
 Set(varFilamentRate, 0.10);
-Set(varResinRate, 0.20);
+Set(varResinRate, 0.30);
 Set(varMinimumCost, 3.00);
 
 // === STYLING ===
@@ -3868,7 +4167,7 @@ Reset(ddColor);
 Reset(dpDueDate);
 Reset(txtNotes);
 
-Navigate(scrMyRequests, ScreenTransition.Fade)
+Navigate(scrMyRequests, varScreenTransition)
 ```
 
 ## Form OnFailure (Show Actual Error)
