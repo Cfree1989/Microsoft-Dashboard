@@ -1,7 +1,15 @@
+# ************************************************************************************************
+# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
+# Use the maker portal to create and edit your Power Apps.
+# 
+# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
+# 
+# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
+# ************************************************************************************************
 Screens:
   scrDashboard:
     Properties:
-      LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
+      LoadingSpinnerColor: =varColorPrimary
       OnVisible: |-
         =Set(varActor, {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
@@ -16,20 +24,20 @@ Screens:
       - recHeader:
           Control: Rectangle@2.3.0
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
             Fill: =RGBA(45, 45, 48, 1)
             Height: =60
             Width: =Parent.Width
       - lblAppTitle:
           Control: Label@2.5.1
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
             Color: =RGBA(255, 255, 255, 1)
-            Font: =Font.'Segoe UI'
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =30
             Size: =18
-            Text: ="Print Lab Dashboard"
+            Text: ="Print Lab Dashboard [BUILD: B4-MARKER]"
             Width: =300
             X: =20
             Y: =15
@@ -39,12 +47,12 @@ Screens:
             BorderColor: =ColorFade(Self.Fill, -15%)
             Color: =RGBA(255, 255, 255, 1)
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
-            Fill: =If(varCurrentPage = "Dashboard", RGBA(70, 130, 220, 1), RGBA(60, 60, 65, 1))
-            Font: =Font.'Segoe UI'
+            Fill: =If(varCurrentPage = "Dashboard", varColorPrimary, varNavBtnInactiveFill)
+            Font: =varAppFont
             Height: =36
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
-            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            HoverFill: =varNavBtnHoverFill
             OnSelect: =Set(varCurrentPage, "Dashboard")
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
@@ -59,12 +67,12 @@ Screens:
             BorderColor: =ColorFade(Self.Fill, -15%)
             Color: =RGBA(255, 255, 255, 1)
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
-            Fill: =If(varCurrentPage = "Admin", RGBA(70, 130, 220, 1), RGBA(60, 60, 65, 1))
-            Font: =Font.'Segoe UI'
+            Fill: =If(varCurrentPage = "Admin", varColorPrimary, varNavBtnInactiveFill)
+            Font: =varAppFont
             Height: =36
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
-            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            HoverFill: =varNavBtnHoverFill
             OnSelect: =Notify("Admin features coming soon!", NotificationType.Information)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
@@ -79,12 +87,12 @@ Screens:
             BorderColor: =ColorFade(Self.Fill, -15%)
             Color: =RGBA(255, 255, 255, 1)
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
-            Fill: =If(varCurrentPage = "Analytics", RGBA(70, 130, 220, 1), RGBA(60, 60, 65, 1))
-            Font: =Font.'Segoe UI'
+            Fill: =If(varCurrentPage = "Analytics", varColorPrimary, varNavBtnInactiveFill)
+            Font: =varAppFont
             Height: =36
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
-            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            HoverFill: =varNavBtnHoverFill
             OnSelect: =Notify("Analytics features coming soon!", NotificationType.Information)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
@@ -97,9 +105,9 @@ Screens:
           Control: Label@2.5.1
           Properties:
             Align: =Align.Right
-            BorderColor: =RGBA(0, 18, 107, 1)
-            Color: =RGBA(200, 200, 200, 1)
-            Font: =Font.'Segoe UI'
+            BorderColor: =varColorBorder
+            Color: =varColorBorder
+            Font: =varAppFont
             Height: =24
             Size: =12
             Text: =varMeName
@@ -110,7 +118,7 @@ Screens:
           Control: Gallery@2.15.0
           Variant: Horizontal
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
             Height: =50
             Items: |-
               =Table(
@@ -137,14 +145,14 @@ Screens:
                     =If(
                         varSelectedStatus = ThisItem.Status, 
                         If(ThisItem.Status = "Pending", Color.Black, Color.White),
-                        RGBA(100, 100, 100, 1)
+                        varColorTextMuted
                     )
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varNavBtnHoverFill
                   OnSelect: =Set(varSelectedStatus, ThisItem.Status)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -158,9 +166,9 @@ Screens:
           Control: Label@2.5.1
           Properties:
             Align: =Align.Center
-            BorderColor: =RGBA(0, 18, 107, 1)
-            Color: =RGBA(120, 120, 120, 1)
-            Font: =Font.'Segoe UI'
+            BorderColor: =varColorBorder
+            Color: =varColorTextLight
+            Font: =varAppFont
             Height: =100
             Size: =14
             Text: ="No " & varSelectedStatus & " requests found"
@@ -172,7 +180,7 @@ Screens:
           Control: Gallery@2.15.0
           Variant: Vertical
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
             Height: =Parent.Height - 160
             Items: |-
               =SortByColumns(
@@ -211,9 +219,9 @@ Screens:
             - lblStudentName:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =24
                   OnSelect: =Select(Parent)
                   Size: =14
@@ -225,9 +233,9 @@ Screens:
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Right
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(209, 52, 56, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorDanger
+                  Font: =varAppFont
                   Height: =44
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -254,9 +262,9 @@ Screens:
             - lblFilename:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =9
@@ -267,9 +275,9 @@ Screens:
             - lblStudentEmail:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =9
@@ -280,9 +288,9 @@ Screens:
             - lblPrinter:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -294,7 +302,7 @@ Screens:
             - lblColor:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: |-
                     =Switch(
                         ThisItem.Color.Value,
@@ -317,7 +325,7 @@ Screens:
                         "Any", RGBA(224, 224, 224, 1),
                         RGBA(153, 153, 153, 1)
                     )
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =10
@@ -327,9 +335,9 @@ Screens:
             - lblEstimates:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =10
@@ -382,9 +390,9 @@ Screens:
             - lblJobId:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -395,9 +403,9 @@ Screens:
             - lblcreated:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =28
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -408,9 +416,9 @@ Screens:
             - lblDetailsHeader:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   OnSelect: =Select(Parent)
@@ -421,9 +429,9 @@ Screens:
             - lblJobIdLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -434,9 +442,9 @@ Screens:
             - lblCreatedLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -447,9 +455,9 @@ Screens:
             - lblDisciplineLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   Size: =8
                   Text: ="Discipline:"
@@ -459,9 +467,9 @@ Screens:
             - lblDiscipline:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -472,9 +480,9 @@ Screens:
             - lblProjectTypeLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -485,9 +493,9 @@ Screens:
             - lblProjectType:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -498,9 +506,9 @@ Screens:
             - lblCourseLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -511,9 +519,9 @@ Screens:
             - lblCourse:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -523,7 +531,7 @@ Screens:
             - icoLightbulb:
                 Control: Classic/Icon@2.5.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), RGBA(180, 180, 180, 1))
                   Height: =24
                   Icon: =Icon.Lightbulb
@@ -566,16 +574,16 @@ Screens:
             - btnReject:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  BorderColor: =RGBA(209, 52, 56, 1)
+                  BorderColor: =varColorDanger
                   BorderThickness: =1
-                  Color: =RGBA(209, 52, 56, 1)
+                  Color: =varColorDanger
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =Color.White
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =32
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowRejectModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
@@ -777,7 +785,7 @@ Screens:
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
-                  Color: '=varColorPrimary          '
+                  Color: =varColorPrimary
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =ColorFade(varColorPrimary, varSecondaryFade)
                   Font: =varAppFont
@@ -809,11 +817,11 @@ Screens:
                   Color: =RGBA(0, 120, 212, 1)
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =Color.White
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =28
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varSelectedItem, ThisItem);
                     Set(varShowAddFileModal, ThisItem.ID)
@@ -832,9 +840,9 @@ Screens:
             - lblMessagesHeader:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =11
@@ -845,16 +853,16 @@ Screens:
             - btnViewMessages:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  BorderColor: =RGBA(70, 130, 220, 1)
+                  BorderColor: =varColorPrimary
                   BorderThickness: =1
-                  Color: =RGBA(70, 130, 220, 1)
+                  Color: =varColorPrimary
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(240, 240, 240, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =28
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: =RGBA(70, 130, 220, 1)
+                  HoverFill: =varColorPrimary
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
@@ -874,10 +882,10 @@ Screens:
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =Color.White
                   Fill: =RGBA(209, 52, 56, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =10
@@ -889,16 +897,16 @@ Screens:
             - btnCardSendMessage:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  BorderColor: =RGBA(70, 130, 220, 1)
+                  BorderColor: =varColorPrimary
                   BorderThickness: =1
-                  Color: =RGBA(70, 130, 220, 1)
+                  Color: =varColorPrimary
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =Color.White
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =28
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varSelectedItem, ThisItem);
                     Set(varShowMessageModal, ThisItem.ID)
@@ -918,9 +926,9 @@ Screens:
             - lblTransactionLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   Size: =8
                   Text: |-
@@ -932,9 +940,9 @@ Screens:
             - lblTransactionValue:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
@@ -949,10 +957,10 @@ Screens:
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =0
-                  Color: =RGBA(120, 120, 120, 1)
+                  Color: =varColorTextLight
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =Color.Transparent
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =28
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
@@ -980,9 +988,9 @@ Screens:
             - lblPaymentHistoryLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(120, 120, 120, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextLight
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =12
@@ -994,9 +1002,9 @@ Screens:
             - lblPaymentHistoryValue:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =10
@@ -1014,20 +1022,20 @@ Screens:
           Properties:
             BorderColor: =RGBA(230, 230, 230, 1)
             BorderThickness: =1
-            Fill: =RGBA(248, 248, 248, 1)
+            Fill: =varColorBg
             Height: =50
             Width: =Parent.Width
             Y: =110
       - txtSearch:
           Control: Classic/TextInput@2.3.2
           Properties:
-            BorderColor: =RGBA(200, 200, 200, 1)
+            BorderColor: =varColorBorder
             Default: =
-            Font: =Font.'Segoe UI'
+            Font: =varAppFont
             Height: =36
             HintText: ="Search by name, email, or ReqKey..."
-            HoverBorderColor: =RGBA(0, 18, 107, 1)
-            HoverFill: =RGBA(186, 202, 226, 1)
+            HoverBorderColor: =varColorBorder
+            HoverFill: =varDropdownHoverFill
             OnChange: =Set(varSearchText, Self.Text)
             RadiusBottomLeft: =4
             RadiusBottomRight: =4
@@ -1039,12 +1047,12 @@ Screens:
       - chkNeedsAttention:
           Control: Classic/CheckBox@2.1.0
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
-            CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
+            CheckboxBorderColor: =varColorBorder
             CheckboxSize: =30
             CheckmarkFill: =RGBA(0, 0, 0, 1)
-            Color: =RGBA(80, 80, 80, 1)
-            Font: =Font.'Segoe UI'
+            Color: =varColorText
+            Font: =varAppFont
             Height: =31
             HoverColor: =RGBA(0, 18, 107, 1)
             OnCheck: =Set(varNeedsAttention, true)
@@ -1057,11 +1065,11 @@ Screens:
       - btnRefresh:
           Control: Classic/Button@2.2.0
           Properties:
-            BorderColor: =RGBA(70, 130, 220, 1)
+            BorderColor: =varColorPrimary
             Color: =Color.White
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
-            Fill: =RGBA(70, 130, 220, 1)
-            Font: =Font.'Segoe UI'
+            Fill: =varColorPrimary
+            Font: =varAppFont
             Height: =36
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
@@ -1078,15 +1086,15 @@ Screens:
       - btnClearFilters:
           Control: Classic/Button@2.2.0
           Properties:
-            BorderColor: =RGBA(200, 200, 200, 1)
-            Color: =RGBA(100, 100, 100, 1)
+            BorderColor: =varColorBorder
+            Color: =varColorTextMuted
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
             Fill: =RGBA(240, 240, 240, 1)
-            Font: =Font.'Segoe UI'
+            Font: =varAppFont
             Height: =36
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
-            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            HoverFill: =varColorPrimaryHover
             OnSelect: |-
               =Reset(txtSearch);
               Set(varSearchText, "");
@@ -1111,14 +1119,14 @@ Screens:
             - recRejectOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRejectModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =610
                   Width: =600
@@ -1127,9 +1135,9 @@ Screens:
             - lblRejectTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(209, 52, 56, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorDanger
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -1140,9 +1148,9 @@ Screens:
             - lblRejectStudent:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =25
                   Size: =12
                   Text: |-
@@ -1153,8 +1161,8 @@ Screens:
             - lblRejectStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -1165,31 +1173,31 @@ Screens:
             - ddRejectStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Pick your name"
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberName"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 115
             - lblRejectReasonsLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =32
                   Text: ="Rejection Reasons (select all that apply):"
@@ -1199,10 +1207,10 @@ Screens:
             - chkTooSmall:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="Features are too small or too thin"
                   Width: =350
@@ -1211,10 +1219,10 @@ Screens:
             - chkGeometry:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="The geometry is problematic"
                   Width: =350
@@ -1223,10 +1231,10 @@ Screens:
             - chkNotSolid:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="Open model/not solid geometry"
                   Width: =350
@@ -1235,10 +1243,10 @@ Screens:
             - chkScale:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="Incorrect Scale"
                   Width: =350
@@ -1247,10 +1255,10 @@ Screens:
             - chkMessy:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="The model is messy"
                   Width: =350
@@ -1259,10 +1267,10 @@ Screens:
             - chkOverhangs:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="Excessive overhangs requiring too much support"
                   Width: =350
@@ -1271,10 +1279,10 @@ Screens:
             - chkNotJoined:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Text: ="Model parts are not joined together"
                   Width: =350
@@ -1283,8 +1291,8 @@ Screens:
             - lblRejectCommentsLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Text: ="Additional Comments (optional):"
                   Width: =300
@@ -1293,13 +1301,13 @@ Screens:
             - txtRejectComments:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =80
                   HintText: ="Provide specific feedback for the student..."
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =560
                   X: =recRejectModal.X + 20
@@ -1311,11 +1319,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(184, 0, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowRejectModal, 0);
                     Set(varSelectedItem, Blank());
@@ -1343,11 +1351,11 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: =If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =RGBA(209, 52, 56, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -1435,14 +1443,14 @@ Screens:
             - recApprovalOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recApprovalModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =650
                   Tooltip: =
@@ -1452,9 +1460,9 @@ Screens:
             - lblApprovalTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(16, 124, 16, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -1465,9 +1473,9 @@ Screens:
             - lblApprovalStudent:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =25
                   Size: =12
                   Text: |-
@@ -1478,8 +1486,8 @@ Screens:
             - lblApprovalStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -1490,31 +1498,31 @@ Screens:
             - ddApprovalStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Pick your name"
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberEmail"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 115
             - lblApprovalWeightLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -1525,14 +1533,14 @@ Screens:
             - txtEstimatedWeight:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: ="Enter weight in grams (e.g., 25)"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Size: =11
                   Width: =236
                   X: =recApprovalModal.X + 20
@@ -1540,9 +1548,9 @@ Screens:
             - lblWeightValidation:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(209, 52, 56, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorDanger
+                  Font: =varAppFont
                   Height: =25
                   Size: =11
                   Text: |-
@@ -1560,8 +1568,8 @@ Screens:
             - lblApprovalTimeLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =10
@@ -1573,14 +1581,14 @@ Screens:
             - txtEstimatedTime:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: ="Enter hours (e.g., 2.5)"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Size: =11
                   Width: =200
                   X: =recApprovalModal.X + 20
@@ -1588,8 +1596,8 @@ Screens:
             - lblApprovalCostLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =25
                   Size: =14
@@ -1599,9 +1607,9 @@ Screens:
             - lblApprovalCostValue:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(16, 124, 16, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Size: =24
                   Text: |-
@@ -1626,8 +1634,8 @@ Screens:
             - lblApprovalCommentsLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Additional Comments (optional):"
@@ -1637,13 +1645,13 @@ Screens:
             - txtApprovalComments:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =100
                   HintText: ="Add any special instructions for this job..."
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =560
                   X: =recApprovalModal.X + 20
@@ -1655,11 +1663,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(150, 150, 150, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowApprovalModal, 0);
                     Set(varSelectedItem, Blank());
@@ -1690,11 +1698,11 @@ Screens:
                         DisplayMode.Disabled
                     )
                   Fill: =RGBA(16, 124, 16, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -1787,14 +1795,14 @@ Screens:
             - recArchiveOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recArchiveModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =400
                   Width: =500
@@ -1803,9 +1811,9 @@ Screens:
             - lblArchiveTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -1816,9 +1824,9 @@ Screens:
             - lblArchiveWarning:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(150, 100, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =50
                   Size: =12
                   Text: ="⚠️ This will remove the request from active views. Archived requests can still be viewed in the Archived filter."
@@ -1828,8 +1836,8 @@ Screens:
             - lblArchiveStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -1840,30 +1848,30 @@ Screens:
             - ddArchiveStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberName"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 145
             - lblArchiveReasonLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Reason (optional):"
@@ -1873,13 +1881,13 @@ Screens:
             - txtArchiveReason:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =80
                   HintText: ="Why is this request being archived?"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =460
                   X: =recArchiveModal.X + 20
@@ -1891,11 +1899,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(150, 150, 150, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowArchiveModal, 0);
                     Set(varSelectedItem, Blank());
@@ -1916,11 +1924,11 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: =If(IsBlank(ddArchiveStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -1992,14 +2000,14 @@ Screens:
             - recDetailsOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recDetailsModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =620
                   Width: =550
@@ -2008,9 +2016,9 @@ Screens:
             - lblDetailsTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(0, 120, 212, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -2021,8 +2029,8 @@ Screens:
             - lblDetailsCurrentLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Current Settings:"
@@ -2031,9 +2039,9 @@ Screens:
             - lblDetailsCurrent:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Height: =30
                   Size: =10
                   Text: |-
@@ -2048,8 +2056,8 @@ Screens:
             - lblDetailsStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -2060,30 +2068,30 @@ Screens:
             - ddDetailsStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberEmail"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =250
                   X: =recDetailsModal.X + 20
                   Y: =recDetailsModal.Y + 138
             - lblDetailsMethodLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Method:"
@@ -2093,30 +2101,30 @@ Screens:
             - ddDetailsMethod:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["Value"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =Choices([@PrintRequests].Method)
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =150
                   X: =recDetailsModal.X + 20
                   Y: =recDetailsModal.Y + 208
             - lblDetailsPrinterLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Printer:"
@@ -2126,16 +2134,16 @@ Screens:
             - ddDetailsPrinter:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["Value"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: |-
                     =Filter(
                         Choices([@PrintRequests].Printer),
@@ -2151,18 +2159,18 @@ Screens:
                         )
                     )
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =340
                   X: =recDetailsModal.X + 190
                   Y: =recDetailsModal.Y + 208
             - lblDetailsColorLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Color:"
@@ -2172,30 +2180,30 @@ Screens:
             - ddDetailsColor:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["Value"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =Choices([@PrintRequests].Color)
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =200
                   X: =recDetailsModal.X + 20
                   Y: =recDetailsModal.Y + 278
             - lblDetailsWeightLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Est. Weight (g):"
@@ -2205,22 +2213,22 @@ Screens:
             - txtDetailsWeight:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =If(IsBlank(varSelectedItem.EstimatedWeight), "", Text(varSelectedItem.EstimatedWeight))
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: ="e.g., 25"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Width: =120
                   X: =recDetailsModal.X + 20
                   Y: =recDetailsModal.Y + 348
             - lblDetailsHoursLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: ="Est. Hours:"
@@ -2230,22 +2238,22 @@ Screens:
             - txtDetailsHours:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =If(IsBlank(varSelectedItem.EstimatedTime), "", Text(varSelectedItem.EstimatedTime))
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: ="e.g., 6.5"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Width: =100
                   X: =recDetailsModal.X + 160
                   Y: =recDetailsModal.Y + 348
             - lblDetailsCostLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -2256,9 +2264,9 @@ Screens:
             - lblDetailsCostValue:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(16, 124, 16, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Height: =36
                   Size: =18
@@ -2290,11 +2298,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(150, 150, 150, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowDetailsModal, 0);
                     Set(varSelectedItem, Blank());
@@ -2333,11 +2341,11 @@ Screens:
                         DisplayMode.Disabled
                     )
                   Fill: =RGBA(0, 120, 212, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -2435,8 +2443,8 @@ Screens:
             - lblDetailsTransLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -2448,13 +2456,13 @@ Screens:
             - txtDetailsTransaction:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =Coalesce(varSelectedItem.TransactionNumber, "")
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =36
                   HintText: ="e.g., 123"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Visible: =!IsBlank(varSelectedItem.TransactionNumber)
                   Width: =200
                   X: =recDetailsModal.X + 20
@@ -2470,14 +2478,14 @@ Screens:
             - recPaymentOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recPaymentModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =If(!IsBlank(varSelectedItem.PaymentNotes), 740, 650)
                   Width: =550
@@ -2486,9 +2494,9 @@ Screens:
             - lblPaymentTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(0, 158, 73, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -2499,9 +2507,9 @@ Screens:
             - lblPaymentStudent:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(100, 100, 100, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
                   Size: =12
                   Text: |-
                     ="Student: " & varSelectedItem.Student.DisplayName & Char(10) &
@@ -2512,8 +2520,8 @@ Screens:
             - lblPaymentStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =14
@@ -2525,30 +2533,30 @@ Screens:
             - ddPaymentStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberEmail"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 130
             - lblPaymentTypeLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =14
@@ -2560,9 +2568,9 @@ Screens:
             - txtPaymentTransaction:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: |-
@@ -2573,16 +2581,16 @@ Screens:
                         "Code", "e.g. GRANT-12345",
                         "Reference number"
                     )
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Width: =250
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 205
             - lblPaymentWeightLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -2593,22 +2601,22 @@ Screens:
             - txtPaymentWeight:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Format: =TextFormat.Number
                   Height: =36
                   HintText: ="Weight in grams"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Width: =150
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 280
             - lblPaymentCostLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =25
                   Size: =14
@@ -2618,9 +2626,9 @@ Screens:
             - lblPaymentCostValue:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(0, 158, 73, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Height: =42
                   Size: =24
@@ -2651,8 +2659,8 @@ Screens:
             - lblPaymentDateLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =14
@@ -2663,8 +2671,8 @@ Screens:
             - dpPaymentDate:
                 Control: Classic/DatePicker@2.6.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   Height: =36
                   IconBackground: =RGBA(56, 96, 178, 1)
                   IconFill: =RGBA(255, 255, 255, 1)
@@ -2674,8 +2682,8 @@ Screens:
             - lblPaymentNotesLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =14
@@ -2686,13 +2694,13 @@ Screens:
             - txtPaymentNotes:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =50
                   HintText: ="Any partial payments, discrepancies, or special circumstances..."
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =510
                   X: =recPaymentModal.X + 20
@@ -2700,11 +2708,11 @@ Screens:
             - chkPartialPickup:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
                   Color: =RGBA(150, 100, 0, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =32
                   HoverColor: =RGBA(0, 18, 107, 1)
                   Italic: =true
@@ -2720,11 +2728,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(150, 150, 150, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowPaymentModal, 0);
                     Set(varSelectedItem, Blank());
@@ -2760,11 +2768,11 @@ Screens:
                         DisplayMode.Disabled
                     )
                   Fill: =If(chkPartialPickup.Value, RGBA(255, 140, 0, 1), RGBA(0, 158, 73, 1))
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -2910,11 +2918,11 @@ Screens:
             - chkOwnMaterial:
                 Control: Classic/CheckBox@2.1.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  CheckboxBorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
+                  CheckboxBorderColor: =varColorBorder
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
                   Color: =RGBA(0, 158, 73, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =32
                   HoverColor: =RGBA(0, 18, 107, 1)
@@ -2925,29 +2933,29 @@ Screens:
             - ddPaymentType:
                 Control: Classic/DropDown@2.3.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   Default: ="TigerCASH"
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =["TigerCASH", "Check", "Code"]
                   Items.Value: =Value
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =180
                   X: =recPaymentModal.X + 340
                   Y: =recPaymentModal.Y + 130
             - lblPaymentTransLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   Height: =20
                   Text: |-
                     =Switch(
@@ -2963,9 +2971,9 @@ Screens:
             - lblPaymentHistoryHeader:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(180, 100, 0, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =11
@@ -2977,8 +2985,8 @@ Screens:
             - txtPaymentHistory:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
                   Default: |-
                     =Concat(
                         ForAll(
@@ -3024,10 +3032,10 @@ Screens:
                     )
                   DisplayMode: =DisplayMode.View
                   Fill: =RGBA(255, 248, 230, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =55
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Size: =10
                   Visible: =!IsBlank(varSelectedItem.PaymentNotes)
@@ -3045,14 +3053,14 @@ Screens:
             - recNotesOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recNotesModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =560
                   Width: =550
@@ -3061,9 +3069,9 @@ Screens:
             - lblNotesTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =18
@@ -3075,14 +3083,14 @@ Screens:
                 Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
-                  Color: =RGBA(100, 100, 100, 1)
+                  Color: =varColorTextMuted
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(240, 240, 240, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =30
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowNotesModal, 0);
                     Set(varSelectedItem, Blank());
@@ -3102,9 +3110,9 @@ Screens:
             - lblStudentNotesHeader:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3115,7 +3123,7 @@ Screens:
             - txtStudentNotesContent:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(200, 200, 200, 1)
+                  BorderColor: =varColorBorder
                   Color: =If(IsBlank(varSelectedItem.Notes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))
                   Default: |-
                     =If(
@@ -3124,10 +3132,10 @@ Screens:
                         Substitute(varSelectedItem.Notes, " | ", Char(10) & Char(10))
                     )
                   DisplayMode: =DisplayMode.View
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =42
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Italic: =IsBlank(varSelectedItem.Notes)
                   Mode: =TextMode.MultiLine
                   Size: =11
@@ -3137,9 +3145,9 @@ Screens:
             - lblStaffNotesHeader:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3150,7 +3158,7 @@ Screens:
             - txtStaffNotesContent:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(200, 200, 200, 1)
+                  BorderColor: =varColorBorder
                   Color: =If(IsBlank(varSelectedItem.StaffNotes), RGBA(150, 150, 150, 1), RGBA(50, 50, 50, 1))
                   Default: |-
                     =If(
@@ -3218,10 +3226,10 @@ Screens:
                         )
                     )
                   DisplayMode: =DisplayMode.View
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =148
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Italic: =IsBlank(varSelectedItem.StaffNotes)
                   Mode: =TextMode.MultiLine
                   Size: =11
@@ -3231,9 +3239,9 @@ Screens:
             - lblNotesStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3245,31 +3253,31 @@ Screens:
             - ddNotesStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberEmail"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recNotesModal.X + 20
                   Y: =464
             - lblAddNoteLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3279,13 +3287,13 @@ Screens:
             - txtAddNote:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =80
                   HintText: ="Type your note here..."
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =510
                   X: =recNotesModal.X + 20
@@ -3297,11 +3305,11 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(150, 150, 150, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowNotesModal, 0);
                     Set(varSelectedItem, Blank());
@@ -3326,11 +3334,11 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: =If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =RGBA(16, 124, 16, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// Append the new note to StaffNotes with staff name and timestamp
                     // Using LookUp to get fresh record avoids concurrency conflicts
@@ -3373,14 +3381,14 @@ Screens:
             - recFileOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recFileModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =450
                   Width: =500
@@ -3389,9 +3397,9 @@ Screens:
             - lblFileTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(0, 120, 212, 1)
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -3402,8 +3410,8 @@ Screens:
             - lblFileStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Text: |-
@@ -3414,23 +3422,23 @@ Screens:
             - ddFileActor:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Pick your name"
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberName"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =300
                   X: =recFileModal.X + 20
                   Y: =recFileModal.Y + 80
@@ -3439,7 +3447,7 @@ Screens:
                 Variant: Classic
                 Layout: Vertical
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   DataSource: =PrintRequests
                   Height: =200
                   Item: =varSelectedItem
@@ -3474,7 +3482,7 @@ Screens:
                       Control: TypedDataCard@1.0.7
                       Variant: ClassicAttachmentsEdit
                       Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
+                        BorderColor: =varColorBorder
                         DataField: ="{Attachments}"
                         Default: =ThisItem.Attachments
                         DisplayName: =DataSourceInfo([@PrintRequests],DataSourceInfo.DisplayName,Attachments)
@@ -3492,7 +3500,7 @@ Screens:
                               AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(0, 18, 107, 1)
-                              Font: =Font.'Open Sans'
+                              Font: =varAppFont
                               Height: =34
                               Text: =Parent.DisplayName
                               Width: =Parent.Width - 60
@@ -3505,19 +3513,19 @@ Screens:
                             Properties:
                               BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
                               DisplayMode: =Parent.DisplayMode
-                              Font: =Font.'Open Sans'
+                              Font: =varAppFont
                               Height: =100
-                              HoverFill: =RGBA(186, 202, 226, 1)
+                              HoverFill: =varDropdownHoverFill
                               ItemColor: =RGBA(255, 255, 255, 1)
                               ItemFill: =RGBA(56, 96, 178, 1)
-                              ItemHoverFill: =RGBA(186, 202, 226, 1)
+                              ItemHoverFill: =varDropdownHoverFill
                               Items: =Parent.Default
                               PaddingBottom: =5
                               PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
                               PaddingRight: =5
                               PaddingTop: =5
                               PressedColor: =RGBA(255, 255, 255, 1)
-                              PressedFill: =RGBA(0, 18, 107, 1)
+                              PressedFill: =varDropdownPressedFill
                               Tooltip: =Parent.DisplayName
                               Width: =Parent.Width - 60
                               X: =30
@@ -3529,7 +3537,7 @@ Screens:
                               AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(168, 0, 0, 1)
-                              Font: =Font.'Open Sans'
+                              Font: =varAppFont
                               FontWeight: =FontWeight.Semibold
                               Height: =10
                               Live: =Live.Assertive
@@ -3550,7 +3558,7 @@ Screens:
                               Align: =Align.Center
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(0, 18, 107, 1)
-                              Font: =Font.'Open Sans'
+                              Font: =varAppFont
                               Height: =DataCardKey13.Height
                               Text: ="*"
                               Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
@@ -3569,7 +3577,7 @@ Screens:
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: =SubmitForm(frmAttachmentsEdit)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -3591,7 +3599,7 @@ Screens:
                   Height: =36
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =ResetForm(frmAttachmentsEdit);
                     Set(varShowAddFileModal, 0);
@@ -3616,14 +3624,14 @@ Screens:
             - recViewMsgOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recViewMsgModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =550
                   Width: =600
@@ -3632,9 +3640,9 @@ Screens:
             - lblViewMsgTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(70, 130, 220, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorPrimary
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =18
@@ -3646,7 +3654,7 @@ Screens:
                 Control: Gallery@2.15.0
                 Variant: Vertical
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Height: =420
                   Items: =Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =4
@@ -3658,7 +3666,7 @@ Screens:
                   - recVMsgBg:
                       Control: Rectangle@2.3.0
                       Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
+                        BorderColor: =varColorBorder
                         Fill: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))
                         Height: =Parent.TemplateHeight - 8
                         OnSelect: =Select(Parent)
@@ -3667,7 +3675,7 @@ Screens:
                   - icoVMsgDirection:
                       Control: Classic/Icon@2.5.0
                       Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
+                        BorderColor: =varColorBorder
                         Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))
                         DisplayMode: =DisplayMode.View
                         Height: =16
@@ -3679,9 +3687,9 @@ Screens:
                   - lblVMsgAuthor:
                       Control: Label@2.5.1
                       Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
+                        BorderColor: =varColorBorder
                         Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))
-                        Font: =Font.'Segoe UI'
+                        Font: =varAppFont
                         FontWeight: =FontWeight.Semibold
                         Height: =18
                         OnSelect: =Select(Parent)
@@ -3698,9 +3706,9 @@ Screens:
                       Control: Label@2.5.1
                       Properties:
                         Align: =Align.Right
-                        BorderColor: =RGBA(0, 18, 107, 1)
+                        BorderColor: =varColorBorder
                         Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))
-                        Font: =Font.'Segoe UI'
+                        Font: =varAppFont
                         Height: =16
                         Italic: =true
                         OnSelect: =Select(Parent)
@@ -3712,9 +3720,9 @@ Screens:
                   - lblVMsgContent:
                       Control: Label@2.5.1
                       Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =RGBA(50, 50, 50, 1)
-                        Font: =Font.'Open Sans'
+                        BorderColor: =varColorBorder
+                        Color: =varColorText
+                        Font: =varAppFont
                         Height: =Parent.TemplateHeight - 36
                         OnSelect: =Select(Parent)
                         Overflow: =Overflow.Scroll
@@ -3730,12 +3738,12 @@ Screens:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =RGBA(70, 130, 220, 1)
+                  Fill: =varColorPrimary
                   Font: =varAppFont
                   Height: =35
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// Close view modal and open send modal
                     Set(varShowViewMessagesModal, 0);
@@ -3752,9 +3760,9 @@ Screens:
             - btnViewMsgMarkRead:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  BorderColor: =RGBA(209, 52, 56, 1)
+                  BorderColor: =varColorDanger
                   BorderThickness: =1
-                  Color: =RGBA(209, 52, 56, 1)
+                  Color: =varColorDanger
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =Color.White
                   Font: =varAppFont
@@ -3793,14 +3801,14 @@ Screens:
                 Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
-                  Color: =RGBA(100, 100, 100, 1)
+                  Color: =varColorTextMuted
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: =RGBA(240, 240, 240, 1)
                   Font: =varAppFont
                   Height: =35
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, 0);
                     Set(varSelectedItem, Blank())
@@ -3827,14 +3835,14 @@ Screens:
             - recMessageOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recMessageModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =500
                   Width: =600
@@ -3843,9 +3851,9 @@ Screens:
             - lblMessageTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(70, 130, 220, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorPrimary
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =30
                   Size: =20
@@ -3856,9 +3864,9 @@ Screens:
             - lblMessageStudent:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =25
                   Size: =12
                   Text: |-
@@ -3869,9 +3877,9 @@ Screens:
             - lblMessageStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3897,7 +3905,7 @@ Screens:
                   FocusedBorderThickness: =2
                   Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Pick your name"
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
@@ -3911,9 +3919,9 @@ Screens:
             - lblMessageSubjectLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3929,7 +3937,7 @@ Screens:
                   Default: =""
                   DisabledBorderColor: =RGBA(128, 128, 128, 1)
                   FocusedBorderThickness: =2
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   HintText: ="Brief subject (e.g., Question about your file)"
                   HoverBorderColor: =RGBA(128, 128, 128, 1)
                   HoverFill: =RGBA(255, 255, 255, 1)
@@ -3941,9 +3949,9 @@ Screens:
             - lblMessageBodyLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(50, 50, 50, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -3957,11 +3965,11 @@ Screens:
                   BorderColor: =RGBA(128, 128, 128, 1)
                   BorderThickness: =1
                   Default: =""
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =140
                   HintText: ="Type your message to the student..."
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   MaxLength: =2000
                   Mode: =TextMode.MultiLine
                   Width: =540
@@ -3971,7 +3979,7 @@ Screens:
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: |-
                     =If(
                         Len(txtMessageBody.Text) > 1900, 
@@ -3980,7 +3988,7 @@ Screens:
                         RGBA(255, 140, 0, 1),
                         RGBA(100, 100, 100, 1)
                     )
-                  Font: =Font.'Segoe UI'
+                  Font: =varAppFont
                   Height: =22
                   Size: =8
                   Text: =Len(txtMessageBody.Text) & " / 2000" & If(Len(txtMessageBody.Text) > 1900, " ⚠️ Near limit!", "")
@@ -3997,7 +4005,7 @@ Screens:
                   Font: =varAppFont
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowMessageModal, 0);
                     Set(varSelectedItem, Blank());
@@ -4031,11 +4039,11 @@ Screens:
                         DisplayMode.Edit,
                         DisplayMode.Disabled
                     )
-                  Fill: =RGBA(70, 130, 220, 1)
+                  Fill: =varColorPrimary
                   Font: =varAppFont
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -4115,8 +4123,8 @@ Screens:
             - Label1:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Open Sans'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   Height: =75
                   Text: |-
                     ="Name: " & ddMessageStaff.Selected.MemberName & " | Email: " & ddMessageStaff.Selected.MemberEmail
@@ -4134,7 +4142,7 @@ Screens:
             - recLoadingOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =RGBA(0, 0, 0, 0.5)
                   Height: =Parent.Height
                   Width: =Parent.Width
@@ -4151,8 +4159,8 @@ Screens:
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Font: =varAppFont
                   Size: =24
                   Text: ="⏳"
                   Width: =50
@@ -4162,9 +4170,9 @@ Screens:
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =RGBA(80, 80, 80, 1)
-                  Font: =Font.'Segoe UI'
+                  BorderColor: =varColorBorder
+                  Color: =varColorText
+                  Font: =varAppFont
                   Height: =30
                   Size: =12
                   Text: =If(IsBlank(varLoadingMessage), "Processing...", varLoadingMessage)
@@ -4182,14 +4190,14 @@ Screens:
             - recRevertOverlay:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  BorderColor: =varColorBorder
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRevertModal:
                 Control: Rectangle@2.3.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Fill: =Color.White
                   Height: =380
                   Width: =450
@@ -4198,9 +4206,9 @@ Screens:
             - lblRevertTitle:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(50, 49, 48, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Height: =30
                   Size: =16
@@ -4211,9 +4219,9 @@ Screens:
             - lblRevertStaffLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(50, 49, 48, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =20
                   Size: =11
                   Text: |-
@@ -4224,32 +4232,32 @@ Screens:
             - ddRevertStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
                   DefaultSelectedItems: =Blank()
                   DisplayFields: =["MemberName"]
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =36
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Staff"
                   Items: =colStaff
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SearchFields: =["MemberName"]
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =321
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 75
             - lblRevertCurrentStatus:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(107, 105, 214, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =25
                   Size: =12
@@ -4261,9 +4269,9 @@ Screens:
             - lblRevertTargetLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(50, 49, 48, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =20
                   Size: =11
                   Text: ="Revert To:"
@@ -4273,14 +4281,14 @@ Screens:
             - ddRevertTarget:
                 Control: Classic/DropDown@2.3.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  ChevronBackground: =RGBA(56, 96, 178, 1)
+                  BorderColor: =varColorBorder
+                  ChevronBackground: =varChevronBackground
                   ChevronFill: =RGBA(255, 255, 255, 1)
-                  ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =RGBA(255, 255, 255, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =35
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverFill: =varDropdownHoverFill
                   Items: |-
                     =If(
                         varSelectedItem.Status.Value = "Printing",
@@ -4291,18 +4299,18 @@ Screens:
                     )
                   Items.Value: =Value
                   PressedColor: =RGBA(255, 255, 255, 1)
-                  PressedFill: =RGBA(0, 18, 107, 1)
+                  PressedFill: =varDropdownPressedFill
                   SelectionColor: =RGBA(255, 255, 255, 1)
-                  SelectionFill: =RGBA(56, 96, 178, 1)
+                  SelectionFill: =varDropdownSelectionFill
                   Width: =410
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 170
             - lblRevertReasonLabel:
                 Control: Label@2.5.1
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Color: =RGBA(50, 49, 48, 1)
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =20
                   Size: =11
                   Text: ="Reason for Revert:"
@@ -4312,13 +4320,13 @@ Screens:
             - txtRevertReason:
                 Control: Classic/TextInput@2.3.2
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorder
                   Default: =""
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =70
                   HintText: ="e.g., Printer jammed, need to restart print"
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varColorBorder
+                  HoverFill: =varDropdownHoverFill
                   Mode: =TextMode.MultiLine
                   Width: =410
                   X: =recRevertModal.X + 20
@@ -4333,7 +4341,7 @@ Screens:
                   Font: =varAppFont
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =Set(varShowRevertModal, 0);
                     Set(varSelectedItem, Blank());
@@ -4358,7 +4366,7 @@ Screens:
                   Font: =varAppFont
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  HoverFill: =varColorPrimaryHover
                   OnSelect: |-
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
@@ -4428,10 +4436,10 @@ Screens:
             DisabledFill: =ColorFade(Self.Fill, 70%)
             Duration: =30000
             Fill: =RGBA(56, 96, 178, 1)
-            Font: =Font.'Open Sans'
+            Font: =varAppFont
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
-            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            HoverFill: =varColorPrimaryHover
             OnTimerEnd: |-
               =// Refresh data from SharePoint
               Refresh(PrintRequests);
@@ -4461,7 +4469,7 @@ Screens:
       - audNotification:
           Control: Audio@2.3.1
           Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
+            BorderColor: =varColorBorder
             Fill: =RGBA(56, 96, 178, 1)
             Media: =notification_chime
             OnEnd: =Set(varPlaySound, false)
