@@ -101,34 +101,47 @@ This app follows consistent design patterns for a professional appearance:
 
 ### Color Palette
 
-| Purpose | Color | RGBA |
-|---------|-------|------|
-| Primary (Active) | Blue | `RGBA(56, 96, 178, 1)` |
-| Success | Green | `RGBA(16, 124, 16, 1)` |
-| Warning | Amber | `RGBA(255, 185, 0, 1)` |
-| Error/Reject | Red | `RGBA(209, 52, 56, 1)` |
-| Info | Light Blue | `RGBA(70, 130, 220, 1)` |
-| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` |
-| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` |
-| Card Background | Warm Cream | `RGBA(247, 237, 223, 1)` |
-| Muted Text | Gray | `RGBA(100, 100, 100, 1)` |
+> **Moodle Brand Colors:** These colors match the lab's Moodle course pages for visual consistency.
+
+| Purpose | Color | RGBA | Hex |
+|---------|-------|------|-----|
+| Primary (Active) | Blue | `RGBA(33, 150, 243, 1)` | #2196F3 |
+| Success | Green | `RGBA(46, 125, 50, 1)` | #2e7d32 |
+| Warning | Orange | `RGBA(255, 119, 12, 1)` | #FF770C |
+| Error/Reject | Red | `RGBA(219, 3, 3, 1)` | #DB0303 |
+| Info | Blue | `RGBA(33, 150, 243, 1)` | #2196F3 |
+| Gold (Pending) | Gold | `RGBA(212, 160, 0, 1)` | #d4a000 |
+| Purple (Printing) | Purple | `RGBA(117, 67, 171, 1)` | #7543AB |
+| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | — |
+| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | — |
+| Card Background | Warm Cream | `RGBA(247, 237, 223, 1)` | — |
+| Muted Text | Gray | `RGBA(100, 100, 100, 1)` | — |
+| Secondary Btn Border | Gray | `RGBA(166, 166, 166, 1)` | #A6A6A6 |
 
 ### Button Styles
 
 | Type | Fill | Color | Border |
 |------|------|-------|--------|
-| Primary Action | Solid color | White | None |
-| Secondary/Outline | White | Colored | Colored, 1px |
+| Primary Action | Solid color (varColorPrimary) | White | None |
+| Secondary (Light Fill) | `ColorFade(varColor*, varSecondaryFade)` | Colored | Gray, 2px (`varSecondaryBtnBorderColor`) |
+| Outline | White | Colored | Colored, 1px |
 | Danger | White | Red | Red, 1px |
-| Navigation (Active) | `RGBA(70, 130, 220, 1)` | White | None |
+| Navigation (Active) | `varColorPrimary` | White | None |
 | Navigation (Inactive) | `RGBA(60, 60, 65, 1)` | White | None |
 
-**All buttons should include:**
+**All standard buttons should include:**
 | Property | Value |
 |----------|-------|
+| Height | `varBtnHeight` (36) |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
-| Size | `varBtnFontSize` |
+| Size | `varBtnFontSize` (12) |
+
+**Secondary buttons (light fill) should also include:**
+| Property | Value |
+|----------|-------|
+| BorderColor | `varSecondaryBtnBorderColor` |
+| BorderThickness | `2` |
 
 ### Corner Radius Standards
 
@@ -404,13 +417,13 @@ Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 // Centralized font setting - use varAppFont in controls for easy bulk updates
 Set(varAppFont, Font.'Open Sans');
 
-// === BUTTON COLOR PALETTE ===
-Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
-Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - approve/complete
-Set(varColorDanger, RGBA(209, 52, 56, 1));         // Red - reject/delete
-Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
+// === BUTTON COLOR PALETTE (Moodle Brand Colors) ===
+Set(varColorPrimary, RGBA(33, 150, 243, 1));       // Blue #2196F3 - Additive, Lab Rules
+Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
+Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
+Set(varColorWarning, RGBA(255, 119, 12, 1));       // Orange #FF770C - Home, Feedback
 Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
-Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
+Set(varColorInfo, RGBA(33, 150, 243, 1));          // Alias for primary
 
 // === COLOR HOVER/PRESSED STATES ===
 Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
@@ -429,6 +442,7 @@ Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
 Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
 Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
 Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
 Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
 Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
@@ -555,10 +569,10 @@ Set(varLoadingMessage, "")
 | `varResinRate` | Cost per gram for resin printing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
-| `varColorPrimary` | Blue - primary actions | Color |
-| `varColorSuccess` | Green - approve/complete | Color |
-| `varColorDanger` | Red - reject/delete | Color |
-| `varColorWarning` | Orange - archive/caution | Color |
+| `varColorPrimary` | Blue #2196F3 - primary actions (Moodle: Additive, Lab Rules) | Color |
+| `varColorSuccess` | Green #2e7d32 - approve/complete (Moodle: Resources) | Color |
+| `varColorDanger` | Red #DB0303 - reject/delete (Moodle: Subtractive, Safety) | Color |
+| `varColorWarning` | Orange #FF770C - archive/caution (Moodle: Home, Feedback) | Color |
 | `varColorNeutral` | Gray - cancel | Color |
 | `varColorInfo` | Alias for primary | Color |
 | `varColorPrimaryHover` | Primary color hover state | Color |
@@ -575,6 +589,7 @@ Set(varLoadingMessage, "")
 | `varColorBgCard` | Card/modal background color | Color |
 | `varColorBorder` | Input border color | Color |
 | `varColorBorderLight` | Card border color | Color |
+| `varSecondaryBtnBorderColor` | Secondary button border color (#A6A6A6) | Color |
 | `varColorOverlay` | Modal overlay color | Color |
 | `varColorDisabled` | Disabled state color | Color |
 | `varRadiusLarge` | Border radius for modals (12) | Number |
@@ -1036,13 +1051,13 @@ After completing this step, your Tree view should look like:
 
 ```powerfx
 Table(
-    {Status: "Uploaded", Color: RGBA(70, 130, 220, 1)},
-    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(16, 124, 16, 1)},
-    {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
-    {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
-    {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Uploaded", Color: RGBA(33, 150, 243, 1)},
+    {Status: "Pending", Color: RGBA(212, 160, 0, 1)},
+    {Status: "Ready to Print", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Completed", Color: RGBA(33, 150, 243, 1)},
+    {Status: "Paid & Picked Up", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Rejected", Color: RGBA(219, 3, 3, 1)},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
@@ -1278,7 +1293,7 @@ If(
 > - "Submitted Xd Xh Xm ago" for older items
 > - Red color indicates urgency
 
-### File Name / Request Info (lblFilename)
+### File Name (lblFilename)
 
 11. Click **+ Insert** → **Text label**.
 12. **Rename it:** `lblFilename`
@@ -1286,7 +1301,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `ThisItem.Student.DisplayName & "_" & ThisItem.Method.Value & "_" & ThisItem.Color.Value` |
+| Text | `If(CountRows(ThisItem.Attachments) > 0, First(ThisItem.Attachments).Name, "No file attached")` |
 | X | `12` |
 | Y | `32` |
 | Width | `Parent.TemplateWidth - 24` |
@@ -1423,23 +1438,26 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"View Notes"` |
-| X | `12` |
-| Y | `100` |
-| Width | `80` |
-| Height | `28` |
+| Text | `"Staff Notes"` |
+| X | `242` |
+| Y | `73` |
+| Width | `75` |
+| Height | `25` |
 | Fill | `ColorFade(varColorNeutral, varSecondaryFade)` |
 | Color | `varColorNeutral` |
 | HoverFill | `ColorFade(varColorNeutral, 55%)` |
 | PressedFill | `ColorFade(varColorNeutral, 45%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| BorderColor | `varSecondaryBtnBorderColor` |
+| BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
+| Size | `9` |
 | Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+> Note: This is a small secondary button so uses Size: 9 instead of varBtnFontSize.
 
 27. Set **OnSelect:**
 
@@ -1828,8 +1846,8 @@ Go back inside `galJobCards` gallery template. We'll place buttons at the **bott
 | Color | `varColorSuccess` |
 | HoverFill | `ColorFade(varColorSuccess, 55%)` |
 | PressedFill | `ColorFade(varColorSuccess, 45%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| BorderColor | `varSecondaryBtnBorderColor` |
+| BorderThickness | `2` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -1890,7 +1908,7 @@ Set(varSelectedItem, ThisItem)
 | Property | Value |
 |----------|-------|
 | Text | `"📦 Archive"` |
-| X | `12 + 2 * ((Parent.TemplateWidth - 40) / 3 + 4)` |
+| X | `12 + ((Parent.TemplateWidth - 40) / 3 + 8) * 2` |
 | Y | `360` |
 | Width | `(Parent.TemplateWidth - 40) / 3` |
 | Height | `varBtnHeight` |
@@ -1898,8 +1916,8 @@ Set(varSelectedItem, ThisItem)
 | Color | `varColorWarning` |
 | HoverFill | `ColorFade(varColorWarning, 55%)` |
 | PressedFill | `ColorFade(varColorWarning, 45%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| BorderColor | `varSecondaryBtnBorderColor` |
+| BorderThickness | `2` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -2098,23 +2116,26 @@ Set(varSelectedItem, ThisItem)
 | Property | Value |
 |----------|-------|
 | Text | `"✏️ Edit"` |
-| X | `Parent.TemplateWidth - 75` |
-| Y | `162` |
-| Width | `65` |
-| Height | `26` |
+| X | `70` |
+| Y | `167` |
+| Width | `55` |
+| Height | `20` |
 | Fill | `ColorFade(varColorPrimary, varSecondaryFade)` |
 | Color | `varColorPrimary` |
 | HoverFill | `ColorFade(varColorPrimary, 55%)` |
 | PressedFill | `ColorFade(varColorPrimary, 45%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| BorderColor | `varSecondaryBtnBorderColor` |
+| BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
+| Size | `8` |
 | Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | Visible | `ThisItem.Status.Value <> "Pending"` |
+
+> Note: This is a small secondary button, so uses a reduced Size of 8 instead of varBtnFontSize.
 
 28. Set **OnSelect:**
 
@@ -6196,11 +6217,11 @@ Set(varSearchText, Self.Text)
 | Y | `117` |
 | Width | `70` |
 | Height | `varBtnHeight` |
-| Fill | `color.white` |
-| Color | `varColorNeutral` |
+| Fill | `ColorFade(varColorNeutral, varSecondaryFade)` |
+| Color | `varColorTextMuted` |
 | HoverFill | `ColorFade(varColorNeutral, 55%)` |
 | PressedFill | `ColorFade(varColorNeutral, 45%)` |
-| BorderColor | `varColorBorderLight` |
+| BorderColor | `varSecondaryBtnBorderColor` |
 | BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -6208,6 +6229,7 @@ Set(varSearchText, Self.Text)
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 
 17. Set **OnSelect:**
 
@@ -6390,23 +6412,25 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| Text | `"📎 Files"` |
+| Text | `"Edit Files"` |
 | X | `12` |
-| Y | `Parent.TemplateHeight - 85` |
-| Width | `80` |
-| Height | `28` |
-| Fill | `ColorFade(varColorPrimary, varSecondaryFade)` |
+| Y | `360` |
+| Width | `(Parent.TemplateWidth - 40) / 3` |
+| Height | `varBtnHeight` |
+| Fill | `Color.White` |
 | Color | `varColorPrimary` |
-| HoverFill | `ColorFade(varColorPrimary, 55%)` |
-| PressedFill | `ColorFade(varColorPrimary, 45%)` |
-| BorderColor | `varColorBorderLight` |
-| BorderThickness | `1` |
+| HoverColor | `Color.White` |
+| HoverFill | `varColorPrimary` |
+| PressedFill | `ColorFade(varColorPrimary, -15%)` |
+| BorderColor | `varColorPrimary` |
+| BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 
 5. Set **OnSelect:**
 
@@ -6753,24 +6777,25 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 | Property | Value |
 |----------|-------|
-| Text | `"View Messages"` |
-| X | `12` |
-| Y | `280` |
+| Text | `"View Student Messages"` |
+| X | `11` |
+| Y | `317` |
 | Width | `100` |
-| Height | `28` |
-| Fill | `ColorFade(varColorPrimary, varSecondaryFade)` |
+| Height | `varBtnHeight` |
+| Fill | `ColorFade(varColorNeutral, varSecondaryFade)` |
 | Color | `varColorPrimary` |
-| HoverFill | `ColorFade(varColorPrimary, 55%)` |
-| PressedFill | `ColorFade(varColorPrimary, 45%)` |
-| BorderColor | `varColorBorderLight` |
-| BorderThickness | `1` |
+| HoverColor | `Color.White` |
+| HoverFill | `varColorPrimary` |
+| PressedFill | `ColorFade(varColorPrimary, -15%)` |
+| BorderColor | `varColorPrimary` |
+| BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
-| HoverColor | `Color.White` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 
 7. Set **OnSelect:**
 
@@ -7311,23 +7336,27 @@ Add a "Send Message" button to each job card in the gallery.
 
 | Property | Value |
 |----------|-------|
-| Text | `"💬 Message"` |
-| X | `100` |
-| Y | `Parent.TemplateHeight - 85` |
-| Width | `100` |
-| Height | `28` |
-| Fill | `ColorFade(varColorPrimary, varSecondaryFade)` |
+| Text | `"Message"` |
+| X | `12 + (Parent.TemplateWidth - 40) / 3 + 8` |
+| Y | `360` |
+| Width | `(Parent.TemplateWidth - 40) / 3` |
+| Height | `varBtnHeight` |
+| Fill | `Color.White` |
 | Color | `varColorPrimary` |
-| HoverFill | `ColorFade(varColorPrimary, 55%)` |
-| PressedFill | `ColorFade(varColorPrimary, 45%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| HoverColor | `Color.White` |
+| HoverFill | `varColorPrimary` |
+| PressedFill | `ColorFade(varColorPrimary, -15%)` |
+| BorderColor | `varColorPrimary` |
+| BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+> Note: btnFiles, btnCardSendMessage, and btnArchive are positioned in a row with even 8px spacing.
 
 4. Set **OnSelect:**
 
@@ -8486,13 +8515,13 @@ This section provides condensed code snippets for quick reference when building 
 
 ```powerfx
 Table(
-    {Status: "Uploaded", Color: RGBA(70, 130, 220, 1)},
-    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(16, 124, 16, 1)},
-    {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
-    {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
-    {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Uploaded", Color: RGBA(33, 150, 243, 1)},
+    {Status: "Pending", Color: RGBA(212, 160, 0, 1)},
+    {Status: "Ready to Print", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Completed", Color: RGBA(33, 150, 243, 1)},
+    {Status: "Paid & Picked Up", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Rejected", Color: RGBA(219, 3, 3, 1)},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
