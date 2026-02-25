@@ -73,13 +73,13 @@ App As appinfo:
         // Centralized font setting - use varAppFont in controls for easy bulk updates
         Set(varAppFont, Font.'Open Sans');
         
-        // === BUTTON COLOR PALETTE ===
-        Set(varColorPrimary, RGBA(33, 150, 243, 1));        // Blue #2196F3 - Additive, Lab Rules
-        Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
-        Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
-        Set(varColorWarning, RGBA(255, 119, 12, 1));       // Orange #FF770C - Home, Feedback
-        Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
-        Set(varColorInfo, RGBA(33, 150, 243, 1));          // Alias for primary
+    // === BUTTON COLOR PALETTE ===
+    Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
+    Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
+    Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
+    Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
+    Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
+    Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
         
         // === COLOR HOVER/PRESSED STATES ===
         Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));

@@ -105,12 +105,12 @@ This app follows consistent design patterns for a professional appearance:
 
 | Purpose | Color | RGBA | Hex |
 |---------|-------|------|-----|
-| Primary (Active) | Blue | `RGBA(33, 150, 243, 1)` | #2196F3 |
+| Primary (Active) | Blue | `RGBA(70, 130, 220, 1)` | #4682DC |
 | Success | Green | `RGBA(46, 125, 50, 1)` | #2e7d32 |
-| Warning | Orange | `RGBA(255, 119, 12, 1)` | #FF770C |
+| Warning | Orange | `RGBA(255, 140, 0, 1)` | #FF8C00 |
 | Error/Reject | Red | `RGBA(219, 3, 3, 1)` | #DB0303 |
-| Info | Blue | `RGBA(33, 150, 243, 1)` | #2196F3 |
-| Gold (Pending) | Gold | `RGBA(212, 160, 0, 1)` | #d4a000 |
+| Info | Blue | `RGBA(70, 130, 220, 1)` | #4682DC |
+| Gold (Pending) | Gold | `RGBA(255, 185, 0, 1)` | #FFB900 |
 | Purple (Printing) | Purple | `RGBA(117, 67, 171, 1)` | #7543AB |
 | Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | — |
 | Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | — |
@@ -298,16 +298,25 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
    - [x] **Staff**
 10. Click **Connect**.
 
+### Adding the Office365Users Connector
+
+> 💡 **Why this connector?** The Office365Users connector lets us display the signed-in user's profile photo in the header.
+
+11. Click **+ Add data**.
+12. In the search box, type `Office 365 Users`.
+13. Click **Office 365 Users** from the list.
+14. If prompted, sign in with your Microsoft 365 account.
+
 ### Adding the Power Automate Flow
 
 > ⚠️ **IMPORTANT:** Adding a flow is DIFFERENT from adding a data source. Don't search for "Power Automate" in the data panel — those are admin connectors, not your flow!
 
-11. Look in the **left sidebar** for a **Power Automate icon** (lightning bolt ⚡).
+15. Look in the **left sidebar** for a **Power Automate icon** (lightning bolt ⚡).
     - OR: In the top menu, click the **three dots (...)** → **Power Automate**
-12. Click **+ Add flow**.
-13. You'll see "Add a flow from this environment" with your flows listed.
-14. Under **Instant**, find and click **Flow C (PR-Action)** (or whatever you named Flow C).
-15. The flow is now added to your app.
+16. Click **+ Add flow**.
+17. You'll see "Add a flow from this environment" with your flows listed.
+18. Under **Instant**, find and click **Flow C (PR-Action)** (or whatever you named Flow C).
+19. The flow is now added to your app.
 
 > 💡 **Why only Flow C?** Flows A and B are automatic SharePoint triggers — they run on their own when items are created/modified. Only Flow C (instant trigger) is called from Power Apps buttons.
 
@@ -323,6 +332,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 - ✅ PrintRequests
 - ✅ AuditLog  
 - ✅ Staff
+- ✅ Office365Users
 
 **In the Power Automate panel**, you should see:
 - ✅ Flow-(C)-Action-LogAction
@@ -417,13 +427,13 @@ Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 // Centralized font setting - use varAppFont in controls for easy bulk updates
 Set(varAppFont, Font.'Open Sans');
 
-// === BUTTON COLOR PALETTE (Moodle Brand Colors) ===
-Set(varColorPrimary, RGBA(33, 150, 243, 1));       // Blue #2196F3 - Additive, Lab Rules
+// === BUTTON COLOR PALETTE ===
+Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
 Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
 Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
-Set(varColorWarning, RGBA(255, 119, 12, 1));       // Orange #FF770C - Home, Feedback
+Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
 Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
-Set(varColorInfo, RGBA(33, 150, 243, 1));          // Alias for primary
+Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
 
 // === COLOR HOVER/PRESSED STATES ===
 Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
@@ -569,10 +579,10 @@ Set(varLoadingMessage, "")
 | `varResinRate` | Cost per gram for resin printing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
-| `varColorPrimary` | Blue #2196F3 - primary actions (Moodle: Additive, Lab Rules) | Color |
+| `varColorPrimary` | Blue - primary actions | Color |
 | `varColorSuccess` | Green #2e7d32 - approve/complete (Moodle: Resources) | Color |
 | `varColorDanger` | Red #DB0303 - reject/delete (Moodle: Subtractive, Safety) | Color |
-| `varColorWarning` | Orange #FF770C - archive/caution (Moodle: Home, Feedback) | Color |
+| `varColorWarning` | Orange - archive/caution | Color |
 | `varColorNeutral` | Gray - cancel | Color |
 | `varColorInfo` | Alias for primary | Color |
 | `varColorPrimaryHover` | Primary color hover state | Color |
@@ -885,6 +895,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     lblEmptyState                     ← Step 9
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
+    imgUserPhoto                      ← Step 4
     lblUserName                       ← Step 4
     btnNavAnalytics                   ← Step 4
     btnNavAdmin                       ← Step 4
@@ -919,6 +930,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 - `lblAppTitle` — App title label
 - `btnNavDashboard`, `btnNavAdmin`, `btnNavAnalytics` — Navigation buttons
 - `lblUserName` — User display
+- `imgUserPhoto` — User profile picture
 
 ### First: Rename the Screen
 
@@ -1006,13 +1018,33 @@ Set(varCurrentPage, "Dashboard")
 19. **Rename it:** `lblUserName`
 20. Set these properties:
    - **Text:** `varMeName`
-   - **X:** `Parent.Width - 216`
+   - **X:** `Parent.Width - 260`
    - **Y:** `18`
    - **Width:** `200`
    - **Height:** `24`
    - **Align:** `Align.Right`
    - **Color:** `varColorBorder`
    - **Size:** `12`
+
+### Adding User Profile Picture (imgUserPhoto)
+
+21. Click **+ Insert** → **Media** → **Image**.
+22. **Rename it:** `imgUserPhoto`
+23. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Image | `Office365Users.UserPhotoV2(varMeEmail)` |
+| X | `Parent.Width - 52` |
+| Y | `10` |
+| Width | `40` |
+| Height | `40` |
+| RadiusTopLeft | `20` |
+| RadiusTopRight | `20` |
+| RadiusBottomLeft | `20` |
+| RadiusBottomRight | `20` |
+
+> 💡 **Circular Profile Photo:** The 20px radius on a 40x40 image creates a perfect circle. The image pulls the user's Microsoft 365 profile photo.
 
 ### ✅ Step 4 Checklist
 
@@ -1027,6 +1059,7 @@ After completing this step, your Tree view should look like:
     btnNavAdmin
     btnNavAnalytics
     lblUserName
+    imgUserPhoto
 ```
 
 ---
@@ -1051,13 +1084,13 @@ After completing this step, your Tree view should look like:
 
 ```powerfx
 Table(
-    {Status: "Uploaded", Color: RGBA(33, 150, 243, 1)},
-    {Status: "Pending", Color: RGBA(212, 160, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Uploaded", Color: varColorPrimary},
+    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
+    {Status: "Ready to Print", Color: varColorSuccess},
     {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
-    {Status: "Completed", Color: RGBA(33, 150, 243, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(46, 125, 50, 1)},
-    {Status: "Rejected", Color: RGBA(219, 3, 3, 1)},
+    {Status: "Completed", Color: varColorPrimary},
+    {Status: "Paid & Picked Up", Color: varColorSuccess},
+    {Status: "Rejected", Color: varColorDanger},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
@@ -1301,7 +1334,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `If(CountRows(ThisItem.Attachments) > 0, First(ThisItem.Attachments).Name, "No file attached")` |
+| Text | `Lower(First(Split(ThisItem.Student.DisplayName, " ")).Value & Last(Split(ThisItem.Student.DisplayName, " ")).Value) & "_" & Lower(ThisItem.Method.Value) & "_" & Lower(ThisItem.Color.Value)` |
 | X | `12` |
 | Y | `32` |
 | Width | `Parent.TemplateWidth - 24` |
@@ -8515,13 +8548,13 @@ This section provides condensed code snippets for quick reference when building 
 
 ```powerfx
 Table(
-    {Status: "Uploaded", Color: RGBA(33, 150, 243, 1)},
-    {Status: "Pending", Color: RGBA(212, 160, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(46, 125, 50, 1)},
+    {Status: "Uploaded", Color: varColorPrimary},
+    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
+    {Status: "Ready to Print", Color: varColorSuccess},
     {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
-    {Status: "Completed", Color: RGBA(33, 150, 243, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(46, 125, 50, 1)},
-    {Status: "Rejected", Color: RGBA(219, 3, 3, 1)},
+    {Status: "Completed", Color: varColorPrimary},
+    {Status: "Paid & Picked Up", Color: varColorSuccess},
+    {Status: "Rejected", Color: varColorDanger},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 )
