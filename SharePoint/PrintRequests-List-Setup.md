@@ -175,17 +175,31 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Choices:**
    - Any
    - Black
+   - Matte Black
    - White
+   - Matte White
    - Gray
+   - Light Gray
+   - Matte Light Gray
    - Red
+   - Matte Red
    - Orange
+   - Matte Orange
    - Yellow
+   - Matte Yellow
+   - Gold
    - Green
+   - Matte Green
    - Forest Green
    - Blue
+   - Matte Blue
+   - Cobalt Blue
    - Purple
+   - Matte Purple
    - Brown
+   - Light Brown
    - Chocolate Brown
+   - Matte Chocolate
    - Copper
    - Bronze
    - Silver
@@ -540,7 +554,7 @@ These columns capture actual payment details when a print is picked up.
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |
 | ProjectType | Choice | No | - | Class Project; Research; Personal; Other |
-| Color | Choice | Yes | - | Any; Black; White; Gray; Red; Orange; Yellow; Green; Forest Green; Blue; Purple; Brown; Chocolate Brown; Copper; Bronze; Silver; Clear |
+| Color | Choice | Yes | - | Any; Black; Matte Black; White; Matte White; Gray; Light Gray; Matte Light Gray; Red; Matte Red; Orange; Matte Orange; Yellow; Matte Yellow; Gold; Green; Matte Green; Forest Green; Blue; Matte Blue; Cobalt Blue; Purple; Matte Purple; Brown; Light Brown; Chocolate Brown; Matte Chocolate; Copper; Bronze; Silver; Clear |
 | Method | Choice | Yes | - | Filament; Resin |
 | Printer | Choice | Yes | - | Printer with build dimensions |
 | DueDate | Date | No | - | Timeline planning |

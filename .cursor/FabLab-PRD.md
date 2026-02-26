@@ -472,7 +472,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Course Number** (Number) - Optional class number (e.g., 1001, 2050)
 - **Discipline** (Choice) - Architecture; Engineering; Art & Design; Business; Liberal Arts; Sciences; Other
 - **ProjectType** (Choice) - Class Project; Research; Personal; Other
-- **Color** (Choice) - Any; Black; White; Gray; Red; Green; Blue; Yellow; Other
+- **Color** (Choice) - Any; Black; Matte Black; White; Matte White; Gray; Light Gray; Matte Light Gray; Red; Matte Red; Orange; Matte Orange; Yellow; Matte Yellow; Gold; Green; Matte Green; Forest Green; Blue; Matte Blue; Cobalt Blue; Purple; Matte Purple; Brown; Light Brown; Chocolate Brown; Matte Chocolate; Copper; Bronze; Silver; Clear
 - **Method** (Choice) - Filament; Resin
 - **Printer** (Choice) - Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in)
 - **DueDate** (Date) - Timeline planning
