@@ -1157,8 +1157,9 @@ Set(varSelectedStatus, ThisItem.Status)
 | HoverColor | `If(varSelectedStatus = ThisItem.Status, If(ThisItem.Status = "Pending", Color.Black, Color.White), varColorText)` |
 | PressedColor | `If(varSelectedStatus = ThisItem.Status, If(ThisItem.Status = "Pending", Color.Black, Color.White), varColorText)` |
 | BorderColor | `varInputBorderColor` |
-| FocusedBorderColor | `varColorPrimary` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
+| BorderThickness | `1` |
+| FocusedBorderColor | `varInputBorderColor` |
+| FocusedBorderThickness | `1` |
 
 > 💡 **Result:** Clicking a tab highlights it with its color and filters the job cards gallery.
 
