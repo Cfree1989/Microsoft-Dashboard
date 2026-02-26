@@ -408,7 +408,7 @@ Set(varSelectedItem, Blank());
 Set(varIsLoading, false);
 
 // === AUDIO NOTIFICATION SYSTEM ===
-// Boolean trigger for Audio control (use with Reset(audNotification) when playing)
+// Boolean trigger for Audio control (use Reset(audNotification) then Set(varPlaySound, true) to play)
 Set(varPlaySound, false);
 
 // Load NeedsAttention items into a local collection (avoids delegation)
@@ -531,7 +531,7 @@ Set(varScreenTransition, ScreenTransition.Fade);
 
 // === TIMER CONFIGURATION ===
 // Auto-refresh interval for dashboard data (milliseconds)
-Set(varRefreshInterval, 30000);                    // 30 seconds
+Set(varRefreshInterval, 10000);                    // 10 seconds
 
 Set(varLoadingMessage, "")
 ```
@@ -574,7 +574,7 @@ Set(varLoadingMessage, "")
 | `varLoadingMessage` | Custom message shown during loading | Text |
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
-| `varPlaySound` | Boolean trigger for Audio; set true after Reset(audNotification) to play | Boolean |
+| `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per gram for resin printing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
@@ -6388,11 +6388,11 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 
 ```powerfx
 Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention});
-// When marking as needing attention, play notification sound (Reset + true so it plays)
+// When marking as needing attention, play notification sound
 If(!ThisItem.NeedsAttention, Reset(audNotification); Set(varPlaySound, true))
 ```
 
-> 💡 **Simple Toggle:** This is a quick flag toggle for staff to mark items needing attention. When they turn the lightbulb *on* (NeedsAttention = true), we call **Reset(audNotification)** then **Set(varPlaySound, true)** so the chime plays. It doesn't log to the audit trail since it's a temporary visual indicator, not a workflow action.
+> 💡 **Simple Toggle:** This is a quick flag toggle for staff to mark items needing attention. When they turn the lightbulb *on* (NeedsAttention = true), we call `Reset(audNotification)` then `Set(varPlaySound, true)` so the chime plays. It doesn't log to the audit trail since it's a temporary visual indicator, not a workflow action.
 
 ---
 
@@ -7952,12 +7952,22 @@ Notify("Changes saved!", NotificationType.Success)
 
 ---
 
+## Important: Browser Autoplay Policy
+
+> ⚠️ **Critical Limitation:** Modern browsers (Chrome, Edge, Firefox) and the Power Apps for Windows desktop app (which uses WebView2/Chromium) **block audio from playing until the user interacts with the page**. This is a browser security feature, not a Power Apps bug.
+>
+> **What this means:** The very first time a user opens the app, they must click somewhere (any button, the canvas, a tab) before audio notifications will work. After that first click, all subsequent audio triggers will play automatically.
+>
+> **Practical impact:** Since staff will naturally click something within seconds of opening the app (e.g., clicking a status tab or job card), this is rarely an issue in practice.
+
+---
+
 ## Overview
 
 The audio notification system consists of two components:
 
 1. **Timer Control** — Automatically refreshes data every 30 seconds and triggers sound when the NeedsAttention *count* increases (e.g. new submission, student reply via Flow)
-2. **Audio Control** — Plays when **Start** (`varPlaySound`) is set to true after **Reset(audNotification)**
+2. **Audio Control** — Plays when `Reset(audNotification)` is called followed by `Set(varPlaySound, true)`
 
 **When the sound plays (exact conditions):**
 
@@ -8041,7 +8051,7 @@ ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 // Count from local collection (no delegation warning)
 Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
 
-// If count increased, play notification sound (Reset + true so Audio reliably plays)
+// If count increased, play notification sound
 If(
     varCurrentAttentionCount > varPrevAttentionCount,
     Reset(audNotification);
@@ -8062,10 +8072,10 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 | 2 | `Refresh(PrintRequests)` fetches latest data from SharePoint |
 | 3 | Count current NeedsAttention items |
 | 4 | Compare to previous count stored in `varPrevAttentionCount` |
-| 5 | If count increased, `Reset(audNotification)` then `Set(varPlaySound, true)` |
+| 5 | If count increased, `Reset(audNotification); Set(varPlaySound, true)` triggers audio |
 | 6 | Update `varPrevAttentionCount` for next cycle |
 
-> 💡 **Why 30 seconds?** This balances responsiveness with SharePoint API limits. You can adjust `varRefreshInterval` in App.OnStart (in milliseconds) — 45000 for 45 seconds, 60000 for 1 minute.
+> 💡 **Why 10 seconds?** This provides responsive notifications while staying well within SharePoint API limits. You can adjust `varRefreshInterval` in App.OnStart (in milliseconds) — 15000 for 15 seconds, 30000 for 30 seconds, 60000 for 1 minute.
 
 ---
 
@@ -8100,14 +8110,13 @@ Set(varPlaySound, false)
 | Property | Purpose |
 |----------|---------|
 | `Media` | The sound file from your Media library |
-| `Start` | Bound to `varPlaySound`. We call `Reset(audNotification)` then set this to `true` each time we want to play, so the control re-arms and plays. |
-| `OnEnd` | Sets `varPlaySound` back to `false` so the next Reset + true can trigger again. |
+| `Start` | Bound to `varPlaySound`. We call `Reset(audNotification)` then set this to `true` each time we want to play. |
+| `OnEnd` | Sets `varPlaySound` back to `false` so the next trigger can fire again. |
 | `Loop` | Set to `false` — we only want one chime per notification |
 | `Visible` | Set to `false` — audio controls don't need to be visible |
+| `AutoStart` | Set to `false` — we trigger manually, not on screen load |
 
-> ⚠️ **Why Reset() before setting true?** The Audio control often doesn't re-trigger if **Start** goes true → false → true. Calling **Reset(audNotification)** first clears its state, so the next `Set(varPlaySound, true)` is seen as a fresh start and the sound plays. Always use this pattern where you trigger the sound (Timer and Lightbulb).
-
-> 💡 **Browser Autoplay Policy:** Most browsers require user interaction before playing audio. The first time a user opens the app, they may need to click somewhere on the page before audio will work. This is a browser security feature, not a Power Apps limitation.
+> ⚠️ **Why Reset() before setting true?** The Audio control doesn't reliably re-trigger if `Start` goes `true` → `false` → `true`. Calling `Reset(audNotification)` first clears its internal state, so the next `Set(varPlaySound, true)` is seen as a fresh start and the sound plays. Always use this pattern where you trigger the sound (Timer and Lightbulb).
 
 ---
 
@@ -8115,7 +8124,7 @@ Set(varPlaySound, false)
 
 ### 1. Confirm the trigger pattern
 
-Every place that should play sound must use **both** steps in this order:
+Every place that should play sound must use this pattern:
 
 ```powerfx
 Reset(audNotification);
@@ -8132,14 +8141,16 @@ The Audio control must have **Start** = `varPlaySound` and **OnEnd** = `Set(varP
 - **Media** on the Audio control must exactly match the file in the app (e.g. `notification_chime` for `notification_chime.mp3`). Check under **Media** in the left panel that the file exists and use that exact name.
 - If you renamed the file after upload, set the control's **Media** dropdown to that name.
 
-### 3. Browser and user gesture
+### 3. Browser and user gesture (MOST COMMON ISSUE)
 
-- Many browsers block audio until the user has interacted with the page. Click once somewhere on the app (e.g. the Refresh button or the canvas), then try the lightbulb again.
+- **This is the #1 reason audio doesn't play!** Browsers block audio until the user has interacted with the page.
+- Click once somewhere on the app (e.g. the Refresh button, a status tab, or any button), then try the lightbulb again.
 - Test in **Play** mode (F5) or the **published** app in a browser; editor preview can behave differently.
+- The Power Apps for Windows desktop app has the same restriction (it uses WebView2/Chromium).
 
 ### 4. Control name
 
-- The formula uses **audNotification** (the name of the Audio control). If your control has a different name (e.g. `Audio1`), use that name in the formula: `Reset(Audio1); Set(varPlaySound, true)`.
+- The formula uses **audNotification** (the name of the Audio control). If your control has a different name (e.g. `Audio1`), ensure the Audio control's **Start** property is set to `varPlaySound`. The name doesn't matter for the trigger pattern since we're just toggling the variable.
 
 ---
 
@@ -8402,8 +8413,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 1. **Browser autoplay:** Click anywhere on the app canvas first — browsers require user interaction before playing audio
 2. **Check Media property:** Ensure `audNotification.Media` matches your uploaded sound file name exactly
 3. **Check Start property:** Ensure `audNotification.Start` is set to `varPlaySound`
-4. **Check trigger:** When playing, use `Reset(audNotification); Set(varPlaySound, true)` (both in that order)
-5. **Check OnEnd:** Ensure `audNotification.OnEnd` is `Set(varPlaySound, false)`
+4. **Check OnEnd:** Ensure `audNotification.OnEnd` is `Set(varPlaySound, false)`
+5. **Check trigger:** When playing, use `Reset(audNotification); Set(varPlaySound, true)` (both steps in that order)
 6. **Check Timer:** Ensure `tmrAutoRefresh.AutoStart` is `true` and `Repeat` is `true`
 
 ---
