@@ -1875,12 +1875,12 @@ Go back inside `galJobCards` gallery template. We'll place buttons at the **bott
 | Y | `Parent.TemplateHeight - varBtnHeight - 12` |
 | Width | `(Parent.TemplateWidth - 40) / 3` |
 | Height | `varBtnHeight` |
-| Fill | `ColorFade(varColorSuccess, varSecondaryFade)` |
-| Color | `varColorSuccess` |
-| HoverFill | `ColorFade(varColorSuccess, 55%)` |
-| PressedFill | `ColorFade(varColorSuccess, 45%)` |
-| BorderColor | `varSecondaryBtnBorderColor` |
-| BorderThickness | `2` |
+| Fill | `varColorSuccess` |
+| Color | `White` |
+| HoverFill | `varColorSuccessHover` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -1910,10 +1910,10 @@ Set(varSelectedItem, ThisItem)
 | Y | `Parent.TemplateHeight - varBtnHeight - 12` |
 | Width | `(Parent.TemplateWidth - 40) / 3` |
 | Height | `varBtnHeight` |
-| Fill | `ColorFade(varColorDanger, varSecondaryFade)` |
-| Color | `varColorDanger` |
-| HoverFill | `ColorFade(varColorDanger, 55%)` |
-| PressedFill | `ColorFade(varColorDanger, 45%)` |
+| Fill | `varColorDanger` |
+| Color | `White` |
+| HoverFill | `varColorDangerHover` |
+| PressedFill | `ColorFade(varColorDanger, -25%)` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
@@ -1945,12 +1945,12 @@ Set(varSelectedItem, ThisItem)
 | Y | `360` |
 | Width | `(Parent.TemplateWidth - 40) / 3` |
 | Height | `varBtnHeight` |
-| Fill | `ColorFade(varColorWarning, varSecondaryFade)` |
-| Color | `varColorWarning` |
-| HoverFill | `ColorFade(varColorWarning, 55%)` |
-| PressedFill | `ColorFade(varColorWarning, 45%)` |
-| BorderColor | `varSecondaryBtnBorderColor` |
-| BorderThickness | `2` |
+| Fill | `varColorWarning` |
+| Color | `White` |
+| HoverFill | `ColorFade(varColorWarning, -15%)` |
+| PressedFill | `ColorFade(varColorWarning, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
