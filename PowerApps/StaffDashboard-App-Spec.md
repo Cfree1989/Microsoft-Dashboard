@@ -504,7 +504,7 @@ Set(varModalMaxHeightExpanded, 740);               // Expanded height (with paym
 Set(varModalMargin, 40);                           // Margin from screen edges
 
 // Gallery template sizes
-Set(varTabGalleryHeight, 145);                     // Status tabs gallery height
+Set(varTabGalleryHeight, 148);                     // Status tabs gallery height
 Set(varCardGalleryHeight, 450);                    // Job cards gallery template size
 
 // Message bubble layout
@@ -968,7 +968,8 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 | Y | `15` |
 | Width | `300` |
 | Height | `30` |
-| Font | `Font.'Open Sans Semibold'` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 | Size | `18` |
 | Color | `Color.White` |
 
@@ -1025,6 +1026,9 @@ Set(varCurrentPage, "Dashboard")
    - **Align:** `Align.Right`
    - **Color:** `varColorBorder`
    - **Size:** `12`
+   - **Visible:** `false`
+
+> 💡 **Hidden by default:** The user name label is hidden because the profile photo provides sufficient user identification. Set `Visible: true` if you want to display the user's name alongside the photo.
 
 ### Adding User Profile Picture (imgUserPhoto)
 
@@ -1034,7 +1038,7 @@ Set(varCurrentPage, "Dashboard")
 
 | Property | Value |
 |----------|-------|
-| Image | `Office365Users.UserPhotoV2(varMeEmail)` |
+| Image | `If(!IsBlank(varMeEmail), Office365Users.UserPhotoV2(varMeEmail), SampleImage)` |
 | X | `Parent.Width - 52` |
 | Y | `10` |
 | Width | `40` |
@@ -1044,7 +1048,7 @@ Set(varCurrentPage, "Dashboard")
 | RadiusBottomLeft | `20` |
 | RadiusBottomRight | `20` |
 
-> 💡 **Circular Profile Photo:** The 20px radius on a 40x40 image creates a perfect circle. The image pulls the user's Microsoft 365 profile photo.
+> 💡 **Circular Profile Photo:** The 20px radius on a 40x40 image creates a perfect circle. The `If(!IsBlank(...))` wrapper prevents errors when `varMeEmail` hasn't loaded yet—it shows `SampleImage` as a fallback until the user's Microsoft 365 profile photo loads.
 
 ### ✅ Step 4 Checklist
 
@@ -1109,14 +1113,14 @@ Table(
 
 | Property | Value |
 |----------|-------|
-| X | `3` |
-| Y | `5` |
-| Width | `138` |
+| X | `5` |
+| Y | `4` |
+| Width | `141` |
 | Height | `40` |
-| Size | `10` |
+| Size | `11` |
 | BorderRadius | `20` |
 
-> 💡 **Why these sizes?** 9 tabs × 145px = 1305px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 10 ensures "Paid & Picked Up" fits.
+> 💡 **Why these sizes?** 9 tabs × 148px = 1332px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits while remaining readable.
 
 14. Set the button's **Text** property (type directly to avoid quote issues):
 
@@ -1138,7 +1142,7 @@ If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))
 If(
     varSelectedStatus = ThisItem.Status, 
     If(ThisItem.Status = "Pending", Color.Black, Color.White),
-    varColorTextMuted
+    varColorText
 )
 ```
 
@@ -1275,10 +1279,11 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 |----------|-------|
 | Text | `ThisItem.Student.DisplayName` |
 | X | `12` |
-| Y | `8` |
+| Y | `14` |
 | Width | `Parent.TemplateWidth - 50` |
 | Height | `24` |
-| Font | `Font.'Open Sans Semibold'` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
 | Color | `varColorText` |
 
@@ -1290,13 +1295,13 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 
 | Property | Value |
 |----------|-------|
-| X | `Parent.TemplateWidth - 130` |
+| X | `200` |
 | Y | `8` |
-| Width | `120` |
-| Height | `20` |
+| Width | `99` |
+| Height | `44` |
 | Align | `Align.Right` |
-| Size | `10` |
-| Color | `RGBA(209, 52, 56, 1)` |
+| Size | `8` |
+| Color | `varColorDanger` |
 
 10. Set **Text:**
 
@@ -1511,14 +1516,15 @@ Set(varSelectedItem, ThisItem)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Additional Details"` |
+| Text | `"Details"` |
 | X | `12` |
 | Y | `165` |
 | Width | `150` |
 | Height | `20` |
-| Font | `Font.'Open Sans Semibold'` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 | Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
+| Color | `varColorText` |
 | Visible | `true` |
 
 ### Expanded Detail Labels
@@ -6797,9 +6803,10 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `260` |
 | Width | `200` |
 | Height | `20` |
-| Font | `Font.'Open Sans Semibold'` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 | Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
+| Color | `varColorText` |
 | Visible | `true` |
 
 #### View Messages Button (btnViewMessages)
@@ -7515,9 +7522,10 @@ scrDashboard
 | Y | `recViewMsgModal.Y + 15` |
 | Width | `400` |
 | Height | `30` |
-| Font | `Font.'Open Sans Semibold'` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 | Size | `18` |
-| Color | `RGBA(70, 130, 220, 1)` |
+| Color | `varColorPrimary` |
 
 ---
 
@@ -7623,10 +7631,11 @@ Set(varSelectedItem, Blank())
 | Width | `300` |
 | Height | `18` |
 | Size | `10` |
+| Color | `If(ThisItem.Direction.Value = "Outbound", varColorPrimary, RGBA(180, 130, 40, 1))` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
 
 > **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). Using `Author` would always show the logged-in user who created the record, not the staff member selected in the dropdown.
-| Color | `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))` |
-| Font | `Font.'Open Sans Semibold'` |
 
 ---
 
