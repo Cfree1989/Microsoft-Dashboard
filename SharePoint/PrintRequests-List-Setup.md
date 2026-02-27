@@ -334,22 +334,25 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Type of text:** Plain text
 5. Click **Save**
 
-### Column 20: RejectionReason (Choice)
+### Column 20: RejectionReason (Choice - Multiple Selection)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `RejectionReason`
-3. **Description:** `Reason for rejection`
+3. **Description:** `Reason(s) for rejection - supports multiple selections`
 4. **Choices:**
-   - File format not supported
-   - Design not printable
-   - Excessive material usage
-   - Incomplete request information
-   - Size limitations
-   - Material not available
-   - Quality concerns
+   - Features are too small or too thin
+   - The geometry is problematic
+   - Open model/not solid geometry
+   - The scale is wrong
+   - The model is messy
+   - Excessive overhangs requiring too much support
+   - Model parts are not joined together
    - Other
-5. **Can add values manually:** Yes (fill-in)
-6. Click **Save**
+5. **Allow multiple selections:** Yes ⚠️ (click "More options" to find this setting)
+6. **Can add values manually:** Yes (fill-in)
+7. Click **Save**
+
+> **⚠️ Important:** This column MUST allow multiple selections for the rejection email flow to work correctly. The Power Automate flow expects an array of choice values.
 
 ### Column 21: StudentConfirmed (Yes/No)
 

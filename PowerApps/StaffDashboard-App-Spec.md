@@ -1422,9 +1422,9 @@ Switch(
     "Green", RGBA(76, 175, 80, 1),
     "Matte Green", RGBA(76, 175, 80, 1),
     "Forest Green", RGBA(34, 139, 34, 1),
-    "Blue", RGBA(0, 102, 204, 1),
-    "Matte Blue", RGBA(0, 102, 204, 1),
-    "Cobalt Blue", RGBA(0, 71, 171, 1),
+    "Blue", RGBA(0, 71, 171, 1),
+    "Matte Blue", RGBA(0, 71, 171, 1),
+    "Cobalt Blue", RGBA(0, 102, 204, 1),
     "Purple", RGBA(107, 63, 160, 1),
     "Matte Purple", RGBA(107, 63, 160, 1),
     "Brown", RGBA(93, 64, 55, 1),
@@ -2603,7 +2603,7 @@ Reset(chkNotJoined)
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Rejecting request...");
 
-// Build rejection reasons string
+// Build rejection reasons string (for StaffNotes display)
 Set(varRejectionReasons, 
     If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
     If(chkGeometry.Value, "The geometry is problematic; ", "") &
@@ -2612,6 +2612,23 @@ Set(varRejectionReasons,
     If(chkMessy.Value, "The model is messy; ", "") &
     If(chkOverhangs.Value, "Excessive overhangs requiring too much support; ", "") &
     If(chkNotJoined.Value, "Model parts are not joined together; ", "")
+);
+
+// Build rejection reasons table (for RejectionReason choice column)
+// Filter to only include selected checkboxes, then map to Value records
+Set(varRejectionReasonsTable,
+    Filter(
+        Table(
+            {Selected: chkTooSmall.Value, Value: "Features are too small or too thin"},
+            {Selected: chkGeometry.Value, Value: "The geometry is problematic"},
+            {Selected: chkNotSolid.Value, Value: "Open model/not solid geometry"},
+            {Selected: chkScale.Value, Value: "The scale is wrong"},
+            {Selected: chkMessy.Value, Value: "The model is messy"},
+            {Selected: chkOverhangs.Value, Value: "Excessive overhangs requiring too much support"},
+            {Selected: chkNotJoined.Value, Value: "Model parts are not joined together"}
+        ),
+        Selected
+    )
 );
 
 // Update the SharePoint item
@@ -2629,6 +2646,7 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Picture: ""
     },
     LastActionAt: Now(),
+    RejectionReason: varRejectionReasonsTable,
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
         "REJECTED by " & 
@@ -8651,9 +8669,9 @@ Switch(
     "Green", RGBA(76, 175, 80, 1),
     "Matte Green", RGBA(76, 175, 80, 1),
     "Forest Green", RGBA(34, 139, 34, 1),
-    "Blue", RGBA(0, 102, 204, 1),
-    "Matte Blue", RGBA(0, 102, 204, 1),
-    "Cobalt Blue", RGBA(0, 71, 171, 1),
+    "Blue", RGBA(0, 71, 171, 1),
+    "Matte Blue", RGBA(0, 71, 171, 1),
+    "Cobalt Blue", RGBA(0, 102, 204, 1),
     "Purple", RGBA(107, 63, 160, 1),
     "Matte Purple", RGBA(107, 63, 160, 1),
     "Brown", RGBA(93, 64, 55, 1),

@@ -1438,7 +1438,7 @@ Screens:
                     Set(varIsLoading, true);
                     Set(varLoadingMessage, "Rejecting request...");
 
-                    // Build rejection reasons string
+                    // Build rejection reasons string (for StaffNotes display)
                     Set(varRejectionReasons, 
                         If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
                         If(chkGeometry.Value, "The geometry is problematic; ", "") &
@@ -1447,6 +1447,22 @@ Screens:
                         If(chkMessy.Value, "The model is messy; ", "") &
                         If(chkOverhangs.Value, "Excessive overhangs requiring too much support; ", "") &
                         If(chkNotJoined.Value, "Model parts are not joined together; ", "")
+                    );
+
+                    // Build rejection reasons table (for RejectionReason choice column)
+                    Set(varRejectionReasonsTable,
+                        Filter(
+                            Table(
+                                {Selected: chkTooSmall.Value, Value: "Features are too small or too thin"},
+                                {Selected: chkGeometry.Value, Value: "The geometry is problematic"},
+                                {Selected: chkNotSolid.Value, Value: "Open model/not solid geometry"},
+                                {Selected: chkScale.Value, Value: "The scale is wrong"},
+                                {Selected: chkMessy.Value, Value: "The model is messy"},
+                                {Selected: chkOverhangs.Value, Value: "Excessive overhangs requiring too much support"},
+                                {Selected: chkNotJoined.Value, Value: "Model parts are not joined together"}
+                            ),
+                            Selected
+                        )
                     );
 
                     // Update the SharePoint item
@@ -1464,6 +1480,7 @@ Screens:
                             Picture: ""
                         },
                         LastActionAt: Now(),
+                        RejectionReason: varRejectionReasonsTable,
                         StaffNotes: Concatenate(
                             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
                             "REJECTED by " & 
