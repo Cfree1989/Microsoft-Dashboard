@@ -95,9 +95,9 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Purpose | Color | RGBA | Variable |
 |---------|-------|------|----------|
 | Primary (Active) | Blue | `RGBA(70, 130, 220, 1)` | `varColorPrimary` |
-| Success | Green | `RGBA(16, 124, 16, 1)` | `varColorSuccess` |
+| Success | Green | `RGBA(46, 125, 50, 1)` | `varColorSuccess` |
 | Warning | Orange | `RGBA(255, 140, 0, 1)` | `varColorWarning` |
-| Error/Danger | Red | `RGBA(209, 52, 56, 1)` | `varColorDanger` |
+| Error/Danger | Red | `RGBA(219, 3, 3, 1)` | `varColorDanger` |
 | Neutral/Cancel | Gray | `RGBA(150, 150, 150, 1)` | `varColorNeutral` |
 | Info | Blue | `RGBA(70, 130, 220, 1)` | `varColorInfo` |
 | Header Background | Transparent | `Color.Transparent` | `varColorHeader` |
@@ -115,11 +115,11 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 |--------|-------|------|
 | Uploaded | Blue | `RGBA(70, 130, 220, 1)` |
 | Pending | Amber | `RGBA(255, 185, 0, 1)` |
-| Ready to Print | Green | `RGBA(16, 124, 16, 1)` |
-| Printing | Purple | `RGBA(107, 105, 214, 1)` |
+| Ready to Print | Green | `RGBA(46, 125, 50, 1)` |
+| Printing | Purple | `RGBA(117, 67, 171, 1)` |
 | Completed | Dark Blue | `RGBA(0, 78, 140, 1)` |
 | Paid & Picked Up | Teal | `RGBA(0, 158, 73, 1)` |
-| Rejected | Red | `RGBA(209, 52, 56, 1)` |
+| Rejected | Red | `RGBA(219, 3, 3, 1)` |
 | Canceled | Gray | `RGBA(138, 136, 134, 1)` |
 | Archived | Gray | `RGBA(96, 94, 92, 1)` |
 
@@ -314,31 +314,32 @@ Set(varMinimumCost, 3.00);
 // --- FONT ---
 Set(varAppFont, Font.'Open Sans');
 
-// --- COLORS ---
+// === BUTTON COLOR PALETTE ===
 Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
-Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
-Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
-
-// --- COLORS: Semantic ---
-Set(varColorSuccess, RGBA(16, 124, 16, 1));        // Green - approve/complete
-Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
-Set(varColorDanger, RGBA(209, 52, 56, 1));         // Red - reject/delete
-Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
+Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
+Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
 Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
 Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
 Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
 
-// --- COLORS: Neutrals (Staff Dashboard) ---
-Set(varColorHeader, Color.Transparent);            // Invisible header background
+// === COLOR HOVER/PRESSED STATES ===
+Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
+Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
+Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
+Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
+
+// === UI NEUTRAL COLORS ===
+Set(varColorHeader, Color.Transparent);            // Header background
 Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
-Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state (darker gray)
+Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
 Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
 Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
 Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
 Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
 Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
-Set(varColorBorderLight, RGBA(166, 166, 166, 1)); // Card borders
+Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
 Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
 Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
@@ -417,12 +418,12 @@ Set(varScreenTransition, ScreenTransition.Fade);
 // === STATUS COLORS ===
 // Consistent with Staff Dashboard
 Set(varStatusColors, Table(
-    {Status: "Uploaded", Color: varColorInfo},
-    {Status: "Pending", Color: varColorWarning},
+    {Status: "Uploaded", Color: varColorPrimary},
+    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
     {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
-    {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
+    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Completed", Color: varColorPrimary},
+    {Status: "Paid & Picked Up", Color: varColorSuccess},
     {Status: "Rejected", Color: varColorDanger},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
@@ -2262,6 +2263,118 @@ Filter(
 
 > ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Color))`), the control may be corrupted. **Fix:** Delete `DataCardValue9`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue9`, and reapply the properties above.
 
+---
+
+### 6E-2: Add Required Field Indicators
+
+**What you're doing:** Adding separate red "(Required)" labels next to each field name that disappear once the field is filled in.
+
+For each required field below, add a new label inside the DataCard positioned next to the field name.
+
+#### TigerCardNumber Required Label
+
+1. Expand `TigerCardNumber_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblTigerCardRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey31.X + DataCardKey31.Width + 5` |
+| Y | `DataCardKey31.Y` |
+| Width | `85` |
+| Height | `DataCardKey31.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `Len(DataCardValue30.Text) <> 16` |
+
+#### Method Required Label
+
+1. Expand `Method_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblMethodRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey8.X + DataCardKey8.Width + 5` |
+| Y | `DataCardKey8.Y` |
+| Width | `85` |
+| Height | `DataCardKey8.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `IsBlank(DataCardValue8.Selected.Value)` |
+
+#### Printer Required Label
+
+1. Expand `Printer_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblPrinterRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey10.X + DataCardKey10.Width + 5` |
+| Y | `DataCardKey10.Y` |
+| Width | `85` |
+| Height | `DataCardKey10.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `IsBlank(DataCardValue10.Selected.Value)` |
+
+#### Color Required Label
+
+1. Expand `Color_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblColorRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey9.X + DataCardKey9.Width + 5` |
+| Y | `DataCardKey9.Y` |
+| Width | `85` |
+| Height | `DataCardKey9.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `IsBlank(DataCardValue9.Selected.Value)` |
+
+#### Attachments Required Label
+
+1. Expand `Attachments_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblAttachmentsRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey32.X + DataCardKey32.Width + 5` |
+| Y | `DataCardKey32.Y` |
+| Width | `85` |
+| Height | `DataCardKey32.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `CountRows(DataCardValue31.Attachments) = 0` |
+
+> 💡 **How it works:** Each "(Required)" label is positioned right after the field name and only shows when the field is empty. The red italic text provides clear visual feedback that disappears as students complete each required field.
+
+---
+
 #### DueDate_DataCard1
 
 75. Click on `DueDate_DataCard1` itself (the card) and set:
@@ -2512,9 +2625,9 @@ This label shows students exactly which fields need attention — but only after
 | Property | Value |
 |----------|-------|
 | X | `varSpacingXL` |
-| Y | `btnSubmit.Y - 40` |
+| Y | `btnSubmit.Y - 70` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
-| Height | `32` |
+| Height | `60` |
 | Align | `Align.Center` |
 | Fill | `RGBA(255, 235, 235, 1)` |
 | Color | `varColorDanger` |
@@ -2526,6 +2639,8 @@ This label shows students exactly which fields need attention — but only after
 | PaddingRight | `varSpacingMD` |
 | BorderColor | `varColorDanger` |
 | BorderThickness | `1` |
+
+> 💡 **Height for multi-line messages:** The increased height (60px) accommodates 2-3 line validation messages (wrong file type, wrong filename format, or both). The Y position is adjusted to prevent overlap with the submit button.
 
 102. Set **Visible** (only show after submit attempt):
 
@@ -2545,16 +2660,41 @@ If(
     CountRows(DataCardValue31.Attachments) = 0,
     "Please attach your 3D model file before submitting.",
     varHasInvalidFile,
-    "Invalid filename: " & First(varInvalidFiles).Name & Char(10) &
-    "Required format: YourName_Method_Color.ext" & Char(10) &
-    "Example: JaneDoe_Filament_Blue.3mf",
+    With(
+        {
+            invalidFile: First(varInvalidFiles),
+            baseName: First(Split(First(varInvalidFiles).Name, ".")).Value,
+            ext: Lower(Last(Split(First(varInvalidFiles).Name, ".")).Value)
+        },
+        With(
+            {
+                hasValidExt: ext in ["stl", "obj", "3mf", "idea", "form"],
+                hasValidFormat: CountRows(Split(baseName, "_")) = 3
+            },
+            If(
+                !hasValidExt && hasValidFormat,
+                "Invalid file type: ." & ext & Char(10) &
+                "Accepted formats: .stl, .obj, .3mf, .idea, .form",
+                hasValidExt && !hasValidFormat,
+                "Invalid filename format: " & invalidFile.Name & Char(10) &
+                "Required: YourName_Method_Color.ext" & Char(10) &
+                "Example: JaneDoe_Filament_Blue.3mf",
+                "Invalid file: " & invalidFile.Name & Char(10) &
+                "Use format: YourName_Method_Color.ext" & Char(10) &
+                "Accepted: .stl, .obj, .3mf, .idea, .form"
+            )
+        )
+    ),
     Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
     "Tiger Card number must be exactly 16 digits.",
     "You must fill in all required fields before submitting."
 )
 ```
 
-> 💡 **Specific feedback:** The message prioritizes the most common issue (missing file attachment), then checks filename format (showing the actual invalid filename), then Tiger Card format, then falls back to general required fields. This helps students understand exactly what needs to be fixed.
+> 💡 **Specific feedback:** The message prioritizes the most common issue (missing file attachment), then provides specific feedback for file issues:
+> - **Wrong extension only** → "Invalid file type: .xyz" with accepted formats
+> - **Wrong format only** → "Invalid filename format" with naming example
+> - **Both wrong** → Combined guidance for extension and format
 
 ---
 
@@ -3249,10 +3389,10 @@ ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected
 | Y | `recConfirmModal.Y + 20` |
 | Width | `recConfirmModal.Width - 40` |
 | Height | `35` |
-| Font | `Font.'Open Sans'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `18` |
-| Color | `RGBA(16, 124, 16, 1)` |
+| Color | `varColorSuccess` |
 
 ### Request Info
 
@@ -3282,7 +3422,7 @@ ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected
 | Y | `recConfirmModal.Y + 100` |
 | Width | `recConfirmModal.Width - 40` |
 | Height | `50` |
-| Font | `Font.'Open Sans'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `28` |
 | Color | `varColorPrimary` |
@@ -3497,10 +3637,10 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | Y | `recCancelModal.Y + 20` |
 | Width | `recCancelModal.Width - 40` |
 | Height | `30` |
-| Font | `Font.'Open Sans'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `18` |
-| Color | `RGBA(209, 52, 56, 1)` |
+| Color | `varColorDanger` |
 
 ### Warning Message
 
@@ -4187,13 +4327,13 @@ Set(varAppFont, Font.'Open Sans');
 
 // === STATUS COLORS ===
 Set(varStatusColors, Table(
-    {Status: "Uploaded", Color: RGBA(70, 130, 220, 1)},
+    {Status: "Uploaded", Color: varColorPrimary},
     {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: RGBA(16, 124, 16, 1)},
-    {Status: "Printing", Color: RGBA(107, 105, 214, 1)},
-    {Status: "Completed", Color: RGBA(0, 78, 140, 1)},
-    {Status: "Paid & Picked Up", Color: RGBA(0, 158, 73, 1)},
-    {Status: "Rejected", Color: RGBA(209, 52, 56, 1)},
+    {Status: "Ready to Print", Color: varColorSuccess},
+    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Completed", Color: varColorPrimary},
+    {Status: "Paid & Picked Up", Color: varColorSuccess},
+    {Status: "Rejected", Color: varColorDanger},
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
@@ -4319,14 +4459,59 @@ If(
     CountRows(DataCardValue31.Attachments) = 0,
     "Please attach your 3D model file before submitting.",
     varHasInvalidFile,
-    "Invalid filename: " & First(varInvalidFiles).Name & Char(10) &
-    "Required format: YourName_Method_Color.ext" & Char(10) &
-    "Example: JaneDoe_Filament_Blue.stl",
+    With(
+        {
+            invalidFile: First(varInvalidFiles),
+            baseName: First(Split(First(varInvalidFiles).Name, ".")).Value,
+            ext: Lower(Last(Split(First(varInvalidFiles).Name, ".")).Value)
+        },
+        With(
+            {
+                hasValidExt: ext in ["stl", "obj", "3mf", "idea", "form"],
+                hasValidFormat: CountRows(Split(baseName, "_")) = 3
+            },
+            If(
+                !hasValidExt && hasValidFormat,
+                "Invalid file type: ." & ext & Char(10) &
+                "Accepted formats: .stl, .obj, .3mf, .idea, .form",
+                hasValidExt && !hasValidFormat,
+                "Invalid filename format: " & invalidFile.Name & Char(10) &
+                "Required: YourName_Method_Color.ext" & Char(10) &
+                "Example: JaneDoe_Filament_Blue.3mf",
+                "Invalid file: " & invalidFile.Name & Char(10) &
+                "Use format: YourName_Method_Color.ext" & Char(10) &
+                "Accepted: .stl, .obj, .3mf, .idea, .form"
+            )
+        )
+    ),
     Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
     "Tiger Card number must be exactly 16 digits.",
     "Please fill in all required fields before submitting."
 )
 ```
+
+## Required Field Label Indicators
+
+Separate "(Required)" labels positioned next to field names. Common properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| Width | `85` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+
+**Per-field configuration:**
+
+| Label | DataCard | Position X | Position Y | Height | Visible |
+|-------|----------|------------|------------|--------|---------|
+| `lblTigerCardRequired` | TigerCardNumber | `DataCardKey31.X + DataCardKey31.Width + 5` | `DataCardKey31.Y` | `DataCardKey31.Height` | `Len(DataCardValue30.Text) <> 16` |
+| `lblMethodRequired` | Method | `DataCardKey8.X + DataCardKey8.Width + 5` | `DataCardKey8.Y` | `DataCardKey8.Height` | `IsBlank(DataCardValue8.Selected.Value)` |
+| `lblPrinterRequired` | Printer | `DataCardKey10.X + DataCardKey10.Width + 5` | `DataCardKey10.Y` | `DataCardKey10.Height` | `IsBlank(DataCardValue10.Selected.Value)` |
+| `lblColorRequired` | Color | `DataCardKey9.X + DataCardKey9.Width + 5` | `DataCardKey9.Y` | `DataCardKey9.Height` | `IsBlank(DataCardValue9.Selected.Value)` |
+| `lblAttachmentsRequired` | Attachments | `DataCardKey32.X + DataCardKey32.Width + 5` | `DataCardKey32.Y` | `DataCardKey32.Height` | `CountRows(DataCardValue31.Attachments) = 0` |
 
 ## My Requests Gallery Items
 
