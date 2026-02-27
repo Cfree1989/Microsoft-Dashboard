@@ -299,6 +299,8 @@ and(
 
 > **How this validation works:** Checks for valid 3D file extension AND requires `FirstLast_Method_Color` naming format (exactly 3 underscore-separated parts, each non-empty). Files that don't match are auto-rejected with an explanatory email.
 
+> 💡 **Defense in depth:** The Student Portal app now validates filenames *before* submission (see `StudentPortal-App-Spec.md` Step 6F-2). This Flow A validation acts as a **safety net** for edge cases (e.g., direct SharePoint submissions, API access). Most invalid filenames should be caught client-side before they ever reach this flow.
+
 
 #### 4f) True Branch (Green Box) — Valid Filename
 

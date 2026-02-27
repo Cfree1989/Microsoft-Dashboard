@@ -293,6 +293,9 @@ Set(varSelectedItem, LookUp(PrintRequests, false));
 Set(varFormSubmitted, false);
 // Track if user attempted to submit (for showing validation errors)
 Set(varSubmitAttempted, false);
+// Track files with invalid names (populated by Attachments OnAddFile/OnRemoveFile)
+Set(varInvalidFiles, Table());
+Set(varHasInvalidFile, false);
 
 // === LOADING STATE ===
 Set(varIsLoading, false);
@@ -561,6 +564,10 @@ RadiusBottomRight: varRadiusXSmall
 | `varDateFormatShort` | Short date format string | Text |
 | `varDateFormatFull` | Full date/time format string | Text |
 | `varScreenTransition` | Navigation transition effect | ScreenTransition |
+| `varFormSubmitted` | Track if form was submitted successfully | Boolean |
+| `varSubmitAttempted` | Track if user attempted submit (for validation display) | Boolean |
+| `varInvalidFiles` | Collection of attached files with invalid names | Table |
+| `varHasInvalidFile` | True if any attached file has invalid name | Boolean |
 
 > 💡 **User Identity Variables Explained:**
 > - **`varMeEmail`** (SMTP): The primary email address (e.g., `john.smith@lsu.edu`). Used for the `StudentEmail` text field and gallery filtering.
@@ -2368,6 +2375,65 @@ Send us ONE FILE with all of your parts and pieces. Do not upload multiple files
 
 ---
 
+### 6F-2: Configure File Name Validation
+
+> ⚠️ **Why client-side validation?** Previously, file validation happened after submission (in Flow A), resulting in rejection emails that confused students. By validating filenames *before* submission, students get immediate feedback and can fix issues on the spot.
+
+**What this validates:**
+- File extension must be `.stl`, `.obj`, `.3mf`, `.idea`, or `.form`
+- Filename must follow the format `Name_Method_Color.ext` (exactly 3 underscore-separated parts)
+
+#### Configure Attachments Control Events
+
+89a. Expand `Attachments_DataCard1` in Tree view.
+89b. Click on the **Attachments control** inside (usually named `DataCardValue31` — look for the paperclip icon).
+89c. Set **OnAddFile:**
+
+```powerfx
+// Validate all attached files whenever a new file is added
+Set(varInvalidFiles,
+    Filter(
+        Self.Attachments,
+        With(
+            {
+                baseName: First(Split(Name, ".")).Value,
+                ext: Lower(Last(Split(Name, ".")).Value)
+            },
+            // Invalid if: wrong extension OR not exactly 3 underscore parts
+            Not(ext in ["stl", "obj", "3mf", "idea", "form"]) ||
+            CountRows(Split(baseName, "_")) <> 3
+        )
+    )
+);
+Set(varHasInvalidFile, CountRows(varInvalidFiles) > 0)
+```
+
+89d. Set **OnRemoveFile:**
+
+```powerfx
+// Re-validate remaining files when a file is removed
+Set(varInvalidFiles,
+    Filter(
+        Self.Attachments,
+        With(
+            {
+                baseName: First(Split(Name, ".")).Value,
+                ext: Lower(Last(Split(Name, ".")).Value)
+            },
+            Not(ext in ["stl", "obj", "3mf", "idea", "form"]) ||
+            CountRows(Split(baseName, "_")) <> 3
+        )
+    )
+);
+Set(varHasInvalidFile, CountRows(varInvalidFiles) > 0)
+```
+
+> 💡 **How it works:** Each time a file is added or removed, we filter the attachments to find any that don't meet our requirements. The `varInvalidFiles` collection contains all problematic files, and `varHasInvalidFile` is a simple boolean for the submit button.
+
+> ⚠️ **Control Name:** Your Attachments control may have a different number (e.g., `DataCardValue27`). Expand `Attachments_DataCard1` in Tree view to find the control with the paperclip icon.
+
+---
+
 ### 6G: Add Submit Button
 
 94. Click **+ Insert** → **Button**.
@@ -2397,13 +2463,14 @@ Send us ONE FILE with all of your parts and pieces. Do not upload multiple files
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
 
-97. Set **DisplayMode** (validates required fields, TigerCard length, and file attachment):
+97. Set **DisplayMode** (validates required fields, TigerCard length, file attachment, and filename format):
 
 ```powerfx
 If(
     frmSubmit.Valid && 
     Len(TigerCardNumber_DataCard1.Update) = 16 &&
-    CountRows(DataCardValue31.Attachments) > 0,
+    CountRows(DataCardValue31.Attachments) > 0 &&
+    !varHasInvalidFile,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
@@ -2411,7 +2478,7 @@ If(
 
 > ⚠️ **Control Name:** `DataCardValue31` is the Attachments control inside `Attachments_DataCard1`. Your number may differ — expand `Attachments_DataCard1` in Tree view to find the control with the paperclip icon.
 
-> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled via `frmSubmit.Valid`. We also check that the Tiger Card number is exactly 16 digits and that at least one file has been attached.
+> 💡 **Form Validation:** EditForm automatically tracks if all required fields are filled via `frmSubmit.Valid`. We also check that the Tiger Card number is exactly 16 digits, that at least one file has been attached, and that all filenames follow the required format (via `varHasInvalidFile` from Step 6F-2).
 
 98. Set **OnSelect:**
 
@@ -2419,11 +2486,12 @@ If(
 // Track that user attempted to submit (for showing validation errors)
 Set(varSubmitAttempted, true);
 
-// Only proceed if form is valid and file is attached
+// Only proceed if form is valid, file is attached, and filenames are valid
 If(
     frmSubmit.Valid && 
     Len(TigerCardNumber_DataCard1.Update) = 16 &&
-    CountRows(DataCardValue31.Attachments) > 0,
+    CountRows(DataCardValue31.Attachments) > 0 &&
+    !varHasInvalidFile,
     Set(varIsLoading, true);
     SubmitForm(frmSubmit)
 )
@@ -2465,7 +2533,8 @@ This label shows students exactly which fields need attention — but only after
 varSubmitAttempted && (
     !frmSubmit.Valid || 
     Len(TigerCardNumber_DataCard1.Update) <> 16 ||
-    CountRows(DataCardValue31.Attachments) = 0
+    CountRows(DataCardValue31.Attachments) = 0 ||
+    varHasInvalidFile
 )
 ```
 
@@ -2475,13 +2544,17 @@ varSubmitAttempted && (
 If(
     CountRows(DataCardValue31.Attachments) = 0,
     "Please attach your 3D model file before submitting.",
+    varHasInvalidFile,
+    "Invalid filename: " & First(varInvalidFiles).Name & Char(10) &
+    "Required format: YourName_Method_Color.ext" & Char(10) &
+    "Example: JaneDoe_Filament_Blue.3mf",
     Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
     "Tiger Card number must be exactly 16 digits.",
-    "Please fill in all required fields before submitting."
+    "You must fill in all required fields before submitting."
 )
 ```
 
-> 💡 **Specific feedback:** The message prioritizes the most common issue (missing file attachment), then checks Tiger Card format, then falls back to general required fields. This helps students understand exactly what needs to be fixed.
+> 💡 **Specific feedback:** The message prioritizes the most common issue (missing file attachment), then checks filename format (showing the actual invalid filename), then Tiger Card format, then falls back to general required fields. This helps students understand exactly what needs to be fixed.
 
 ---
 
@@ -4100,6 +4173,8 @@ Set(varShowCancelModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
 Set(varFormSubmitted, false);
 Set(varSubmitAttempted, false);  // For validation message display
+Set(varInvalidFiles, Table());   // Files with invalid names
+Set(varHasInvalidFile, false);   // Quick check for submit button
 Set(varIsLoading, false);
 
 // === PRICING ===
@@ -4190,17 +4265,67 @@ Notify(
 ## File Warning Label Text (lblFileWarning)
 
 ```powerfx
-"IMPORTANT: File Naming Requirement
-
-Your files MUST be named: FirstLast_Method_Color
-
-Examples:
-  - JaneDoe_Filament_Blue.stl
-  - MikeSmith_Resin_Clear.3mf
+"IMPORTANT: File Requirements
 
 Accepted formats: .stl, .obj, .3mf, .idea, .form
+Maximum file size: 50MB per file
 
-Files not following this format will be rejected."
+Tip: Include your name and details in the filename for easy identification.
+Example: JaneDoe_Filament_Blue.stl
+
+Send us ONE FILE with all of your parts and pieces. Do not upload multiple files at a time unless absolutely necessary."
+```
+
+## File Name Validation (Attachments OnAddFile/OnRemoveFile)
+
+```powerfx
+// Validate all attached files - checks extension and underscore format
+Set(varInvalidFiles,
+    Filter(
+        Self.Attachments,
+        With(
+            {
+                baseName: First(Split(Name, ".")).Value,
+                ext: Lower(Last(Split(Name, ".")).Value)
+            },
+            // Invalid if: wrong extension OR not exactly 3 underscore parts
+            Not(ext in ["stl", "obj", "3mf", "idea", "form"]) ||
+            CountRows(Split(baseName, "_")) <> 3
+        )
+    )
+);
+Set(varHasInvalidFile, CountRows(varInvalidFiles) > 0)
+```
+
+> 💡 **How it works:** Validates each filename has a valid 3D file extension AND follows the `Name_Method_Color.ext` format (exactly 3 underscore-separated parts before the extension).
+
+## Submit Button DisplayMode (with File Validation)
+
+```powerfx
+If(
+    frmSubmit.Valid && 
+    Len(TigerCardNumber_DataCard1.Update) = 16 &&
+    CountRows(DataCardValue31.Attachments) > 0 &&
+    !varHasInvalidFile,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+## Validation Message Text (with File Validation)
+
+```powerfx
+If(
+    CountRows(DataCardValue31.Attachments) = 0,
+    "Please attach your 3D model file before submitting.",
+    varHasInvalidFile,
+    "Invalid filename: " & First(varInvalidFiles).Name & Char(10) &
+    "Required format: YourName_Method_Color.ext" & Char(10) &
+    "Example: JaneDoe_Filament_Blue.stl",
+    Len(TigerCardNumber_DataCard1.Update) <> 16 && !IsBlank(TigerCardNumber_DataCard1.Update),
+    "Tiger Card number must be exactly 16 digits.",
+    "Please fill in all required fields before submitting."
+)
 ```
 
 ## My Requests Gallery Items
