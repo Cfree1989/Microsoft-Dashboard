@@ -306,58 +306,25 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 
 > **Important:** The `[REQ-00001]` prefix in the subject enables Flow E to parse student replies and match them to the correct request. Do not change this format.
 
-6. **Body:** Build the email by typing plain text and inserting expressions:
+6. **Body:** Click **Code View button (`</>`)** at top right of the Body field, then paste the HTML below:
 
-**How to build:**
-1. Click in the **Body** field
-2. Type text, then when you reach a dynamic value:
-   - Click **Expression** tab (fx)
-   - Paste the expression from the table below
-   - Click **Update**
-3. Continue typing the next section of text
+```html
+<p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
+```
 
-| Text to type | Then insert expression |
-|--------------|----------------------|
-| `Hi ` | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
-| `,` (comma + new lines) | |
-| `You have a new message about your print request.` | |
-| `MESSAGE:` | |
-| (new line) | `triggerOutputs()?['body/Message']` |
-| `---` | |
-| `Request: ` | `outputs('Get_Print_Request')?['body/ReqKey']` |
-| `From: ` | `triggerOutputs()?['body/Author']?['DisplayName']` |
-| (rest of email) | |
+> 💡 **HTML Email:** The Message field contains HTML from the Rich Text Editor, which may include embedded images as base64 data URIs. Any pasted screenshots will display inline in the email.
 
 **Complete expressions reference:**
 | Field | Expression |
 |-------|------------|
 | Student Name | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
-| Message Body | `triggerOutputs()?['body/Message']` |
+| Message Body (HTML) | `triggerOutputs()?['body/Message']` |
 | ReqKey | `outputs('Get_Print_Request')?['body/ReqKey']` |
 | Author Name | `triggerOutputs()?['body/Author']?['DisplayName']` |
 
-**Final email should look like:**
-```
-Hi [Dynamic: Student Name],
-
-You have a new message about your print request.
-
-MESSAGE:
-[Dynamic: Message Body]
-
----
-Request: [Dynamic: ReqKey]
-From: [Dynamic: Author Name]
-
-You can reply directly to this email, and your response will be added to your request.
-
-Digital Fabrication Lab
-Room 145 Atkinson Hall
-coad-fablab@lsu.edu
-```
-
 7. In the **Advanced parameters** section, click **Show all** to expand additional fields
-8. **Importance:** Select `Normal`
+8. **Is HTML:** Toggle to **Yes**
+9. **Importance:** Select `Normal`
 
 > **Note:** The Office 365 Outlook connector's "Send an email from a shared mailbox (V2)" action automatically handles Message-ID generation. We store our generated MessageID in SharePoint for reference and future threading.
 
@@ -456,10 +423,17 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 ### Basic Functionality
 - [ ] Staff sends message via Power Apps → Student receives email
 - [ ] Email subject contains `[REQ-00001]` prefix format
-- [ ] Email body contains message content
+- [ ] Email body contains message content (HTML formatted)
+- [ ] Email body displays embedded images from rich text editor
 - [ ] Email body contains reply instructions
 - [ ] Email body contains request details (ReqKey, Author name)
 - [ ] AuditLog entry created with correct fields
+
+### Rich Text / Image Support
+- [ ] Pasted screenshots in message display correctly in email
+- [ ] Multiple images in single message all display
+- [ ] Bold, italic, and list formatting preserved in email
+- [ ] Large images (>100KB) still send successfully
 
 ### Email Threading
 - [ ] First message creates new ThreadID (format: `REQ-00001-20260112143052`)

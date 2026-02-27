@@ -1188,8 +1188,8 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =Color.White
-                  Height: =610
-                  Width: =Min(varModalMaxWidth, Parent.Width - varModalMargin)
+                  Height: =700
+                  Width: =Min(720, Parent.Width - varModalMargin)
                   X: =(Parent.Width - Min(varModalMaxWidth, Parent.Width - varModalMargin)) / 2
                   Y: =(Parent.Height - Min(varModalMaxHeight, Parent.Height - varModalMargin)) / 2
             - lblRejectTitle:
@@ -1202,7 +1202,7 @@ Screens:
                   Height: =30
                   Size: =20
                   Text: ="Reject Request - " & varSelectedItem.ReqKey
-                  Width: =560
+                  Width: =680
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 20
             - lblRejectStudent:
@@ -1215,7 +1215,7 @@ Screens:
                   Size: =12
                   Text: |-
                     ="Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"
-                  Width: =560
+                  Width: =680
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 55
             - lblRejectStaffLabel:
@@ -1362,24 +1362,16 @@ Screens:
                   Width: =300
                   X: =recRejectModal.X + 20
                   Y: =465
-            - txtRejectComments:
-                Control: Classic/TextInput@2.3.2
+            - rteRejectComments:
+                Control: RichTextEditor
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
-                  Default: =
-                  FocusedBorderThickness: =varFocusedBorderThickness
-                  Font: =varAppFont
-                  Height: =80
-                  HintText: ="Provide specific feedback for the student..."
-                  HoverBorderColor: =varInputBorderColor
-                  HoverFill: =varInputHoverFill
-                  Mode: =TextMode.MultiLine
-                  RadiusBottomLeft: =varInputBorderRadius
-                  RadiusBottomRight: =varInputBorderRadius
-                  RadiusTopLeft: =varInputBorderRadius
-                  RadiusTopRight: =varInputBorderRadius
-                  Width: =560
+                  Default: =""
+                  DisplayMode: =DisplayMode.Edit
+                  FocusedBorderColor: =varColorPrimary
+                  Height: =160
+                  Width: =680
                   X: =recRejectModal.X + 20
                   Y: =lblRejectCommentsLabel.Y + lblRejectCommentsLabel.Height + 10
             - btnRejectCancel:
@@ -1398,7 +1390,7 @@ Screens:
                   OnSelect: |-
                     =Set(varShowRejectModal, 0);
                     Set(varSelectedItem, Blank());
-                    Reset(txtRejectComments);
+                    Reset(rteRejectComments);
                     Reset(ddRejectStaff);
                     Reset(chkTooSmall);
                     Reset(chkGeometry);
@@ -1417,8 +1409,8 @@ Screens:
                   Size: =varBtnFontSize
                   Text: ="Cancel"
                   Width: =120
-                  X: =recRejectModal.X + 300
-                  Y: =recRejectModal.Y + 550
+                  X: =recRejectModal.X + 420
+                  Y: =recRejectModal.Y + 630
             - btnRejectConfirm:
                 Control: Classic/Button@2.2.0
                 Properties:
@@ -1485,7 +1477,9 @@ Screens:
                             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
                             "REJECTED by " & 
                             With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                            ": " & varRejectionReasons & txtRejectComments.Text & " - " & Text(Now(), "m/d h:mmam/pm")
+                            ": " & varRejectionReasons & 
+                            If(!IsBlank(rteRejectComments.HtmlText), " | Staff Comments: " & rteRejectComments.HtmlText, "") &
+                            " - " & Text(Now(), "m/d h:mmam/pm")
                         )
                     });
 
@@ -1505,7 +1499,7 @@ Screens:
                     // Close modal and reset
                     Set(varShowRejectModal, 0);
                     Set(varSelectedItem, Blank());
-                    Reset(txtRejectComments);
+                    Reset(rteRejectComments);
                     Reset(ddRejectStaff);
                     Reset(chkTooSmall);
                     Reset(chkGeometry);
@@ -1528,8 +1522,8 @@ Screens:
                   Size: =varBtnFontSize
                   Text: ="Confirm Rejection"
                   Width: =150
-                  X: =recRejectModal.X + 430
-                  Y: =recRejectModal.Y + 550
+                  X: =recRejectModal.X + 550
+                  Y: =recRejectModal.Y + 630
       - conApprovalModal:
           Control: GroupContainer@1.4.0
           Variant: ManualLayout
@@ -4216,24 +4210,15 @@ Screens:
                     ="Message: *"
                   X: =recMessageModal.X + 20
                   Y: =recMessageModal.Y + 240
-            - txtMessageBody:
-                Control: Classic/TextInput@2.3.2
+            - rteMessageBody:
+                Control: RichTextEditor
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
                   Default: =""
-                  FocusedBorderThickness: =varFocusedBorderThickness
-                  Font: =varAppFont
-                  Height: =140
-                  HintText: ="Type your message to the student..."
-                  HoverBorderColor: =varInputBorderColor
-                  HoverFill: =varInputHoverFill
-                  MaxLength: =2000
-                  Mode: =TextMode.MultiLine
-                  RadiusBottomLeft: =varInputBorderRadius
-                  RadiusBottomRight: =varInputBorderRadius
-                  RadiusTopLeft: =varInputBorderRadius
-                  RadiusTopRight: =varInputBorderRadius
+                  DisplayMode: =DisplayMode.Edit
+                  FocusedBorderColor: =varColorPrimary
+                  Height: =180
                   Width: =540
                   X: =recMessageModal.X + 20
                   Y: =recMessageModal.Y + 265
@@ -4242,21 +4227,14 @@ Screens:
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: |-
-                    =If(
-                        Len(txtMessageBody.Text) > 1900,
-                        varColorDanger,
-                        Len(txtMessageBody.Text) > 1800,
-                        varColorWarning,
-                        varColorTextMuted
-                    )
+                  Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =22
                   Size: =8
-                  Text: =Len(txtMessageBody.Text) & " / 2000" & If(Len(txtMessageBody.Text) > 1900, " ⚠️ Near limit!", "")
+                  Text: =Len(rteMessageBody.HtmlText) & " characters"
                   Width: =130
                   X: =recMessageModal.X + 430
-                  Y: =recMessageModal.Y + 408
+                  Y: =recMessageModal.Y + 448
             - btnMessageCancel:
                 Control: Classic/Button@2.2.0
                 Properties:
@@ -4274,7 +4252,7 @@ Screens:
                     =Set(varShowMessageModal, 0);
                     Set(varSelectedItem, Blank());
                     Reset(txtMessageSubject);
-                    Reset(txtMessageBody);
+                    Reset(rteMessageBody);
                     Reset(ddMessageStaff)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -4299,8 +4277,8 @@ Screens:
                         !IsBlank(ddMessageStaff.Selected) &&
                         !IsBlank(txtMessageSubject.Text) &&
                         Len(txtMessageSubject.Text) >= 3 &&
-                        !IsBlank(txtMessageBody.Text) &&
-                        Len(txtMessageBody.Text) >= 10,
+                        !IsBlank(rteMessageBody.HtmlText) &&
+                        Len(rteMessageBody.HtmlText) >= 10,
                         DisplayMode.Edit,
                         DisplayMode.Disabled
                     )
@@ -4324,7 +4302,7 @@ Screens:
                             Title: txtMessageSubject.Text,
                             RequestID: varSelectedItem.ID,
                             ReqKey: varSelectedItem.ReqKey,
-                            Message: txtMessageBody.Text,
+                            Message: rteMessageBody.HtmlText,
                             Author0: {
                                 '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
                                 Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
@@ -4367,7 +4345,7 @@ Screens:
                     Set(varShowMessageModal, 0);
                     Set(varSelectedItem, Blank());
                     Reset(txtMessageSubject);
-                    Reset(txtMessageBody);
+                    Reset(rteMessageBody);
                     Reset(ddMessageStaff);
 
                     // === HIDE LOADING ===

@@ -793,32 +793,14 @@ Some display names differ from internal field names. Always use internal names i
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
-   - **Subject:** Click **Expression** → Type `concat('Your 3D Print request has been rejected – ', outputs('Get_Current_Rejected_Data')?['body/ReqKey'])`
-   - **Body:** Click **Code View button (`</>`)** at top right → Paste the plain text below (expressions will auto-resolve):
+   - **Subject:** Click **Expression** → Type `concat('[', outputs('Get_Current_Rejected_Data')?['body/ReqKey'], '] Your 3D Print request has been rejected')`
+   - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
+```html
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/Notes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
-Unfortunately, your 3D Print request has been rejected by our staff.
 
-REQUEST DETAILS:
-- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})
-- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}
-- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}
-
-REASON FOR REJECTION:
-@{outputs('Compose_Formatted_Reasons_Text')}
-
-ADDITIONAL DETAILS:
-@{outputs('Get_Current_Rejected_Data')?['body/Notes']}
-
-NEXT STEPS:
-• Review the specific rejection reason above
-• Make necessary adjustments to your design or request
-• Submit a new corrected request through the Fabrication Lab website
-• Contact our staff if you have questions about this feedback
-
----
-This is an automated message from the LSU Digital Fabrication Lab.
-```
+> 💡 **HTML Email with Images:** The Notes field contains HTML from the Rich Text Editor, which may include embedded screenshots as base64 data URIs. Any pasted images will display inline to help students understand exactly what needs to be fixed. The connector auto-detects HTML content.
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
 
@@ -884,7 +866,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
-   - **Subject:** Click **Expression** → Type `concat('Estimate ready for your 3D print – ', outputs('Get_Current_Pending_Data')?['body/ReqKey'])`
+   - **Subject:** Click **Expression** → Type `concat('[', outputs('Get_Current_Pending_Data')?['body/ReqKey'], '] Estimate ready for your 3D print')`
    - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
 
 > **Note:** The hyperlink uses an HTML `<a href="...">` anchor tag. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expression inside the href attribute will resolve correctly.
@@ -1007,7 +989,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 4. **Fill in:**
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Completed_Data')?['body/StudentEmail']`
-   - **Subject:** Click **Expression** → Type `concat('Your 3D print is ready for pickup – ', outputs('Get_Current_Completed_Data')?['body/ReqKey'])`
+   - **Subject:** Click **Expression** → Type `concat('[', outputs('Get_Current_Completed_Data')?['body/ReqKey'], '] Your 3D print is ready for pickup')`
    - **Body:** Click **Code View button (`</>`)** → Paste the plain text below (expressions will auto-resolve):
 
 ```
@@ -1269,6 +1251,12 @@ Update these sections in the email templates for your lab:
 - [ ] Shared mailbox configuration working properly
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
+
+### Rich Text / Image Support in Rejection Emails
+- [ ] Pasted screenshots in rejection comments display correctly in email
+- [ ] Multiple images in rejection comments all display
+- [ ] Bold, italic formatting from rich text editor preserved in email
+- [ ] Large images (>100KB) still send successfully
 
 ### Error Handling
 - [ ] Retry policies trigger on simulated failures

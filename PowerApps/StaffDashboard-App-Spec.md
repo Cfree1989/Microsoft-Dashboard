@@ -705,7 +705,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnMessageSend
         btnMessageCancel
         lblMessageCharCount
-        txtMessageBody
+        rteMessageBody
         lblMessageBodyLabel
         txtMessageSubject
         lblMessageSubjectLabel
@@ -834,7 +834,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     ▼ conRejectModal                  ← Step 10 (Reject Modal Container)
         btnRejectConfirm
         btnRejectCancel
-        txtRejectComments
+        rteRejectComments
         lblRejectCommentsLabel
         chkNotJoined
         chkOverhangs
@@ -2283,7 +2283,7 @@ scrDashboard
 └── conRejectModal             ← CONTAINER (set Visible here only!)
     ├── btnRejectConfirm       ← Confirm Rejection button
     ├── btnRejectCancel        ← Cancel button
-    ├── txtRejectComments      ← Multi-line text input
+    ├── rteRejectComments      ← Rich text editor (supports image paste)
     ├── lblRejectCommentsLabel ← "Additional Comments:"
     ├── chkNotJoined           ← Checkbox: Parts not joined
     ├── chkOverhangs           ← Checkbox: Excessive overhangs
@@ -2349,15 +2349,17 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 610) / 2` |
-| Width | `600` |
-| Height | `610` |
+| X | `(Parent.Width - 720) / 2` |
+| Y | `(Parent.Height - 700) / 2` |
+| Width | `720` |
+| Height | `700` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
+
+> 💡 **Wider Modal:** The 720px width provides more room for the Rich Text Editor and screenshot previews.
 
 ---
 
@@ -2372,7 +2374,7 @@ scrDashboard
 | Text | `"Reject Request - " & varSelectedItem.ReqKey` |
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 20` |
-| Width | `560` |
+| Width | `680` |
 | Height | `30` |
 | Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
@@ -2392,7 +2394,7 @@ scrDashboard
 | Text | `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 55` |
-| Width | `560` |
+| Width | `680` |
 | Height | `25` |
 | Size | `12` |
 | Color | `varColorTextMuted` |
@@ -2504,22 +2506,29 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 
 ---
 
-### Comments Text Input (txtRejectComments)
+### Comments Rich Text Editor (rteRejectComments)
 
-36. Click **+ Insert** → **Text input**.
-37. **Rename it:** `txtRejectComments`
+36. Click **+ Insert** → **Input** → **Rich text editor**.
+37. **Rename it:** `rteRejectComments`
 38. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Mode | `TextMode.MultiLine` |
+| Default | `""` |
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 442` |
 | Width | `560` |
-| Height | `80` |
-| HintText | `"Provide specific feedback for the student..."` |
+| Height | `120` |
+| DisplayMode | `DisplayMode.Edit` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderColor | `varColorPrimary` |
 
-> 💡 **Note:** The Y position of `442` provides adequate spacing below the "Additional Comments" label to prevent overlap.
+> 💡 **Rich Text Editor Benefits:**
+> - Staff can copy-paste screenshots directly (Ctrl+V) to show students exactly what's wrong
+> - Images embed as base64 data URIs in the HTML
+> - Supports formatting: bold, italic, lists
+> - Rejection emails display embedded images inline
 
 ---
 
@@ -2532,8 +2541,8 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recRejectModal.X + 300` |
-| Y | `recRejectModal.Y + 550` |
+| X | `recRejectModal.X + 420` |
+| Y | `recRejectModal.Y + 630` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -2555,7 +2564,7 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 ```powerfx
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(txtRejectComments);
+Reset(rteRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -2577,8 +2586,8 @@ Reset(chkNotJoined)
 | Property | Value |
 |----------|-------|
 | Text | `"✗ Confirm Rejection"` |
-| X | `recRejectModal.X + 430` |
-| Y | `recRejectModal.Y + 550` |
+| X | `recRejectModal.X + 550` |
+| Y | `recRejectModal.Y + 630` |
 | Width | `150` |
 | Height | `varBtnHeight` |
 | Fill | `varColorDanger` |
@@ -2651,7 +2660,9 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
         "REJECTED by " & 
         With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & varRejectionReasons & txtRejectComments.Text & " - " & Text(Now(), "m/d h:mmam/pm")
+        ": " & varRejectionReasons & 
+        If(!IsBlank(rteRejectComments.HtmlText), " | Staff Comments: " & rteRejectComments.HtmlText, "") &
+        " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -2671,7 +2682,7 @@ IfError(
 // Close modal and reset
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(txtRejectComments);
+Reset(rteRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -6140,7 +6151,7 @@ Notify("Note added successfully!", NotificationType.Success)
 
 > 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
 >
-> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
+> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `rteRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
 ---
 
@@ -6943,7 +6954,7 @@ Set(varMessageText, "");
     ├── btnMessageSend               ← "Send Message" button
     ├── btnMessageCancel             ← "Cancel" button
     ├── lblMessageCharCount          ← Character count display
-    ├── txtMessageBody               ← Message text input (multiline)
+    ├── rteMessageBody               ← Rich text editor (supports image paste)
     ├── lblMessageBodyLabel          ← "Message:"
     ├── txtMessageSubject            ← Subject input
     ├── lblMessageSubjectLabel       ← "Subject:"
@@ -7174,30 +7185,29 @@ Set(varMessageText, "");
 
 ---
 
-### Message Body Input (txtMessageBody)
+### Message Body Input (rteMessageBody)
 
-29. Click **+ Insert** → **Text input**.
-30. **Rename it:** `txtMessageBody`
+29. Click **+ Insert** → **Input** → **Rich text editor**.
+30. **Rename it:** `rteMessageBody`
 31. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Mode | `TextMode.MultiLine` |
+| Default | `""` |
 | X | `recMessageModal.X + 20` |
 | Y | `recMessageModal.Y + 265` |
 | Width | `540` |
-| Height | `140` |
-| HintText | `"Type your message to the student..."` |
-| Default | `""` |
-| MaxLength | `2000` |
-| Font | `varAppFont` |
-| Size | `varInputFontSize` |
+| Height | `180` |
+| DisplayMode | `DisplayMode.Edit` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `varInputBorderColor` |
-| HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
+| FocusedBorderColor | `varColorPrimary` |
+
+> 💡 **Rich Text Editor Benefits:**
+> - Staff can copy-paste screenshots directly (Ctrl+V)
+> - Images embed as base64 data URIs in the HTML
+> - Supports formatting: bold, italic, lists, links
+> - Emails display embedded images inline
 
 ---
 
@@ -7219,25 +7229,16 @@ Set(varMessageText, "");
 35. Set **Text:**
 
 ```powerfx
-Len(txtMessageBody.Text) & " / 2000" & If(Len(txtMessageBody.Text) > 1900, " ⚠️ Near limit!", "")
+Len(rteMessageBody.HtmlText) & " characters"
 ```
 
 36. Set **Color:**
 
 ```powerfx
-If(
-    Len(txtMessageBody.Text) > 1900, 
-    varColorDanger,
-    Len(txtMessageBody.Text) > 1800, 
-    varColorWarning,
-    varColorTextMuted
-)
+varColorTextMuted
 ```
 
-> 💡 **Character Feedback:**
-> - Gray (0-1800): Normal
-> - Orange (1800-1900): Warning
-> - Red (1900+): Near limit with "⚠️ Near limit!" text
+> 💡 **Note:** Character count shows HTML length which includes formatting tags. This is informational only - no hard limit enforced since rich text with images will vary in size.
 
 ---
 
@@ -7274,7 +7275,7 @@ If(
 Set(varShowMessageModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
-Reset(txtMessageBody);
+Reset(rteMessageBody);
 Reset(ddMessageStaff)
 ```
 
@@ -7314,8 +7315,8 @@ If(
     !IsBlank(ddMessageStaff.Selected) && 
     !IsBlank(txtMessageSubject.Text) && 
     Len(txtMessageSubject.Text) >= 3 &&
-    !IsBlank(txtMessageBody.Text) &&
-    Len(txtMessageBody.Text) >= 10,
+    !IsBlank(rteMessageBody.HtmlText) &&
+    Len(rteMessageBody.HtmlText) >= 10,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
@@ -7329,6 +7330,7 @@ Set(varIsLoading, true);
 Set(varLoadingMessage, "Sending message...");
 
 // Create the message in RequestComments with Direction field
+// Note: Message field stores HTML from rich text editor (supports embedded images)
 Patch(
     RequestComments,
     Defaults(RequestComments),
@@ -7336,7 +7338,7 @@ Patch(
         Title: txtMessageSubject.Text,
         RequestID: varSelectedItem.ID,
         ReqKey: varSelectedItem.ReqKey,
-        Message: txtMessageBody.Text,
+        Message: rteMessageBody.HtmlText,
         Author0: {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
@@ -7379,7 +7381,7 @@ Patch(
 Set(varShowMessageModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
-Reset(txtMessageBody);
+Reset(rteMessageBody);
 Reset(ddMessageStaff);
 
 // === HIDE LOADING ===

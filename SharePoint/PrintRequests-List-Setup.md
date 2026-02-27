@@ -330,9 +330,11 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `StaffNotes`
-3. **Description:** `Internal communication`
-4. **Type of text:** Plain text
+3. **Description:** `Internal communication and rejection feedback (supports rich text with embedded images)`
+4. **Type of text:** Enhanced rich text (Rich text with pictures, tables, and hyperlinks)
 5. Click **Save**
+
+> 💡 **Enhanced Rich Text:** This setting allows staff to paste screenshots directly into rejection comments. Images are embedded as base64 data URIs and display inline in notification emails.
 
 ### Column 20: RejectionReason (Choice - Multiple Selection)
 
@@ -573,7 +575,7 @@ These columns capture actual payment details when a print is picked up.
 | EstHours | Number | No | - | Estimated time in hours |
 | EstWeight | Number | No | - | Estimated material weight in grams |
 | EstimatedCost | Currency | No | - | Calculated estimated cost |
-| StaffNotes | Multi-line | No | - | Internal communication |
+| StaffNotes | Multi-line (Enhanced) | No | - | Internal communication with embedded images |
 | RejectionReason | Choice (fill-in) | No | - | Rejection reason |
 | StudentConfirmed | Yes/No | No | No | Student approval of estimate |
 | NeedsAttention | Yes/No | No | No | Flags for staff review |
