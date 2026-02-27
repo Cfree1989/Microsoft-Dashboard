@@ -111,7 +111,7 @@ This app follows consistent design patterns for a professional appearance:
 | Error/Reject | Red | `RGBA(219, 3, 3, 1)` | #DB0303 |
 | Info | Blue | `RGBA(70, 130, 220, 1)` | #4682DC |
 | Gold (Pending) | Gold | `RGBA(255, 185, 0, 1)` | #FFB900 |
-| Purple (Printing) | Purple | `RGBA(117, 67, 171, 1)` | #7543AB |
+| Orange (Printing) | Orange | `RGBA(255, 140, 0, 1)` | #FF8C00 |
 | Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | — |
 | Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | — |
 | Card Background | Warm Cream | `RGBA(247, 237, 223, 1)` | — |
@@ -1091,7 +1091,7 @@ Table(
     {Status: "Uploaded", Color: varColorPrimary},
     {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
     {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Printing", Color: varColorWarning},
     {Status: "Completed", Color: varColorPrimary},
     {Status: "Paid & Picked Up", Color: varColorSuccess},
     {Status: "Rejected", Color: varColorDanger},
@@ -8586,7 +8586,7 @@ Table(
     {Status: "Uploaded", Color: varColorPrimary},
     {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
     {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Printing", Color: varColorWarning},
     {Status: "Completed", Color: varColorPrimary},
     {Status: "Paid & Picked Up", Color: varColorSuccess},
     {Status: "Rejected", Color: varColorDanger},

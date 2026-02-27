@@ -116,7 +116,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Uploaded | Blue | `RGBA(70, 130, 220, 1)` |
 | Pending | Amber | `RGBA(255, 185, 0, 1)` |
 | Ready to Print | Green | `RGBA(46, 125, 50, 1)` |
-| Printing | Purple | `RGBA(117, 67, 171, 1)` |
+| Printing | Orange | `RGBA(255, 140, 0, 1)` |
 | Completed | Dark Blue | `RGBA(0, 78, 140, 1)` |
 | Paid & Picked Up | Teal | `RGBA(0, 158, 73, 1)` |
 | Rejected | Red | `RGBA(219, 3, 3, 1)` |
@@ -421,7 +421,7 @@ Set(varStatusColors, Table(
     {Status: "Uploaded", Color: varColorPrimary},
     {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
     {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Printing", Color: varColorWarning},
     {Status: "Completed", Color: varColorPrimary},
     {Status: "Paid & Picked Up", Color: varColorSuccess},
     {Status: "Rejected", Color: varColorDanger},
@@ -4330,7 +4330,7 @@ Set(varStatusColors, Table(
     {Status: "Uploaded", Color: varColorPrimary},
     {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
     {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: RGBA(117, 67, 171, 1)},
+    {Status: "Printing", Color: varColorWarning},
     {Status: "Completed", Color: varColorPrimary},
     {Status: "Paid & Picked Up", Color: varColorSuccess},
     {Status: "Rejected", Color: varColorDanger},
