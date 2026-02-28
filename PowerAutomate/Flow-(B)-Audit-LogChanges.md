@@ -802,18 +802,17 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
 ```html
-<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Get_Current_Rejected_Data')?['body/ReqKey']}<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Color: @{outputs('Get_Current_Rejected_Data')?['body/Color']?['Value']}<br>- Printer: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}@{if(empty(outputs('Get_Current_Rejected_Data')?['body/RejectionComment']), '', concat('<br><br>STAFF COMMENTS (', outputs('Get_Current_Rejected_Data')?['body/LastActionBy/DisplayName'], '):<br>', outputs('Get_Current_Rejected_Data')?['body/RejectionComment']))}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Get_Current_Rejected_Data')?['body/ReqKey']}<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Color: @{outputs('Get_Current_Rejected_Data')?['body/Color']?['Value']}<br>- Printer: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}@{if(empty(outputs('Get_Current_Rejected_Data')?['body/RejectionComment']), '', concat('<br><br>STAFF COMMENTS<br>(', outputs('Get_Current_Rejected_Data')?['body/LastActionBy/DisplayName'], '):<br>', outputs('Get_Current_Rejected_Data')?['body/RejectionComment']))}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
 > 💡 **Email Structure Notes:**
 > - **Rejection reasons** display as a bulleted list (one per line with • prefix) from `RejectionReason` field
-> - **STAFF COMMENTS** section shows `[Staff Name]: [Comment]` — only appears if staff entered comments
-> - **Line breaks** are placed *after* the conditional `if()` expression to ensure consistent spacing
+> - **STAFF COMMENTS** section has header on its own line, then `(Staff Name): Comment` on next line — only appears if staff entered comments
 >
 > **Field Usage:**
 > - `RejectionReason` — Multi-select choice field for structured reasons (displayed as bullets)
 > - `RejectionComment` — Staff comment for student-facing display
-> - `LastActionBy/DisplayName` — Staff name who performed the rejection (extract DisplayName from Person object)
+> - `LastActionBy/DisplayName` — Full staff name who performed the rejection
 > - `StaffNotes` — Internal activity log only (NOT used in emails)
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.

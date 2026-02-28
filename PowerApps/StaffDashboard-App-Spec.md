@@ -2616,7 +2616,7 @@ Set(varLoadingMessage, "Rejecting request...");
 // Note: Data is stored in three separate fields for clean separation:
 // - RejectionReason: Multi-select choice field for structured reasons (displayed as bullets in email)
 // - RejectionComment: Plain text staff comment for student-facing email display
-// - StaffNotes: Activity log entry for internal tracking (not shown in student emails)
+// - StaffNotes: Activity log entry for internal tracking (includes rejection reasons for easy reference in Notes modal)
 
 // Build rejection reasons table (for RejectionReason choice column)
 // Filter to only include selected checkboxes, then map to Value records
@@ -2656,7 +2656,8 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
         "REJECTED by " &
         With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        If(!IsBlank(txtRejectComments.Text), ": " & txtRejectComments.Text, "") &
+        ": " & Concat(varRejectionReasonsTable, Value, "; ") &
+        If(!IsBlank(txtRejectComments.Text), " - " & txtRejectComments.Text, "") &
         " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
@@ -5917,11 +5918,21 @@ If(
                                     action = "NOTE",
                                     // Manual note - quote the whole thing
                                     """" & details & """",
-                                    // Action entry - only quote the comment part after " - " if present
-                                    If(
-                                        Find(" - ", details) > 0,
-                                        Left(details, Max(0, Find(" - ", details) - 1)) & " - """ & Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)) & """",
-                                        details
+                                    // Action entry - format reasons as bullets, quote comment after " - "
+                                    With(
+                                        {
+                                            hasComment: Find(" - ", details) > 0,
+                                            reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
+                                            commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
+                                        },
+                                        // Format reasons: if contains "; " split into bullets, otherwise show as single bullet
+                                        If(
+                                            Find("; ", reasonsPart) > 0,
+                                            Concat(ForAll(Split(reasonsPart, "; "), "- " & Value), Char(10)),
+                                            "- " & reasonsPart
+                                        ) &
+                                        // Add quoted comment if present
+                                        If(hasComment, Char(10) & """" & commentPart & """", "")
                                     )
                                 ),
                                 ""
@@ -5941,7 +5952,16 @@ If(
 > 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
 > - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED")
 > - Line 2: Staff name (e.g., "Lauren V.")
-> - Line 3: Details/comments
+> - Line 3+: Details/comments (for rejections, shows each reason as a bulleted item, then quoted staff comment)
+>
+> **Example rejection display:**
+> ```
+> 2/28 2:14pm - REJECTED
+> Sarah B.
+> - The geometry is problematic
+> - The model is messy
+> "It looks awful..."
+> ```
 >
 > The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
 >
