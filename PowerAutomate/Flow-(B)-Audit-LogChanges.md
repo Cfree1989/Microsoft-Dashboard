@@ -797,10 +797,12 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
 ```html
-<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/Notes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REJECTION DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}<br><br>NEXT STEPS:<br>• Review the rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
-> 💡 **HTML Email with Images:** The Notes field contains HTML from the Rich Text Editor, which may include embedded screenshots as base64 data URIs. Any pasted images will display inline to help students understand exactly what needs to be fixed. The connector auto-detects HTML content.
+> ⚠️ **FIX APPLIED (2/27/2026):** The email template now uses `StaffNotes` directly instead of the unreliable `Compose_Formatted_Reasons_Text` (which depended on the `RejectionReason` choice column) and `Notes` (which was the wrong field - student submission notes). See `Debug/Rejection Email Reasons Solutions.md` for full analysis.
+
+> 💡 **HTML Email with Images:** The StaffNotes field may contain HTML from staff rejection comments. Any pasted images will display inline to help students understand exactly what needs to be fixed. The connector auto-detects HTML content.
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
 
