@@ -5925,14 +5925,15 @@ If(
                                             reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
                                             commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
                                         },
-                                        // Format reasons: if contains "; " split into bullets, otherwise show as single bullet
+                                        // Format reasons with header and spacing
+                                        Char(10) & "Reasons:" & Char(10) &
                                         If(
                                             Find("; ", reasonsPart) > 0,
-                                            Concat(ForAll(Split(reasonsPart, "; "), "- " & Value), Char(10)),
-                                            "- " & reasonsPart
+                                            Concat(ForAll(Split(reasonsPart, "; ") As reason, {line: "  - " & reason.Value}), line, Char(10)),
+                                            "  - " & reasonsPart
                                         ) &
-                                        // Add quoted comment if present
-                                        If(hasComment, Char(10) & """" & commentPart & """", "")
+                                        // Add quoted comment if present (with blank line before)
+                                        If(hasComment, Char(10) & Char(10) & """" & commentPart & """", "")
                                     )
                                 ),
                                 ""
@@ -5958,8 +5959,11 @@ If(
 > ```
 > 2/28 2:14pm - REJECTED
 > Sarah B.
-> - The geometry is problematic
-> - The model is messy
+>
+> Reasons:
+>   - The geometry is problematic
+>   - The model is messy
+>
 > "It looks awful..."
 > ```
 >
