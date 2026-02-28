@@ -797,12 +797,14 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
 ```html
-<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REJECTION DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}<br><br>NEXT STEPS:<br>• Review the rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
-> ⚠️ **FIX APPLIED (2/27/2026):** The email template now uses `StaffNotes` directly instead of the unreliable `Compose_Formatted_Reasons_Text` (which depended on the `RejectionReason` choice column) and `Notes` (which was the wrong field - student submission notes). See `Debug/Rejection Email Reasons Solutions.md` for full analysis.
+> ⚠️ **CRITICAL:** Use `body/StaffNotes` (staff rejection comments with rich text) NOT `body/Notes` (student submission notes). See `Debug/Rejection Email RichText Solutions.md` for details.
 
-> 💡 **HTML Email with Images:** The StaffNotes field may contain HTML from staff rejection comments. Any pasted images will display inline to help students understand exactly what needs to be fixed. The connector auto-detects HTML content.
+> 💡 **HTML Email Support:** The StaffNotes field may contain HTML from staff rejection comments (bold, italic, lists). The connector auto-detects HTML content and renders formatting correctly.
+>
+> ⚠️ **Image Limitation:** Do NOT paste images into rejection comments. SharePoint strips base64 images from rich text fields. Staff should use text descriptions instead. See `Debug/Rejection Email RichText Solutions.md` for details.
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
 
@@ -1254,11 +1256,11 @@ Update these sections in the email templates for your lab:
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
 
-### Rich Text / Image Support in Rejection Emails
-- [ ] Pasted screenshots in rejection comments display correctly in email
-- [ ] Multiple images in rejection comments all display
+### Rich Text Support in Rejection Emails
 - [ ] Bold, italic formatting from rich text editor preserved in email
-- [ ] Large images (>100KB) still send successfully
+- [ ] Text content from `rteRejectComments` displays in email
+
+> ⚠️ **Image Limitation:** Pasted images do NOT work in rejection emails. SharePoint strips base64 images from rich text columns, and email clients (especially Gmail) don't reliably render them anyway. See `Debug/Rejection Email RichText Solutions.md` for full analysis. Staff should use text descriptions only.
 
 ### Error Handling
 - [ ] Retry policies trigger on simulated failures

@@ -745,159 +745,107 @@ Per Microsoft Power Fx ([Source](https://learn.microsoft.com/en-us/power-platfor
 |-----------|----------|------------|
 | | | |
 
-### Recommended Approach:
+### Recommended Approach (Implemented):
 
-**Phase 1 (Immediate):** Fix `body/Notes` → `body/StaffNotes` in Flow B email template
-**Phase 2 (Short-term):** Add separate `RejectionComments` column for clean text storage
-**Phase 3 (Long-term):** Implement image upload to document library with URL replacement
+**Phase 1 (Implemented):** Flow B email template uses `body/StaffNotes` ✅
+**Phase 2 (Skipped):** Separate `RejectionComments` column not needed for text-only
+**Phase 3 (Not Implementing):** Image support skipped due to complexity — text descriptions sufficient
 
 ---
 
 ## Suggested Solution
 
-### Selected Option: **Hybrid B + C** (Separate Column + Image Library)
+### Selected Option: **Phase 1 Only** (Text-Only via StaffNotes)
 
 ### Implementation Steps:
 
-**PHASE 1 — IMMEDIATE FIX (5 minutes)**
+**PHASE 1 — FIX REQUIRED**
 
-1. Open Power Automate → Flow B (PR-Audit)
-2. Find the "Send an email (V2)" action
-3. Locate the ADDITIONAL DETAILS section in the email body
-4. Change:
-   ```
-   @{outputs('Get_Current_Rejected_Data')?['body/Notes']}
-   ```
-   To:
-   ```
-   @{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}
-   ```
-5. Save and test
+Update Flow B rejection email template to use `body/StaffNotes` instead of `body/Notes`:
 
-**PHASE 2 — CLEAN ARCHITECTURE (30 minutes)**
+**In Power Automate:**
+1. Open Flow B (PR-Audit)
+2. Find "Send Rejection Email" action
+3. Click Code View (`</>`)
+4. Replace the email body with:
 
-*SharePoint:*
-1. Open PrintRequests list → Settings → Create column
-2. Column name: `RejectionComments`
-3. Type: Multiple lines of text
-4. Text type: Enhanced rich text (Rich text with pictures, tables, and hyperlinks)
-5. Allow unlimited length: Yes
-6. Save
-
-*Power Apps:*
-1. Open Staff Dashboard → Refresh data source to pick up new column
-2. Modify `btnRejectConfirm.OnSelect` Patch formula
-3. Add `RejectionComments: rteRejectComments.HtmlText` to Patch
-4. Remove the `" | Staff Comments: "` concatenation from StaffNotes
-5. Save and publish
-
-*Power Automate:*
-1. Edit Flow B email template
-2. Change ADDITIONAL DETAILS to:
-   ```
-   @{triggerBody()?['RejectionComments']}
-   ```
-3. Save
-
-**PHASE 3 — IMAGE SUPPORT (2-4 hours)**
-
-*SharePoint:*
-1. Create new Document Library: `RejectionImages`
-2. Configure permissions (same as PrintRequests list)
-
-*Power Automate:*
-1. Create new Flow: `Upload-Rejection-Image`
-2. Trigger: PowerApps (V2)
-3. Inputs: `ImageBase64` (string), `RequestID` (string), `ImageName` (string)
-4. Actions:
-   - Create file in RejectionImages
-   - Filename: `{RequestID}_{ImageName}.png`
-   - Content: `base64ToBinary(ImageBase64)`
-5. Return: File URL
-
-*Power Apps:*
-1. Create function to extract base64 images from `rteRejectComments.HtmlText`
-2. For each image, call `Upload-Rejection-Image` flow
-3. Replace base64 `<img>` tags with URL-based `<img>` tags
-4. Patch the modified HTML to `RejectionComments`
-
-**Expression for Parsing StaffNotes (Option A fallback):**
+```html
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
-@{if(
-    contains(triggerBody()?['StaffNotes'], ' | Staff Comments: '),
-    first(split(
-        last(split(triggerBody()?['StaffNotes'], ' | Staff Comments: ')),
-        ' - '
-    )),
-    'No additional comments provided.'
-)}
-```
+
+5. Save the flow
+
+**PHASE 2 — SKIPPED** (Clean architecture with separate column)
+
+Not implemented. The existing `StaffNotes` approach is sufficient for text-only use.
+
+**PHASE 3 — NOT IMPLEMENTING** (Image support)
+
+Image upload to document library is NOT being implemented due to:
+- High complexity (2-4 hours of development)
+- Requires creating new SharePoint library, new Power Automate flow, and complex Power Apps logic
+- Text descriptions are sufficient for most rejection scenarios
 
 ### Testing Checklist:
 
+- [ ] Update Flow B email template (change `body/Notes` to `body/StaffNotes`)
 - [ ] Staff enters custom text in rich text editor during rejection
-- [ ] Staff pastes an image in rich text editor during rejection
-- [ ] Verify StaffNotes/RejectionComments contains the HTML content in SharePoint
-- [ ] Verify rejection email displays custom text in ADDITIONAL DETAILS
-- [ ] Verify rejection email displays pasted image inline
-- [ ] Test with various image sizes (small screenshot vs large photo)
-- [ ] Test email rendering in multiple clients (Outlook, Gmail, mobile)
-- [ ] Confirm no data truncation occurs
+- [ ] Verify StaffNotes contains the HTML content in SharePoint
+- [ ] Verify rejection email displays custom text in ADDITIONAL DETAILS section
+- [ ] Test email rendering in Outlook
+- [ ] Test email rendering in Gmail (verify HTML renders correctly)
 
 ---
 
-## Quick Fixes to Test
+## The Fix
 
-### Fix 1: Verify StaffNotes Contains Rich Text
+### Updated Email Template (Flow B)
 
-**Test Steps:**
-1. Open SharePoint PrintRequests list
-2. Find REQ-00129 (or most recent rejection)
-3. Open the item → check `StaffNotes` field
-4. Does it contain `" | Staff Comments: "` followed by HTML content?
-5. If no: Problem is in Power Apps (rich text not being saved)
-6. If yes: Problem is in Flow (not extracting/displaying the content)
+Change `body/Notes` to `body/StaffNotes` in the rejection email:
 
-### Fix 2: Check Column Size Limits
-
-**Test Steps:**
-1. Check if `StaffNotes` content is truncated in SharePoint
-2. Compare the character count of what was entered vs what was saved
-3. SharePoint limit for "Multiple lines of text" is approximately 63,999 characters
-4. Base64 images can easily exceed this
-
-### Fix 3: Immediate Email Template Fix
-
-**Option A - Use Full StaffNotes:**
+**Before (WRONG):**
+```html
+ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/Notes']}
 ```
-ADDITIONAL DETAILS:
-@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}
-```
-(Shows entire StaffNotes including the Staff Comments section)
 
-**Option B - Parse Staff Comments from StaffNotes:**
+**After (CORRECT):**
+```html
+ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}
 ```
-@{if(
-    contains(outputs('Get_Current_Rejected_Data')?['body/StaffNotes'], ' | Staff Comments: '),
-    last(split(outputs('Get_Current_Rejected_Data')?['body/StaffNotes'], ' | Staff Comments: ')),
-    ''
-)}
+
+### Complete Corrected Email Template
+
+```html
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/StaffNotes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
-(Extracts just the Staff Comments portion, but may include trailing timestamp)
+
+### Field Explanation
+
+| Field | Contains | Used For |
+|-------|----------|----------|
+| `body/Notes` | Student's submission notes | ❌ WRONG - this is what the student wrote when submitting |
+| `body/StaffNotes` | Staff rejection comments | ✅ CORRECT - contains rich text from `rteRejectComments` |
+| `Compose_Formatted_Reasons_Text` | Checkbox reasons | ✅ Shows predefined rejection reasons |
+
+### Note on Image Limitation
+
+Staff should NOT paste images into `rteRejectComments`. SharePoint strips base64 images from rich text fields. Use text descriptions instead.
 
 ---
 
 ## Implementation Priority
 
-| Priority | Fix | Effort | Impact |
-|----------|-----|--------|--------|
-| **P0 (Critical)** | Change `body/Notes` to `body/StaffNotes` in email | 2 min | Shows text comments in email immediately |
-| **P1 (Important)** | Add separate `RejectionComments` column + update Patch | 30 min | Clean architecture, direct field reference |
-| **P2 (Important)** | Implement image upload to document library | 2-4 hrs | **Only way to make images work** (base64 is stripped by SharePoint) |
-| **P3 (Optional)** | Parse StaffNotes for cleaner extraction | 15 min | Only if not implementing P1 |
-| **P4 (Consider)** | Disable image paste in rich text editor | 5 min | Prevents user frustration if P2 not implemented |
+| Priority | Fix | Effort | Impact | Status |
+|----------|-----|--------|--------|--------|
+| **P0 (Critical)** | Change `body/Notes` to `body/StaffNotes` in email | 2 min | Shows text comments in email immediately | ⏳ TODO |
+| **P1 (Important)** | Add separate `RejectionComments` column + update Patch | 30 min | Clean architecture, direct field reference | ⏭️ Skipped |
+| **P2 (Important)** | Implement image upload to document library | 2-4 hrs | **Only way to make images work** | ❌ Not implementing |
+| **P3 (Optional)** | Parse StaffNotes for cleaner extraction | 15 min | Only if not implementing P1 | ⏭️ Skipped |
+| **P4 (Consider)** | Warn users about image limitation | 5 min | Prevents user frustration | ✅ Done (docs updated) |
 
-**Critical Discovery:** P2 is required for ANY image support — there is no workaround for SharePoint stripping base64 images from rich text columns.
+**Decision:** Image support (P2) is not being implemented due to complexity. Text-only approach using existing `StaffNotes` field is sufficient.
+
+**Next Step:** Complete P0 by updating Flow B in Power Automate.
 
 ---
 
@@ -922,19 +870,29 @@ ADDITIONAL DETAILS:
 
 ## Final Decision
 
-**Selected Solution:** Hybrid B + C (Separate Column + Image Library)
+**Selected Solution:** Text-Only (Phase 1 fix)
 
 **Rationale:** 
-1. SharePoint **strips base64 images** from enhanced rich text columns — this is a platform limitation that cannot be worked around within the column itself
+1. SharePoint **strips base64 images** from enhanced rich text columns — this is a platform limitation that cannot be worked around
 2. Email clients (especially Gmail) **do not reliably render base64 images** — even if images survived storage, they wouldn't display in emails
-3. The only reliable path for images is: Upload to SharePoint library → Reference by URL → Email renders URL-based images
-4. Text content works fine in a dedicated column — separating concerns improves maintainability
+3. **Image support (Phase 3) is NOT being implemented** — the complexity of uploading images to a document library and replacing URLs is not worth the effort for this use case
+4. Text content works fine using `StaffNotes` field directly — the existing architecture is sufficient
 
-**Immediate Action:** Change `body/Notes` to `body/StaffNotes` in Flow B email template
+**Implemented Fix:**
+- Flow B email template uses `body/StaffNotes` (contains rejection reasons + staff comments)
+- Staff Dashboard `rteRejectComments` rich text editor supports text formatting only
+- Documentation updated to warn against pasting images
 
-**Implementation Date:** *(TBD)*
+**What Staff Should Do Instead:**
+- Use text descriptions to explain issues with the model
+- Reference specific features by name (e.g., "the left wing has unsupported overhangs")
+- If visual reference is critical, ask student to visit the lab in person
+
+**Implementation Date:** 2/27/2026
 
 **Status:** [ ] Not Started  [x] Research Complete  [ ] In Progress  [ ] Completed  [ ] Abandoned
+
+**Action Required:** Update Flow B email template in Power Automate (change `body/Notes` to `body/StaffNotes`)
 
 ---
 

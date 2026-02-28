@@ -2525,10 +2525,10 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | FocusedBorderColor | `varColorPrimary` |
 
 > 💡 **Rich Text Editor Benefits:**
-> - Staff can copy-paste screenshots directly (Ctrl+V) to show students exactly what's wrong
-> - Images embed as base64 data URIs in the HTML
 > - Supports formatting: bold, italic, lists
-> - Rejection emails display embedded images inline
+> - Staff can provide detailed text explanations of issues
+>
+> ⚠️ **Image Limitation:** Do NOT paste images into the rich text editor. SharePoint strips base64 images from rich text fields, so pasted images will not appear in rejection emails. Use text descriptions instead. See `Debug/Rejection Email RichText Solutions.md` for details.
 
 ---
 
