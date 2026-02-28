@@ -705,7 +705,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnMessageSend
         btnMessageCancel
         lblMessageCharCount
-        rteMessageBody
+        txtMessageBody
         lblMessageBodyLabel
         txtMessageSubject
         lblMessageSubjectLabel
@@ -834,7 +834,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     ▼ conRejectModal                  ← Step 10 (Reject Modal Container)
         btnRejectConfirm
         btnRejectCancel
-        rteRejectComments
+        txtRejectComments
         lblRejectCommentsLabel
         chkNotJoined
         chkOverhangs
@@ -2283,7 +2283,7 @@ scrDashboard
 └── conRejectModal             ← CONTAINER (set Visible here only!)
     ├── btnRejectConfirm       ← Confirm Rejection button
     ├── btnRejectCancel        ← Cancel button
-    ├── rteRejectComments      ← Rich text editor (supports image paste)
+    ├── txtRejectComments      ← Multi-line text input for staff comments
     ├── lblRejectCommentsLabel ← "Additional Comments:"
     ├── chkNotJoined           ← Checkbox: Parts not joined
     ├── chkOverhangs           ← Checkbox: Excessive overhangs
@@ -2359,7 +2359,7 @@ scrDashboard
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-> 💡 **Wider Modal:** The 720px width provides more room for the Rich Text Editor and screenshot previews.
+> 💡 **Wider Modal:** The 720px width provides more room for the rejection reason checkboxes and staff dropdown.
 
 ---
 
@@ -2506,10 +2506,10 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 
 ---
 
-### Comments Rich Text Editor (rteRejectComments)
+### Comments Text Input (txtRejectComments)
 
-36. Click **+ Insert** → **Input** → **Rich text editor**.
-37. **Rename it:** `rteRejectComments`
+36. Click **+ Insert** → **Text input**.
+37. **Rename it:** `txtRejectComments`
 38. Set properties:
 
 | Property | Value |
@@ -2519,16 +2519,17 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Y | `recRejectModal.Y + 442` |
 | Width | `560` |
 | Height | `120` |
+| Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderColor | `varColorPrimary` |
+| HintText | `"Add any additional details for the student..."` |
 
-> 💡 **Rich Text Editor Benefits:**
-> - Supports formatting: bold, italic, lists
-> - Staff can provide detailed text explanations of issues
->
-> ⚠️ **Image Limitation:** Do NOT paste images into the rich text editor. SharePoint strips base64 images from rich text fields, so pasted images will not appear in rejection emails. Use text descriptions instead. See `Debug/Rejection Email RichText Solutions.md` for details.
+> 💡 **Data Storage:**
+> - `RejectionComment` field: Staff comment for student-facing rejection emails
+> - `RejectionReason` field: Structured reasons as multi-select choices (displayed as bullets)
+> - `StaffNotes` field: Activity log for internal tracking only (not shown in emails)
 
 ---
 
@@ -2564,7 +2565,7 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 ```powerfx
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(rteRejectComments);
+Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -2612,16 +2613,10 @@ Reset(chkNotJoined)
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Rejecting request...");
 
-// Build rejection reasons string (for StaffNotes display)
-Set(varRejectionReasons, 
-    If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
-    If(chkGeometry.Value, "The geometry is problematic; ", "") &
-    If(chkNotSolid.Value, "Open model/not solid geometry; ", "") &
-    If(chkScale.Value, "The scale is wrong; ", "") &
-    If(chkMessy.Value, "The model is messy; ", "") &
-    If(chkOverhangs.Value, "Excessive overhangs requiring too much support; ", "") &
-    If(chkNotJoined.Value, "Model parts are not joined together; ", "")
-);
+// Note: Data is stored in three separate fields for clean separation:
+// - RejectionReason: Multi-select choice field for structured reasons (displayed as bullets in email)
+// - RejectionComment: Plain text staff comment for student-facing email display
+// - StaffNotes: Activity log entry for internal tracking (not shown in student emails)
 
 // Build rejection reasons table (for RejectionReason choice column)
 // Filter to only include selected checkboxes, then map to Value records
@@ -2656,12 +2651,12 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     },
     LastActionAt: Now(),
     RejectionReason: varRejectionReasonsTable,
+    RejectionComment: txtRejectComments.Text,
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "REJECTED by " & 
+        "REJECTED by " &
         With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & varRejectionReasons & 
-        If(!IsBlank(rteRejectComments.HtmlText), " | Staff Comments: " & rteRejectComments.HtmlText, "") &
+        If(!IsBlank(txtRejectComments.Text), ": " & txtRejectComments.Text, "") &
         " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
@@ -2682,7 +2677,7 @@ IfError(
 // Close modal and reset
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(rteRejectComments);
+Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -6151,7 +6146,7 @@ Notify("Note added successfully!", NotificationType.Success)
 
 > 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
 >
-> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `rteRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
+> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
 ---
 
@@ -6954,7 +6949,7 @@ Set(varMessageText, "");
     ├── btnMessageSend               ← "Send Message" button
     ├── btnMessageCancel             ← "Cancel" button
     ├── lblMessageCharCount          ← Character count display
-    ├── rteMessageBody               ← Rich text editor (supports image paste)
+    ├── txtMessageBody               ← Multi-line text input for message content
     ├── lblMessageBodyLabel          ← "Message:"
     ├── txtMessageSubject            ← Subject input
     ├── lblMessageSubjectLabel       ← "Subject:"
@@ -7185,10 +7180,10 @@ Set(varMessageText, "");
 
 ---
 
-### Message Body Input (rteMessageBody)
+### Message Body Input (txtMessageBody)
 
-29. Click **+ Insert** → **Input** → **Rich text editor**.
-30. **Rename it:** `rteMessageBody`
+29. Click **+ Insert** → **Text input**.
+30. **Rename it:** `txtMessageBody`
 31. Set properties:
 
 | Property | Value |
@@ -7198,16 +7193,12 @@ Set(varMessageText, "");
 | Y | `recMessageModal.Y + 265` |
 | Width | `540` |
 | Height | `180` |
+| Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderColor | `varColorPrimary` |
-
-> 💡 **Rich Text Editor Benefits:**
-> - Staff can copy-paste screenshots directly (Ctrl+V)
-> - Images embed as base64 data URIs in the HTML
-> - Supports formatting: bold, italic, lists, links
-> - Emails display embedded images inline
+| HintText | `"Type your message to the student..."` |
 
 ---
 
@@ -7229,7 +7220,7 @@ Set(varMessageText, "");
 35. Set **Text:**
 
 ```powerfx
-Len(rteMessageBody.HtmlText) & " characters"
+Len(txtMessageBody.Text) & " characters"
 ```
 
 36. Set **Color:**
@@ -7238,7 +7229,7 @@ Len(rteMessageBody.HtmlText) & " characters"
 varColorTextMuted
 ```
 
-> 💡 **Note:** Character count shows HTML length which includes formatting tags. This is informational only - no hard limit enforced since rich text with images will vary in size.
+> 💡 **Note:** Character count is informational only - no hard limit is enforced.
 
 ---
 
@@ -7275,7 +7266,7 @@ varColorTextMuted
 Set(varShowMessageModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
-Reset(rteMessageBody);
+Reset(txtMessageBody);
 Reset(ddMessageStaff)
 ```
 
@@ -7315,8 +7306,8 @@ If(
     !IsBlank(ddMessageStaff.Selected) && 
     !IsBlank(txtMessageSubject.Text) && 
     Len(txtMessageSubject.Text) >= 3 &&
-    !IsBlank(rteMessageBody.HtmlText) &&
-    Len(rteMessageBody.HtmlText) >= 10,
+    !IsBlank(txtMessageBody.Text) &&
+    Len(txtMessageBody.Text) >= 10,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
@@ -7330,7 +7321,7 @@ Set(varIsLoading, true);
 Set(varLoadingMessage, "Sending message...");
 
 // Create the message in RequestComments with Direction field
-// Note: Message field stores HTML from rich text editor (supports embedded images)
+// Note: Message field stores plain text content
 Patch(
     RequestComments,
     Defaults(RequestComments),
@@ -7338,7 +7329,7 @@ Patch(
         Title: txtMessageSubject.Text,
         RequestID: varSelectedItem.ID,
         ReqKey: varSelectedItem.ReqKey,
-        Message: rteMessageBody.HtmlText,
+        Message: txtMessageBody.Text,
         Author0: {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
             Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
@@ -7381,7 +7372,7 @@ Patch(
 Set(varShowMessageModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtMessageSubject);
-Reset(rteMessageBody);
+Reset(txtMessageBody);
 Reset(ddMessageStaff);
 
 // === HIDE LOADING ===

@@ -51,12 +51,10 @@ After creating the list, add these 13 columns:
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `Message`
-3. **Description:** `Full message content (supports rich text with embedded images)`
+3. **Description:** `Full message content`
 4. **Require that this column contains information:** Yes
-5. **Type of text:** Enhanced rich text (Rich text with pictures, tables, and hyperlinks)
+5. **Type of text:** Plain text (multiple lines of text)
 6. Click **Save**
-
-> 💡 **Enhanced Rich Text:** This setting allows staff to paste screenshots directly into messages. Images are embedded as base64 data URIs and display inline in notification emails sent to students.
 
 ### Column 4: Author (Person)
 
@@ -257,7 +255,7 @@ This approach is simpler and supports bi-directional messaging.
 | Title | Single line | Yes | - | Message subject |
 | RequestID | Number | Yes | - | Links to PrintRequests.ID |
 | ReqKey | Single line | No | - | Display identifier |
-| Message | Multi-line (Enhanced) | Yes | - | Full content with embedded images |
+| Message | Multi-line (Plain) | Yes | - | Full message content |
 | Author | Person | Yes | - | Who wrote it |
 | AuthorRole | Choice | Yes | - | Staff or Student |
 | SentAt | DateTime | No | Today | Timestamp |

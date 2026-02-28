@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 34 total fields (13 student-facing + 14 staff processing + 7 payment recording)
+- 35 total fields (13 student-facing + 15 staff processing + 7 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -330,11 +330,11 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `StaffNotes`
-3. **Description:** `Internal communication and rejection feedback (supports rich text with embedded images)`
-4. **Type of text:** Enhanced rich text (Rich text with pictures, tables, and hyperlinks)
+3. **Description:** `Internal staff activity log and notes`
+4. **Type of text:** Plain text (multiple lines of text)
 5. Click **Save**
 
-> 💡 **Enhanced Rich Text:** This setting allows staff to paste screenshots directly into rejection comments. Images are embedded as base64 data URIs and display inline in notification emails.
+> 💡 **Plain Text:** This field stores the activity log as plain text entries separated by ` | `. Each entry includes the action, staff name, and timestamp.
 
 ### Column 20: RejectionReason (Choice - Multiple Selection)
 
@@ -356,7 +356,23 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 > **⚠️ Important:** This column MUST allow multiple selections for the rejection email flow to work correctly. The Power Automate flow expects an array of choice values.
 
-### Column 21: StudentConfirmed (Yes/No)
+### Column 21: RejectionComment (Multiple lines of text)
+
+1. Click **+ Add column** → **Multiple lines of text**
+2. **Name:** `RejectionComment`
+3. **Description:** `Staff feedback for student (displayed in rejection email)`
+4. **Type of text:** Plain text
+5. Click **Save**
+
+> 💡 **Purpose:** This field stores ONLY the staff's comment text for student-facing rejection emails. Unlike `StaffNotes` (which contains the full activity log), this field contains clean, plain text that displays directly in emails without timestamps or metadata.
+>
+> **Example email output:**
+> ```
+> STAFF COMMENTS:
+> Devin B.: The support structures would be too heavy for this design. Consider hollowing the base.
+> ```
+
+### Column 22: StudentConfirmed (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentConfirmed`
@@ -364,7 +380,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Default value:** No
 5. Click **Save**
 
-### Column 22: NeedsAttention (Yes/No)
+### Column 23: NeedsAttention (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `NeedsAttention`
@@ -372,7 +388,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Default value:** No
 5. Click **Save**
 
-### Column 23: Expanded (Yes/No)
+### Column 24: Expanded (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `Expanded`
@@ -380,7 +396,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Default value:** No
 5. Click **Save**
 
-### Column 24: LastAction (Choice)
+### Column 25: LastAction (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `LastAction`
@@ -398,7 +414,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - System
 5. Click **Save**
 
-### Column 25: LastActionBy (Single line of text)
+### Column 26: LastActionBy (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `LastActionBy`
@@ -407,7 +423,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 **Note:** This is Single line text (not Person) to allow "System" value for infinite loop prevention.
 
-### Column 26: LastActionAt (Date and time)
+### Column 27: LastActionAt (Date and time)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `LastActionAt`
@@ -421,14 +437,14 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 These columns capture actual payment details when a print is picked up.
 
-### Column 27: TransactionNumber (Single line of text)
+### Column 28: TransactionNumber (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `TransactionNumber`
 3. **Description:** `TigerCASH transaction/receipt number`
 4. Click **Save**
 
-### Column 28: FinalWeight (Number)
+### Column 29: FinalWeight (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `FinalWeight`
@@ -436,7 +452,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Number of decimal places:** 0
 5. Click **Save**
 
-### Column 29: FinalCost (Currency)
+### Column 30: FinalCost (Currency)
 
 1. Click **+ Add column** → **Currency**
 2. **Name:** `FinalCost`
@@ -445,7 +461,7 @@ These columns capture actual payment details when a print is picked up.
 5. **Number of decimal places:** 2
 6. Click **Save**
 
-### Column 30: PaymentDate (Date)
+### Column 31: PaymentDate (Date)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `PaymentDate`
@@ -453,7 +469,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Include time:** No
 5. Click **Save**
 
-### Column 31: PaymentNotes (Multiple lines of text)
+### Column 32: PaymentNotes (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `PaymentNotes`
@@ -461,7 +477,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Type of text:** Plain text
 5. Click **Save**
 
-### Column 32: StudentOwnMaterial (Yes/No)
+### Column 33: StudentOwnMaterial (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentOwnMaterial`
@@ -469,7 +485,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Default value:** No
 5. Click **Save**
 
-### Column 33: PaymentType (Choice)
+### Column 34: PaymentType (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `PaymentType`
@@ -575,8 +591,9 @@ These columns capture actual payment details when a print is picked up.
 | EstHours | Number | No | - | Estimated time in hours |
 | EstWeight | Number | No | - | Estimated material weight in grams |
 | EstimatedCost | Currency | No | - | Calculated estimated cost |
-| StaffNotes | Multi-line (Enhanced) | No | - | Internal communication with embedded images |
-| RejectionReason | Choice (fill-in) | No | - | Rejection reason |
+| StaffNotes | Multi-line (Plain) | No | - | Internal staff activity log and notes |
+| RejectionReason | Choice (fill-in) | No | - | Rejection reason(s) - multiple selection |
+| RejectionComment | Multi-line (Plain) | No | - | Staff feedback for student (displayed in email) |
 | StudentConfirmed | Yes/No | No | No | Student approval of estimate |
 | NeedsAttention | Yes/No | No | No | Flags for staff review |
 | Expanded | Yes/No | No | No | Power Apps UI state |
@@ -605,7 +622,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] Item-level permissions configured (students see only their own)
 - [ ] Version history enabled
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
-- [ ] All 14 staff processing columns added
+- [ ] All 15 staff processing columns added (including RejectionComment)
 - [ ] All 7 payment recording columns added
 - [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
