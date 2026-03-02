@@ -1,0 +1,462 @@
+- conViewMessagesModal:
+    Control: GroupContainer@1.4.0
+    Variant: ManualLayout
+    Properties:
+      Height: =Parent.Height
+      Visible: =varShowViewMessagesModal > 0
+      Width: =Parent.Width
+      Y: =40
+    Children:
+      - recViewMsgOverlay:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Fill: =RGBA(0, 0, 0, 0.7)
+            Height: =Parent.Height
+            Width: =Parent.Width
+      - recViewMsgModal:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Fill: =Color.White
+            Height: =750
+            Width: =Min(varModalMaxWidth, Parent.Width - varModalMargin)
+            X: =(Parent.Width - Min(varModalMaxWidth, Parent.Width - varModalMargin)) / 2
+            Y: =(Parent.Height - 750) / 2
+      - lblViewMsgTitle:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorPrimary
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =30
+            Size: =18
+            Text: ="Messages - " & varSelectedItem.ReqKey
+            Width: =recViewMsgModal.Width - 70
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 12
+      - lblViewMsgSubtitle:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            Size: =12
+            Text: ="Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"
+            Width: =recViewMsgModal.Width - 70
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 38
+      - btnViewMsgClose:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =varSecondaryBtnBorderColor
+            Color: =varColorTextMuted
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =ColorFade(varColorNeutral, varSecondaryFade)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =35
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(varColorNeutral, 55%)
+            OnSelect: |-
+              =Set(varShowViewMessagesModal, 0);
+              Set(varSelectedItem, Blank());
+              Reset(txtViewMsgSubject);
+              Reset(txtViewMsgBody);
+              Reset(ddViewMsgStaff)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorNeutral, 45%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =16
+            Text: ="✕"
+            Width: =35
+            X: =recViewMsgModal.X + recViewMsgModal.Width - 45
+            Y: =recViewMsgModal.Y + 10
+      - galViewMessages:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Height: =250
+            Items: =Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
+            TemplatePadding: =4
+            TemplateSize: =100
+            Width: =recViewMsgModal.Width - 40
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 65
+          Children:
+            - recVMsgBg:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))
+                  Height: =Parent.TemplateHeight - 8
+                  OnSelect: =Select(Parent)
+                  Width: =Parent.TemplateWidth * 0.85
+                  X: =If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * 0.15, 0)
+            - icoVMsgDirection:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))
+                  DisplayMode: =DisplayMode.View
+                  Height: =16
+                  Icon: =If(ThisItem.Direction.Value = "Outbound", Icon.ChevronRight, Icon.ChevronLeft)
+                  OnSelect: =Select(Parent)
+                  Width: =16
+                  X: =recVMsgBg.X + 10
+                  Y: =8
+            - lblVMsgAuthor:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =18
+                  OnSelect: =Select(Parent)
+                  Size: =10
+                  Text: |-
+                    =With(
+                        {parts: Split(ThisItem.Author0.DisplayName, " ")},
+                        First(parts).Value & " " & Last(parts).Value
+                    ) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")
+                  Width: =300
+                  X: =recVMsgBg.X + 32
+                  Y: =6
+            - lblVMsgDirectionBadge:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Right
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))
+                  Font: =varAppFont
+                  Height: =16
+                  Italic: =true
+                  OnSelect: =Select(Parent)
+                  Size: =9
+                  Text: =If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")
+                  Width: =45
+                  X: =recVMsgBg.X + recVMsgBg.Width - 55
+                  Y: =6
+            - lblVMsgContent:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =Font.'Open Sans'
+                  Height: =Parent.TemplateHeight - 36
+                  OnSelect: =Select(Parent)
+                  Overflow: =Overflow.Scroll
+                  Size: =11
+                  Text: =ThisItem.Message
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =recVMsgBg.Width - 20
+                  X: =recVMsgBg.X + 10
+                  Y: =26
+      - recViewMsgSeparator:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =Transparent
+            Fill: =RGBA(200, 200, 200, 1)
+            Height: =1
+            Width: =recViewMsgModal.Width - 40
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 315
+      - lblViewMsgStaffLabel:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorText
+            Font: =Font.'Open Sans'
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            Size: =12
+            Text: |-
+              ="Performing Action As: *"
+            Width: =200
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 325
+      - ddViewMsgStaff:
+          Control: Classic/ComboBox@2.3.2
+          Properties:
+            BorderColor: =varInputBorderColor
+            BorderThickness: =varInputBorderThickness
+            ChevronBackground: =varChevronBackground
+            ChevronDisabledBackground: =varChevronBackground
+            ChevronDisabledFill: =varChevronBackground
+            ChevronFill: =varChevronFill
+            ChevronHoverBackground: =varChevronHoverBackground
+            ChevronHoverFill: =varChevronHoverFill
+            DisabledBorderColor: =varInputBorderColor
+            DisplayFields: =["MemberName"]
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =36
+            HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Pick your name"
+            Items: =colStaff
+            PressedColor: =varDropdownPressedColor
+            PressedFill: =varDropdownPressedFill
+            SearchFields: =["MemberName"]
+            SelectionColor: =varDropdownSelectionColor
+            SelectionFill: =varDropdownSelectionFill
+            Width: =250
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 348
+      - lblViewMsgSubjectLabel:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorText
+            Font: =Font.'Open Sans'
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            Size: =12
+            Text: |-
+              ="Subject: *"
+            Width: =100
+            X: =recViewMsgModal.X + 290
+            Y: =recViewMsgModal.Y + 325
+      - txtViewMsgSubject:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =varInputBorderColor
+            BorderThickness: =varInputBorderThickness
+            Default: =""
+            DisabledBorderColor: =varInputBorderColor
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =36
+            HintText: |-
+              ="Brief subject..."
+            HoverBorderColor: =varInputBorderColor
+            HoverFill: =varInputHoverFill
+            MaxLength: =200
+            Size: =varInputFontSize
+            Width: =recViewMsgModal.Width - 310
+            X: =recViewMsgModal.X + 290
+            Y: =recViewMsgModal.Y + 348
+      - lblViewMsgBodyLabel:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorText
+            Font: =Font.'Open Sans'
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            Size: =12
+            Text: |-
+              ="Message: *"
+            Width: =150
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 395
+      - txtViewMsgBody:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =varInputBorderColor
+            BorderThickness: =varInputBorderThickness
+            Default: =""
+            DisplayMode: =DisplayMode.Edit
+            FocusedBorderColor: =varColorPrimary
+            Font: =varAppFont
+            Height: =130
+            HintText: |-
+              ="Type your message to the student..."
+            Mode: =TextMode.MultiLine
+            Width: =recViewMsgModal.Width - 40
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + 418
+      - lblViewMsgCharCount:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =varColorTextMuted
+            Font: =varAppFont
+            Height: =22
+            Size: =9
+            Text: =Len(txtViewMsgBody.Text) & " characters"
+            Width: =130
+            X: =recViewMsgModal.X + recViewMsgModal.Width - 150
+            Y: =recViewMsgModal.Y + 552
+      - btnViewMsgMarkRead:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =varColorDanger
+            BorderThickness: =varInputBorderThickness
+            Color: =varColorDanger
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =Color.White
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =35
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =Color.White
+            HoverFill: =varColorDanger
+            OnSelect: |-
+              =UpdateIf(
+                  RequestComments,
+                  RequestID = varSelectedItem.ID &&
+                  Direction.Value = "Inbound" &&
+                  ReadByStaff = false,
+                  {ReadByStaff: true}
+              );
+
+              // Clear NeedsAttention flag on the print request
+              Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {NeedsAttention: false});
+
+              Notify("Messages marked as read", NotificationType.Success)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorDanger, -15%)
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =10
+            Text: ="Mark All Read"
+            Visible: =!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
+            Width: =120
+            X: =recViewMsgModal.X + 20
+            Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
+
+      - btnViewMsgCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorFade(varColorNeutral, -15%)
+            BorderThickness: =0
+            Color: =Color.White
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =varColorNeutral
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =35
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =Color.White
+            HoverFill: =ColorFade(varColorNeutral, -15%)
+            OnSelect: |-
+              =Set(varShowViewMessagesModal, 0);
+              Set(varSelectedItem, Blank());
+              Reset(txtViewMsgSubject);
+              Reset(txtViewMsgBody);
+              Reset(ddViewMsgStaff)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorNeutral, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="Cancel"
+            Width: =100
+            X: =recViewMsgModal.X + recViewMsgModal.Width - 250
+            Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
+
+      - btnViewMsgSend:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            BorderThickness: =0
+            Color: =Color.White
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            DisabledColor: =RGBA(166, 166, 166, 1)
+            DisabledFill: =RGBA(244, 244, 244, 1)
+            DisplayMode: |-
+              =If(
+                  !IsBlank(ddViewMsgStaff.Selected) && 
+                  !IsBlank(txtViewMsgSubject.Text) && 
+                  Len(txtViewMsgSubject.Text) >= 3 &&
+                  !IsBlank(txtViewMsgBody.Text) &&
+                  Len(txtViewMsgBody.Text) >= 10,
+                  DisplayMode.Edit,
+                  DisplayMode.Disabled
+              )
+            Fill: =varColorPrimary
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =35
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(varColorPrimary, -15%)
+            OnSelect: |-
+              =// === SHOW LOADING ===
+              Set(varIsLoading, true);
+              Set(varLoadingMessage, "Sending message...");
+
+              // Create the message in RequestComments with Direction field
+              Patch(
+                  RequestComments,
+                  Defaults(RequestComments),
+                  {
+                      Title: txtViewMsgSubject.Text,
+                      RequestID: varSelectedItem.ID,
+                      ReqKey: varSelectedItem.ReqKey,
+                      Message: txtViewMsgBody.Text,
+                      Author0: {
+                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                          Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+                          Department: "",
+                          DisplayName: ddViewMsgStaff.Selected.MemberName,
+                          Email: ddViewMsgStaff.Selected.MemberEmail,
+                          JobTitle: "",
+                          Picture: ""
+                      },
+                      AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+                      Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
+                      SentAt: Now(),
+                      ReadByStudent: false,
+                      ReadByStaff: true,
+                      StudentEmail: varSelectedItem.StudentEmail
+                  }
+              );
+
+              // Update PrintRequest to mark last action
+              Patch(
+                  PrintRequests,
+                  LookUp(PrintRequests, ID = varSelectedItem.ID),
+                  {
+                      LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
+                      LastActionBy: {
+                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                          Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+                          Department: "",
+                          DisplayName: ddViewMsgStaff.Selected.MemberName,
+                          Email: ddViewMsgStaff.Selected.MemberEmail,
+                          JobTitle: "",
+                          Picture: ""
+                      },
+                      LastActionAt: Now()
+                  }
+              );
+
+              // Reset compose fields but keep modal open to see new message
+              Reset(txtViewMsgSubject);
+              Reset(txtViewMsgBody);
+              Reset(ddViewMsgStaff);
+
+              // === HIDE LOADING ===
+              Set(varIsLoading, false);
+              Set(varLoadingMessage, "");
+
+              Notify("Message sent! Student will receive email notification.", NotificationType.Success)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorPrimary, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="📧 Send Message"
+            Width: =130
+            X: =recViewMsgModal.X + recViewMsgModal.Width - 150
+            Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50

@@ -779,8 +779,13 @@ Some display names differ from internal field names. Always use internal names i
 **Action 5: Compose Formatted Reasons Text**
 1. **+ Add an action** → **Compose** (Data Operations)
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Compose Formatted Reasons Text`
-3. **Inputs:** Click **Expression** → Type `join(body('Format_Rejection_Reasons'), '; ')`
-4. **What this does:** Joins all rejection reasons with semicolons into readable text like "Reason 1; Reason 2; Reason 3"
+3. **Inputs:** Click **Expression** → Type `concat('• ', join(body('Format_Rejection_Reasons'), '<br>• '))`
+4. **What this does:** Joins all rejection reasons as a bulleted list with HTML line breaks:
+   ```
+   • Features are too small or too thin
+   • Open model/not solid geometry
+   • The model is messy
+   ```
 
 **Action 6: Send Rejection Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
@@ -797,10 +802,18 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
 ```html
-<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Get_Current_Rejected_Data')?['body/Title']} (@{outputs('Get_Current_Rejected_Data')?['body/ReqKey']})<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Printer Requested: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}<br><br>ADDITIONAL DETAILS:<br>@{outputs('Get_Current_Rejected_Data')?['body/Notes']}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
+<p class="editor-paragraph">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Get_Current_Rejected_Data')?['body/ReqKey']}<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Color: @{outputs('Get_Current_Rejected_Data')?['body/Color']?['Value']}<br>- Printer: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}@{if(empty(outputs('Get_Current_Rejected_Data')?['body/RejectionComment']), '', concat('<br><br>STAFF COMMENTS<br>(', outputs('Get_Current_Rejected_Data')?['body/LastActionBy/DisplayName'], '):<br>', outputs('Get_Current_Rejected_Data')?['body/RejectionComment']))}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
-> 💡 **HTML Email with Images:** The Notes field contains HTML from the Rich Text Editor, which may include embedded screenshots as base64 data URIs. Any pasted images will display inline to help students understand exactly what needs to be fixed. The connector auto-detects HTML content.
+> 💡 **Email Structure Notes:**
+> - **Rejection reasons** display as a bulleted list (one per line with • prefix) from `RejectionReason` field
+> - **STAFF COMMENTS** section has header on its own line, then `(Staff Name): Comment` on next line — only appears if staff entered comments
+>
+> **Field Usage:**
+> - `RejectionReason` — Multi-select choice field for structured reasons (displayed as bullets)
+> - `RejectionComment` — Staff comment for student-facing display
+> - `LastActionBy/DisplayName` — Full staff name who performed the rejection
+> - `StaffNotes` — Internal activity log only (NOT used in emails)
 
 **⚠️ Troubleshooting:** If Power Automate adds a "For each" loop when you select fields, delete it and use the Code View method above with expressions.
 
@@ -1252,11 +1265,13 @@ Update these sections in the email templates for your lab:
 - [ ] Email links resolve to correct SharePoint URLs
 - [ ] Lab hours and location information accurate in emails
 
-### Rich Text / Image Support in Rejection Emails
-- [ ] Pasted screenshots in rejection comments display correctly in email
-- [ ] Multiple images in rejection comments all display
-- [ ] Bold, italic formatting from rich text editor preserved in email
-- [ ] Large images (>100KB) still send successfully
+### Rejection Email Content
+- [ ] "REASON FOR REJECTION" shows rejection reasons as a bulleted list (one per line with • prefix)
+- [ ] "STAFF COMMENTS" section appears ONLY when staff entered comments in rich text editor
+- [ ] "STAFF COMMENTS" section does NOT appear when no comments were entered
+- [ ] Staff comments display as: `[Staff Name]: [Comment text]`
+- [ ] No duplicate rejection reasons (reasons shown once via RejectionReason field)
+- [ ] RejectionComment field contains only plain text (no timestamps or metadata)
 
 ### Error Handling
 - [ ] Retry policies trigger on simulated failures

@@ -35,8 +35,8 @@
 20. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
     - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
     - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
-    - [Step 17C: Building the Message Modal](#step-17c-building-the-message-modal)
-    - [Step 17D: View Messages Modal](#step-17d-view-messages-modal) ← **NEW**
+    - [Step 17C: Adding the Message Button to Job Cards](#step-17c-adding-the-message-button-to-job-cards)
+    - [Step 17D: Unified Messages Modal](#step-17d-unified-messages-modal)
     - [Step 17E: Adding the Loading Overlay](#step-17e-adding-the-loading-overlay) ← **UX Enhancement**
     - [Step 17F: Adding the Audio Notification System](#step-17f-adding-the-audio-notification-system) ← **NEW**
 21. [Publishing the App](#step-18-publishing-the-app)
@@ -149,10 +149,10 @@ This app follows consistent design patterns for a professional appearance:
 | Element Type | Radius | Variable | Examples |
 |--------------|--------|----------|----------|
 | Cards & Modals | `8` | — | `recCardBackground`, `recApprovalModal` |
-| Primary Buttons | `6` | — | `btnMessageSend`, `btnCardSendMessage` |
+| Primary Buttons | `6` | — | `btnViewMsgSend`, `btnCardSendMessage` |
 | Action Buttons | `4` | `varBtnBorderRadius` | `btnApprove`, `btnReject`, `btnEditDetails` |
-| Text Inputs | `4` | `varInputBorderRadius` | `txtSearch`, `txtMessageSubject` |
-| Dropdowns | `4` | `varInputBorderRadius` | `ddRejectStaff`, `ddMessageStaff` |
+| Text Inputs | `4` | `varInputBorderRadius` | `txtSearch`, `txtViewMsgSubject` |
+| Dropdowns | `4` | `varInputBorderRadius` | `ddRejectStaff`, `ddViewMsgStaff` |
 
 > 💡 **Consistency Tip:** Apply all four radius properties together:
 > ```powerfx
@@ -396,7 +396,6 @@ Set(varShowArchiveModal, 0);
 Set(varShowDetailsModal, 0);
 Set(varShowPaymentModal, 0);
 Set(varShowAddFileModal, 0);
-Set(varShowMessageModal, 0);
 Set(varShowNotesModal, 0);
 Set(varShowViewMessagesModal, 0);
 Set(varShowStudentNoteModal, 0);
@@ -567,9 +566,8 @@ Set(varLoadingMessage, "")
 | `varShowDetailsModal` | ID of item for detail changes (0=hidden) | Number |
 | `varShowPaymentModal` | ID of item for payment (0=hidden) | Number |
 | `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
-| `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varShowNotesModal` | ID of item for notes modal (0=hidden) | Number |
-| `varShowViewMessagesModal` | ID of item for view messages modal (0=hidden) | Number |
+| `varShowViewMessagesModal` | ID of item for unified messages modal (0=hidden) | Number |
 | `varShowStudentNoteModal` | ID of item for student note modal (0=hidden) | Number |
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
@@ -704,24 +702,19 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblLoadingSpinner
         recLoadingBox
         recLoadingOverlay
-    ▼ conMessageModal                 ← Step 17C (Send Message Modal Container)
-        btnMessageSend
-        btnMessageCancel
-        lblMessageCharCount
-        rteMessageBody
-        lblMessageBodyLabel
-        txtMessageSubject
-        lblMessageSubjectLabel
-        ddMessageStaff
-        lblMessageStaffLabel
-        lblMessageStudent
-        lblMessageTitle
-        recMessageModal
-        recMessageOverlay
-    ▼ conViewMessagesModal            ← Step 17D (View Messages Modal Container)
+    ▼ conViewMessagesModal            ← Step 17D (Unified Messages Modal Container)
         btnViewMsgClose
-        btnViewMsgSendNew
+        btnViewMsgSend
+        btnViewMsgCancel
         btnViewMsgMarkRead
+        lblViewMsgCharCount
+        txtViewMsgBody
+        lblViewMsgBodyLabel
+        txtViewMsgSubject
+        lblViewMsgSubjectLabel
+        ddViewMsgStaff
+        lblViewMsgStaffLabel
+        recViewMsgSeparator
         galViewMessages
         lblViewMsgTitle
         recViewMsgModal
@@ -844,7 +837,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     ▼ conRejectModal                  ← Step 10 (Reject Modal Container)
         btnRejectConfirm
         btnRejectCancel
-        rteRejectComments
+        txtRejectComments
         lblRejectCommentsLabel
         chkNotJoined
         chkOverhangs
@@ -2335,7 +2328,7 @@ scrDashboard
 └── conRejectModal             ← CONTAINER (set Visible here only!)
     ├── btnRejectConfirm       ← Confirm Rejection button
     ├── btnRejectCancel        ← Cancel button
-    ├── rteRejectComments      ← Rich text editor (supports image paste)
+    ├── txtRejectComments      ← Multi-line text input for staff comments
     ├── lblRejectCommentsLabel ← "Additional Comments:"
     ├── chkNotJoined           ← Checkbox: Parts not joined
     ├── chkOverhangs           ← Checkbox: Excessive overhangs
@@ -2411,7 +2404,7 @@ scrDashboard
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-> 💡 **Wider Modal:** The 720px width provides more room for the Rich Text Editor and screenshot previews.
+> 💡 **Wider Modal:** The 720px width provides more room for the rejection reason checkboxes and staff dropdown.
 
 ---
 
@@ -2558,10 +2551,10 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 
 ---
 
-### Comments Rich Text Editor (rteRejectComments)
+### Comments Text Input (txtRejectComments)
 
-36. Click **+ Insert** → **Input** → **Rich text editor**.
-37. **Rename it:** `rteRejectComments`
+36. Click **+ Insert** → **Text input**.
+37. **Rename it:** `txtRejectComments`
 38. Set properties:
 
 | Property | Value |
@@ -2571,16 +2564,17 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Y | `recRejectModal.Y + 442` |
 | Width | `560` |
 | Height | `120` |
+| Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderColor | `varColorPrimary` |
+| HintText | `"Add any additional details for the student..."` |
 
-> 💡 **Rich Text Editor Benefits:**
-> - Staff can copy-paste screenshots directly (Ctrl+V) to show students exactly what's wrong
-> - Images embed as base64 data URIs in the HTML
-> - Supports formatting: bold, italic, lists
-> - Rejection emails display embedded images inline
+> 💡 **Data Storage:**
+> - `RejectionComment` field: Staff comment for student-facing rejection emails
+> - `RejectionReason` field: Structured reasons as multi-select choices (displayed as bullets)
+> - `StaffNotes` field: Activity log for internal tracking only (not shown in emails)
 
 ---
 
@@ -2616,7 +2610,7 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 ```powerfx
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(rteRejectComments);
+Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -2664,16 +2658,10 @@ Reset(chkNotJoined)
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Rejecting request...");
 
-// Build rejection reasons string (for StaffNotes display)
-Set(varRejectionReasons, 
-    If(chkTooSmall.Value, "Features are too small or too thin; ", "") &
-    If(chkGeometry.Value, "The geometry is problematic; ", "") &
-    If(chkNotSolid.Value, "Open model/not solid geometry; ", "") &
-    If(chkScale.Value, "The scale is wrong; ", "") &
-    If(chkMessy.Value, "The model is messy; ", "") &
-    If(chkOverhangs.Value, "Excessive overhangs requiring too much support; ", "") &
-    If(chkNotJoined.Value, "Model parts are not joined together; ", "")
-);
+// Note: Data is stored in three separate fields for clean separation:
+// - RejectionReason: Multi-select choice field for structured reasons (displayed as bullets in email)
+// - RejectionComment: Plain text staff comment for student-facing email display
+// - StaffNotes: Activity log entry for internal tracking (includes rejection reasons for easy reference in Notes modal)
 
 // Build rejection reasons table (for RejectionReason choice column)
 // Filter to only include selected checkboxes, then map to Value records
@@ -2708,12 +2696,13 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     },
     LastActionAt: Now(),
     RejectionReason: varRejectionReasonsTable,
+    RejectionComment: txtRejectComments.Text,
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "REJECTED by " & 
+        "REJECTED by " &
         With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & varRejectionReasons & 
-        If(!IsBlank(rteRejectComments.HtmlText), " | Staff Comments: " & rteRejectComments.HtmlText, "") &
+        ": " & Concat(varRejectionReasonsTable, Value, "; ") &
+        If(!IsBlank(txtRejectComments.Text), " - " & txtRejectComments.Text, "") &
         " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
@@ -2734,7 +2723,7 @@ IfError(
 // Close modal and reset
 Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
-Reset(rteRejectComments);
+Reset(txtRejectComments);
 Reset(ddRejectStaff);
 Reset(chkTooSmall);
 Reset(chkGeometry);
@@ -5974,11 +5963,22 @@ If(
                                     action = "NOTE",
                                     // Manual note - quote the whole thing
                                     """" & details & """",
-                                    // Action entry - only quote the comment part after " - " if present
-                                    If(
-                                        Find(" - ", details) > 0,
-                                        Left(details, Max(0, Find(" - ", details) - 1)) & " - """ & Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)) & """",
-                                        details
+                                    // Action entry - format reasons as bullets, quote comment after " - "
+                                    With(
+                                        {
+                                            hasComment: Find(" - ", details) > 0,
+                                            reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
+                                            commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
+                                        },
+                                        // Format reasons with header and spacing
+                                        Char(10) & "Reasons:" & Char(10) &
+                                        If(
+                                            Find("; ", reasonsPart) > 0,
+                                            Concat(ForAll(Split(reasonsPart, "; ") As reason, {line: "  - " & reason.Value}), line, Char(10)),
+                                            "  - " & reasonsPart
+                                        ) &
+                                        // Add quoted comment if present (with blank line before)
+                                        If(hasComment, Char(10) & Char(10) & """" & commentPart & """", "")
                                     )
                                 ),
                                 ""
@@ -5998,7 +5998,19 @@ If(
 > 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
 > - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED")
 > - Line 2: Staff name (e.g., "Lauren V.")
-> - Line 3: Details/comments
+> - Line 3+: Details/comments (for rejections, shows each reason as a bulleted item, then quoted staff comment)
+>
+> **Example rejection display:**
+> ```
+> 2/28 2:14pm - REJECTED
+> Sarah B.
+>
+> Reasons:
+>   - The geometry is problematic
+>   - The model is messy
+>
+> "It looks awful..."
+> ```
 >
 > The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
 >
@@ -6203,7 +6215,7 @@ Notify("Note added successfully!", NotificationType.Success)
 
 > 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
 >
-> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `rteRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
+> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
 ---
 
@@ -7212,482 +7224,11 @@ With these controls, each job card shows:
 - **View Messages** button to open the full conversation modal
 - **Red unread badge** with count of unread student replies
 
-The full message content and Mark Read functionality are in the View Messages Modal (Step 17D).
+The full messaging functionality (view history AND compose) is in the unified Messages Modal (Step 17D).
 
 ---
 
-## Step 17C: Building the Message Modal
-
-**What you're doing:** Creating a modal for staff to send messages to students about their print requests without leaving the dashboard.
-
-> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
-
-### Overview
-
-This modal allows bi-directional communication between staff and students. Messages are stored in the `RequestComments` list and trigger email notifications to students via Flow D.
-
-### Adding Variables to App.OnStart
-
-Add these variables to your existing `App.OnStart`:
-
-```powerfx
-// === MESSAGE MODAL CONTROLS ===
-Set(varShowMessageModal, 0);
-Set(varMessageSubject, "");
-Set(varMessageText, "");
-```
-
-### Controls to Create (Container-Based)
-
-```
-└── conMessageModal                  ← CONTAINER (set Visible here only!)
-    ├── btnMessageSend               ← "Send Message" button
-    ├── btnMessageCancel             ← "Cancel" button
-    ├── lblMessageCharCount          ← Character count display
-    ├── rteMessageBody               ← Rich text editor (supports image paste)
-    ├── lblMessageBodyLabel          ← "Message:"
-    ├── txtMessageSubject            ← Subject input
-    ├── lblMessageSubjectLabel       ← "Subject:"
-    ├── ddMessageStaff               ← Staff dropdown
-    ├── lblMessageStaffLabel         ← "Performing Action As:"
-    ├── lblMessageStudent            ← Student info display
-    ├── lblMessageTitle              ← "Send Message - REQ-00001"
-    ├── recMessageModal              ← White modal box
-    └── recMessageOverlay            ← Dark semi-transparent overlay
-```
-
-### Building the Modal
-
-### Modal Container (conMessageModal)
-
-1. Click on **scrDashboard** in Tree view.
-2. Click **+ Insert** → **Layout** → **Container**.
-3. **Rename it:** `conMessageModal`
-4. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `0` |
-| Y | `0` |
-| Width | `Parent.Width` |
-| Height | `Parent.Height` |
-| Fill | `RGBA(0, 0, 0, 0)` |
-| **Visible** | `varShowMessageModal > 0` |
-
-> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
-
----
-
-### Modal Overlay (recMessageOverlay)
-
-5. With `conMessageModal` selected, click **+ Insert** → **Rectangle**.
-6. **Rename it:** `recMessageOverlay`
-7. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `0` |
-| Y | `0` |
-| Width | `Parent.Width` |
-| Height | `Parent.Height` |
-| Fill | `varColorOverlay` |
-
----
-
-### Modal Content Box (recMessageModal)
-
-8. Click **+ Insert** → **Rectangle**.
-9. **Rename it:** `recMessageModal`
-10. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 500) / 2` |
-| Width | `600` |
-| Height | `500` |
-| Fill | `varColorBgCard` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
-
----
-
-### Modal Title (lblMessageTitle)
-
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblMessageTitle`
-10. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Send Message - " & varSelectedItem.ReqKey` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 20` |
-| Width | `400` |
-| Height | `30` |
-| Font | `Font.'Open Sans'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `20` |
-| Color | `RGBA(70, 130, 220, 1)` |
-
----
-
-### Student Info Label (lblMessageStudent)
-
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblMessageStudent`
-13. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"To: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 55` |
-| Width | `560` |
-| Height | `25` |
-| Font | `Font.'Open Sans'` |
-| Size | `12` |
-| Color | `varColorText` |
-
----
-
-### Staff Attribution Label (lblMessageStaffLabel)
-
-14. Click **+ Insert** → **Text label**.
-15. **Rename it:** `lblMessageStaffLabel`
-16. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Performing Action As: *"` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 90` |
-| Width | `200` |
-| Height | `20` |
-| Font | `Font.'Open Sans'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
-| Color | `varColorText` |
-
----
-
-### Staff Attribution Dropdown (ddMessageStaff)
-
-17. Click **+ Insert** → **Combo box**.
-18. **Rename it:** `ddMessageStaff`
-19. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Items | `colStaff` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 115` |
-| Width | `300` |
-| Height | `36` |
-| DisplayFields | `["MemberName"]` |
-| SearchFields | `["MemberName"]` |
-| DefaultSelectedItems | `Blank()` |
-| InputTextPlaceholder | `"Pick your name"` |
-| Font | `varAppFont` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisabledBorderColor | `varInputBorderColor` |
-| ChevronBackground | `varChevronBackground` |
-| ChevronFill | `varChevronFill` |
-| ChevronHoverBackground | `varChevronHoverBackground` |
-| ChevronHoverFill | `varChevronHoverFill` |
-| ChevronDisabledBackground | `varChevronBackground` |
-| ChevronDisabledFill | `varChevronBackground` |
-| HoverFill | `varDropdownHoverFill` |
-| PressedFill | `varDropdownPressedFill` |
-| PressedColor | `varDropdownPressedColor` |
-| SelectionFill | `varDropdownSelectionFill` |
-| SelectionColor | `varDropdownSelectionColor` |
-
----
-
-### Subject Label (lblMessageSubjectLabel)
-
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblMessageSubjectLabel`
-22. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Subject: *"` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 165` |
-| Width | `150` |
-| Height | `20` |
-| Font | `Font.'Open Sans'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
-| Color | `varColorText` |
-
----
-
-### Subject Input (txtMessageSubject)
-
-23. Click **+ Insert** → **Text input**.
-24. **Rename it:** `txtMessageSubject`
-25. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 190` |
-| Width | `540` |
-| Height | `40` |
-| HintText | `"Brief subject (e.g., Question about your file)"` |
-| Default | `""` |
-| MaxLength | `200` |
-| Font | `varAppFont` |
-| Size | `varInputFontSize` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `varInputBorderColor` |
-| HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
-
----
-
-### Message Body Label (lblMessageBodyLabel)
-
-26. Click **+ Insert** → **Text label**.
-27. **Rename it:** `lblMessageBodyLabel`
-28. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Message: *"` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 240` |
-| Width | `150` |
-| Height | `20` |
-| Font | `Font.'Open Sans'` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
-| Color | `varColorText` |
-
----
-
-### Message Body Input (rteMessageBody)
-
-29. Click **+ Insert** → **Input** → **Rich text editor**.
-30. **Rename it:** `rteMessageBody`
-31. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `""` |
-| X | `recMessageModal.X + 20` |
-| Y | `recMessageModal.Y + 265` |
-| Width | `540` |
-| Height | `180` |
-| DisplayMode | `DisplayMode.Edit` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| FocusedBorderColor | `varColorPrimary` |
-
-> 💡 **Rich Text Editor Benefits:**
-> - Staff can copy-paste screenshots directly (Ctrl+V)
-> - Images embed as base64 data URIs in the HTML
-> - Supports formatting: bold, italic, lists, links
-> - Emails display embedded images inline
-
----
-
-### Character Count Label (lblMessageCharCount)
-
-32. Click **+ Insert** → **Text label**.
-33. **Rename it:** `lblMessageCharCount`
-34. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `recMessageModal.X + 430` |
-| Y | `recMessageModal.Y + 408` |
-| Width | `130` |
-| Height | `22` |
-| Size | `8` |
-| Align | `Align.Center` |
-
-35. Set **Text:**
-
-```powerfx
-Len(rteMessageBody.HtmlText) & " characters"
-```
-
-36. Set **Color:**
-
-```powerfx
-varColorTextMuted
-```
-
-> 💡 **Note:** Character count shows HTML length which includes formatting tags. This is informational only - no hard limit enforced since rich text with images will vary in size.
-
----
-
-### Cancel Button (btnMessageCancel)
-
-37. Click **+ Insert** → **Button**.
-38. **Rename it:** `btnMessageCancel`
-39. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Cancel"` |
-| X | `recMessageModal.X + 340` |
-| Y | `recMessageModal.Y + 440` |
-| Width | `100` |
-| Height | `varBtnHeight` |
-| Fill | `varColorNeutral` |
-| Color | `Color.White` |
-| HoverFill | `ColorFade(varColorNeutral, -15%)` |
-| PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| RadiusTopLeft | `varBtnBorderRadius` |
-| RadiusTopRight | `varBtnBorderRadius` |
-| RadiusBottomLeft | `varBtnBorderRadius` |
-| RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
-| Font | `varAppFont` |
-
-40. Set **OnSelect:**
-
-```powerfx
-Set(varShowMessageModal, 0);
-Set(varSelectedItem, Blank());
-Reset(txtMessageSubject);
-Reset(rteMessageBody);
-Reset(ddMessageStaff)
-```
-
----
-
-### Send Message Button (btnMessageSend)
-
-41. Click **+ Insert** → **Button**.
-42. **Rename it:** `btnMessageSend`
-43. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"📧 Send Message"` |
-| X | `recMessageModal.X + 450` |
-| Y | `recMessageModal.Y + 440` |
-| Width | `130` |
-| Height | `varBtnHeight` |
-| Fill | `varColorPrimary` |
-| Color | `Color.White` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| RadiusTopLeft | `varBtnBorderRadius` |
-| RadiusTopRight | `varBtnBorderRadius` |
-| RadiusBottomLeft | `varBtnBorderRadius` |
-| RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
-| Font | `varAppFont` |
-
-44. Set **DisplayMode:**
-
-```powerfx
-If(
-    !IsBlank(ddMessageStaff.Selected) && 
-    !IsBlank(txtMessageSubject.Text) && 
-    Len(txtMessageSubject.Text) >= 3 &&
-    !IsBlank(rteMessageBody.HtmlText) &&
-    Len(rteMessageBody.HtmlText) >= 10,
-    DisplayMode.Edit,
-    DisplayMode.Disabled
-)
-```
-
-45. Set **OnSelect:**
-
-```powerfx
-// === SHOW LOADING ===
-Set(varIsLoading, true);
-Set(varLoadingMessage, "Sending message...");
-
-// Create the message in RequestComments with Direction field
-// Note: Message field stores HTML from rich text editor (supports embedded images)
-Patch(
-    RequestComments,
-    Defaults(RequestComments),
-    {
-        Title: txtMessageSubject.Text,
-        RequestID: varSelectedItem.ID,
-        ReqKey: varSelectedItem.ReqKey,
-        Message: rteMessageBody.HtmlText,
-        Author0: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Department: "",
-            DisplayName: ddMessageStaff.Selected.MemberName,
-            Email: ddMessageStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
-        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
-        SentAt: Now(),
-        ReadByStudent: false,
-        ReadByStaff: true,
-        StudentEmail: varSelectedItem.StudentEmail
-    }
-);
-
-// Update PrintRequest to mark last action
-// Using LookUp to get fresh record avoids concurrency conflicts
-Patch(
-    PrintRequests,
-    LookUp(PrintRequests, ID = varSelectedItem.ID),
-    {
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
-        LastActionBy: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & ddMessageStaff.Selected.MemberEmail,
-            Department: "",
-            DisplayName: ddMessageStaff.Selected.MemberName,
-            Email: ddMessageStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now()
-    }
-);
-
-// Close modal and notify
-Set(varShowMessageModal, 0);
-Set(varSelectedItem, Blank());
-Reset(txtMessageSubject);
-Reset(rteMessageBody);
-Reset(ddMessageStaff);
-
-// === HIDE LOADING ===
-Set(varIsLoading, false);
-Set(varLoadingMessage, "");
-
-Notify("Message sent! Student will receive email notification.", NotificationType.Success)
-```
-
-> **Note:** The `Direction: {Value: "Outbound"}` field is required for the new email threading system. Flow D will detect this and send the email with threading headers. See `PowerAutomate/Flow-(D)-Message-Notifications.md` for details.
-
-> **Important:** The field is named `Author0` (not `Author`) because SharePoint has a built-in "Author" field for "Created By". When you create a custom Person column named "Author", SharePoint assigns it the internal name `Author0` to avoid conflict.
-
----
-
-### Adding the Send Message Button to Job Cards
+## Step 17C: Adding the Message Button to Job Cards
 
 Add a "Send Message" button to each job card in the gallery.
 
@@ -7727,37 +7268,26 @@ Add a "Send Message" button to each job card in the gallery.
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
-Set(varShowMessageModal, ThisItem.ID)
+Set(varShowViewMessagesModal, ThisItem.ID)
 ```
 
----
-
-### Testing the Message Modal
-
-- [ ] Message button appears on all job cards
-- [ ] Clicking "Message" opens the modal with correct request info
-- [ ] Staff dropdown defaults to current user
-- [ ] Send button disabled until subject (3+ chars) and message (10+ chars) entered
-- [ ] Sending creates entry in RequestComments list with Direction = Outbound
-- [ ] Success notification appears
-- [ ] Modal closes and resets after sending
-- [ ] Flow D sends threaded email to student with [REQ-00001] in subject
+> **Note:** This button opens the same unified Messages Modal as the "View Messages" button. Staff can view conversation history and send new messages from one place.
 
 ---
 
-## Step 17D: View Messages Modal
+## Step 17D: Unified Messages Modal
 
-**What you're doing:** Creating a modal to view the full conversation thread between staff and students, with better formatting than the inline display.
+**What you're doing:** Creating a unified modal that displays the conversation thread between staff and students AND allows composing new messages — all in one place.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
 ### Overview
 
-This modal displays the complete message history for a print request:
+This unified modal displays the complete message history AND allows composing new messages:
 - Full message content (no truncation)
 - Clear visual distinction between inbound/outbound messages
 - Scrollable conversation thread
-- Button to send new messages
+- Integrated compose section for sending messages without switching modals
 
 ### Control Hierarchy (Container-Based)
 
@@ -7765,14 +7295,24 @@ This modal displays the complete message history for a print request:
 scrDashboard
 └── conViewMessagesModal            ← CONTAINER (set Visible here only!)
     ├── btnViewMsgClose             ← X close button
-    ├── btnViewMsgSendNew           ← "Send New Message" button
+    ├── btnViewMsgSend              ← "Send Message" button
+    ├── btnViewMsgCancel            ← "Cancel" button
     ├── btnViewMsgMarkRead          ← "Mark All Read" button (visible when unread)
+    ├── lblViewMsgCharCount         ← Character count display
+    ├── txtViewMsgBody              ← Message body input
+    ├── lblViewMsgBodyLabel         ← "Message: *"
+    ├── txtViewMsgSubject           ← Subject input
+    ├── lblViewMsgSubjectLabel      ← "Subject: *"
+    ├── ddViewMsgStaff              ← Staff dropdown
+    ├── lblViewMsgStaffLabel        ← "Performing Action As: *"
+    ├── recViewMsgSeparator         ← Line separating history from compose
     ├── galViewMessages             ← Scrollable message gallery
     │   ├── recVMsgBg               ← Background (direction-based colors)
     │   ├── icoVMsgDirection        ← Direction icon (send/mail)
     │   ├── lblVMsgAuthor           ← Author name + timestamp
     │   ├── lblVMsgDirectionBadge   ← SENT/REPLY badge
     │   └── lblVMsgContent          ← Full message text
+    ├── lblViewMsgSubtitle          ← "Student: Name (email)"
     ├── lblViewMsgTitle             ← "Messages - REQ-00001"
     ├── recViewMsgModal             ← White modal box
     └── recViewMsgOverlay           ← Dark semi-transparent overlay
@@ -7823,9 +7363,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 550) / 2` |
+| Y | `(Parent.Height - 750) / 2` |
 | Width | `600` |
-| Height | `550` |
+| Height | `750` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -7842,9 +7382,9 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| Text | `varSelectedItem.Student.DisplayName & " (" & varSelectedItem.ReqKey & ")"` |
+| Text | `"Messages - " & varSelectedItem.ReqKey` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 15` |
+| Y | `recViewMsgModal.Y + 12` |
 | Width | `400` |
 | Height | `30` |
 | Font | `varAppFont` |
@@ -7854,11 +7394,30 @@ scrDashboard
 
 ---
 
+### Modal Subtitle (lblViewMsgSubtitle)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblViewMsgSubtitle`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 38` |
+| Width | `400` |
+| Height | `20` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
 ### Close Button (btnViewMsgClose)
 
-14. Click **+ Insert** → **Button**.
-15. **Rename it:** `btnViewMsgClose`
-16. Set properties:
+17. Click **+ Insert** → **Button**.
+18. **Rename it:** `btnViewMsgClose`
+19. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -7880,28 +7439,31 @@ scrDashboard
 | Size | `16` |
 | Font | `varAppFont` |
 
-17. Set **OnSelect:**
+20. Set **OnSelect:**
 
 ```powerfx
 Set(varShowViewMessagesModal, 0);
-Set(varSelectedItem, Blank())
+Set(varSelectedItem, Blank());
+Reset(txtViewMsgSubject);
+Reset(txtViewMsgBody);
+Reset(ddViewMsgStaff)
 ```
 
 ---
 
 ### Messages Gallery (galViewMessages)
 
-18. Click **+ Insert** → **Blank vertical gallery**.
-19. **Rename it:** `galViewMessages`
-20. Set properties:
+21. Click **+ Insert** → **Blank vertical gallery**.
+22. **Rename it:** `galViewMessages`
+23. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 55` |
+| Y | `recViewMsgModal.Y + 65` |
 | Width | `560` |
-| Height | `420` |
+| Height | `250` |
 | TemplateSize | `70` |
 | TemplatePadding | `4` |
 | ShowScrollbar | `true` |
@@ -7910,7 +7472,7 @@ Set(varSelectedItem, Blank())
 
 #### Inside galViewMessages — Message Background
 
-21. Inside `galViewMessages`, add a **Rectangle**:
+24. Inside `galViewMessages`, add a **Rectangle**:
    - **Name:** `recVMsgBg`
    - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)`
    - **Y:** `0`
@@ -7926,9 +7488,9 @@ Set(varSelectedItem, Blank())
 
 #### Inside galViewMessages — Direction Icon
 
-22. Inside `galViewMessages`, click **+ Insert** → **Icons** → select any icon.
-23. **Rename it:** `icoVMsgDirection`
-24. Set properties:
+25. Inside `galViewMessages`, click **+ Insert** → **Icons** → select any icon.
+26. **Rename it:** `icoVMsgDirection`
+27. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -7944,13 +7506,13 @@ Set(varSelectedItem, Blank())
 
 #### Inside galViewMessages — Author Label
 
-25. Inside `galViewMessages`, click **+ Insert** → **Text label**.
-26. **Rename it:** `lblVMsgAuthor`
-27. Set properties:
+28. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+29. **Rename it:** `lblVMsgAuthor`
+30. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")` |
+| Text | `If(IsBlank(ThisItem.Author0.DisplayName), "Unknown", With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value)) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")` |
 | X | `recVMsgBg.X + 32` |
 | Y | `6` |
 | Width | `300` |
@@ -7966,9 +7528,9 @@ Set(varSelectedItem, Blank())
 
 #### Inside galViewMessages — Direction Badge
 
-28. Inside `galViewMessages`, click **+ Insert** → **Text label**.
-29. **Rename it:** `lblVMsgDirectionBadge`
-30. Set properties:
+31. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+32. **Rename it:** `lblVMsgDirectionBadge`
+33. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -7986,9 +7548,9 @@ Set(varSelectedItem, Blank())
 
 #### Inside galViewMessages — Message Content
 
-31. Inside `galViewMessages`, click **+ Insert** → **Text label**.
-32. **Rename it:** `lblVMsgContent`
-33. Set properties:
+34. Inside `galViewMessages`, click **+ Insert** → **Text label**.
+35. **Rename it:** `lblVMsgContent`
+36. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8006,25 +7568,215 @@ Set(varSelectedItem, Blank())
 
 ---
 
-### Send New Message Button (btnViewMsgSendNew)
+### Compose Section Separator (recViewMsgSeparator)
 
-34. Click **+ Insert** → **Button**.
-35. **Rename it:** `btnViewMsgSendNew`
-36. Set properties:
+37. Click **+ Insert** → **Rectangle**.
+38. **Rename it:** `recViewMsgSeparator`
+39. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"📧 Send New Message"` |
-| X | `recViewMsgModal.X + recViewMsgModal.Width - 170` |
-| Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 315` |
+| Width | `560` |
+| Height | `1` |
+| Fill | `RGBA(200, 200, 200, 1)` |
+
+---
+
+### Staff Attribution Label (lblViewMsgStaffLabel)
+
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblViewMsgStaffLabel`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 325` |
+| Width | `200` |
+| Height | `20` |
+| Font | `Font.'Open Sans'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Staff Attribution Dropdown (ddViewMsgStaff)
+
+43. Click **+ Insert** → **Combo box**.
+44. **Rename it:** `ddViewMsgStaff`
+45. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 348` |
+| Width | `250` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| InputTextPlaceholder | `"Pick your name"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+
+---
+
+### Subject Label (lblViewMsgSubjectLabel)
+
+46. Click **+ Insert** → **Text label**.
+47. **Rename it:** `lblViewMsgSubjectLabel`
+48. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Subject: *"` |
+| X | `recViewMsgModal.X + 290` |
+| Y | `recViewMsgModal.Y + 325` |
+| Width | `100` |
+| Height | `20` |
+| Font | `Font.'Open Sans'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Subject Input (txtViewMsgSubject)
+
+49. Click **+ Insert** → **Text input**.
+50. **Rename it:** `txtViewMsgSubject`
+51. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recViewMsgModal.X + 290` |
+| Y | `recViewMsgModal.Y + 348` |
+| Width | `290` |
+| Height | `36` |
+| HintText | `"Brief subject..."` |
+| Default | `""` |
+| MaxLength | `200` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
+
+---
+
+### Message Body Label (lblViewMsgBodyLabel)
+
+52. Click **+ Insert** → **Text label**.
+53. **Rename it:** `lblViewMsgBodyLabel`
+54. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Message: *"` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 395` |
 | Width | `150` |
+| Height | `20` |
+| Font | `Font.'Open Sans'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Message Body Input (txtViewMsgBody)
+
+55. Click **+ Insert** → **Text input**.
+56. **Rename it:** `txtViewMsgBody`
+57. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `""` |
+| X | `recViewMsgModal.X + 20` |
+| Y | `recViewMsgModal.Y + 418` |
+| Width | `560` |
+| Height | `130` |
+| Mode | `TextMode.MultiLine` |
+| DisplayMode | `DisplayMode.Edit` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderColor | `varColorPrimary` |
+| HintText | `"Type your message to the student..."` |
+
+---
+
+### Character Count Label (lblViewMsgCharCount)
+
+58. Click **+ Insert** → **Text label**.
+59. **Rename it:** `lblViewMsgCharCount`
+60. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recViewMsgModal.X + 450` |
+| Y | `recViewMsgModal.Y + 552` |
+| Width | `130` |
+| Height | `22` |
+| Size | `8` |
+| Align | `Align.Center` |
+
+61. Set **Text:**
+
+```powerfx
+Len(txtViewMsgBody.Text) & " characters"
+```
+
+62. Set **Color:**
+
+```powerfx
+varColorTextMuted
+```
+
+---
+
+### Cancel Button (btnViewMsgCancel)
+
+63. Click **+ Insert** → **Button**.
+64. **Rename it:** `btnViewMsgCancel`
+65. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recViewMsgModal.X + 340` |
+| Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
+| Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `varColorPrimary` |
+| Fill | `varColorNeutral` |
 | Color | `Color.White` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
@@ -8032,23 +7784,133 @@ Set(varSelectedItem, Blank())
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-37. Set **OnSelect:**
+66. Set **OnSelect:**
 
 ```powerfx
-// Close view modal and open send modal
 Set(varShowViewMessagesModal, 0);
-Set(varShowMessageModal, varSelectedItem.ID)
+Set(varSelectedItem, Blank());
+Reset(txtViewMsgSubject);
+Reset(txtViewMsgBody);
+Reset(ddViewMsgStaff)
 ```
 
-> **Note:** This closes the View Messages modal and opens the Send Message modal (Step 17C) for the same request.
+---
+
+### Send Message Button (btnViewMsgSend)
+
+67. Click **+ Insert** → **Button**.
+68. **Rename it:** `btnViewMsgSend`
+69. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"📧 Send Message"` |
+| X | `recViewMsgModal.X + 450` |
+| Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
+| Width | `130` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+70. Set **DisplayMode:**
+
+```powerfx
+If(
+    !IsBlank(ddViewMsgStaff.Selected) && 
+    !IsBlank(txtViewMsgSubject.Text) && 
+    Len(txtViewMsgSubject.Text) >= 3 &&
+    !IsBlank(txtViewMsgBody.Text) &&
+    Len(txtViewMsgBody.Text) >= 10,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+71. Set **OnSelect:**
+
+```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Sending message...");
+
+// Create the message in RequestComments with Direction field
+Patch(
+    RequestComments,
+    Defaults(RequestComments),
+    {
+        Title: txtViewMsgSubject.Text,
+        RequestID: varSelectedItem.ID,
+        ReqKey: varSelectedItem.ReqKey,
+        Message: txtViewMsgBody.Text,
+        Author0: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+            Department: "",
+            DisplayName: ddViewMsgStaff.Selected.MemberName,
+            Email: ddViewMsgStaff.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
+        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
+        SentAt: Now(),
+        ReadByStudent: false,
+        ReadByStaff: true,
+        StudentEmail: varSelectedItem.StudentEmail
+    }
+);
+
+// Update PrintRequest to mark last action
+Patch(
+    PrintRequests,
+    LookUp(PrintRequests, ID = varSelectedItem.ID),
+    {
+        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
+        LastActionBy: {
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+            Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+            Department: "",
+            DisplayName: ddViewMsgStaff.Selected.MemberName,
+            Email: ddViewMsgStaff.Selected.MemberEmail,
+            JobTitle: "",
+            Picture: ""
+        },
+        LastActionAt: Now()
+    }
+);
+
+// Reset compose fields but keep modal open to see new message
+Reset(txtViewMsgSubject);
+Reset(txtViewMsgBody);
+Reset(ddViewMsgStaff);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
+
+Notify("Message sent! Student will receive email notification.", NotificationType.Success)
+```
+
+> **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages.
 
 ---
 
 ### Mark Read Button (btnViewMsgMarkRead)
 
-38. Click **+ Insert** → **Button**.
-39. **Rename it:** `btnViewMsgMarkRead`
-40. Set properties:
+72. Click **+ Insert** → **Button**.
+73. **Rename it:** `btnViewMsgMarkRead`
+74. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8071,7 +7933,7 @@ Set(varShowMessageModal, varSelectedItem.ID)
 | Font | `varAppFont` |
 | Visible | `!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
 
-41. Set **OnSelect:**
+75. Set **OnSelect:**
 
 ```powerfx
 UpdateIf(
@@ -8093,18 +7955,30 @@ Notify("Messages marked as read", NotificationType.Success)
 
 ---
 
-### Testing the View Messages Modal
+### Testing the Unified Messages Modal
 
+**Message History:**
 - [ ] "View Messages" button appears on job cards
-- [ ] Clicking opens modal with correct request title
+- [ ] Clicking opens modal with correct title (Messages - REQ-XXXXX) and subtitle (Student name + email)
 - [ ] Messages display with correct direction styling (blue=outbound, yellow=inbound)
 - [ ] Full message content visible (no truncation)
 - [ ] Messages scroll when there are many
-- [ ] Close button (X) closes modal
-- [ ] "Send New Message" opens the send message modal
+- [ ] Close button (X) closes modal and resets compose fields
 - [ ] "Mark All Read" button appears when there are unread messages
 - [ ] Clicking "Mark All Read" clears unread status and hides the button
 - [ ] Unread badge on job card updates after marking read
+
+**Compose Section:**
+- [ ] Staff dropdown shows all staff members
+- [ ] Subject field accepts input with hint text
+- [ ] Message body is a multi-line text area
+- [ ] Character count updates as you type
+- [ ] Send button disabled until staff selected, subject (3+ chars), and message (10+ chars) entered
+- [ ] Sending message creates entry in RequestComments list with Direction = Outbound
+- [ ] After sending, compose fields reset but modal stays open
+- [ ] New message appears in the conversation above
+- [ ] Success notification appears
+- [ ] Cancel button closes modal and resets all fields
 
 ---
 
@@ -8486,9 +8360,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 ▼ scrDashboard
     ▼ conLoadingOverlay               ← TOP (highest z-order)
         ...
-    ▼ conMessageModal
-        ...
-    ▼ conViewMessagesModal
+    ▼ conViewMessagesModal            ← Unified Messages Modal
         ...
     ...other modal containers...
     audNotification                   ← NEW: Audio control (invisible)
@@ -8836,7 +8708,7 @@ LastActionBy: {
 | Details | `ddDetailsStaff` |
 | Payment | `ddPaymentStaff` |
 | Files | `ddFileActor` |
-| Message | `ddMessageStaff` |
+| Message | `ddViewMsgStaff` |
 
 ## Pricing Formula
 
