@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "flex-wrap": "wrap",
+    "display": "flex"
+  },
+  "children": [
+    {
+      "elmType": "div",
+      "style": {
+        "box-sizing": "border-box",
+        "padding": "4px 8px 5px 8px",
+        "display": "flex",
+        "border-radius": "16px",
+        "height": "24px",
+        "align-items": "center",
+        "white-space": "nowrap",
+        "overflow": "hidden",
+        "margin": "4px 4px 4px 4px",
+        "font-weight": "600",
+        "color": "=if(@currentField == 'Approved', '#000000', '#ffffff')",
+        "background-color": "=if(@currentField == 'Created', '#4682DC', if(@currentField == 'Approved', '#FFB900', if(@currentField == 'Printing', '#FF8C00', if(@currentField == 'Completed', '#004E8C', if(@currentField == 'Picked Up', '#009E49', if(@currentField == 'Rejected', '#D13438', if(@currentField == 'Canceled by Student', '#8A8886', if(@currentField == 'Updated', '#00897B', if(@currentField == 'Status Change', '#7B1FA2', if(@currentField == 'File Added', '#0097A7', if(@currentField == 'Comment Added', '#C2185B', if(@currentField == 'Assigned', '#5E35B1', if(@currentField == 'Email Sent', '#0288D1', if(@currentField == 'System', '#546E7A', if(@currentField == 'Student Confirmed', '#512DA8', '#333333')))))))))))))))"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "style": {
+            "overflow": "hidden",
+            "text-overflow": "ellipsis",
+            "padding": "0 3px"
+          },
+          "txtContent": "@currentField"
+        }
+      ]
+    }
+  ]
+}

@@ -396,7 +396,21 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - Rejected
    - Canceled by Student
    - System
+   - Approved
+   - Printing
+   - Completed
+   - Picked Up
+   - Student Confirmed
 5. Click **Save**
+
+#### Apply LastAction Formatting (Visual Badge Display)
+
+6. After creating the column, click the **LastAction** column header → **Column settings** → **Format this column**
+7. Click **Advanced mode**
+8. Paste the JSON from `SharePoint/LastAction-Column-Formatting.json`
+9. Click **Save**
+
+> 💡 **Result:** Each action type will display as a colored pill/badge matching the status colors for easy visual identification in the list view.
 
 ### Column 25: LastActionBy (Single line of text)
 
@@ -614,6 +628,7 @@ These columns capture actual payment details when a print is picked up.
 - [ ] StudentConfirmed, NeedsAttention, Expanded default to No
 - [ ] Status column formatting applied
 - [ ] Color column formatting applied (actual filament colors)
+- [ ] LastAction column formatting applied
 - [ ] Views created: My Requests, All Requests, Active Queue
 
 ---

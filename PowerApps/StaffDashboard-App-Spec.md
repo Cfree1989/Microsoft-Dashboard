@@ -28,7 +28,8 @@
 16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
 17. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
 18. [Building the Notes Modal](#step-13-building-the-notes-modal)
-18. [Adding Search and Filters](#step-14-adding-search-and-filters)
+19. [Building the Student Note Modal](#step-13b-building-the-student-note-modal)
+20. [Adding Search and Filters](#step-14-adding-search-and-filters)
 18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
 19. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
 20. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
@@ -398,6 +399,7 @@ Set(varShowAddFileModal, 0);
 Set(varShowMessageModal, 0);
 Set(varShowNotesModal, 0);
 Set(varShowViewMessagesModal, 0);
+Set(varShowStudentNoteModal, 0);
 Set(varShowRevertModal, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
@@ -568,6 +570,7 @@ Set(varLoadingMessage, "")
 | `varShowMessageModal` | ID of item for messaging (0=hidden) | Number |
 | `varShowNotesModal` | ID of item for notes modal (0=hidden) | Number |
 | `varShowViewMessagesModal` | ID of item for view messages modal (0=hidden) | Number |
+| `varShowStudentNoteModal` | ID of item for student note modal (0=hidden) | Number |
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
@@ -747,6 +750,13 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblNotesTitle
         recNotesModal
         recNotesOverlay
+    ▼ conStudentNoteModal             ← Step 13B (Student Note Modal Container)
+        btnStudentNoteClose
+        btnStudentNoteOk
+        txtStudentNoteContent
+        lblStudentNoteTitle
+        recStudentNoteModal
+        recStudentNoteOverlay
     ▼ conPaymentModal                 ← Step 12C (Payment Modal Container)
         btnPaymentConfirm
         btnPaymentCancel
@@ -886,6 +896,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnViewNotes                  ← Step 7 (opens Notes Modal)
         lblEstimates                  ← Step 7 (shows after approval)
         lblColor                      ← Step 7
+        btnStudentNote                ← Step 7 (opens Student Note Modal, visible only if note exists)
         lblPrinter                    ← Step 7
         lblStudentEmail               ← Step 7
         lblFilename                   ← Step 7
@@ -1381,6 +1392,47 @@ If(
 | Color | `varColorTextMuted` |
 
 > 💡 **Why this formula?** The Printer column includes dimensions (e.g., "Prusa XL (14.2×14.2×14.2in)") to help students check if their model fits. This formula strips the dimensions for cleaner display on staff cards, showing just "Prusa XL".
+
+### Student Note Button (btnStudentNote)
+
+> 💡 **Purpose:** This button only appears when a student submitted a note with their print request. It draws attention so staff don't miss important student instructions.
+
+18. Click **+ Insert** → **Button**.
+19. **Rename it:** `btnStudentNote`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student Notes"` |
+| X | `Parent.TemplateWidth - 75` |
+| Y | `55` |
+| Width | `60` |
+| Height | `20` |
+| Fill | `RGBA(255, 226, 140, 1)` |
+| Color | `RGBA(51, 51, 51, 1)` |
+| HoverFill | `RGBA(255, 210, 100, 1)` |
+| PressedFill | `RGBA(240, 195, 90, 1)` |
+| BorderColor | `RGBA(220, 190, 100, 1)` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Size | `9` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| **Visible** | `!IsBlank(ThisItem.Notes)` |
+
+21. Set **OnSelect:**
+
+```powerfx
+Set(varShowStudentNoteModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
+```
+
+> 💡 **Styling Note:** The gold/amber color matches the attention system and stands out against the card background. The button only appears when the student included a note, so staff immediately know there's something to review.
+
+---
 
 ### Color Indicator (lblColor)
 
@@ -6185,6 +6237,244 @@ Your Notes Modal should now contain these controls:
 5. Type a note and click "+ Add Note"
 6. Verify the note appears in the Staff Notes section with the staff first name prefix
 7. Click Cancel or X to close the modal
+
+---
+
+# STEP 13B: Building the Student Note Modal
+
+**What you're doing:** Creating a simple modal that displays the student's submission note when they click the "📝 Note" button on a job card. This ensures staff don't miss important instructions from students.
+
+> 💡 **Why a separate modal?** The Notes Modal (Step 13) shows both staff notes and student notes together. This dedicated Student Note modal is a quick, focused view triggered by the attention-grabbing gold button, ensuring student instructions are noticed.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conStudentNoteModal              ← CONTAINER (set Visible here only!)
+    ├── btnStudentNoteClose          ← X close button
+    ├── btnStudentNoteOk             ← "Got It" button
+    ├── txtStudentNoteContent        ← Note display (read-only)
+    ├── lblStudentNoteTitle          ← "Student Note - REQ-00116"
+    ├── recStudentNoteModal          ← White modal box
+    └── recStudentNoteOverlay        ← Dark semi-transparent background
+```
+
+---
+
+### Modal Container (conStudentNoteModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conStudentNoteModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowStudentNoteModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Overlay (recStudentNoteOverlay)
+
+5. Inside `conStudentNoteModal`, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recStudentNoteOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0.7)` |
+
+8. Set **OnSelect:**
+
+```powerfx
+Set(varShowStudentNoteModal, 0);
+Set(varSelectedItem, Blank())
+```
+
+---
+
+### Modal Box (recStudentNoteModal)
+
+9. Inside `conStudentNoteModal`, click **+ Insert** → **Rectangle**.
+10. **Rename it:** `recStudentNoteModal`
+11. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 400) / 2` |
+| Y | `(Parent.Height - 250) / 2` |
+| Width | `400` |
+| Height | `250` |
+| Fill | `varColorBgCard` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+---
+
+### Title Label (lblStudentNoteTitle)
+
+12. Inside `conStudentNoteModal`, click **+ Insert** → **Text label**.
+13. **Rename it:** `lblStudentNoteTitle`
+14. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student Note - " & varSelectedItem.ReqKey` |
+| X | `recStudentNoteModal.X + 20` |
+| Y | `recStudentNoteModal.Y + 15` |
+| Width | `340` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `16` |
+| Color | `varColorText` |
+
+---
+
+### Note Content Display (txtStudentNoteContent)
+
+15. Inside `conStudentNoteModal`, click **+ Insert** → **Text input**.
+16. **Rename it:** `txtStudentNoteContent`
+17. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `varSelectedItem.Notes` |
+| X | `recStudentNoteModal.X + 20` |
+| Y | `recStudentNoteModal.Y + 55` |
+| Width | `360` |
+| Height | `120` |
+| Mode | `TextMode.MultiLine` |
+| DisplayMode | `DisplayMode.View` |
+| Font | `varAppFont` |
+| Size | `12` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| Fill | `RGBA(248, 248, 248, 1)` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+
+> 💡 **Read-Only Display:** Setting `DisplayMode` to `View` makes this a read-only text display. The light gray background visually indicates it's not editable.
+
+---
+
+### "Got It" Button (btnStudentNoteOk)
+
+18. Inside `conStudentNoteModal`, click **+ Insert** → **Button**.
+19. **Rename it:** `btnStudentNoteOk`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Got It"` |
+| X | `recStudentNoteModal.X + recStudentNoteModal.Width - 100` |
+| Y | `recStudentNoteModal.Y + recStudentNoteModal.Height - 50` |
+| Width | `80` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+21. Set **OnSelect:**
+
+```powerfx
+Set(varShowStudentNoteModal, 0);
+Set(varSelectedItem, Blank())
+```
+
+---
+
+### Close Button (btnStudentNoteClose)
+
+22. Inside `conStudentNoteModal`, click **+ Insert** → **Button**.
+23. **Rename it:** `btnStudentNoteClose`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recStudentNoteModal.X + recStudentNoteModal.Width - 40` |
+| Y | `recStudentNoteModal.Y + 10recStudentNoteModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `RGBA(100, 100, 100, 1)` |
+| HoverFill | `RGBA(230, 230, 230, 1)` |
+| PressedFill | `RGBA(200, 200, 200, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `15` |
+| RadiusTopRight | `15` |
+| RadiusBottomLeft | `15` |
+| RadiusBottomRight | `15` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+25. Set **OnSelect:**
+
+```powerfx
+Set(varShowStudentNoteModal, 0);
+Set(varSelectedItem, Blank())
+```
+
+---
+
+### ⚠️ CRITICAL: Reorder Modal Container for Proper Z-Index
+
+**After creating the Student Note Modal, drag `conStudentNoteModal` to the TOP of the Tree view** with the other modal containers.
+
+The correct order from top to bottom should place `conStudentNoteModal` with the other modal containers, above `recFilterBar` and `galJobCards`.
+
+---
+
+### ✅ Step 13B Checklist
+
+Your Student Note Modal should now contain these controls:
+
+```
+▼ conStudentNoteModal
+    btnStudentNoteClose
+    btnStudentNoteOk
+    txtStudentNoteContent
+    lblStudentNoteTitle
+    recStudentNoteModal
+    recStudentNoteOverlay
+```
+
+**Testing the Student Note Modal:**
+1. Find a job card where the student included a note (gold "📝 Note" button visible)
+2. Click the "📝 Note" button
+3. Verify the modal opens with the student's note displayed
+4. Verify the ReqKey shows in the title
+5. Click "Got It" or "✕" to close the modal
+6. Verify the modal closes properly
 
 ---
 

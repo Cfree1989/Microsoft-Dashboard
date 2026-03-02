@@ -207,7 +207,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | EstimatedWeight | Number | Staff estimation (weight in grams) |
 | EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.20/gram, $3.00 minimum) |
 | StaffNotes | Multiple lines of text | Staff-only |
-| LastAction | Choice | Created; Updated; Status Change; File Added; Approved; Rejected; Canceled by Student; Printing; Completed; Picked Up; Comment Added; Email Sent |
+| LastAction | Choice | Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; Canceled by Student; System; Approved; Printing; Completed; Picked Up; Student Confirmed |
 | LastActionBy | Person | Who did it |
 | LastActionAt | Date and Time | Timestamp |
 | NeedsAttention | Yes/No | Flags items requiring staff review (Default: No) |
