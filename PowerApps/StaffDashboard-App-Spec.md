@@ -951,7 +951,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     lblEmptyState                     ← Step 9
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
-    imgUserPhoto                      ← Step 4
     lblUserName                       ← Step 4
     btnNavAnalytics                   ← Step 4
     btnNavAdmin                       ← Step 4
@@ -986,7 +985,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 - `lblAppTitle` — App title label
 - `btnNavDashboard`, `btnNavAdmin`, `btnNavAnalytics` — Navigation buttons
 - `lblUserName` — User display
-- `imgUserPhoto` — User profile picture
 
 ### First: Rename the Screen
 
@@ -1084,27 +1082,7 @@ Set(varCurrentPage, "Dashboard")
    - **Size:** `12`
    - **Visible:** `false`
 
-> 💡 **Hidden by default:** The user name label is hidden because the profile photo provides sufficient user identification. Set `Visible: true` if you want to display the user's name alongside the photo.
-
-### Adding User Profile Picture (imgUserPhoto)
-
-21. Click **+ Insert** → **Media** → **Image**.
-22. **Rename it:** `imgUserPhoto`
-23. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| Image | `If(!IsBlank(varMeEmail), Office365Users.UserPhotoV2(varMeEmail), SampleImage)` |
-| X | `Parent.Width - 52` |
-| Y | `10` |
-| Width | `40` |
-| Height | `40` |
-| RadiusTopLeft | `20` |
-| RadiusTopRight | `20` |
-| RadiusBottomLeft | `20` |
-| RadiusBottomRight | `20` |
-
-> 💡 **Circular Profile Photo:** The 20px radius on a 40x40 image creates a perfect circle. The `If(!IsBlank(...))` wrapper prevents errors when `varMeEmail` hasn't loaded yet—it shows `SampleImage` as a fallback until the user's Microsoft 365 profile photo loads.
+> 💡 **Hidden by default:** The user name label is hidden to keep the header clean. Set `Visible: true` if you want to display the user's name in the header.
 
 ### ✅ Step 4 Checklist
 
@@ -1119,7 +1097,6 @@ After completing this step, your Tree view should look like:
     btnNavAdmin
     btnNavAnalytics
     lblUserName
-    imgUserPhoto
 ```
 
 ---
