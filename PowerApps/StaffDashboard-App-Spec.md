@@ -400,6 +400,20 @@ Set(varShowNotesModal, 0);
 Set(varShowViewMessagesModal, 0);
 Set(varShowStudentNoteModal, 0);
 Set(varShowRevertModal, 0);
+Set(varShowBatchPaymentModal, 0);
+
+// === BATCH PAYMENT MODE ===
+// Controls multi-select batch payment functionality
+Set(varBatchSelectMode, false);
+ClearCollect(colBatchItems, Blank());
+Clear(colBatchItems);
+
+// Batch calculation variables (used during batch payment processing)
+Set(varBatchTotalEstWeight, 0);
+Set(varBatchCombinedWeight, 0);
+Set(varBatchItemCount, 0);
+Set(varBatchFinalCost, 0);
+Set(varBatchProcessedCount, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -570,6 +584,14 @@ Set(varLoadingMessage, "")
 | `varShowViewMessagesModal` | ID of item for unified messages modal (0=hidden) | Number |
 | `varShowStudentNoteModal` | ID of item for student note modal (0=hidden) | Number |
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
+| `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
+| `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
+| `colBatchItems` | Collection of items selected for batch payment | Table |
+| `varBatchTotalEstWeight` | Sum of estimated weights for batch items (calculation temp) | Number |
+| `varBatchCombinedWeight` | Combined final weight entered for batch (calculation temp) | Number |
+| `varBatchItemCount` | Number of items in batch (calculation temp) | Number |
+| `varBatchFinalCost` | Total final cost for batch (calculation temp) | Number |
+| `varBatchProcessedCount` | Count of items processed (for notification) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
@@ -750,9 +772,30 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblStudentNoteTitle
         recStudentNoteModal
         recStudentNoteOverlay
+    ▼ conBatchPaymentModal            ← Step 12E (Batch Payment Modal Container)
+        btnBatchPaymentConfirm
+        btnBatchPaymentCancel
+        galBatchItems
+        lblBatchItemsHeader
+        chkBatchOwnMaterial
+        lblBatchCostValue
+        lblBatchCostLabel
+        txtBatchWeight
+        lblBatchWeightLabel
+        txtBatchTransaction
+        lblBatchTransLabel
+        ddBatchPaymentType
+        lblBatchPaymentTypeLabel
+        ddBatchStaff
+        lblBatchStaffLabel
+        lblBatchSummary
+        lblBatchTitle
+        recBatchPaymentModal
+        recBatchPaymentOverlay
     ▼ conPaymentModal                 ← Step 12C (Payment Modal Container)
         btnPaymentConfirm
         btnPaymentCancel
+        btnAddMoreItems
         chkPartialPickup
         txtPaymentNotes
         lblPaymentNotesLabel
@@ -875,6 +918,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnReject                     ← Step 9
         btnApprove                    ← Step 9
         icoLightbulb                  ← Step 15
+        icoBatchCheck                 ← Step 15 (batch selection indicator)
         lblCourse                     ← Step 7
         lblCourseLabel                ← Step 7
         lblProjectType                ← Step 7
@@ -896,6 +940,14 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblSubmittedTime              ← Step 7
         lblStudentName                ← Step 7
         recCardBackground             ← Step 7
+    ▼ conBatchSelectionFooter         ← Step 15 (Batch Selection Footer)
+        btnProcessBatchPayment
+        btnBatchCancel
+        lblBatchStudents
+        lblBatchEstTotal
+        lblBatchCount
+        lblBatchModeActive
+        recBatchFooterBg
     lblEmptyState                     ← Step 9
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
@@ -1264,15 +1316,33 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Y | `0` |
 | Width | `Parent.TemplateWidth` |
 | Height | `Parent.TemplateHeight - 8` |
-| Fill | `If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard)` |
-| BorderColor | `If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), varColorBorderLight)` |
+| Fill | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard))` |
+| BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBorderLight))` |
 | BorderThickness | `If(ThisItem.NeedsAttention, 2, 1)` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px).
+4. Set **OnSelect:**
+
+```powerfx
+If(
+    varBatchSelectMode && ThisItem.Status.Value = "Completed",
+    // Batch mode: toggle item in collection
+    If(
+        ThisItem.ID in colBatchItems.ID,
+        Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)),
+        Collect(colBatchItems, ThisItem)
+    ),
+    // Normal mode: select item for details (no action needed here - buttons handle modals)
+    Set(varSelectedItem, ThisItem)
+)
+```
+
+> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px). In batch select mode, selected cards show a light green background with green border.
+
+> **Note:** These formulas reference `varBatchSelectMode`, `colBatchItems`, and `NeedsAttention` which are used in later steps (batch payment in Step 12C/12E, lightbulb in Step 15). The variables are initialized in App.OnStart (Step 3).
 
 ### Student Name (lblStudentName)
 
@@ -2195,7 +2265,9 @@ Set(varLoadingMessage, "")
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
-| Visible | `ThisItem.Status.Value in ["Printing", "Completed"]` |
+| Visible | `ThisItem.Status.Value in ["Printing", "Completed"] && !varBatchSelectMode` |
+
+> ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
 
 24. Set **OnSelect:**
 
@@ -2232,9 +2304,11 @@ Set(varSelectedItem, ThisItem)
 | Size | `8` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| Visible | `ThisItem.Status.Value <> "Pending"` |
+| Visible | `ThisItem.Status.Value <> "Pending" && !varBatchSelectMode` |
 
 > Note: This is a small secondary button, so uses a reduced Size of 8 instead of varBtnFontSize.
+
+> ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
 
 28. Set **OnSelect:**
 
@@ -2272,7 +2346,9 @@ Set(varSelectedItem, ThisItem)
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
-| Visible | `ThisItem.Status.Value in ["Printing", "Completed"]` |
+| Visible | `ThisItem.Status.Value in ["Printing", "Completed"] && !varBatchSelectMode` |
+
+> ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
 
 32. Set **OnSelect:**
 
@@ -2318,6 +2394,14 @@ Set(varSelectedItem, ThisItem)
 **What you're doing:** Creating a popup dialog that appears when staff click "Reject" to capture rejection reasons.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls — no need to set visibility on each individual control!
+
+> ⚠️ **IMPORTANT - Control Types:** This guide uses **Classic** controls (not Modern controls). When inserting controls:
+> - For **Text Input**: Insert → Input → **Text input** (Classic). Uses `.Text` property.
+> - For **Buttons**: Insert → Input → **Button** (Classic). Uses `Fill`/`Color` properties, NOT `Appearance`.
+> - For **Combo Box**: Insert → Input → **Combo box** (Classic). Uses `.Selected.Value`.
+> - For **Checkbox**: Insert → Input → **Checkbox** (Classic). Uses `.Value` property.
+>
+> If you accidentally insert Modern controls, you'll see errors like "Name isn't valid. 'Text' isn't recognized." Modern TextInput uses `.Value` instead of `.Text`.
 
 ### Modal Structure (Container-Based)
 
@@ -2566,9 +2650,14 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Height | `120` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
-| FocusedBorderColor | `varColorPrimary` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 | HintText | `"Add any additional details for the student..."` |
 
 > 💡 **Data Storage:**
@@ -2951,6 +3040,14 @@ scrDashboard
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter weight in grams (e.g., 25)"` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 ---
 
@@ -3022,6 +3119,14 @@ IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter hours (e.g., 2.5)"` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 ---
 
@@ -3114,6 +3219,14 @@ If(
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Add any special instructions for this job..."` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 ---
 
@@ -3483,6 +3596,14 @@ scrDashboard
 | Width | `460` |
 | Height | `80` |
 | HintText | `"Why is this request being archived?"` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 ---
 
@@ -4179,6 +4300,14 @@ With(
 | HintText | `"e.g., 123"` |
 | Default | `Coalesce(varSelectedItem.TransactionNumber, "")` |
 | Visible | `!IsBlank(varSelectedItem.TransactionNumber)` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 > 💡 **Why this matters:** If a transaction number was entered incorrectly during payment recording, staff can fix it here without having to undo the entire payment process. Shows on any status where a transaction exists.
 
@@ -4396,6 +4525,7 @@ scrDashboard
 └── conPaymentModal           ← CONTAINER (set Visible here only!)
     ├── btnPaymentConfirm     ← Record Payment button (changes color based on partial)
     ├── btnPaymentCancel      ← Cancel button
+    ├── btnAddMoreItems       ← Batch mode button (adds item to batch, enters multi-select)
     ├── chkPartialPickup      ← Partial pickup checkbox (keeps status as Completed)
     ├── txtPaymentNotes       ← Multi-line text input
     ├── lblPaymentNotesLabel  ← "Payment Notes (optional):"
@@ -5025,11 +5155,72 @@ Concat(
 
 ---
 
-### Cancel Button (btnPaymentCancel)
+### Add More Items Button (btnAddMoreItems)
+
+> 💡 **Use Case:** When a student is picking up multiple jobs at once (their own or friends'), staff can click this button to enter batch select mode. The current item is added to a batch collection, the modal closes, and staff can select additional "Completed" items from the gallery before processing them all in one transaction.
 
 71. Click **+ Insert** → **Button**.
-72. **Rename it:** `btnPaymentCancel`
+72. **Rename it:** `btnAddMoreItems`
 73. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"+ Add More Items"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
+| Width | `140` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| Visible | `varSelectedItem.Status.Value = "Completed"` |
+
+> ⚠️ **Visibility:** This button only appears when the Payment Modal is opened from "Completed" status. When opened from "Printing" status (for partial payments during active printing), batch mode is not available.
+
+74. Set **OnSelect:**
+
+```powerfx
+// Add current item to batch collection
+Collect(colBatchItems, varSelectedItem);
+
+// Enable batch select mode
+Set(varBatchSelectMode, true);
+
+// Close this modal
+Set(varShowPaymentModal, 0);
+Set(varSelectedItem, Blank());
+
+// Reset modal fields
+Reset(txtPaymentTransaction);
+Reset(txtPaymentWeight);
+Reset(dpPaymentDate);
+Reset(txtPaymentNotes);
+Reset(ddPaymentStaff);
+Reset(chkOwnMaterial);
+Reset(chkPartialPickup);
+Reset(ddPaymentType);
+
+// Notify user
+Notify("Batch mode enabled. Select more Completed items, then click 'Process Batch Payment'.", NotificationType.Information)
+```
+
+---
+
+### Cancel Button (btnPaymentCancel)
+
+75. Click **+ Insert** → **Button**.
+76. **Rename it:** `btnPaymentCancel`
+77. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5052,7 +5243,7 @@ Concat(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-74. Set **OnSelect:**
+78. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -5071,9 +5262,9 @@ Reset(ddPaymentType)
 
 ### Confirm Payment Button (btnPaymentConfirm)
 
-75. Click **+ Insert** → **Button**.
-76. **Rename it:** `btnPaymentConfirm`
-77. Set properties:
+79. Click **+ Insert** → **Button**.
+80. **Rename it:** `btnPaymentConfirm`
+81. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5098,7 +5289,7 @@ Reset(ddPaymentType)
 
 > 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
 
-78. Set **DisplayMode:**
+82. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -5112,7 +5303,7 @@ If(
 )
 ```
 
-79. Set **OnSelect:**
+83. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -5551,6 +5742,14 @@ If(
 | Width | `410` |
 | Height | `70` |
 | Mode | `TextMode.MultiLine` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 
 ---
 
@@ -5680,6 +5879,786 @@ Set(varLoadingMessage, "")
 > 💡 **Audit Trail:** The revert action is logged in two places:
 > - **StaffNotes field:** Human-readable entry like "REVERTED by John D.: Printing → Ready to Print - Printer jammed - 2/6 2:45pm"
 > - **Flow C audit log:** Machine-readable entry for reporting and compliance
+
+---
+
+# STEP 12E: Building the Batch Payment Modal
+
+**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a combined weight and single transaction number.
+
+> 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
+
+> ⚠️ **Reminder:** Use Classic controls as described in Step 10. Classic TextInput uses `.Text`, Classic Button uses `Fill`/`Color` properties.
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
+    ├── btnBatchPaymentConfirm    ← Record Batch Payment button
+    ├── btnBatchPaymentCancel     ← Cancel button
+    ├── galBatchItems             ← Gallery showing selected items
+    ├── lblBatchItemsHeader       ← "Selected Items:"
+    ├── chkBatchOwnMaterial       ← Own material checkbox (applies to all)
+    ├── lblBatchCostValue         ← Auto-calculated combined cost
+    ├── lblBatchCostLabel         ← "Total Cost:"
+    ├── txtBatchWeight            ← Combined weight input
+    ├── lblBatchWeightLabel       ← "Combined Weight (grams): *"
+    ├── txtBatchTransaction       ← Transaction number input
+    ├── lblBatchTransLabel        ← "Transaction Number: *"
+    ├── ddBatchPaymentType        ← Payment type dropdown
+    ├── lblBatchPaymentTypeLabel  ← "Payment Type: *"
+    ├── ddBatchStaff              ← Staff dropdown
+    ├── lblBatchStaffLabel        ← "Performing Action As: *"
+    ├── lblBatchSummary           ← Summary showing count and estimated total
+    ├── lblBatchTitle             ← "Batch Payment - X Items"
+    ├── recBatchPaymentModal      ← White modal box
+    └── recBatchPaymentOverlay    ← Dark semi-transparent background
+```
+
+---
+
+### Modal Container (conBatchPaymentModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conBatchPaymentModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowBatchPaymentModal > 0` |
+
+---
+
+### Modal Overlay (recBatchPaymentOverlay)
+
+5. With `conBatchPaymentModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recBatchPaymentOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorOverlay` |
+
+---
+
+### Modal Content Box (recBatchPaymentModal)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recBatchPaymentModal`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 650) / 2` |
+| Width | `600` |
+| Height | `650` |
+| Fill | `varColorBgCard` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+---
+
+### Modal Title (lblBatchTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblBatchTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 20` |
+| Width | `560` |
+| Height | `30` |
+| Font | `Font.'Open Sans'` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `varColorSuccess` |
+
+14. Set **Text:**
+
+```powerfx
+"Batch Payment - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
+```
+
+---
+
+### Summary Label (lblBatchSummary)
+
+15. Click **+ Insert** → **Text label**.
+16. **Rename it:** `lblBatchSummary`
+17. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 55` |
+| Width | `560` |
+| Height | `20` |
+| Size | `12` |
+| Color | `varColorTextMuted` |
+
+18. Set **Text:**
+
+```powerfx
+"Estimated Total: " & Text(Sum(colBatchItems, EstimatedWeight)) & "g → " & Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
+```
+
+---
+
+### Staff Label (lblBatchStaffLabel)
+
+19. Click **+ Insert** → **Text label**.
+20. **Rename it:** `lblBatchStaffLabel`
+21. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 85` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Staff Dropdown (ddBatchStaff)
+
+22. Click **+ Insert** → **Combo box**.
+23. **Rename it:** `ddBatchStaff`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 110` |
+| Width | `270` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+
+---
+
+### Payment Type Label (lblBatchPaymentTypeLabel)
+
+25. Click **+ Insert** → **Text label**.
+26. **Rename it:** `lblBatchPaymentTypeLabel`
+27. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payment Type: *"` |
+| X | `recBatchPaymentModal.X + 310` |
+| Y | `recBatchPaymentModal.Y + 85` |
+| Width | `120` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Payment Type Dropdown (ddBatchPaymentType)
+
+28. Click **+ Insert** → **Combo box**.
+29. **Rename it:** `ddBatchPaymentType`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `["TigerCASH", "Check", "Code"]` |
+| X | `recBatchPaymentModal.X + 310` |
+| Y | `recBatchPaymentModal.Y + 110` |
+| Width | `130` |
+| Height | `36` |
+| DefaultSelectedItems | `["TigerCASH"]` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+
+---
+
+### Transaction Label (lblBatchTransLabel)
+
+31. Click **+ Insert** → **Text label**.
+32. **Rename it:** `lblBatchTransLabel`
+33. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 460` |
+| Y | `recBatchPaymentModal.Y + 85` |
+| Width | `120` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+34. Set **Text:**
+
+```powerfx
+If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: *")
+```
+
+---
+
+### Transaction Input (txtBatchTransaction)
+
+35. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
+36. **Rename it:** `txtBatchTransaction`
+37. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `""` |
+| X | `recBatchPaymentModal.X + 460` |
+| Y | `recBatchPaymentModal.Y + 110` |
+| Width | `120` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+
+---
+
+### Weight Label (lblBatchWeightLabel)
+
+38. Click **+ Insert** → **Text label**.
+39. **Rename it:** `lblBatchWeightLabel`
+40. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Combined Weight (grams): *"` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 160` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Weight Input (txtBatchWeight)
+
+41. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
+42. **Rename it:** `txtBatchWeight`
+43. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 185` |
+| Width | `150` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+
+44. Set **Default:**
+
+```powerfx
+Text(Sum(colBatchItems, EstimatedWeight))
+```
+
+> 💡 **Pre-filled:** Weight is pre-filled with the sum of estimated weights from all selected items. Staff can adjust based on actual measured weight.
+
+---
+
+### Cost Label (lblBatchCostLabel)
+
+45. Click **+ Insert** → **Text label**.
+46. **Rename it:** `lblBatchCostLabel`
+47. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Total Cost:"` |
+| X | `recBatchPaymentModal.X + 190` |
+| Y | `recBatchPaymentModal.Y + 160` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Cost Value (lblBatchCostValue)
+
+48. Click **+ Insert** → **Text label**.
+49. **Rename it:** `lblBatchCostValue`
+50. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 190` |
+| Y | `recBatchPaymentModal.Y + 185` |
+| Width | `150` |
+| Height | `36` |
+| Size | `16` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `varColorSuccess` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+51. Set **Text:**
+
+```powerfx
+With(
+    {
+        baseCost: Max(
+            Value(txtBatchWeight.Text) * varFilamentRate,
+            varMinimumCost
+        )
+    },
+    Text(
+        If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+        "[$-en-US]$#,##0.00"
+    )
+)
+```
+
+> 💡 **Auto-calculated:** Cost updates in real-time based on weight and own material discount. Uses the same rate variables as single-item payment.
+
+---
+
+### Own Material Checkbox (chkBatchOwnMaterial)
+
+52. Click **+ Insert** → **Checkbox**.
+53. **Rename it:** `chkBatchOwnMaterial`
+54. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student provides own material (70% discount)"` |
+| X | `recBatchPaymentModal.X + 360` |
+| Y | `recBatchPaymentModal.Y + 185` |
+| Width | `220` |
+| Height | `36` |
+| Size | `11` |
+
+---
+
+### Items Header (lblBatchItemsHeader)
+
+55. Click **+ Insert** → **Text label**.
+56. **Rename it:** `lblBatchItemsHeader`
+57. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Selected Items:"` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 235` |
+| Width | `560` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+
+---
+
+### Items Gallery (galBatchItems)
+
+58. Click **+ Insert** → **Blank vertical gallery**.
+59. **Rename it:** `galBatchItems`
+60. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colBatchItems` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 260` |
+| Width | `560` |
+| Height | `280` |
+| TemplateSize | `35` |
+| TemplatePadding | `2` |
+
+61. Inside `galBatchItems`, add a **Text label** named `lblBatchItemRow`:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.TemplateWidth` |
+| Height | `Parent.TemplateHeight` |
+| Size | `11` |
+| Color | `varColorText` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+62. Set **Text** for `lblBatchItemRow`:
+
+```powerfx
+ThisItem.ReqKey & " - " & ThisItem.Student.DisplayName & " (" & Text(ThisItem.EstimatedWeight) & "g, " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00") & ")"
+```
+
+63. Inside `galBatchItems`, add a **Button** named `btnRemoveFromBatch`:
+
+> ⚠️ **Use Classic Button:** Insert → Input → **Button** (NOT Modern Button). Classic buttons use `Fill`/`Color` properties. Do NOT set an `Appearance` property - that's Modern-only syntax.
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `Parent.TemplateWidth - 30` |
+| Y | `(Parent.TemplateHeight - 24) / 2` |
+| Width | `24` |
+| Height | `24` |
+| Fill | `Transparent` |
+| Color | `RGBA(180, 0, 0, 1)` |
+| HoverFill | `RGBA(255, 220, 220, 1)` |
+| PressedFill | `RGBA(255, 200, 200, 1)` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `12` |
+| RadiusTopRight | `12` |
+| RadiusBottomLeft | `12` |
+| RadiusBottomRight | `12` |
+| Size | `10` |
+| Font | `varAppFont` |
+
+64. Set **OnSelect** for `btnRemoveFromBatch`:
+
+```powerfx
+Remove(colBatchItems, ThisItem);
+If(
+    CountRows(colBatchItems) = 0,
+    // If no items left, close modal and exit batch mode
+    Set(varShowBatchPaymentModal, 0);
+    Set(varBatchSelectMode, false);
+    Notify("All items removed. Batch mode cancelled.", NotificationType.Information)
+)
+```
+
+> 💡 **Remove Items:** Staff can remove individual items from the batch if needed. If all items are removed, the modal closes automatically.
+
+---
+
+### Cancel Button (btnBatchPaymentCancel)
+
+65. Click **+ Insert** → **Button** (Classic, NOT Modern).
+66. **Rename it:** `btnBatchPaymentCancel`
+67. Set properties (do NOT use `Appearance` - that's Modern-only):
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recBatchPaymentModal.X + 320` |
+| Y | `recBatchPaymentModal.Y + 560` |
+| Width | `120` |
+| Height | `varBtnHeight` |
+| Fill | `varColorNeutral` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+68. Set **OnSelect:**
+
+```powerfx
+Set(varShowBatchPaymentModal, 0);
+// Don't clear colBatchItems - let user continue selecting
+Reset(txtBatchTransaction);
+Reset(txtBatchWeight);
+Reset(ddBatchStaff);
+Reset(chkBatchOwnMaterial);
+Reset(ddBatchPaymentType)
+```
+
+---
+
+### Confirm Batch Payment Button (btnBatchPaymentConfirm)
+
+69. Click **+ Insert** → **Button** (Classic, NOT Modern).
+70. **Rename it:** `btnBatchPaymentConfirm`
+71. Set properties 
+
+| Property | Value |
+|----------|-------|
+| Text | `"Record Batch Payment"` |
+| X | `recBatchPaymentModal.X + 450` |
+| Y | `recBatchPaymentModal.Y + 560` |
+| Width | `130` |
+| Height | `varBtnHeight` |
+| Fill | `varColorSuccess` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+72. Set **DisplayMode:**
+
+```powerfx
+If(
+    !IsBlank(ddBatchStaff.Selected) && 
+    !IsBlank(txtBatchTransaction.Text) &&
+    !IsBlank(txtBatchWeight.Text) && 
+    IsNumeric(txtBatchWeight.Text) && 
+    Value(txtBatchWeight.Text) > 0 &&
+    CountRows(colBatchItems) > 0,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+73. Set **OnSelect:**
+
+```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Processing batch payment...");
+
+// === STEP 1: CONCURRENCY CHECK ===
+// Refresh data and verify all items are still in Completed status
+Refresh(PrintRequests);
+If(
+    CountRows(Filter(PrintRequests, ID in colBatchItems.ID && Status.Value <> "Completed")) > 0,
+    // One or more items changed - abort
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, "");
+    Notify("One or more items are no longer in 'Completed' status. Please cancel and try again.", NotificationType.Error),
+    
+    // === STEP 2: CALCULATE VALUES AND PROCESS ===
+    // Store calculated values in variables for use in ForAll
+    Set(varBatchTotalEstWeight, Sum(colBatchItems, EstimatedWeight));
+    Set(varBatchCombinedWeight, Value(txtBatchWeight.Text));
+    Set(varBatchItemCount, CountRows(colBatchItems));
+    Set(varBatchFinalCost, 
+        If(
+            chkBatchOwnMaterial.Value,
+            Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost) * varOwnMaterialDiscount,
+            Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost)
+        )
+    );
+    
+    // === STEP 3: PATCH EACH ITEM ===
+    ForAll(
+        colBatchItems As BatchItem,
+        Patch(
+            PrintRequests,
+            LookUp(PrintRequests, ID = BatchItem.ID),
+            {
+                Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+                FinalWeight: If(
+                    varBatchTotalEstWeight > 0,
+                    Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                    Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                ),
+                FinalCost: If(
+                    varBatchTotalEstWeight > 0,
+                    Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchFinalCost, 2),
+                    Round(varBatchFinalCost / varBatchItemCount, 2)
+                ),
+                TransactionNumber: txtBatchTransaction.Text,
+                StudentOwnMaterial: chkBatchOwnMaterial.Value,
+                PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
+                PaymentNotes: Concatenate(
+                    BatchItem.PaymentNotes,
+                    If(IsBlank(BatchItem.PaymentNotes), "", " | "),
+                    "[BATCH " & varBatchItemCount & "] " &
+                    With({n: ddBatchStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                    ": " &
+                    Text(
+                        If(
+                            varBatchTotalEstWeight > 0,
+                            Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchFinalCost, 2),
+                            Round(varBatchFinalCost / varBatchItemCount, 2)
+                        ),
+                        "[$-en-US]$#,##0.00"
+                    ) &
+                    " (" &
+                    Text(
+                        If(
+                            varBatchTotalEstWeight > 0,
+                            Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                            Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                        )
+                    ) &
+                    "g from " & varBatchCombinedWeight & "g combined" &
+                    If(chkBatchOwnMaterial.Value, ", own material", "") &
+                    ") #" & txtBatchTransaction.Text &
+                    " " & ddBatchPaymentType.Selected.Value &
+                    " - " & Text(Now(), "m/d h:mmam/pm")
+                ),
+                LastActionBy: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                    Claims: "i:0#.f|membership|" & Lower(ddBatchStaff.Selected.MemberEmail),
+                    Department: "",
+                    DisplayName: ddBatchStaff.Selected.MemberName,
+                    Email: ddBatchStaff.Selected.MemberEmail,
+                    JobTitle: "",
+                    Picture: ""
+                },
+                LastActionTime: Now(),
+                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
+            }
+        )
+    );
+    
+    // === STEP 4: LOG ACTIONS VIA FLOW ===
+    ForAll(
+        colBatchItems,
+        IfError(
+            'Flow-(C)-Action-LogAction'.Run(
+                Text(ID),
+                "Status Change",
+                "Status",
+                "Paid & Picked Up (Batch)",
+                ddBatchStaff.Selected.MemberEmail
+            ),
+            Blank()
+        )
+    );
+    
+    // === STEP 5: CLEANUP AND NOTIFY ===
+    // Store count before clearing for notification
+    Set(varBatchProcessedCount, varBatchItemCount);
+    
+    Clear(colBatchItems);
+    Set(varBatchSelectMode, false);
+    Set(varShowBatchPaymentModal, 0);
+    
+    // Reset form fields
+    Reset(txtBatchTransaction);
+    Reset(txtBatchWeight);
+    Reset(ddBatchStaff);
+    Reset(chkBatchOwnMaterial);
+    Reset(ddBatchPaymentType);
+    
+    // Success notification
+    Notify(varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") & " processed successfully!", NotificationType.Success);
+    
+    // === HIDE LOADING ===
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, "")
+)
+```
+
+> ⚠️ **Why ForAll + Patch instead of Patch(Table, ForAll)?** The `Patch(DataSource, Table)` bulk pattern has compatibility issues with SharePoint connectors. Using `ForAll` with individual `Patch` calls inside is more reliable and universally supported.
+
+> ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
+
+> 💡 **PaymentNotes Format:** Each item's notes include `[BATCH N]` indicator, staff initials, proportional cost, weight breakdown, transaction number, payment type, and timestamp. Example: `[BATCH 3] John D.: $12.50 (45g from 180g combined, own material) #12345 TigerCASH - 3/2 10:30am`
+
+---
+
+### Troubleshooting: Batch Payment Modal Errors
+
+If you see formula errors after building this modal, here are the most common causes and fixes:
+
+#### Error: "Name isn't valid. 'Text' isn't recognized."
+
+**Cause:** You inserted a **Modern TextInput** control instead of a **Classic Text input**. Modern TextInput uses `.Value` property, not `.Text`.
+
+**Fix:** Delete the control and re-add it correctly:
+1. Delete `txtBatchWeight` (or `txtBatchTransaction`)
+2. Click **+ Insert** → **Input** → **Text input** (the Classic version)
+3. Rename and configure as specified above
+
+**Alternative Fix (if you want to keep Modern controls):** Replace all `.Text` references with `.Value`:
+- `txtBatchWeight.Text` → `txtBatchWeight.Value`
+- `txtBatchTransaction.Text` → `txtBatchTransaction.Value`
+
+#### Error: "Name isn't valid. 'ButtonAppearance' isn't recognized."
+
+**Cause:** You're using Modern button syntax (`Appearance: ButtonAppearance.Primary`) on a Classic button, or the enum syntax is wrong.
+
+**Fix:** Classic buttons don't have an `Appearance` property. Use these style properties instead:
+- For Primary (green) button: `Fill: varColorSuccess`, `Color: Color.White`
+- For Secondary (gray) button: `Fill: varColorNeutral`, `Color: Color.White`  
+- For Subtle/transparent button: `Fill: Transparent`, `Color: RGBA(180, 0, 0, 1)`
+
+If using Modern buttons, the correct syntax is `'ButtonAppearance'.Primary` (with quotes around ButtonAppearance).
+
+#### Error: "The '.' operator cannot be used on Error values."
+
+**Cause:** A cascading error. Another formula has an error, and this formula references its output.
+
+**Fix:** Fix the root cause error first (usually the `ButtonAppearance` or `.Text` error above), and this error will resolve automatically.
+
+#### Error: "The function 'If' / 'Value' / 'IsBlank' / 'IsNumeric' has some invalid arguments."
+
+**Cause:** One of the function's arguments is an error value (usually from `.Text` not being recognized).
+
+**Fix:** Fix the TextInput control type issue first. Once `txtBatchWeight.Text` resolves correctly, these functions will work.
+
+#### Error: "The function 'Patch' has some invalid arguments." / "Invalid argument type (Table). Expecting a Record value instead."
+
+**Cause:** The `Patch(DataSource, Table)` pattern requires each record in the table to include the primary key (ID) field. If `colBatchItems` doesn't have ID, or if the ForAll structure is wrong, this error appears.
+
+**Fix:** Ensure your `colBatchItems` collection includes the `ID` field from the original records. When you `Collect(colBatchItems, ThisItem)` in the card OnSelect, the ID should be included automatically.
+
+If the error persists, try this alternative approach using ForAll with individual Patch calls:
+
+```powerfx
+// Alternative: Individual Patch calls (slower but more compatible)
+ForAll(
+    colBatchItems As BatchItem,
+    Patch(
+        PrintRequests,
+        LookUp(PrintRequests, ID = BatchItem.ID),
+        {
+            Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+            // ... rest of fields
+        }
+    )
+)
+```
+
+#### Quick Reference: Classic vs Modern Control Properties
+
+| Control Type | Classic Property | Modern Property |
+|--------------|------------------|-----------------|
+| TextInput value | `.Text` | `.Value` |
+| Button style | `Fill`, `Color`, `HoverFill` | `Appearance` |
+| ComboBox selection | `.Selected.Value` | `.Selected.Value` |
+| Checkbox value | `.Value` | `.Value` |
 
 ---
 
@@ -6377,6 +7356,9 @@ Set(varSelectedItem, Blank())
 | Size | `12` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| DisabledBorderColor | `varInputBorderColor` |
 | Fill | `RGBA(248, 248, 248, 1)` |
 | RadiusTopLeft | `varInputBorderRadius` |
 | RadiusTopRight | `varInputBorderRadius` |
@@ -6727,7 +7709,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 | Height | `24` |
 | Color | `If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), varColorDisabled)` |
 | Tooltip | `If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")` |
-| Visible | `true` |
+| Visible | `!varBatchSelectMode` |
 
 5. Set **OnSelect:**
 
@@ -6739,29 +7721,238 @@ If(!ThisItem.NeedsAttention, Reset(audNotification); Set(varPlaySound, true))
 
 > 💡 **Simple Toggle:** This is a quick flag toggle for staff to mark items needing attention. When they turn the lightbulb *on* (NeedsAttention = true), we call `Reset(audNotification)` then `Set(varPlaySound, true)` so the chime plays. It doesn't log to the audit trail since it's a temporary visual indicator, not a workflow action.
 
+> **Note:** The `recCardBackground` styling for batch selection (green highlight) and attention highlighting (yellow/orange) was already configured in Step 7 with the complete formulas.
+
 ---
 
-### Attention Card Styling
+### Batch Selection Checkbox Icon (icoBatchCheck)
 
-6. Update `recCardBackground` (inside galJobCards). Set **Fill:**
+6. Inside `galJobCards`, click **+ Insert** → **Icons** → select any icon.
+7. **Rename it:** `icoBatchCheck`
+8. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Icon | `If(ThisItem.ID in colBatchItems.ID, Icon.Check, Icon.Add)` |
+| X | `Parent.TemplateWidth - 40` |
+| Y | `10` |
+| Width | `28` |
+| Height | `28` |
+| Color | `If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))` |
+| Visible | `varBatchSelectMode && ThisItem.Status.Value = "Completed"` |
+| OnSelect | `If(ThisItem.ID in colBatchItems.ID, Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)), Collect(colBatchItems, ThisItem))` |
+
+> 💡 **Batch Selection Indicator:** This icon appears in the top-right corner of cards when batch select mode is active. Shows a filled checkmark for selected items and an empty circle for unselected items. Only appears on "Completed" status cards since batch payment only applies to those.
+
+---
+
+### Batch Selection Footer Panel (conBatchSelectionFooter)
+
+This floating panel appears at the bottom of the screen when batch select mode is active, showing selection count, estimated total, and action buttons.
+
+9. Click on **scrDashboard** in Tree view (not inside galJobCards).
+10. Click **+ Insert** → **Layout** → **Container**.
+11. **Rename it:** `conBatchSelectionFooter`
+12. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `Parent.Height - 80` |
+| Width | `Parent.Width` |
+| Height | `80` |
+| Fill | `RGBA(255, 255, 255, 0.98)` |
+| Visible | `varBatchSelectMode` |
+
+> 💡 **Key Point:** This container is positioned at the bottom of the screen and only appears when batch select mode is active.
+
+---
+
+### Footer Background (recBatchFooterBg)
+
+13. Inside `conBatchSelectionFooter`, click **+ Insert** → **Rectangle**.
+14. **Rename it:** `recBatchFooterBg`
+15. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `Color.White` |
+
+16. Set **BorderColor:**
 
 ```powerfx
-If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), Color.White)
+varColorBorderLight
 ```
 
-7. Set **BorderColor:**
+17. Set **BorderThickness:** `1`
+
+---
+
+### Batch Mode Label (lblBatchModeActive)
+
+18. Inside `conBatchSelectionFooter`, click **+ Insert** → **Text label**.
+19. **Rename it:** `lblBatchModeActive`
+20. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"BATCH MODE"` |
+| X | `20` |
+| Y | `8` |
+| Width | `100` |
+| Height | `20` |
+| FontWeight | `FontWeight.Bold` |
+| Size | `10` |
+| Color | `varColorPrimary` |
+
+---
+
+### Selection Count Label (lblBatchCount)
+
+21. Inside `conBatchSelectionFooter`, click **+ Insert** → **Text label**.
+22. **Rename it:** `lblBatchCount`
+23. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `30` |
+| Width | `200` |
+| Height | `20` |
+| Size | `12` |
+| Color | `varColorText` |
+
+24. Set **Text:**
 
 ```powerfx
-If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), varColorBorderLight)
+CountRows(colBatchItems) & " item" & If(CountRows(colBatchItems) <> 1, "s", "") & " selected"
 ```
 
-8. Set **BorderThickness:**
+---
+
+### Estimated Total Label (lblBatchEstTotal)
+
+25. Inside `conBatchSelectionFooter`, click **+ Insert** → **Text label**.
+26. **Rename it:** `lblBatchEstTotal`
+27. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `20` |
+| Y | `50` |
+| Width | `200` |
+| Height | `20` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+
+28. Set **Text:**
 
 ```powerfx
-If(ThisItem.NeedsAttention, 2, 1)
+"Est. Total: " & Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 ```
 
-> 💡 **Static Highlight:** Items needing attention get a noticeable warm yellow/orange background with an orange border. No animation required—the color stands out without being distracting.
+---
+
+### Selected Students Label (lblBatchStudents)
+
+29. Inside `conBatchSelectionFooter`, click **+ Insert** → **Text label**.
+30. **Rename it:** `lblBatchStudents`
+31. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `230` |
+| Y | `30` |
+| Width | `Parent.Width - 500` |
+| Height | `40` |
+| Size | `10` |
+| Color | `varColorTextMuted` |
+| VerticalAlign | `VerticalAlign.Top` |
+
+32. Set **Text:**
+
+```powerfx
+Concat(Distinct(colBatchItems, Student.DisplayName), Value, ", ")
+```
+
+> 💡 **Shows Students:** Lists all unique student names in the batch, separated by commas. Useful when picking up jobs for multiple students.
+
+---
+
+### Cancel Batch Button (btnBatchCancel)
+
+33. Inside `conBatchSelectionFooter`, click **+ Insert** → **Button**.
+34. **Rename it:** `btnBatchCancel`
+35. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `Parent.Width - 280` |
+| Y | `(Parent.Height - varBtnHeight) / 2` |
+| Width | `100` |
+| Height | `varBtnHeight` |
+| Fill | `varColorNeutral` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+36. Set **OnSelect:**
+
+```powerfx
+Clear(colBatchItems);
+Set(varBatchSelectMode, false);
+Notify("Batch selection cancelled.", NotificationType.Information)
+```
+
+---
+
+### Process Batch Payment Button (btnProcessBatchPayment)
+
+37. Inside `conBatchSelectionFooter`, click **+ Insert** → **Button**.
+38. **Rename it:** `btnProcessBatchPayment`
+39. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Process Batch Payment"` |
+| X | `Parent.Width - 170` |
+| Y | `(Parent.Height - varBtnHeight) / 2` |
+| Width | `150` |
+| Height | `varBtnHeight` |
+| Fill | `varColorSuccess` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| DisplayMode | `If(CountRows(colBatchItems) > 0, DisplayMode.Edit, DisplayMode.Disabled)` |
+
+40. Set **OnSelect:**
+
+```powerfx
+Set(varShowBatchPaymentModal, 1)
+```
+
+> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight and transaction number for all selected items.
 
 ---
 
@@ -6816,6 +8007,9 @@ scrDashboard
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
+| Visible | `!varBatchSelectMode` |
+
+> ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
 
 5. Set **OnSelect:**
 
@@ -7721,9 +8915,14 @@ Reset(ddViewMsgStaff)
 | Height | `130` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
-| FocusedBorderColor | `varColorPrimary` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
 | HintText | `"Type your message to the student..."` |
 
 ---
@@ -8678,6 +9877,9 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 | `varSelectedItem` | Button click | Item for modal |
 | `varActor` | Screen.OnVisible | Current user Person record (available for quick Patch operations) |
 | `varShowPaymentModal` | btnPickedUp click | Controls payment modal visibility |
+| `varShowBatchPaymentModal` | btnProcessBatchPayment click | Controls batch payment modal visibility |
+| `varBatchSelectMode` | btnAddMoreItems click | Enables multi-select batch payment mode |
+| `colBatchItems` | Card selection in batch mode | Collection of items selected for batch payment |
 | `varBaseCost` | Payment modal confirm | Base cost before discount |
 | `varFinalCost` | Payment modal confirm | Final cost (with 70% discount if own material) |
 
