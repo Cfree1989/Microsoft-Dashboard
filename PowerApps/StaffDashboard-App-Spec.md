@@ -6527,15 +6527,14 @@ If(
                     " - " & Text(Now(), "m/d h:mmam/pm")
                 ),
                 LastActionBy: {
-                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-                    Claims: "i:0#.f|membership|" & Lower(ddBatchStaff.Selected.MemberEmail),
-                    Department: "",
+                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                    Discipline: "",
                     DisplayName: ddBatchStaff.Selected.MemberName,
                     Email: ddBatchStaff.Selected.MemberEmail,
                     JobTitle: "",
                     Picture: ""
                 },
-                LastActionTime: Now(),
+                LastActionAt: Now(),
                 LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
             }
         )
