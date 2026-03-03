@@ -393,6 +393,7 @@ Set(varExpandAll, false);
 Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varShowArchiveModal, 0);
+Set(varShowCompleteModal, 0);
 Set(varShowDetailsModal, 0);
 Set(varShowPaymentModal, 0);
 Set(varShowAddFileModal, 0);
@@ -577,6 +578,7 @@ Set(varLoadingMessage, "")
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varShowArchiveModal` | ID of item being archived (0=hidden) | Number |
+| `varShowCompleteModal` | ID of item being marked complete (0=hidden) | Number |
 | `varShowDetailsModal` | ID of item for detail changes (0=hidden) | Number |
 | `varShowPaymentModal` | ID of item for payment (0=hidden) | Number |
 | `varShowAddFileModal` | ID of item for attachments (0=hidden) | Number |
@@ -848,6 +850,15 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblRevertTitle
         recRevertModal
         recRevertOverlay
+    ▼ conCompleteModal                ← Step 12A (Complete Confirmation Modal Container)
+        btnCompleteConfirm
+        btnCompleteCancel
+        ddCompleteStaff
+        lblCompleteStaffLabel
+        lblCompleteWarning
+        lblCompleteTitle
+        recCompleteModal
+        recCompleteOverlay
     ▼ conArchiveModal                 ← Step 12 (Archive Modal Container)
         btnArchiveConfirm
         btnArchiveCancel
@@ -2158,7 +2169,7 @@ Set(varLoadingMessage, "")
 
 | Property | Value |
 |----------|-------|
-| Text | `"✓ Complete"` |
+| Text | `"Print Complete"` |
 | X | `12` |
 | Y | `Parent.TemplateHeight - varBtnHeight - 12` |
 | Width | `(Parent.TemplateWidth - 28) / 2` |
@@ -2180,41 +2191,11 @@ Set(varLoadingMessage, "")
 20. Set **OnSelect:**
 
 ```powerfx
-// === SHOW LOADING ===
-Set(varIsLoading, true);
-Set(varLoadingMessage, "Completing print...");
-
-// Store reference to current item before async operations
-Set(varCurrentItem, ThisItem);
-
-Patch(PrintRequests, varCurrentItem, {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionAt: Now(),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & User().Email,
-        Discipline: "",
-        DisplayName: User().FullName,
-        Email: User().Email,
-        JobTitle: "",
-        Picture: ""
-    }
-});
-
-'Flow-(C)-Action-LogAction'.Run(
-    Text(varCurrentItem.ID),      // RequestID
-    "Status Change",              // Action
-    "Status",                     // FieldName
-    "Completed",                  // NewValue
-    varMeEmail                    // ActorEmail
-);
-
-Notify("Marked as completed!", NotificationType.Success);
-
-// === HIDE LOADING ===
-Set(varIsLoading, false);
-Set(varLoadingMessage, "")
+Set(varShowCompleteModal, ThisItem.ID);
+Set(varSelectedItem, ThisItem)
 ```
+
+> 💡 **Safety Check:** This opens the Complete Confirmation Modal (built in Step 12A) instead of immediately marking the print complete. This prevents accidental status changes and ensures staff intentionally confirms before the student receives a pickup notification email.
 
 ### Picked Up Button (btnPickedUp)
 
@@ -3704,6 +3685,291 @@ Reset(ddArchiveStaff);
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
+
+---
+
+# STEP 12A: Building the Complete Confirmation Modal
+
+**What you're doing:** Creating a confirmation dialog before marking a print as complete. This prevents accidental status changes and ensures staff intentionally confirms before the student receives a pickup notification email.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+> ⚠️ **Why This Matters:** When a print is marked "Completed", the student immediately receives an email telling them to come pick up their print. An accidental click could cause the student to waste a trip to the lab. This confirmation modal adds a safety check.
+
+### Control Hierarchy (Container-Based)
+
+```
+scrDashboard
+└── conCompleteModal          ← CONTAINER (set Visible here only!)
+    ├── btnCompleteConfirm    ← Confirm Complete button
+    ├── btnCompleteCancel     ← Cancel button
+    ├── ddCompleteStaff       ← Staff dropdown
+    ├── lblCompleteStaffLabel ← "Performing Action As: *"
+    ├── lblCompleteWarning    ← Warning about email notification
+    ├── lblCompleteTitle      ← "Mark [Student Name] Complete - REQ-00042"
+    ├── recCompleteModal      ← White modal box
+    └── recCompleteOverlay    ← Dark semi-transparent background
+```
+
+---
+
+### Modal Container (conCompleteModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conCompleteModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowCompleteModal > 0` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+
+---
+
+### Modal Overlay (recCompleteOverlay)
+
+5. With `conCompleteModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recCompleteOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorOverlay` |
+
+---
+
+### Modal Content Box (recCompleteModal)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recCompleteModal`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - 500) / 2` |
+| Y | `(Parent.Height - 260) / 2` |
+| Width | `500` |
+| Height | `260` |
+| Fill | `varColorBgCard` |
+
+---
+
+### Modal Title (lblCompleteTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblCompleteTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Mark " & varSelectedItem.Student.DisplayName & " Complete - " & varSelectedItem.ReqKey` |
+| X | `recCompleteModal.X + 20` |
+| Y | `recCompleteModal.Y + 20` |
+| Width | `460` |
+| Height | `30` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `20` |
+| Color | `varColorTextMuted` |
+
+---
+
+### Warning Message (lblCompleteWarning)
+
+14. Click **+ Insert** → **Text label**.
+15. **Rename it:** `lblCompleteWarning`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"⚠️ Marking this print complete will immediately send a pickup notification email to the student. Make sure the print is actually finished and ready."` |
+| X | `recCompleteModal.X + 20` |
+| Y | `recCompleteModal.Y + 55` |
+| Width | `460` |
+| Height | `50` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `RGBA(150, 100, 0, 1)` |
+
+---
+
+### Staff Label (lblCompleteStaffLabel)
+
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblCompleteStaffLabel`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Performing Action As: *"` |
+| X | `recCompleteModal.X + 20` |
+| Y | `recCompleteModal.Y + 115` |
+| Width | `200` |
+| Height | `20` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Staff Dropdown (ddCompleteStaff)
+
+20. Click **+ Insert** → **Combo box**.
+21. **Rename it:** `ddCompleteStaff`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colStaff` |
+| X | `recCompleteModal.X + 20` |
+| Y | `recCompleteModal.Y + 140` |
+| Width | `300` |
+| Height | `36` |
+| DisplayFields | `["MemberName"]` |
+| SearchFields | `["MemberName"]` |
+| DefaultSelectedItems | `Blank()` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+
+---
+
+### Cancel Button (btnCompleteCancel)
+
+23. Click **+ Insert** → **Button**.
+24. **Rename it:** `btnCompleteCancel`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Cancel"` |
+| X | `recCompleteModal.X + 200` |
+| Y | `recCompleteModal.Y + 200` |
+| Width | `120` |
+| Height | `varBtnHeight` |
+| Fill | `varColorNeutral` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorNeutral, -15%)` |
+| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+30. Set **OnSelect:**
+
+```powerfx
+Set(varShowCompleteModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddCompleteStaff)
+```
+
+---
+
+### Confirm Complete Button (btnCompleteConfirm)
+
+27. Click **+ Insert** → **Button**.
+28. **Rename it:** `btnCompleteConfirm`
+29. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Confirm Complete"` |
+| X | `recCompleteModal.X + 330` |
+| Y | `recCompleteModal.Y + 200` |
+| Width | `150` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| DisplayMode | `If(IsBlank(ddCompleteStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+30. Set **OnSelect:**
+
+```powerfx
+// === SHOW LOADING ===
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Completing print...");
+
+// Update SharePoint item
+Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+    Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
+    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+    LastActionBy: {
+        Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
+        Discipline: "",
+        DisplayName: ddCompleteStaff.Selected.MemberName,
+        Email: ddCompleteStaff.Selected.MemberEmail,
+        JobTitle: "",
+        Picture: ""
+    },
+    LastActionAt: Now()
+});
+
+// Log action via Flow C
+IfError(
+    'Flow-(C)-Action-LogAction'.Run(
+        Text(varSelectedItem.ID),              // RequestID
+        "Status Change",                       // Action
+        "Status",                              // FieldName
+        "Completed",                           // NewValue
+        ddCompleteStaff.Selected.MemberEmail   // ActorEmail
+    ),
+    Notify("Marked complete, but could not log to audit.", NotificationType.Warning),
+    Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success)
+);
+
+// Close modal and reset
+Set(varShowCompleteModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddCompleteStaff);
+
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
+```
+
+> 💡 **Email Notification:** When the status changes to "Completed", Flow B automatically sends a pickup notification email to the student. This modal ensures staff intentionally confirms before that email is sent.
 
 ---
 
@@ -7634,6 +7900,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 1. In the **Tree view** (left panel), locate these containers:
    - `conPaymentModal`
    - `conDetailsModal`
+   - `conCompleteModal`
    - `conArchiveModal`
    - `conApprovalModal`
    - `conRejectModal`
@@ -7645,6 +7912,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
    scrDashboard
    ├── conPaymentModal           ← Modal containers at TOP
    ├── conDetailsModal
+   ├── conCompleteModal
    ├── conArchiveModal
    ├── conApprovalModal
    ├── conRejectModal            ← ...all above filter bar

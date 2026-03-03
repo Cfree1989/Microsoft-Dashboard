@@ -1,0 +1,186 @@
+- conCompleteModal:
+    Control: GroupContainer@1.4.0
+    Variant: ManualLayout
+    Properties:
+      Height: =Parent.Height
+      Visible: =varShowCompleteModal > 0
+      Width: =Parent.Width
+    Children:
+      - recCompleteOverlay:
+          Control: Rectangle@2.3.0
+          Properties:
+            Fill: =varColorOverlay
+            Height: =Parent.Height
+            Width: =Parent.Width
+      - recCompleteModal:
+          Control: Rectangle@2.3.0
+          Properties:
+            Fill: =varColorBgCard
+            Height: =260
+            Width: =500
+            X: =(Parent.Width - 500) / 2
+            Y: =(Parent.Height - 260) / 2
+      - lblCompleteTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =varColorTextMuted
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =30
+            Size: =20
+            Text: ="Mark " & varSelectedItem.Student.DisplayName & " Complete - " & varSelectedItem.ReqKey
+            Width: =460
+            X: =recCompleteModal.X + 20
+            Y: =recCompleteModal.Y + 20
+      - lblCompleteWarning:
+          Control: Label@2.5.1
+          Properties:
+            Color: =RGBA(150, 100, 0, 1)
+            Font: =varAppFont
+            Height: =50
+            Size: =12
+            Text: ="⚠️ Marking this print complete will immediately send a pickup notification email to the student. Make sure the print is actually finished and ready."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =460
+            X: =recCompleteModal.X + 20
+            Y: =recCompleteModal.Y + 55
+      - lblCompleteStaffLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =varColorText
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            Size: =12
+            Text: '="Performing Action As: *"'
+            Width: =200
+            X: =recCompleteModal.X + 20
+            Y: =recCompleteModal.Y + 115
+      - ddCompleteStaff:
+          Control: Classic/ComboBox@2.4.0
+          Properties:
+            BorderColor: =varInputBorderColor
+            BorderThickness: =varInputBorderThickness
+            ChevronBackground: =varChevronBackground
+            ChevronDisabledBackground: =varChevronBackground
+            ChevronDisabledFill: =varChevronBackground
+            ChevronFill: =varChevronFill
+            ChevronHoverBackground: =varChevronHoverBackground
+            ChevronHoverFill: =varChevronHoverFill
+            DisabledBorderColor: =varInputBorderColor
+            DisplayFields: =["MemberName"]
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =36
+            HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Pick your name"
+            Items: =colStaff
+            PressedColor: =varDropdownPressedColor
+            PressedFill: =varDropdownPressedFill
+            SearchFields: =["MemberName"]
+            SelectionColor: =varDropdownSelectionColor
+            SelectionFill: =varDropdownSelectionFill
+            Width: =300
+            X: =recCompleteModal.X + 20
+            Y: =recCompleteModal.Y + 140
+      - btnCompleteCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =varColorNeutral
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =Color.White
+            HoverFill: =ColorFade(varColorNeutral, -15%)
+            OnSelect: |-
+              =Set(varShowCompleteModal, 0);
+              Set(varSelectedItem, Blank());
+              Reset(ddCompleteStaff)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorNeutral, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="Cancel"
+            Width: =120
+            X: =recCompleteModal.X + 200
+            Y: =recCompleteModal.Y + 200
+      - btnCompleteConfirm:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            DisabledColor: =RGBA(166, 166, 166, 1)
+            DisabledFill: =RGBA(244, 244, 244, 1)
+            DisplayMode: =If(IsBlank(ddCompleteStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =varColorPrimary
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =Color.White
+            HoverFill: =varColorPrimaryHover
+            OnSelect: |-
+              =// === SHOW LOADING ===
+              Set(varIsLoading, true);
+              Set(varLoadingMessage, "Completing print...");
+
+              // Update SharePoint item
+              Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+                  Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
+                  LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+                  LastActionBy: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                      Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
+                      Department: "",
+                      DisplayName: ddCompleteStaff.Selected.MemberName,
+                      Email: ddCompleteStaff.Selected.MemberEmail,
+                      JobTitle: "",
+                      Picture: ""
+                  },
+                  LastActionAt: Now()
+              });
+
+              // Log action via Flow C
+              IfError(
+                  'Flow-(C)-Action-LogAction'.Run(
+                      Text(varSelectedItem.ID),
+                      "Status Change",
+                      "Status",
+                      "Completed",
+                      ddCompleteStaff.Selected.MemberEmail
+                  ),
+                  Notify("Marked complete, but could not log to audit.", NotificationType.Warning),
+                  Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success)
+              );
+
+              // Close modal and reset
+              Set(varShowCompleteModal, 0);
+              Set(varSelectedItem, Blank());
+              Reset(ddCompleteStaff);
+
+              // === HIDE LOADING ===
+              Set(varIsLoading, false);
+              Set(varLoadingMessage, "")
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =varColorPrimaryPressed
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="✓ Confirm Complete"
+            Width: =150
+            X: =recCompleteModal.X + 330
+            Y: =recCompleteModal.Y + 200

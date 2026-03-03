@@ -36,6 +36,7 @@ Set(varExpandAll, false);
 Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varShowArchiveModal, 0);
+Set(varShowCompleteModal, 0);
 Set(varShowDetailsModal, 0);
 Set(varShowPaymentModal, 0);
 Set(varShowAddFileModal, 0);
