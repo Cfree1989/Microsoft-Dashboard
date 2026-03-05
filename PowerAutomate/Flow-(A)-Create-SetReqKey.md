@@ -180,8 +180,8 @@ toLower(triggerOutputs()?['body/Author']?['Email'])
 **UI steps:**
 1. Click **+ New step**
 2. Search for and select **Condition**
-3. Rename the condition to: `Check Has Attachments`
-   - Click the **three dots (…)** → **Rename** → type `Check Has Attachments`
+3. Rename the condition to: `Check for No Attachments`
+   - Click the **three dots (…)** → **Rename** → type `Check for No Attachments`
 4. Set up condition:
    - **Left box:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/{HasAttachments}']` → click **Update**
    - **Middle:** Select **is equal to**
@@ -196,13 +196,13 @@ toLower(triggerOutputs()?['body/Author']?['Email'])
 
 **What this does:** When no files are attached, marks the request as Rejected and sends the student an email explaining they need to attach a file.
 
-#### Action 1: Update Item as Rejected (No Attachments)
+#### Action 1: Reject Request - No Files
 
 **UI steps:**
 1. Click **+ Add an action** in the NO (red) branch
 2. Search for and select **Update item** (SharePoint)
-3. Rename the action to: `Reject - No Attachments`
-   - Click the **three dots (…)** → **Rename** → type `Reject - No Attachments`
+3. Rename the action to: `Reject Request - No Files`
+   - Click the **three dots (…)** → **Rename** → type `Reject Request - No Files`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -220,13 +220,13 @@ toLower(triggerOutputs()?['body/Author']?['Email'])
    - **LastAction Value:** Select `Rejected`
    - **LastActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
 
-#### Action 2: Send No Attachment Email
+#### Action 2: Send No Files Email
 
 **UI steps:**
 1. Click **+ Add an action** in the NO branch
 2. Search for and select **Send an email from a shared mailbox (V2)** (Office 365 Outlook)
-3. Rename the action to: `Send No Attachment Email`
-   - Click the **three dots (…)** → **Rename** → type `Send No Attachment Email`
+3. Rename the action to: `Send No Files Email`
+   - Click the **three dots (…)** → **Rename** → type `Send No Files Email`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -242,20 +242,20 @@ concat('[', outputs('Generate_ReqKey'), '] Action needed: attach your 3D print f
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
 
 ```html
-<p class="editor-paragraph">Your 3D print request was received, but no file was attached.<br><br>WHAT TO DO:<br>1. Go to the Digital Fabrication Lab submission portal<br>2. Submit a new request with your 3D model file attached<br><br>FILE REQUIREMENTS:<br>• Name your file: FirstLast_Method_Color.ext<br>• Example: JaneDoe_Filament_Blue.stl<br>• Accepted file types: .stl, .obj, .3mf, .idea, .form<br>• Maximum file size: 50MB<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Generate_ReqKey')}<br>- Method: @{triggerOutputs()?['body/Method']?['Value']}<br>- Color: @{triggerOutputs()?['body/Color']?['Value']}<br><br>If you need assistance, please visit the lab during open hours or reply to this email.<br><br>---<br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
+<p class="editor-paragraph">We're unable to process your 3D print request because no files were attached.</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Required:</strong></b> At least one 3D model file must be attached</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Accepted formats:</strong></b> .stl, .obj, .3mf, .idea, .form</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">File naming:</strong></b> FirstLast_Method_Color.ext</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Example:</strong></b> JaneDoe_Resin_Clear.3mf</p><br><p class="editor-paragraph">Please attach your file and submit a new request. Thank you!</p><br><p class="editor-paragraph">This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
 6. In the **Advanced parameters** section, click **Show all**
 7. **Is HTML:** Toggle to **Yes**
 8. **Importance:** Select `Normal`
 
-#### Action 3: Log Rejection (No Attachments)
+#### Action 3: Log No Files Rejection
 
 **UI steps:**
 1. Click **+ Add an action** in the NO branch
 2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Rejection - No Attachments`
-   - Click the **three dots (…)** → **Rename** → type `Log Rejection - No Attachments`
+3. Rename the action to: `Log No Files Rejection`
+   - Click the **three dots (…)** → **Rename** → type `Log No Files Rejection`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -278,13 +278,13 @@ concat('[', outputs('Generate_ReqKey'), '] Action needed: attach your 3D print f
    - **FlowRunId:** Click **Expression** tab (fx) → paste: `workflow()['run']['name']` → click **Update**
    - **Notes:** Type `No files attached. Rejection email sent to student.`
 
-#### Action 4: Terminate Flow (No Attachments)
+#### Action 4: Stop Flow - No Files
 
 **UI steps:**
 1. Click **+ Add an action** in the NO branch
 2. Search for and select **Terminate**
-3. Rename the action to: `Terminate - No Attachments`
-   - Click the **three dots (…)** → **Rename** → type `Terminate - No Attachments`
+3. Rename the action to: `Stop Flow - No Files`
+   - Click the **three dots (…)** → **Rename** → type `Stop Flow - No Files`
 4. Fill in:
    - **Status:** Select `Succeeded`
    - **Message (optional):** Type `Request rejected - no attachments. Email sent to student.`
@@ -296,7 +296,7 @@ concat('[', outputs('Generate_ReqKey'), '] Action needed: attach your 3D print f
 **What this does:** Retrieves the list of attachments to validate their filenames against the naming policy.
 
 **UI steps:**
-1. Click **+ Add an action** in the YES (green) branch of "Check Has Attachments"
+1. Click **+ Add an action** in the FALSE (red) branch of "Check for No Attachments"
 2. Search for and select **Get attachments** (SharePoint)
 3. Rename the action to: `Get Attachments`
    - Click the **three dots (…)** → **Rename** → type `Get Attachments`
@@ -375,8 +375,8 @@ equals(length(split(first(split(outputs('Get_First_Filename'), '.')), '_')), 3)
 **UI steps:**
 1. Click **+ Add an action**
 2. Search for and select **Condition**
-3. Rename the condition to: `Is Filename Valid`
-   - Click the **three dots (…)** → **Rename** → type `Is Filename Valid`
+3. Rename the condition to: `Validate Filename Format`
+   - Click the **three dots (…)** → **Rename** → type `Validate Filename Format`
 4. Set up condition with **AND** logic:
    - Click **+ Add** → **Add row** to add a second condition
    - **Row 1 - Left box:** Click **Expression** tab (fx) → paste: `outputs('Check_Valid_Extension')` → click **Update**
@@ -395,13 +395,13 @@ equals(length(split(first(split(outputs('Get_First_Filename'), '.')), '_')), 3)
 
 **What this does:** When the filename doesn't match the policy, marks the request as Rejected and sends the student an email explaining the correct format.
 
-#### Action 1: Update Item as Rejected (Invalid Filename)
+#### Action 1: Reject Request - Invalid Filename
 
 **UI steps:**
-1. Click **+ Add an action** in the NO (red) branch of "Is Filename Valid"
+1. Click **+ Add an action** in the FALSE (red) branch of "Validate Filename Format"
 2. Search for and select **Update item** (SharePoint)
-3. Rename the action to: `Reject - Invalid Filename`
-   - Click the **three dots (…)** → **Rename** → type `Reject - Invalid Filename`
+3. Rename the action to: `Reject Request - Invalid Filename`
+   - Click the **three dots (…)** → **Rename** → type `Reject Request - Invalid Filename`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -441,20 +441,20 @@ concat('[', outputs('Generate_ReqKey'), '] Action needed: rename your 3D print f
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below:
 
 ```html
-<p class="editor-paragraph">Your 3D print request was received, but the file name doesn't match our required format.<br><br>YOUR FILE:<br>@{outputs('Get_First_Filename')}<br><br>REQUIRED FORMAT:<br>FirstLast_Method_Color.ext<br><br>EXAMPLE:<br>JaneDoe_Filament_Blue.stl<br><br>WHAT TO DO:<br>1. Rename your file to match the format above<br>2. Use underscores (_) to separate the three parts<br>3. Submit a new request with the correctly named file<br><br>ACCEPTED FILE TYPES:<br>.stl, .obj, .3mf, .idea, .form<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Generate_ReqKey')}<br>- Method: @{triggerOutputs()?['body/Method']?['Value']}<br>- Color: @{triggerOutputs()?['body/Color']?['Value']}<br><br>If you need assistance, please visit the lab during open hours or reply to this email.<br><br>---<br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
+<p class="editor-paragraph">We're unable to process your request because the attached file name doesn't follow our format.</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Required format:</strong></b> FirstLast_Method_Color</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Examples:</strong></b> JaneDoe_Resin_Clear (with .stl, .obj, .3mf, .idea, or .form extension)</p><br><p class="editor-paragraph"><b><strong class="editor-text-bold">Accepted file types:</strong></b> .stl, .obj, .3mf, .idea, .form</p><br><p class="editor-paragraph">Please rename your file accordingly and submit a new request. Thank you!</p><br><p class="editor-paragraph">This is an automated message from the LSU Digital Fabrication Lab<i><em class="editor-text-italic">.</em></i></p>
 ```
 
 6. In the **Advanced parameters** section, click **Show all**
 7. **Is HTML:** Toggle to **Yes**
 8. **Importance:** Select `Normal`
 
-#### Action 3: Log Rejection (Invalid Filename)
+#### Action 3: Log Invalid Filename Rejection
 
 **UI steps:**
 1. Click **+ Add an action** in the NO branch
 2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Rejection - Invalid Filename`
-   - Click the **three dots (…)** → **Rename** → type `Log Rejection - Invalid Filename`
+3. Rename the action to: `Log Invalid Filename Rejection`
+   - Click the **three dots (…)** → **Rename** → type `Log Invalid Filename Rejection`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -480,7 +480,7 @@ concat('[', outputs('Generate_ReqKey'), '] Action needed: rename your 3D print f
 concat('Filename "', outputs('Get_First_Filename'), '" does not match required format. Rejection email sent.')
 ```
 
-#### Action 4: Terminate Flow (Invalid Filename)
+#### Action 4: Set variable
 
 **UI steps:**
 1. Click **+ Add an action** in the NO branch
@@ -497,13 +497,13 @@ concat('Filename "', outputs('Get_First_Filename'), '" does not match required f
 
 **What this does:** For valid submissions, updates the item with ReqKey and display name, logs the creation, and sends a confirmation email to the student.
 
-#### Action 1: Update Item with ReqKey and Display Name
+#### Action 1: Update Request - Valid File
 
 **UI steps:**
-1. Click **+ Add an action** in the YES (green) branch of "Is Filename Valid"
+1. Click **+ Add an action** in the FALSE (red) branch of "Check Invalid Attachments"
 2. Search for and select **Update item** (SharePoint)
-3. Rename the action to: `Update Item with ReqKey`
-   - Click the **three dots (…)** → **Rename** → type `Update Item with ReqKey`
+3. Rename the action to: `Update Request - Valid File`
+   - Click the **three dots (…)** → **Rename** → type `Update Request - Valid File`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -519,13 +519,13 @@ concat('Filename "', outputs('Get_First_Filename'), '" does not match required f
    - **LastAction Value:** Select `Created`
    - **LastActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
 
-#### Action 2: Log Request Created
+#### Action 2: Log Request Creation
 
 **UI steps:**
 1. Click **+ Add an action** in the YES branch
 2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Request Created`
-   - Click the **three dots (…)** → **Rename** → type `Log Request Created`
+3. Rename the action to: `Log Request Creation`
+   - Click the **three dots (…)** → **Rename** → type `Log Request Creation`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -548,13 +548,13 @@ concat('Filename "', outputs('Get_First_Filename'), '" does not match required f
    - **FlowRunId:** Click **Expression** tab (fx) → paste: `workflow()['run']['name']` → click **Update**
    - **Notes:** Type `New 3D print request submitted with standardized display name`
 
-#### Action 3: Send Confirmation Email
+#### Action 3: Send confirmation email
 
 **UI steps:**
 1. Click **+ Add an action** in the YES branch
 2. Search for and select **Send an email from a shared mailbox (V2)** (Office 365 Outlook)
-3. Rename the action to: `Send Confirmation Email`
-   - Click the **three dots (…)** → **Rename** → type `Send Confirmation Email`
+3. Rename the action to: `Send confirmation email`
+   - Click the **three dots (…)** → **Rename** → type `Send confirmation email`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -594,13 +594,13 @@ concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))
 | Printer | `triggerOutputs()?['body/Printer']?['Value']` |
 | Color | `triggerOutputs()?['body/Color']?['Value']` |
 
-#### Action 4: Log Email Sent
+#### Action 4: Log email sent
 
 **UI steps:**
 1. Click **+ Add an action** in the YES branch
 2. Search for and select **Create item** (SharePoint)
-3. Rename the action to: `Log Email Sent`
-   - Click the **three dots (…)** → **Rename** → type `Log Email Sent`
+3. Rename the action to: `Log email sent`
+   - Click the **three dots (…)** → **Rename** → type `Log email sent`
 4. **Configure retry policy:**
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
@@ -731,7 +731,7 @@ concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 5: Check Has Attachments                                  │
+│  Step 5: Check for No Attachments                               │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (No Files)       │ YES (Has Files)                           │
 │ → Reject            │ → Continue to Step 6                      │
@@ -745,7 +745,7 @@ concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 10: Is Filename Valid?                                    │
+│  Step 10: Validate Filename Format                              │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (Invalid)        │ YES (Valid)                               │
 │ → Reject            │ → Continue to Step 11                     │
@@ -832,24 +832,24 @@ Use these exact names when renaming actions in Power Automate:
 | 2 | Compose | `Generate ReqKey` |
 | 3 | Compose | `Generate Standardized Display Name` |
 | 4 | Compose | `Get Student Email` |
-| 5 | Condition | `Check Has Attachments` |
-| 5a-1 | Update item | `Reject - No Attachments` |
-| 5a-2 | Send email | `Send No Attachment Email` |
-| 5a-3 | Create item | `Log Rejection - No Attachments` |
-| 5a-4 | Terminate | `Terminate - No Attachments` |
+| 5 | Condition | `Check for No Attachments` |
+| 5a-1 | Update item | `Reject Request - No Files` |
+| 5a-2 | Send email | `Send No Files Email` |
+| 5a-3 | Create item | `Log No Files Rejection` |
+| 5a-4 | Terminate | `Stop Flow - No Files` |
 | 6 | Get attachments | `Get Attachments` |
 | 7 | Compose | `Get First Filename` |
 | 8 | Compose | `Check Valid Extension` |
 | 9 | Compose | `Check Filename Format` |
-| 10 | Condition | `Is Filename Valid` |
-| 10a-1 | Update item | `Reject - Invalid Filename` |
+| 10 | Condition | `Validate Filename Format` |
+| 10a-1 | Update item | `Reject Request - Invalid Filename` |
 | 10a-2 | Send email | `Send Invalid Filename Email` |
-| 10a-3 | Create item | `Log Rejection - Invalid Filename` |
-| 10a-4 | Terminate | `Terminate - Invalid Filename` |
-| 11-1 | Update item | `Update Item with ReqKey` |
-| 11-2 | Create item | `Log Request Created` |
-| 11-3 | Send email | `Send Confirmation Email` |
-| 11-4 | Create item | `Log Email Sent` |
+| 10a-3 | Create item | `Log Invalid Filename Rejection` |
+| 10a-4 | Set variable | `Set variable` |
+| 11-1 | Update item | `Update Request - Valid File` |
+| 11-2 | Create item | `Log Request Creation` |
+| 11-3 | Send email | `Send confirmation email` |
+| 11-4 | Create item | `Log email sent` |
 
 **Why rename actions?**
 - Makes flow easier to read and debug
