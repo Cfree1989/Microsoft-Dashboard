@@ -50,6 +50,60 @@
 
 ---
 
+## Flow Structure Overview
+
+> **IMPORTANT:** Read this section first to understand the loop hierarchy before building.
+
+The flow has **three main processing loops** that run **sequentially** (one after the other, NOT nested inside each other). Each main loop contains nested loops for deleting multiple related records.
+
+```
+Flow
+├── Recurrence (trigger)
+├── Calculate 7 Day Cutoff
+├── Calculate 12 Month Cutoff
+├── Initialize Rejected Counter
+├── Initialize Canceled Counter
+├── Initialize Archived Counter
+├── Get Rejected Requests Past Retention
+├── Get Canceled Requests Past Retention
+├── Get Archived Requests Past Retention
+│
+├── Process Each Rejected Request          ◄── MAIN LOOP #1
+│   ├── Get AuditLog Entries for Rejected
+│   ├── Delete Rejected Audit Entries      ◄── nested loop
+│   │   └── Delete Rejected Audit Entry        (ONLY this action inside)
+│   ├── Get Messages for Rejected
+│   ├── Delete Rejected Messages           ◄── nested loop
+│   │   └── Delete Rejected Message            (ONLY this action inside)
+│   ├── Delete Rejected PrintRequest
+│   └── Increment Rejected Count
+│
+├── Process Each Canceled Request          ◄── MAIN LOOP #2 (after #1, not inside)
+│   ├── Get AuditLog Entries for Canceled
+│   ├── Delete Canceled Audit Entries      ◄── nested loop
+│   │   └── Delete Canceled Audit Entry        (ONLY this action inside)
+│   ├── Get Messages for Canceled
+│   ├── Delete Canceled Messages           ◄── nested loop
+│   │   └── Delete Canceled Message            (ONLY this action inside)
+│   ├── Delete Canceled PrintRequest
+│   └── Increment Canceled Count
+│
+├── Process Each Archived Request          ◄── MAIN LOOP #3 (after #2, not inside)
+│   ├── Get AuditLog Entries for Archived
+│   ├── Delete Archived Audit Entries      ◄── nested loop
+│   │   └── Delete Archived Audit Entry        (ONLY this action inside)
+│   └── Increment Archived Count
+│
+└── Send Summary Email
+```
+
+**Key rules:**
+1. The three main loops (`Process Each Rejected/Canceled/Archived`) are **siblings** — each starts after the previous one ends
+2. Nested loops (like `Delete Rejected Audit Entries`) contain **only one action** — the delete action
+3. After a nested loop ends, the next action goes in the **main loop**, not inside the nested loop
+
+---
+
 ## Step-by-Step Implementation
 
 ### Step 1: Flow Creation Setup
