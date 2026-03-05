@@ -540,6 +540,7 @@ Set(varPaymentMethod, "TigerCASH only");
 // Consistent date formatting across the app
 Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
 Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
+Set(varDateTimeShort, "mmm d, h:mm AM/PM");        // e.g., "Mar 4, 2:17 PM"
 
 // === NAVIGATION ===
 // Screen transition effect - change to customize navigation feel
@@ -660,6 +661,7 @@ Set(varLoadingMessage, "")
 | `varPaymentMethod` | Accepted payment method | Text |
 | `varDateFormatShort` | Short date format string | Text |
 | `varDateFormatFull` | Full date/time format string | Text |
+| `varDateTimeShort` | Compact date/time format string | Text |
 | `varScreenTransition` | Navigation transition effect | ScreenTransition |
 | `varRefreshInterval` | Auto-refresh timer interval (milliseconds) | Number |
 
@@ -916,9 +918,11 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     recFilterBar                      ← Step 14 (filter bar background)
     ▼ galJobCards                     ← Step 6
         btnCardSendMessage            ← Step 16C
-        lblUnreadBadge                ← Step 16B
+        lblUnreadBadge                ← Step 16B (text on top)
+        recUnreadBadge                ← Step 16B (circular background)
         btnViewMessages               ← Step 16B (opens View Messages Modal)
         lblMessagesHeader             ← Step 16B
+        lblNotesHeader                ← Step 16B (notes count indicator)
         btnFiles                      ← Step 16
         btnRevert                     ← Step 9 (revert status for Printing/Completed)
         btnEditDetails                ← Step 12B
@@ -1371,27 +1375,36 @@ If(
 **⬇️ FORMULA: Shows relative time since submission (with "Just now" for recent items)**
 
 ```powerfx
-If(
-    DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes) < 1,
-    "Just now",
-    "Submitted " &
+With(
+    {varMinutes: DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes)},
     If(
-        DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 0,
-        Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & "d ",
-        ""
-    ) &
-    If(
-        Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24) > 0,
-        Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24)) & "h ",
-        ""
-    ) &
-    Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
+        varMinutes < 1,
+        "Just now",
+        If(
+            varMinutes >= 1440,
+            Text(RoundDown(varMinutes / 1440, 0)) & "d " &
+            If(
+                Mod(RoundDown(varMinutes / 60, 0), 24) > 0,
+                Text(Mod(RoundDown(varMinutes / 60, 0), 24)) & "h",
+                ""
+            ),
+            If(
+                varMinutes >= 60,
+                Text(RoundDown(varMinutes / 60, 0)) & "h ",
+                ""
+            ) &
+            Text(Mod(varMinutes, 60)) & "m"
+        )
+    )
 )
 ```
 
 > 💡 **Time Display:**
+> - Calculates elapsed time from total minutes (avoids `DateDiff` calendar day bug)
+> - Days = `RoundDown(minutes / 1440, 0)` (1440 min = 24 hours)
 > - "Just now" for items less than 1 minute old
-> - "Submitted Xd Xh Xm ago" for older items
+> - "Xh Xm" for items less than 24 hours old
+> - "Xd Xh" for items 24+ hours old (minutes hidden for clarity)
 > - Red color indicates urgency
 
 ### File Name (lblFilename)
@@ -1702,7 +1715,7 @@ These labels show additional info when the card is expanded. All have the same V
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(ThisItem.Created, "mmm dd, yyyy hh:mm AM/PM")` |
+| Text | `Text(ThisItem.Created, varDateTimeShort)` |
 | X | `Parent.TemplateWidth / 2 + 55` |
 | Y | `185` |
 | Width | `150` |
@@ -7147,26 +7160,32 @@ If(
             Split(varSelectedItem.StaffNotes, " | ") As entry,
             With(
                 {
-                    text: entry.Value,
-                    dashParts: Split(entry.Value, " - ")
+                    // Strip [NOTE] prefix if present for manual notes
+                    text: If(StartsWith(entry.Value, "[NOTE] "), Mid(entry.Value, 8, Len(entry.Value) - 7), entry.Value),
+                    isManualNote: StartsWith(entry.Value, "[NOTE] ")
                 },
                 With(
                     {
-                        datetime: Last(dashParts).Value,
-                        beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(dashParts).Value) - 3)),
-                        byPos: Find(" by ", text),
-                        colonPos: Find(":", text)
+                        dashParts: Split(text, " - ")
                     },
                     With(
                         {
-                            action: If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), "NOTE"),
-                            rawName: If(
-                                byPos > 0 && colonPos > byPos + 4,
-                                Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
-                                If(colonPos > 1, Trim(Left(text, colonPos - 1)), "")
-                            ),
-                            details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                            datetime: Last(dashParts).Value,
+                            beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(dashParts).Value) - 3)),
+                            byPos: Find(" by ", text),
+                            colonPos: Find(":", text)
                         },
+                        With(
+                            {
+                                // Force "NOTE" action if [NOTE] prefix was present, otherwise detect from " by " pattern
+                                action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), "NOTE")),
+                                rawName: If(
+                                    !isManualNote && byPos > 0 && colonPos > byPos + 4,
+                                    Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
+                                    If(colonPos > 1, Trim(Left(text, colonPos - 1)), "")
+                                ),
+                                details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                            },
                         With(
                             {
                                 // Convert any name to "First L." format
@@ -7205,6 +7224,7 @@ If(
                                 ""
                             ) &
                             Char(10)
+                            )
                         )
                     )
                 )
@@ -7217,9 +7237,10 @@ If(
 ```
 
 > 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
-> - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED")
+> - Manual notes prefixed with `[NOTE]` have the prefix stripped before display
+> - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED" or "3/4 9:15am - NOTE")
 > - Line 2: Staff name (e.g., "Lauren V.")
-> - Line 3+: Details/comments (for rejections, shows each reason as a bulleted item, then quoted staff comment)
+> - Line 3+: Details/comments (for rejections, shows each reason as a bulleted item, then quoted staff comment; for manual notes, shows the note in quotes)
 >
 > **Example rejection display:**
 > ```
@@ -7413,12 +7434,13 @@ If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disab
 50. Set **OnSelect:**
 
 ```powerfx
-// Append the new note to StaffNotes with staff name and timestamp
+// Append the new note to StaffNotes with [NOTE] prefix for manual notes
 // Using LookUp to get fresh record avoids concurrency conflicts
 Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID),
 {
     StaffNotes: Concatenate(
         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        "[NOTE] " &
         With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
         ": " & txtAddNote.Text & " - " & Text(Now(), "m/d h:mmam/pm")
     )
@@ -7434,7 +7456,7 @@ Reset(txtAddNote);
 Notify("Note added successfully!", NotificationType.Success)
 ```
 
-> 💡 **Note Format:** Manual notes use the same format as system entries: short name (e.g., "Lauren V.") followed by the note text and a compact timestamp (e.g., "1/30 2:45pm"). All notes are separated by ` | ` in storage and parsed for clean display.
+> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` to distinguish them from automated audit entries (APPROVED, REJECTED, etc.). The job card counter only counts manual `[NOTE]` entries, while the modal displays all entries. All notes are separated by ` | ` in storage and parsed for clean display.
 >
 > ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
@@ -8593,11 +8615,32 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Color | `varColorText` |
 | Visible | `true` |
 
+#### Notes Header (lblNotesHeader)
+
+4. Click **+ Insert** → **Text label**.
+5. **Rename it:** `lblNotesHeader`
+6. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Notes (" & If(IsBlank(ThisItem.StaffNotes), 0, CountRows(Split(ThisItem.StaffNotes, "[NOTE]")) - 1) & ")"` |
+| X | `lblMessagesHeader.X + lblMessagesHeader.Width + 20` |
+| Y | `lblMessagesHeader.Y` |
+| Width | `200` |
+| Height | `20` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `varColorText` |
+| Visible | `true` |
+
+> 💡 **Note:** This counts only **manual staff notes** (tagged with `[NOTE]`), not automated audit entries like approvals or rejections. The formula splits on `[NOTE]` and subtracts 1 (since splitting "A[NOTE]B" returns 2 parts). Automated entries are still visible in the Notes modal but don't increment this counter.
+
 #### View Messages Button (btnViewMessages)
 
-4. Click **+ Insert** → **Button**.
-5. **Rename it:** `btnViewMessages`
-6. Set properties:
+7. Click **+ Insert** → **Button**.
+8. **Rename it:** `btnViewMessages`
+9. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8621,7 +8664,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-7. Set **OnSelect:**
+10. Set **OnSelect:**
 
 ```powerfx
 Set(varShowViewMessagesModal, ThisItem.ID);
@@ -8632,11 +8675,11 @@ Set(varSelectedItem, ThisItem)
 
 ---
 
-#### Unread Badge (lblUnreadBadge)
+#### Unread Badge Background (recUnreadBadge)
 
-8. Still in `galJobCards`, click **+ Insert** → **Text label**.
-9. **Rename it:** `lblUnreadBadge`
-10. Set properties:
+11. Still in `galJobCards`, click **+ Insert** → **Text label**.
+12. **Rename it:** `lblUnreadBadge`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8651,14 +8694,15 @@ Set(varSelectedItem, ThisItem)
 | Align | `Align.Center` |
 | Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
 
-> **Note:** The unread badge shows a red circle with the count of student replies that staff haven't read yet. It only appears when there are unread inbound messages.
+> **Note:** The unread badge uses two layered controls: a rounded rectangle (`recUnreadBadge`) for the circular red background, and a label (`lblUnreadBadge`) for the white text on top. Both share the same visibility condition so they appear/disappear together.
 
 ---
 
-#### Job Card Messages Summary
+#### Job Card Messages & Notes Summary
 
 With these controls, each job card shows:
-- **Messages (X)** header with total count
+- **Messages (X)** header with total message count
+- **Notes (X)** header with staff notes count
 - **View Messages** button to open the full conversation modal
 - **Red unread badge** with count of unread student replies
 
@@ -8902,9 +8946,11 @@ Reset(ddViewMsgStaff)
 | Y | `recViewMsgModal.Y + 65` |
 | Width | `560` |
 | Height | `250` |
-| TemplateSize | `70` |
-| TemplatePadding | `4` |
+| TemplateSize | `lblVMsgContent.Y + lblVMsgContent.Height + 16` |
+| TemplatePadding | `8` |
 | ShowScrollbar | `true` |
+
+> **Flexible Height:** The `TemplateSize` formula calculates each row's height based on the auto-height label plus padding, allowing messages to expand naturally.
 
 ---
 
@@ -8915,7 +8961,7 @@ Reset(ddViewMsgStaff)
    - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)`
    - **Y:** `0`
    - **Width:** `Parent.TemplateWidth * varMessageBubbleWidth`
-   - **Height:** `Parent.TemplateHeight - 8`
+   - **Height:** `lblVMsgContent.Y + lblVMsgContent.Height + 6`
    - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
    - **RadiusTopLeft:** `6`
    - **RadiusTopRight:** `6`
@@ -8996,13 +9042,12 @@ Reset(ddViewMsgStaff)
 | X | `recVMsgBg.X + 10` |
 | Y | `26` |
 | Width | `recVMsgBg.Width - 20` |
-| Height | `Parent.TemplateHeight - 36` |
+| AutoHeight | `true` |
 | Size | `11` |
 | Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Top` |
-| Overflow | `Overflow.Scroll` |
 
-> **Note:** Full message content is displayed without truncation. Long messages will scroll within the template.
+> **Note:** Using `AutoHeight` allows each message to expand to fit its content. The gallery scrolls to show all messages rather than each message having its own scrollbar.
 
 ---
 
@@ -10300,12 +10345,36 @@ Switch(
 ## Relative Time Display
 
 ```powerfx
-"Submitted " & 
-If(DateDiff(ThisItem.Created, Now(), TimeUnit.Days) > 0,
-    Text(DateDiff(ThisItem.Created, Now(), TimeUnit.Days)) & "d ", "") &
-If(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24) > 0,
-    Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Hours), 24)) & "h ", "") &
-Text(Mod(DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes), 60)) & "m ago"
+// LookUp the "Request Created" audit entry to get the actual creation timestamp
+// Dynamic display: shows minutes only for items < 1 day old
+With(
+    {varCreatedAt: LookUp(AuditLog, ReqKey = ThisItem.ReqKey && Action.Value = "Created", ActionAt)},
+    If(
+        IsBlank(varCreatedAt),
+        "",
+        If(
+            DateDiff(varCreatedAt, Now(), TimeUnit.Minutes) < 1,
+            "Just now",
+            If(
+                DateDiff(varCreatedAt, Now(), TimeUnit.Days) > 0,
+                // 1+ days: show days and hours only
+                Text(DateDiff(varCreatedAt, Now(), TimeUnit.Days)) & "d " &
+                If(
+                    Mod(DateDiff(varCreatedAt, Now(), TimeUnit.Hours), 24) > 0,
+                    Text(Mod(DateDiff(varCreatedAt, Now(), TimeUnit.Hours), 24)) & "h",
+                    ""
+                ),
+                // Less than 1 day: show hours and minutes
+                If(
+                    DateDiff(varCreatedAt, Now(), TimeUnit.Hours) > 0,
+                    Text(DateDiff(varCreatedAt, Now(), TimeUnit.Hours)) & "h ",
+                    ""
+                ) &
+                Text(Mod(DateDiff(varCreatedAt, Now(), TimeUnit.Minutes), 60)) & "m"
+            )
+        )
+    )
+)
 ```
 
 ## Cost Calculation

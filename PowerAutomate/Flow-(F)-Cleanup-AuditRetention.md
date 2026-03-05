@@ -1,23 +1,22 @@
 # Flow F (PR-Cleanup)
 
-**Full Name:** PR-Cleanup: Audit retention  
+**Full Name:** PR-Cleanup: Data retention  
 **Type:** Scheduled cloud flow (Recurrence trigger)
 
-**Purpose:** Automatically delete AuditLog entries for jobs that have been in terminal states (Rejected, Canceled, Archived) beyond their retention periods, keeping the AuditLog list performant while preserving audit trails for active and recent jobs.
+**Purpose:** Automatically clean up data for jobs in terminal states (Rejected, Canceled, Archived) beyond their retention periods. For Rejected/Canceled jobs, performs full deletion (PrintRequest + AuditLog + Messages). For Archived jobs, only removes AuditLog entries to keep the list performant while preserving job records for historical reference.
 
 ---
 
 ## Retention Policy
 
-| Status | Retention Period | Rationale |
-|--------|------------------|-----------|
-| Rejected | 1 month after rejection | Short disputes window; student can resubmit |
-| Canceled | 1 month after cancellation | Student-initiated; minimal audit need |
-| Archived | 12 months after archive | Longest retention for completed work |
+| Status | Retention Period | What Gets Deleted | Rationale |
+|--------|------------------|-------------------|-----------|
+| Rejected | 7 days | **Everything** — PrintRequest, AuditLog, Messages | Jobs never worked; minimal dispute window |
+| Canceled | 7 days | **Everything** — PrintRequest, AuditLog, Messages | Student-initiated cancellation; no business value |
+| Archived | 12 months | **AuditLog only** — PrintRequest preserved | Keeps active list fast; preserves historical records |
 
 **What is NOT deleted:**
-- The PrintRequest records themselves (only AuditLog entries are removed)
-- The `StaffNotes` field on PrintRequests (preserves human-readable action history)
+- PrintRequest records for Archived jobs (preserved indefinitely for historical lookup)
 - AuditLog entries for active jobs (any status not in the table above)
 
 ---
@@ -87,13 +86,13 @@
 
 **UI steps:**
 
-#### Action 1: Calculate 1-Month Cutoff
+#### Action 1: Calculate 7-Day Cutoff
 1. Click **+ New step**
 2. **Search:** Type `Compose` → Select **Compose**
-3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 1 Month Cutoff`
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 7 Day Cutoff`
 4. In **Inputs**, click **Expression** tab (fx) → Paste:
 ```
-formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')
+formatDateTime(addDays(utcNow(), -7), 'yyyy-MM-ddTHH:mm:ssZ')
 ```
 5. Click **OK**
 
@@ -109,7 +108,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 ```
 5. Click **OK**
 
-**Test Step 2:** Save → Run flow manually → Check run history → Both Compose actions should show ISO date strings
+**Test Step 2:** Save → Run flow manually → Check run history → Both Compose actions should show ISO date strings (7 days ago and 365 days ago)
 
 ---
 
@@ -175,7 +174,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
    - **List Name:** `PrintRequests`
    - **Filter Query:** Build this in parts (do NOT paste as one string):
      1. Type: `Status eq 'Rejected' and LastActionAt lt '`
-     2. Click **Dynamic content** → Select **Outputs** from `Calculate 1 Month Cutoff`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 7 Day Cutoff`
      3. Type: `'` (closing single quote)
    - **Top Count:** `100` (process in batches to avoid throttling)
 
@@ -198,7 +197,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
    - **List Name:** `PrintRequests`
    - **Filter Query:** Build this in parts:
      1. Type: `Status eq 'Canceled' and LastActionAt lt '`
-     2. Click **Dynamic content** → Select **Outputs** from `Calculate 1 Month Cutoff`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 7 Day Cutoff`
      3. Type: `'` (closing single quote)
    - **Top Count:** `100`
 
@@ -227,9 +226,9 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 ---
 
-### Step 5: Process Rejected Requests
+### Step 5: Process Rejected Requests (Full Deletion)
 
-**What this does:** For each rejected request past retention, deletes all associated AuditLog entries.
+**What this does:** For each rejected request past 7-day retention, performs **full cleanup**: deletes all AuditLog entries, all Messages, and the PrintRequest itself.
 
 **UI steps:**
 
@@ -266,7 +265,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
    concat('RequestID eq ', items('Process_Each_Rejected_Request')?['ID'])
    ```
    - Click **OK**
-   - **Top Count:** `500` (a single request shouldn't have more than this)
+   - **Top Count:** `500`
 
 #### Action 3: Delete Each AuditLog Entry
 1. Click **Add an action** (inside the loop, after Get AuditLog)
@@ -284,38 +283,73 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 6. Click **Add an action**
 7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
 8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Rejected Audit Entry`
-9. **Configure retry policy:**
-   - Click **three dots (…)** → **Settings**
-   - **Retry policy:** Select **Exponential interval**
-   - **Count:** `4`
-   - **Interval:** `PT1M`
-   - **Minimum interval:** `PT20S`
-   - **Maximum interval:** `PT1H`
-   - Click **Done**
-10. **Configure run after (continue on error):**
-    - Click **three dots (…)** → **Configure run after**
-    - Check all boxes: **is successful**, **has failed**, **is skipped**, **has timed out**
-    - Click **Done**
+9. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+10. **Configure run after:** Check all boxes (is successful, has failed, is skipped, has timed out)
 11. Fill in:
     - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** `AuditLog`
-    - **Id:** Click **Dynamic content** → Select **ID** from `Delete Rejected Audit Entries` (the current item in the inner loop)
+    - **Id:** Click **Dynamic content** → Under the **Get AuditLog Entries for Rejected** section, select **ID**
 
-#### Action 4: Increment Rejected Counter
-1. Click **Add an action** (inside the nested loop, after Delete item)
+#### Action 4: Get Messages for This Request
+1. Click **Add an action** (inside the main loop, AFTER the Delete Audit Entries loop)
+2. **Search:** Type `Get items` → Select **Get items (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get Messages for Rejected`
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `RequestComments`
+   - **Filter Query:** Click **Expression** tab → Paste:
+   ```
+   concat('RequestID eq ', items('Process_Each_Rejected_Request')?['ID'])
+   ```
+   - Click **OK**
+   - **Top Count:** `500`
+
+#### Action 5: Delete Each Message
+1. Click **Add an action** (inside the main loop, after Get Messages)
+2. **Search:** Type `Apply to each` → Select **Apply to each**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Rejected Messages`
+4. In **Select an output:** Click **Dynamic content** → Select **value** from `Get Messages for Rejected`
+5. **Configure concurrency:** Turn On, Degree of Parallelism: `1`
+
+**Inside the nested Apply to each:**
+
+6. Click **Add an action**
+7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
+8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Rejected Message`
+9. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+10. **Configure run after:** Check all boxes
+11. Fill in:
+    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+    - **List Name:** `RequestComments`
+    - **Id:** Click **Dynamic content** → Under the **Get Messages for Rejected** section, select **ID** (this is the current item's ID from the loop)
+
+#### Action 6: Delete the PrintRequest Itself
+1. Click **Add an action** (inside the main loop, AFTER the Delete Messages loop)
+2. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Rejected PrintRequest`
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+5. **Configure run after:** Check all boxes
+6. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Dynamic content** → Under the **Get Rejected Requests Past Retention** section, select **ID**
+
+#### Action 7: Increment Rejected Counter
+1. Click **Add an action** (inside the main loop, after Delete PrintRequest)
 2. **Search:** Type `Increment variable` → Select **Increment variable**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Increment Rejected Count`
 4. Fill in:
    - **Name:** Select `RejectedCount`
    - **Value:** `1`
 
-**Test Step 5:** Save → Run flow manually → Check that Rejected requests past retention have their AuditLog entries deleted and RejectedCount increments correctly
+**Test Step 5:** Save → Run flow manually → Check that Rejected requests past 7 days have ALL data deleted (AuditLog, Messages, PrintRequest)
 
 ---
 
-### Step 6: Process Canceled Requests
+### Step 6: Process Canceled Requests (Full Deletion)
 
-**What this does:** For each canceled request past retention, deletes all associated AuditLog entries.
+**What this does:** For each canceled request past 7-day retention, performs **full cleanup**: deletes all AuditLog entries, all Messages, and the PrintRequest itself.
 
 **UI steps:**
 
@@ -336,14 +370,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 1. Click **Add an action** (inside the loop)
 2. **Search:** Type `Get items` → Select **Get items (SharePoint)**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get AuditLog Entries for Canceled`
-4. **Configure retry policy:**
-   - Click **three dots (…)** → **Settings**
-   - **Retry policy:** Select **Exponential interval**
-   - **Count:** `4`
-   - **Interval:** `PT1M`
-   - **Minimum interval:** `PT20S`
-   - **Maximum interval:** `PT1H`
-   - Click **Done**
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
 5. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `AuditLog`
@@ -359,43 +386,74 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 2. **Search:** Type `Apply to each` → Select **Apply to each**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled Audit Entries`
 4. In **Select an output:** Click **Dynamic content** → Select **value** from `Get AuditLog Entries for Canceled`
-5. **Configure concurrency:**
-   - Click **three dots (…)** → **Settings**
-   - **Concurrency Control:** Turn **On**
-   - **Degree of Parallelism:** `1`
-   - Click **Done**
+5. **Configure concurrency:** Turn On, Degree of Parallelism: `1`
 
 **Inside the nested Apply to each:**
 
 6. Click **Add an action**
 7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
 8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled Audit Entry`
-9. **Configure retry policy:**
-   - Click **three dots (…)** → **Settings**
-   - **Retry policy:** Select **Exponential interval**
-   - **Count:** `4`
-   - **Interval:** `PT1M`
-   - **Minimum interval:** `PT20S`
-   - **Maximum interval:** `PT1H`
-   - Click **Done**
-10. **Configure run after (continue on error):**
-    - Click **three dots (…)** → **Configure run after**
-    - Check all boxes: **is successful**, **has failed**, **is skipped**, **has timed out**
-    - Click **Done**
+9. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+10. **Configure run after:** Check all boxes
 11. Fill in:
     - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** `AuditLog`
-    - **Id:** Click **Dynamic content** → Select **ID** from `Delete Canceled Audit Entries` (the current item in the inner loop)
+    - **Id:** Click **Dynamic content** → Under the **Get AuditLog Entries for Canceled** section, select **ID**
 
-#### Action 4: Increment Canceled Counter
-1. Click **Add an action** (inside the nested loop, after Delete item)
+#### Action 4: Get Messages for This Request
+1. Click **Add an action** (inside the main loop, AFTER the Delete Audit Entries loop)
+2. **Search:** Type `Get items` → Select **Get items (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get Messages for Canceled`
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `RequestComments`
+   - **Filter Query:** Click **Expression** tab → Paste:
+   ```
+   concat('RequestID eq ', items('Process_Each_Canceled_Request')?['ID'])
+   ```
+   - Click **OK**
+   - **Top Count:** `500`
+
+#### Action 5: Delete Each Message
+1. Click **Add an action** (inside the main loop, after Get Messages)
+2. **Search:** Type `Apply to each` → Select **Apply to each**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled Messages`
+4. In **Select an output:** Click **Dynamic content** → Select **value** from `Get Messages for Canceled`
+5. **Configure concurrency:** Turn On, Degree of Parallelism: `1`
+
+**Inside the nested Apply to each:**
+
+6. Click **Add an action**
+7. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
+8. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled Message`
+9. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+10. **Configure run after:** Check all boxes
+11. Fill in:
+    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+    - **List Name:** `RequestComments`
+    - **Id:** Click **Dynamic content** → Under the **Get Messages for Canceled** section, select **ID** (this is the current item's ID from the loop)
+
+#### Action 6: Delete the PrintRequest Itself
+1. Click **Add an action** (inside the main loop, AFTER the Delete Messages loop)
+2. **Search:** Type `Delete item` → Select **Delete item (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Delete Canceled PrintRequest`
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+5. **Configure run after:** Check all boxes
+6. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Dynamic content** → Under the **Get Canceled Requests Past Retention** section, select **ID**
+
+#### Action 7: Increment Canceled Counter
+1. Click **Add an action** (inside the main loop, after Delete PrintRequest)
 2. **Search:** Type `Increment variable` → Select **Increment variable**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Increment Canceled Count`
 4. Fill in:
    - **Name:** Select `CanceledCount`
    - **Value:** `1`
 
-**Test Step 6:** Save → Run flow manually → Check that Canceled requests past retention have their AuditLog entries deleted
+**Test Step 6:** Save → Run flow manually → Check that Canceled requests past 7 days have ALL data deleted (AuditLog, Messages, PrintRequest)
 
 ---
 
@@ -471,7 +529,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 11. Fill in:
     - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** `AuditLog`
-    - **Id:** Click **Dynamic content** → Select **ID** from `Delete Archived Audit Entries` (the current item in the inner loop)
+    - **Id:** Click **Dynamic content** → Under the **Get AuditLog Entries for Archived** section, select **ID**
 
 #### Action 4: Increment Archived Counter
 1. Click **Add an action** (inside the nested loop, after Delete item)
@@ -530,7 +588,7 @@ add(add(variables('RejectedCount'), variables('CanceledCount')), variables('Arch
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Click **Expression** → Paste:
    ```
-   concat('Weekly cleanup deleted ', outputs('Calculate_Total_Deleted'), ' audit entries (Rejected: ', variables('RejectedCount'), ', Canceled: ', variables('CanceledCount'), ', Archived: ', variables('ArchivedCount'), '). Retention: Rejected/Canceled=30 days, Archived=365 days.')
+   concat('Weekly cleanup: Rejected=', variables('RejectedCount'), ' (full delete), Canceled=', variables('CanceledCount'), ' (full delete), Archived=', variables('ArchivedCount'), ' (audit only). Retention: Rejected/Canceled=7 days, Archived=365 days.')
    ```
 
 **Test Step 8:** Save → Run flow manually → Check AuditLog for "Audit Cleanup Run" entry with counts
@@ -544,7 +602,7 @@ After completing all steps, your flow should look like this:
 ```
 Recurrence (Weekly, Sunday 3 AM)
 │
-├── Calculate 1 Month Cutoff
+├── Calculate 7 Day Cutoff
 ├── Calculate 12 Month Cutoff
 │
 ├── Initialize Rejected Counter
@@ -555,19 +613,27 @@ Recurrence (Weekly, Sunday 3 AM)
 ├── Get Canceled Requests Past Retention
 ├── Get Archived Requests Past Retention
 │
-├── Process Each Rejected Request
-│   └── Get AuditLog Entries for Rejected
-│       └── Delete Rejected Audit Entries
-│           ├── Delete Rejected Audit Entry
-│           └── Increment Rejected Count
+├── Process Each Rejected Request (FULL DELETION)
+│   ├── Get AuditLog Entries for Rejected
+│   │   └── Delete Rejected Audit Entries
+│   │       └── Delete Rejected Audit Entry
+│   ├── Get Messages for Rejected
+│   │   └── Delete Rejected Messages
+│   │       └── Delete Rejected Message
+│   ├── Delete Rejected PrintRequest
+│   └── Increment Rejected Count
 │
-├── Process Each Canceled Request
-│   └── Get AuditLog Entries for Canceled
-│       └── Delete Canceled Audit Entries
-│           ├── Delete Canceled Audit Entry
-│           └── Increment Canceled Count
+├── Process Each Canceled Request (FULL DELETION)
+│   ├── Get AuditLog Entries for Canceled
+│   │   └── Delete Canceled Audit Entries
+│   │       └── Delete Canceled Audit Entry
+│   ├── Get Messages for Canceled
+│   │   └── Delete Canceled Messages
+│   │       └── Delete Canceled Message
+│   ├── Delete Canceled PrintRequest
+│   └── Increment Canceled Count
 │
-├── Process Each Archived Request
+├── Process Each Archived Request (AUDIT LOG ONLY)
 │   └── Get AuditLog Entries for Archived
 │       └── Delete Archived Audit Entries
 │           ├── Delete Archived Audit Entry
@@ -592,19 +658,31 @@ Recurrence (Weekly, Sunday 3 AM)
 - [ ] Check AuditLog for "Audit Cleanup Run" entry
 - [ ] Verify counts in Notes field are accurate
 
-### Functional Testing
+### Functional Testing (Rejected/Canceled - Full Deletion)
 - [ ] Create a test PrintRequest with Status = "Rejected"
-- [ ] Manually set `LastActionAt` to 35 days ago (via SharePoint list edit)
+- [ ] Manually set `LastActionAt` to 10 days ago (via SharePoint list edit)
+- [ ] Create associated AuditLog entries for that RequestID
+- [ ] Create associated Messages for that RequestID
+- [ ] Run flow manually
+- [ ] Verify PrintRequest is DELETED
+- [ ] Verify AuditLog entries for that request are DELETED
+- [ ] Verify Messages for that request are DELETED
+- [ ] Verify cleanup summary shows correct count
+
+### Functional Testing (Archived - Audit Only)
+- [ ] Create a test PrintRequest with Status = "Archived"
+- [ ] Manually set `LastActionAt` to 400 days ago
 - [ ] Create associated AuditLog entries for that RequestID
 - [ ] Run flow manually
-- [ ] Verify AuditLog entries for that request are deleted
-- [ ] Verify PrintRequest itself is NOT deleted
-- [ ] Verify cleanup summary shows correct count
+- [ ] Verify AuditLog entries are deleted
+- [ ] Verify PrintRequest itself is NOT deleted (still exists)
 
 ### Edge Cases
 - [ ] No eligible items → Flow completes, summary shows 0 deleted
 - [ ] Large batch (50+ requests) → Flow completes without throttling errors
 - [ ] Mixed statuses → Only items past their specific retention are deleted
+- [ ] Rejected/Canceled with no Messages → Flow handles gracefully (empty loop)
+- [ ] Archived jobs → Only AuditLog deleted, PrintRequest and Messages preserved
 
 ---
 
@@ -675,6 +753,7 @@ To change retention periods, update the Compose expressions:
 
 | Period | Expression |
 |--------|------------|
+| 7 days | `formatDateTime(addDays(utcNow(), -7), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 2 weeks | `formatDateTime(addDays(utcNow(), -14), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 1 month | `formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 3 months | `formatDateTime(addDays(utcNow(), -90), 'yyyy-MM-ddTHH:mm:ssZ')` |
@@ -701,9 +780,10 @@ If the flow hasn't run in a while and there's a large backlog:
 
 ## Key Features
 
-- **Status-Specific Retention:** Different retention periods based on job outcome
-- **Non-Destructive:** Only deletes AuditLog entries, not PrintRequest records
-- **Self-Documenting:** Creates audit entry for each cleanup run
+- **Status-Specific Retention:** 7 days for Rejected/Canceled (full delete), 12 months for Archived (audit only)
+- **Full Cleanup for Rejected/Canceled:** Deletes PrintRequest, AuditLog entries, AND Messages — no orphaned data
+- **Preserves Archived History:** Archived PrintRequests stay indefinitely for historical reference
+- **Self-Documenting:** Creates audit entry for each cleanup run with counts
 - **Throttle-Safe:** Concurrency controls prevent SharePoint throttling
 - **Error-Resilient:** Continues processing even if individual deletions fail
 - **Traceable:** FlowRunId in summary enables troubleshooting
