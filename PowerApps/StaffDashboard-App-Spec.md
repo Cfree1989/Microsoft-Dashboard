@@ -202,7 +202,7 @@ Use **Parent-relative sizing** for responsive layouts:
 
 | Modal | Width | Height | Notes |
 |-------|-------|--------|-------|
-| Approval | 600 | 650 | Includes cost calculator |
+| Approval | 600 | 725 | Includes cost calculator, slicing computer dropdown |
 | Rejection | 600 | 610 | Multiple checkboxes |
 | Archive | 500 | 400 | Simple confirmation |
 | Details | 550 | 620 | Multiple dropdowns |
@@ -368,6 +368,13 @@ ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.
 
 // Check if current user is a staff member
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
+
+// === SLICING COMPUTERS ===
+// Collection for slicing computer dropdown in approval modal
+ClearCollect(colSlicingComputers, 
+    {Name: "Computer 1"},
+    {Name: "Computer 2"}
+);
 
 // === STATUS DEFINITIONS ===
 // All possible statuses in the system
@@ -1599,10 +1606,31 @@ If(
 
 ---
 
+### Slicing Computer Display (lblSlicedOn)
+
+29. Click **+ Insert** → **Text label**.
+30. **Rename it:** `lblSlicedOn`
+31. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"💻 " & ThisItem.SlicedOnComputer.Value` |
+| X | `12` |
+| Y | `115` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `20` |
+| Size | `10` |
+| Color | `varColorTextMuted` |
+| **Visible** | `!IsBlank(ThisItem.SlicedOnComputer)` |
+
+> 💡 **When it shows:** Only appears after approval when the slicing computer field is populated. Displays which workstation was used to slice the model.
+
+---
+
 ### View Notes Button (btnViewNotes)
 
-24. Click **+ Insert** → **Button**.
-25. **Rename it:** `btnViewNotes`
+32. Click **+ Insert** → **Button**.
+33. **Rename it:** `btnViewNotes`
 26. Set properties:
 
 | Property | Value |
@@ -1628,7 +1656,7 @@ If(
 
 > Note: This is a small secondary button so uses Size: 9 instead of varBtnFontSize.
 
-27. Set **OnSelect:**
+34. Set **OnSelect:**
 
 ```powerfx
 Set(varShowNotesModal, ThisItem.ID);
@@ -1641,9 +1669,9 @@ Set(varSelectedItem, ThisItem)
 
 ### Additional Details Section (Expandable)
 
-30. Click **+ Insert** → **Text label**.
-31. **Rename it:** `lblDetailsHeader`
-32. Set properties:
+35. Click **+ Insert** → **Text label**.
+36. **Rename it:** `lblDetailsHeader`
+37. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -2817,16 +2845,18 @@ scrDashboard
     ├── lblApprovalCommentsLabel ← "Additional Comments:"
     ├── lblApprovalCostValue     ← Auto-calculated cost display
     ├── lblApprovalCostLabel     ← "Estimated Cost:"
-    ├── txtEstimatedTime         ← Time input field (optional)
-    ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours):"
-    ├── lblWeightValidation      ← Validation error message
+    ├── txtEstimatedTime         ← Time input field (required)
+    ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours): *"
+    ├── lblWeightValidation      ← Weight validation error message
     ├── txtEstimatedWeight       ← Weight input field
     ├── lblApprovalWeightLabel   ← "Estimated Weight (grams): *"
+    ├── ddSlicedOnComputer       ← Slicing computer dropdown
+    ├── lblSlicedOnLabel         ← "Sliced On Computer:"
     ├── ddApprovalStaff          ← Staff dropdown
     ├── lblApprovalStaffLabel    ← "Performing Action As: *"
     ├── lblApprovalStudent       ← Student name and email
     ├── lblApprovalTitle         ← "Approve Request - REQ-00042"
-    ├── recApprovalModal         ← White modal box
+    ├── recApprovalModal         ← White modal box (725px tall)
     └── recApprovalOverlay       ← Dark semi-transparent background
 ```
 
@@ -2877,14 +2907,16 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 650) / 2` |
+| Y | `(Parent.Height - 725) / 2` |
 | Width | `600` |
-| Height | `650` |
+| Height | `725` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
+
+> 💡 **Modal Height:** 725px to accommodate slicing computer dropdown and required time field.
 
 ---
 
@@ -2980,17 +3012,71 @@ scrDashboard
 
 ---
 
-### Weight Label (lblApprovalWeightLabel)
+### Slicing Computer Label (lblSlicedOnLabel)
 
 23. Click **+ Insert** → **Text label**.
-24. **Rename it:** `lblApprovalWeightLabel`
+24. **Rename it:** `lblSlicedOnLabel`
 25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Sliced On Computer: *"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 165` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Slicing Computer Dropdown (ddSlicedOnComputer)
+
+26. Click **+ Insert** → **Combo box**.
+27. **Rename it:** `ddSlicedOnComputer`
+28. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colSlicingComputers` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 190` |
+| Width | `200` |
+| Height | `36` |
+| DisplayFields | `["Name"]` |
+| SearchFields | `["Name"]` |
+| DefaultSelectedItems | `Blank()` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+
+> 💡 **Note:** This field is required. Staff must select which computer was used for slicing; it will display on the job card after approval.
+
+---
+
+### Weight Label (lblApprovalWeightLabel)
+
+29. Click **+ Insert** → **Text label**.
+30. **Rename it:** `lblApprovalWeightLabel`
+31. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Estimated Weight (grams): *"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 165` |
+| Y | `recApprovalModal.Y + 240` |
 | Width | `250` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -2999,15 +3085,15 @@ scrDashboard
 
 ### Weight Input (txtEstimatedWeight)
 
-26. Click **+ Insert** → **Text input**.
-27. **Rename it:** `txtEstimatedWeight`
-28. Set properties:
+32. Click **+ Insert** → **Text input**.
+33. **Rename it:** `txtEstimatedWeight`
+34. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Format | `TextFormat.Number` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 190` |
+| Y | `recApprovalModal.Y + 265` |
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter weight in grams (e.g., 25)"` |
@@ -3024,14 +3110,14 @@ scrDashboard
 
 ### Weight Validation Label (lblWeightValidation)
 
-29. Click **+ Insert** → **Text label**.
-30. **Rename it:** `lblWeightValidation`
-31. Set properties:
+35. Click **+ Insert** → **Text label**.
+36. **Rename it:** `lblWeightValidation`
+37. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recApprovalModal.X + 230` |
-| Y | `recApprovalModal.Y + 195` |
+| Y | `recApprovalModal.Y + 270` |
 | Width | `200` |
 | Height | `25` |
 | Size | `11` |
@@ -3061,32 +3147,34 @@ IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value
 
 ### Time Label (lblApprovalTimeLabel)
 
-34. Click **+ Insert** → **Text label**.
-35. **Rename it:** `lblApprovalTimeLabel`
-36. Set properties:
+38. Click **+ Insert** → **Text label**.
+39. **Rename it:** `lblApprovalTimeLabel`
+40. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Estimated Print Time (hours): (Optional)"` |
+| Text | `"Estimated Print Time (hours): *"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 240` |
+| Y | `recApprovalModal.Y + 315` |
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
+
+> ⚠️ **Required Field:** Print time is now required (changed from optional).
 
 ---
 
 ### Time Input (txtEstimatedTime)
 
-37. Click **+ Insert** → **Text input**.
-38. **Rename it:** `txtEstimatedTime`
-39. Set properties:
+41. Click **+ Insert** → **Text input**.
+42. **Rename it:** `txtEstimatedTime`
+43. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Format | `TextFormat.Number` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 265` |
+| Y | `recApprovalModal.Y + 340` |
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter hours (e.g., 2.5)"` |
@@ -3103,15 +3191,15 @@ IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value
 
 ### Cost Label (lblApprovalCostLabel)
 
-40. Click **+ Insert** → **Text label**.
-41. **Rename it:** `lblApprovalCostLabel`
-42. Set properties:
+44. Click **+ Insert** → **Text label**.
+45. **Rename it:** `lblApprovalCostLabel`
+46. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Estimated Cost:"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 320` |
+| Y | `recApprovalModal.Y + 395` |
 | Width | `150` |
 | Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3121,21 +3209,21 @@ IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value
 
 ### Cost Value Display (lblApprovalCostValue)
 
-43. Click **+ Insert** → **Text label**.
-44. **Rename it:** `lblApprovalCostValue`
-45. Set properties:
+47. Click **+ Insert** → **Text label**.
+48. **Rename it:** `lblApprovalCostValue`
+49. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 345` |
+| Y | `recApprovalModal.Y + 420` |
 | Width | `200` |
 | Height | `40` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `24` |
 | Color | `RGBA(16, 124, 16, 1)` |
 
-46. Set **Text:**
+50. Set **Text:**
 
 ```powerfx
 If(
@@ -3161,15 +3249,15 @@ If(
 
 ### Comments Label (lblApprovalCommentsLabel)
 
-47. Click **+ Insert** → **Text label**.
-48. **Rename it:** `lblApprovalCommentsLabel`
-49. Set properties:
+51. Click **+ Insert** → **Text label**.
+52. **Rename it:** `lblApprovalCommentsLabel`
+53. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Additional Comments (optional):"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 400` |
+| Y | `recApprovalModal.Y + 475` |
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3178,15 +3266,15 @@ If(
 
 ### Comments Text Input (txtApprovalComments)
 
-50. Click **+ Insert** → **Text input**.
-51. **Rename it:** `txtApprovalComments`
-52. Set properties:
+54. Click **+ Insert** → **Text input**.
+55. **Rename it:** `txtApprovalComments`
+56. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 425` |
+| Y | `recApprovalModal.Y + 500` |
 | Width | `560` |
 | Height | `80` |
 | HintText | `"Add any special instructions for this job..."` |
@@ -3203,15 +3291,15 @@ If(
 
 ### Cancel Button (btnApprovalCancel)
 
-53. Click **+ Insert** → **Button**.
-54. **Rename it:** `btnApprovalCancel`
-55. Set properties:
+57. Click **+ Insert** → **Button**.
+58. **Rename it:** `btnApprovalCancel`
+59. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recApprovalModal.X + 300` |
-| Y | `recApprovalModal.Y + 560` |
+| Y | `recApprovalModal.Y + 635` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -3228,7 +3316,7 @@ If(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-56. Set **OnSelect:**
+60. Set **OnSelect:**
 
 ```powerfx
 Set(varShowApprovalModal, 0);
@@ -3236,22 +3324,23 @@ Set(varSelectedItem, Blank());
 Reset(txtEstimatedWeight);
 Reset(txtEstimatedTime);
 Reset(txtApprovalComments);
-Reset(ddApprovalStaff)
+Reset(ddApprovalStaff);
+Reset(ddSlicedOnComputer)
 ```
 
 ---
 
 ### Confirm Approval Button (btnApprovalConfirm)
 
-57. Click **+ Insert** → **Button**.
-58. **Rename it:** `btnApprovalConfirm`
-59. Set properties:
+61. Click **+ Insert** → **Button**.
+62. **Rename it:** `btnApprovalConfirm`
+63. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"✓ Confirm Approval"` |
 | X | `recApprovalModal.X + 430` |
-| Y | `recApprovalModal.Y + 560` |
+| Y | `recApprovalModal.Y + 635` |
 | Width | `150` |
 | Height | `varBtnHeight` |
 | Fill | `varColorSuccess` |
@@ -3268,20 +3357,26 @@ Reset(ddApprovalStaff)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-57. Set **DisplayMode:**
+64. Set **DisplayMode:**
 
 ```powerfx
 If(
     !IsBlank(ddApprovalStaff.Selected) && 
+    !IsBlank(ddSlicedOnComputer.Selected) &&
     !IsBlank(txtEstimatedWeight.Text) && 
     IsNumeric(txtEstimatedWeight.Text) && 
-    Value(txtEstimatedWeight.Text) > 0,
+    Value(txtEstimatedWeight.Text) > 0 &&
+    !IsBlank(txtEstimatedTime.Text) &&
+    IsNumeric(txtEstimatedTime.Text) &&
+    Value(txtEstimatedTime.Text) > 0,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-58. Set **OnSelect:**
+> ⚠️ **Required Fields:** Staff, sliced on computer, weight, AND time are all required for the confirm button to be enabled.
+
+65. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -3318,13 +3413,15 @@ IfError(
         },
         LastActionAt: Now(),
         EstimatedWeight: Value(txtEstimatedWeight.Text),
-        EstimatedTime: If(IsNumeric(txtEstimatedTime.Text), Value(txtEstimatedTime.Text), Blank()),
+        EstimatedTime: Value(txtEstimatedTime.Text),
         EstimatedCost: varCalculatedCost,
+        SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
         StaffNotes: Concatenate(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
             "APPROVED by " & 
             With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
             ": " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+            " on " & ddSlicedOnComputer.Selected.Name &
             If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
             " - " & Text(Now(), "m/d h:mmam/pm")
         )
@@ -3350,7 +3447,8 @@ IfError(
     Reset(txtEstimatedWeight);
     Reset(txtEstimatedTime);
     Reset(txtApprovalComments);
-    Reset(ddApprovalStaff)
+    Reset(ddApprovalStaff);
+    Reset(ddSlicedOnComputer)
 );
 
 // === HIDE LOADING ===

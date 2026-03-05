@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 35 total fields (13 student-facing + 15 staff processing + 7 payment recording)
+- 36 total fields (13 student-facing + 16 staff processing + 7 payment recording)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -445,20 +445,33 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Include time:** Yes
 5. Click **Save**
 
+### Column 28: SlicedOnComputer (Choice)
+
+1. Click **+ Add column** → **Choice**
+2. **Name:** `SlicedOnComputer`
+3. **Description:** `Computer used for slicing the model during approval`
+4. **Choices:**
+   - Computer 1
+   - Computer 2
+5. **Require that this column contains information:** No (enforced in Power Apps)
+6. Click **Save**
+
+> 💡 **Purpose:** Tracks which staff workstation was used to slice the 3D model when the job was approved. Displayed on job cards after approval.
+
 ---
 
 ## Step 4B: Add Payment Recording Columns (7)
 
 These columns capture actual payment details when a print is picked up.
 
-### Column 28: TransactionNumber (Single line of text)
+### Column 29: TransactionNumber (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `TransactionNumber`
 3. **Description:** `TigerCASH transaction/receipt number`
 4. Click **Save**
 
-### Column 29: FinalWeight (Number)
+### Column 30: FinalWeight (Number)
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `FinalWeight`
@@ -466,7 +479,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Number of decimal places:** 0
 5. Click **Save**
 
-### Column 30: FinalCost (Currency)
+### Column 31: FinalCost (Currency)
 
 1. Click **+ Add column** → **Currency**
 2. **Name:** `FinalCost`
@@ -475,7 +488,7 @@ These columns capture actual payment details when a print is picked up.
 5. **Number of decimal places:** 2
 6. Click **Save**
 
-### Column 31: PaymentDate (Date)
+### Column 32: PaymentDate (Date)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `PaymentDate`
@@ -483,7 +496,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Include time:** No
 5. Click **Save**
 
-### Column 32: PaymentNotes (Multiple lines of text)
+### Column 33: PaymentNotes (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `PaymentNotes`
@@ -491,7 +504,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Type of text:** Plain text
 5. Click **Save**
 
-### Column 33: StudentOwnMaterial (Yes/No)
+### Column 34: StudentOwnMaterial (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentOwnMaterial`
@@ -499,7 +512,7 @@ These columns capture actual payment details when a print is picked up.
 4. **Default value:** No
 5. Click **Save**
 
-### Column 34: PaymentType (Choice)
+### Column 35: PaymentType (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `PaymentType`
