@@ -309,7 +309,7 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 6. **Body:** Click **Code View button (`</>`)** at top right of the Body field, then paste the HTML below:
 
 ```html
-<p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
+<p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author0']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
 ```
 
 > 💡 **HTML Email:** The Message field contains HTML from the Rich Text Editor, which may include embedded images as base64 data URIs. Any pasted screenshots will display inline in the email.
@@ -320,7 +320,9 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 | Student Name | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
 | Message Body (HTML) | `triggerOutputs()?['body/Message']` |
 | ReqKey | `outputs('Get_Print_Request')?['body/ReqKey']` |
-| Author Name | `triggerOutputs()?['body/Author']?['DisplayName']` |
+| Author Name | `triggerOutputs()?['body/Author0']?['DisplayName']` |
+
+> ⚠️ **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). `Author` would always show whoever is logged into Power Apps, not the staff member selected in the "Performing Action As" dropdown.
 
 7. In the **Advanced parameters** section, click **Show all** to expand additional fields
 8. **Is HTML:** Toggle to **Yes**
@@ -479,11 +481,15 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 | Request ID (lookup) | `triggerOutputs()?['body/RequestID']` |
 | Direction (choice) | `triggerOutputs()?['body/Direction']?['Value']` |
 | Author Role (choice) | `triggerOutputs()?['body/AuthorRole']?['Value']` |
-| Author Name | `triggerOutputs()?['body/Author']?['DisplayName']` |
-| Author Email | `triggerOutputs()?['body/Author']?['Email']` |
+| **Staff Member Name** (use this) | `triggerOutputs()?['body/Author0']?['DisplayName']` |
+| **Staff Member Email** (use this) | `triggerOutputs()?['body/Author0']?['Email']` |
+| Created By Name (system) | `triggerOutputs()?['body/Author']?['DisplayName']` |
+| Created By Email (system) | `triggerOutputs()?['body/Author']?['Email']` |
 | Message Subject/Title | `triggerOutputs()?['body/Title']` |
 | Message Body | `triggerOutputs()?['body/Message']` |
 | Student Email | `triggerOutputs()?['body/StudentEmail']` |
+
+> ⚠️ **Important:** Use `Author0` for the staff member's name in emails. `Author` is the SharePoint "Created By" field which shows whoever is logged in, not the person selected in the "Performing Action As" dropdown.
 
 ### Get Print Request Outputs
 
