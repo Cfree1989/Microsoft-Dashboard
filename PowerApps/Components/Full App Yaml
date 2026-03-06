@@ -489,10 +489,10 @@ Screens:
                     =If(
                         varBatchSelectMode && ThisItem.ID in colBatchItems.ID,
                         varColorSuccess,  // Green border for selected batch items
-                        If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 180, 0, 1), varColorBorderLight)
+                        If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), varColorBorderLight)
                     )
-                  BorderThickness: =If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", 2, 1)
-                  Fill: =If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 235, 180, 1), varColorBgCard))
+                  BorderThickness: =If(ThisItem.NeedsAttention, 2, 1)
+                  Fill: =If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard))
                   Height: =Parent.TemplateHeight - 8
                   OnSelect: |-
                     =If(
@@ -839,14 +839,14 @@ Screens:
                 Control: Classic/Icon@2.5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 215, 0, 1), varColorDisabled)
+                  Color: =If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), varColorDisabled)
                   Height: =24
                   Icon: =Icon.Lightbulb
                   OnSelect: |-
                     =Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention});
                     // When marking as needing attention, play notification sound
                     If(!ThisItem.NeedsAttention, Reset(audNotification); Set(varPlaySound, true))
-                  Tooltip: =If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", "Mark as handled", "Mark as needing attention")
+                  Tooltip: =If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")
                   Visible: =!varBatchSelectMode
                   Width: =24
                   X: =Parent.TemplateWidth - 30

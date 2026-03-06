@@ -1315,9 +1315,9 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Y | `0` |
 | Width | `Parent.TemplateWidth` |
 | Height | `Parent.TemplateHeight - 8` |
-| Fill | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 235, 180, 1), varColorBgCard))` |
-| BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 235, 180, 1), varColorBorderLight))` |
-| BorderThickness | `If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", 2, 1)` |
+| Fill | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard))` |
+| BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBorderLight))` |
+| BorderThickness | `If(ThisItem.NeedsAttention, 2, 1)` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
@@ -1339,7 +1339,7 @@ If(
 )
 ```
 
-> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px). This styling only applies when `Status <> "Uploaded"` — newly uploaded jobs don't show attention highlighting even if flagged. In batch select mode, selected cards show a light green background with green border.
+> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px). In batch select mode, selected cards show a light green background with green border.
 
 > **Note:** These formulas reference `varBatchSelectMode`, `colBatchItems`, and `NeedsAttention` which are used in later steps (batch payment in Step 12C/12E, lightbulb in Step 15). The variables are initialized in App.OnStart (Step 3).
 
@@ -8071,8 +8071,8 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 | Y | `16` |
 | Width | `24` |
 | Height | `24` |
-| Color | `If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 215, 0, 1), varColorDisabled)` |
-| Tooltip | `If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", "Mark as handled", "Mark as needing attention")` |
+| Color | `If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), varColorDisabled)` |
+| Tooltip | `If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")` |
 | Visible | `!varBatchSelectMode` |
 
 5. Set **OnSelect:**
@@ -10389,14 +10389,14 @@ SortByColumns(
 ## Attention Highlight (Card Background)
 
 ```powerfx
-// Rectangle.Fill for attention highlight (not shown on Uploaded status)
-If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 235, 180, 1), Color.White)
+// Rectangle.Fill for attention highlight
+If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), Color.White)
 
-// Rectangle.BorderColor for attention highlight (not shown on Uploaded status)
-If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", RGBA(255, 180, 0, 1), varColorBorderLight)
+// Rectangle.BorderColor for attention highlight
+If(ThisItem.NeedsAttention, RGBA(255, 180, 0, 1), varColorBorderLight)
 
-// Rectangle.BorderThickness for attention highlight (not shown on Uploaded status)
-If(ThisItem.NeedsAttention && ThisItem.Status.Value <> "Uploaded", 2, 1)
+// Rectangle.BorderThickness for attention highlight
+If(ThisItem.NeedsAttention, 2, 1)
 ```
 
 ## Color Switch Statement
