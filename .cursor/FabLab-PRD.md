@@ -134,7 +134,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 #### PrintRequests List (P0 - Critical)
 - **Description:** Central repository for all 3D print requests
 - **Acceptance Criteria:**
-  - 32 total fields (13 student-facing, 14 staff processing, 5 payment recording)
+  - 36 total fields (13 student-facing, 16 staff processing, 7 payment recording)
   - Item-level security ensuring students see only their requests
   - Attachment support for 3D model files
   - Version history enabled for change tracking
@@ -449,7 +449,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 ### Decision Points Requiring Stakeholder Input
 - ~~**Lab Hours Information:** Specific operating hours for inclusion in pickup notifications~~ **RESOLVED:** Monday-Friday 8:30 AM - 4:30 PM, Room 145 Atkinson Hall
-- ~~**Payment Process:** Integration with existing payment systems or manual process continuation~~ **RESOLVED:** TigerCASH only at pickup
+- ~~**Payment Process:** Integration with existing payment systems or manual process continuation~~ **RESOLVED:** TigerCASH, check, or grant code at pickup
 - **Staff Role Hierarchy:** Detailed role definitions beyond Manager/Technician/Student Worker
 - ~~**File Retention Policy:** Long-term storage requirements for completed requests and audit logs~~ **RESOLVED:** See Appendix F: Audit Retention Policy
 
@@ -461,7 +461,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 #### PrintRequests List Schema
 
-**Total Fields:** 32 (13 student-facing + 14 staff processing + 5 payment recording)
+**Total Fields:** 36 (13 student-facing + 16 staff processing + 7 payment recording)
 
 **Student-Facing Fields (13):**
 - **Title** (Single line text) - Request title
@@ -760,7 +760,7 @@ WHAT HAPPENS NEXT:
 • Your request is now in our print queue
 • We'll begin preparing and printing your job
 • You'll receive another email when it's completed and ready for pickup
-• Payment will be due at pickup (TigerCASH only)
+• Payment will be due at pickup (TigerCASH, check, or grant code)
 
 IMPORTANT REMINDERS:
 • Print times are estimates and may vary
@@ -789,7 +789,7 @@ Your print is ready for pick up in the Fabrication Lab!
 
 PICKUP INFORMATION:
 📍 Location: Room 145 Atkinson Hall
-💳 Payment: TigerCASH only
+💳 Payment: TigerCASH, check, or grant code
 🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 
 WHAT TO BRING:
@@ -816,7 +816,7 @@ The Fabrication Lab uses a weight-based pricing model to recover material costs 
 | Material | Rate per Gram | Typical Small Print (50g) | Typical Large Print (200g) |
 |----------|---------------|---------------------------|----------------------------|
 | Filament (PLA/PETG/ABS) | $0.10/g | $5.00 | $20.00 |
-| Resin (Standard) | $0.20/g | $10.00 | $40.00 |
+| Resin (Standard) | $0.30/g | $15.00 | $60.00 |
 
 #### Minimum Charge
 
@@ -843,7 +843,7 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 **Where:**
 - **EstimatedWeight:** Predicted grams of material (from slicer software)
 - **FinalWeight:** Actual grams of finished print (weighed at pickup)
-- **Material_Rate:** $0.10/g (Filament) or $0.20/g (Resin)
+- **Material_Rate:** $0.10/g (Filament) or $0.30/g (Resin)
 - **$3.00:** Minimum charge applied if calculated cost is lower
 
 #### Calculation Examples
@@ -863,14 +863,14 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 **Example 3: Small Resin Miniature**
 - Weight: 20 grams
 - Method: Resin
-- Calculated: 20g × $0.20/g = $4.00
-- **Final Cost: $4.00**
+- Calculated: 20g × $0.30/g = $6.00
+- **Final Cost: $6.00**
 
 **Example 4: Large Resin Model**
 - Weight: 100 grams
 - Method: Resin
-- Calculated: 100g × $0.20/g = $20.00
-- **Final Cost: $20.00**
+- Calculated: 100g × $0.30/g = $30.00
+- **Final Cost: $30.00**
 
 #### Estimation Process
 
@@ -885,7 +885,7 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 
 #### Payment Collection
 
-**Method:** TigerCASH only  
+**Method:** TigerCASH, check, or grant code  
 **Location:** Room 145 Atkinson Hall  
 **When:** At pickup (Status: Completed)  
 **Requirements:** Student ID for verification
@@ -974,8 +974,8 @@ This enables:
 
 | Job Status | Retention Period | Rationale |
 |------------|------------------|-----------|
-| **Rejected** | 1 month after rejection | Short disputes window; student can resubmit corrected files |
-| **Canceled** | 1 month after cancellation | Student-initiated; minimal audit need |
+| **Rejected** | 7 days after rejection | Short disputes window; student can resubmit corrected files |
+| **Canceled** | 7 days after cancellation | Student-initiated; minimal audit need |
 | **Archived** | 12 months after archive | Longest retention for completed work; covers academic year |
 
 **Active Jobs:** AuditLog entries for jobs in any other status (Uploaded, Pending, Ready to Print, Printing, Completed, Paid & Picked Up) are never deleted.

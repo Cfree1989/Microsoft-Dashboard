@@ -435,12 +435,12 @@ Update these URLs for your specific SharePoint site:
 4. **File Validation Setup**: Add helper text for file requirements:
    - Select the **Attachments** card → **Advanced** → **DisplayName**: 
    ```
-  "File Upload (Required: .stl, .obj, .3mf, .idea, .form • Max 150MB per file)"
+  "File Upload (Required: .stl, .obj, .3mf, .idea, .form • Max 50MB per file)"
    ```
    - Add a **Text label** above the Attachments card with validation guidance:
    ```
   "ACCEPTED FILE TYPES: .stl, .obj, .3mf, .idea, .form
-   MAXIMUM SIZE: 150MB per file
+   MAXIMUM SIZE: 50MB per file
    Files not meeting these requirements will be rejected by staff"
    ```
 5. **Defaults** (select the card → set the property shown):
@@ -543,7 +543,7 @@ Patch(PrintRequests, ThisItem, {
     LastActionAt: Now(),
     StaffNotes: Concatenate(
         If(IsBlank(ThisItem.StaffNotes), "", ThisItem.StaffNotes & " | "),
-        "REJECTED: File does not meet requirements (.stl/.obj/.3mf only, max 150MB) - " & Text(Now(), "mm/dd/yyyy")
+        "REJECTED: File does not meet requirements (.stl/.obj/.3mf only, max 50MB) - " & Text(Now(), "mm/dd/yyyy")
     )
 });
 

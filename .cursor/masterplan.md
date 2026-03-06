@@ -1,5 +1,7 @@
 # 3D Print System Project Plan (Beginner-Friendly Flask API + Next.js Edition)
 
+> **⚠️ LEGACY DOCUMENT:** This document describes an earlier Flask/Next.js implementation approach that was used as a reference example. The current system is built on Microsoft 365 (SharePoint, Power Apps, Power Automate). See `FabLab-PRD.md` and `Build Guide.md` for the active implementation.
+
 ## 1. Project Overview
 This project is a fully functional Flask-based 3D print job management system, specifically designed for beginners. The system is tailored for an academic/makerspace setting with up to three staff members operating concurrently on separate computers. It uses a **workstation-based login system with per-action staff attribution** and is designed with safeguards to prevent data conflicts and race conditions inherent in a multi-user environment. The system handles the complete workflow from student submission to completion, with comprehensive file tracking, staff approval, and the ability to open the exact uploaded files directly in local applications.
 
