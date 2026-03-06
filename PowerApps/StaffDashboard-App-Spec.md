@@ -1440,11 +1440,11 @@ With(
 | Y | `55` |
 | Width | `60` |
 | Height | `20` |
-| Fill | `RGBA(255, 226, 140, 1)` |
-| Color | `RGBA(51, 51, 51, 1)` |
-| HoverFill | `RGBA(255, 210, 100, 1)` |
-| PressedFill | `RGBA(240, 195, 90, 1)` |
-| BorderColor | `RGBA(220, 190, 100, 1)` |
+| Fill | `RGBA(255, 46, 46, 1)` |
+| Color | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(220, 40, 40, 1)` |
+| PressedFill | `RGBA(200, 35, 35, 1)` |
+| BorderColor | `RGBA(184, 0, 0, 1)` |
 | BorderThickness | `1` |
 | RadiusTopLeft | `4` |
 | RadiusTopRight | `4` |
@@ -2071,10 +2071,10 @@ Set(varSelectedItem, ThisItem)
 | Y | `360` |
 | Width | `(Parent.TemplateWidth - 40) / 3` |
 | Height | `varBtnHeight` |
-| Fill | `varColorWarning` |
-| Color | `White` |
-| HoverFill | `ColorFade(varColorWarning, -15%)` |
-| PressedFill | `ColorFade(varColorWarning, -25%)` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
@@ -8708,12 +8708,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `317` |
 | Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `ColorFade(varColorNeutral, varSecondaryFade)` |
-| Color | `varColorPrimary` |
+| Fill | `RGBA(255, 46, 46, 1)` |
+| Color | `RGBA(255, 255, 255, 1)` |
 | HoverColor | `Color.White` |
-| HoverFill | `varColorPrimary` |
-| PressedFill | `ColorFade(varColorPrimary, -15%)` |
-| BorderColor | `varColorPrimary` |
+| HoverFill | `RGBA(220, 40, 40, 1)` |
+| PressedFill | `RGBA(200, 35, 35, 1)` |
+| BorderColor | `RGBA(184, 0, 0, 1)` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
