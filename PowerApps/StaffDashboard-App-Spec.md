@@ -1601,11 +1601,12 @@ If(
 | Y | `73` |
 | Width | `75` |
 | Height | `25` |
-| Fill | `ColorFade(varColorNeutral, varSecondaryFade)` |
-| Color | `varColorNeutral` |
-| HoverFill | `ColorFade(varColorNeutral, 55%)` |
-| PressedFill | `ColorFade(varColorNeutral, 45%)` |
-| BorderColor | `varSecondaryBtnBorderColor` |
+| Fill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 46, 46, 1), Color.White)` |
+| Color | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 255, 255, 1), varColorPrimary)` |
+| HoverFill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(220, 40, 40, 1), varColorPrimary)` |
+| HoverColor | `Color.White` |
+| PressedFill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
+| BorderColor | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(184, 0, 0, 1), varColorPrimary)` |
 | BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -8708,12 +8709,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `317` |
 | Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `RGBA(255, 46, 46, 1)` |
-| Color | `RGBA(255, 255, 255, 1)` |
+| Fill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 46, 46, 1), Color.White)` |
+| Color | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 255, 255, 1), varColorPrimary)` |
 | HoverColor | `Color.White` |
-| HoverFill | `RGBA(220, 40, 40, 1)` |
-| PressedFill | `RGBA(200, 35, 35, 1)` |
-| BorderColor | `RGBA(184, 0, 0, 1)` |
+| HoverFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(220, 40, 40, 1), varColorPrimary)` |
+| PressedFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
+| BorderColor | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(184, 0, 0, 1), varColorPrimary)` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
