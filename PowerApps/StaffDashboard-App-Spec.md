@@ -1127,44 +1127,43 @@ After completing this step, your Tree view should look like:
 
 **What you're doing:** Building a row of clickable tabs that show status counts and filter the gallery.
 
-### Instructions
+### Creating the Gallery (galStatusTabs)
 
 1. Click **+ Insert** → **Horizontal gallery** (or search for "Blank horizontal gallery").
-2. Rename it to `galStatusTabs` (click the name in Tree view to edit).
-3. Position and size:
-   - **X:** `0`
-   - **Y:** `60`
-   - **Width:** `Parent.Width`
-   - **Height:** `50`
+2. **Rename it:** `galStatusTabs`
+3. Set properties:
 
-4. Set the **Items** property:
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `60` |
+| Width | `Parent.Width` |
+| Height | `50` |
+| TemplateSize | `varTabGalleryHeight` |
+| TemplatePadding | `3` |
+| Items | _(see formula below)_ |
 
 **⬇️ FORMULA: Paste into galStatusTabs Items**
 
 ```powerfx
 Table(
     {Status: "Uploaded", Color: varColorPrimary},
-    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: varColorWarning},
+    {Status: "Pending", Color: varColorPrimary},
+    {Status: "Ready to Print", Color: varColorPrimary},
+    {Status: "Printing", Color: varColorPrimary},
     {Status: "Completed", Color: varColorPrimary},
-    {Status: "Paid & Picked Up", Color: varColorSuccess},
-    {Status: "Rejected", Color: varColorDanger},
-    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
-    {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
+    {Status: "Paid & Picked Up", Color: varColorPrimary},
+    {Status: "Rejected", Color: varColorPrimary},
+    {Status: "Canceled", Color: varColorPrimary},
+    {Status: "Archived", Color: varColorPrimary}
 )
 ```
 
-5. Set **TemplateSize:** `varTabGalleryHeight`
-6. Set **TemplatePadding:** `3`
+### Adding the Tab Button (btnStatusTab)
 
-
-### Adding the Tab Button Inside the Gallery (btnStatusTab)
-
-9. With `galStatusTabs` selected, click **+ Insert** → **Button**.
-10. **Rename it:** `btnStatusTab`
-11. The button appears inside the gallery template.
-12. **First, set the size and position:**
+4. With `galStatusTabs` selected, click **+ Insert** → **Button**.
+5. **Rename it:** `btnStatusTab`
+6. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1174,53 +1173,22 @@ Table(
 | Height | `40` |
 | Size | `11` |
 | BorderRadius | `20` |
-
-> 💡 **Why these sizes?** 9 tabs × 148px = 1332px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits while remaining readable.
-
-14. Set the button's **Text** property (type directly to avoid quote issues):
-
-```powerfx
-ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status)))
-```
-
-> ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
-
-16. Set the **Fill** property:
-
-```powerfx
-If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))
-```
-
-17. Set the **Color** property (text color):
-
-```powerfx
-If(
-    varSelectedStatus = ThisItem.Status, 
-    If(ThisItem.Status = "Pending", Color.Black, Color.White),
-    varColorText
-)
-```
-
-18. Set the **OnSelect** property:
-
-```powerfx
-Set(varSelectedStatus, ThisItem.Status)
-```
-
-19. Set the hover, pressed, and focus properties:
-
-| Property | Value |
-|----------|-------|
+| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status)))` |
+| Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
+| Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
+| OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
 | HoverFill | `ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -10%)` |
 | PressedFill | `ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)` |
-| HoverColor | `If(varSelectedStatus = ThisItem.Status, If(ThisItem.Status = "Pending", Color.Black, Color.White), varColorText)` |
-| PressedColor | `If(varSelectedStatus = ThisItem.Status, If(ThisItem.Status = "Pending", Color.Black, Color.White), varColorText)` |
+| HoverColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
+| PressedColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `1` |
 | FocusedBorderColor | `varInputBorderColor` |
 | FocusedBorderThickness | `1` |
 
-> 💡 **Result:** Clicking a tab highlights it with its color and filters the job cards gallery.
+> 💡 **Why these sizes?** 9 tabs × 148px = 1332px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits while remaining readable.
+>
+> ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
 
 ### ✅ Step 5 Checklist
 
@@ -1239,12 +1207,12 @@ Your Tree view should now include:
 
 **What you're doing:** Creating the main gallery that displays all print requests as job cards.
 
-### Instructions
+### Creating the Gallery (galJobCards)
 
 1. Click on **scrDashboard** in the Tree view (not inside the status tabs gallery).
 2. Click **+ Insert** → **Blank vertical gallery**.
-3. Rename it to `galJobCards`.
-4. Position and size:
+3. **Rename it:** `galJobCards`
+4. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -1252,14 +1220,14 @@ Your Tree view should now include:
 | Y | `160` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height - 160` |
-| **WrapCount** | `4` |
+| WrapCount | `4` |
 | TemplatePadding | `8` |
+| TemplateSize | `varCardGalleryHeight` |
+| Items | _(see formula below)_ |
 
-> 💡 **WrapCount = 4** creates a grid layout with 4 cards per row! Each card will be approximately 330px wide.
+> 💡 **WrapCount = 4** creates a grid layout with 4 cards per row. Each card will be approximately 330px wide.
 > 
 > ⚠️ **Note:** Y=160 leaves room for the Filter Bar (built in Step 14) between the status tabs and job cards.
-
-5. Set the **Items** property:
 
 **⬇️ FORMULA: Paste into galJobCards Items**
 
@@ -1267,28 +1235,21 @@ Your Tree view should now include:
 SortByColumns(
     Filter(
         PrintRequests,
-        // Filter by selected status tab (use .Value for Choice fields)
         Status.Value = varSelectedStatus,
-        // Search filter (searches name and email)
         If(
             IsBlank(varSearchText), 
             true, 
             varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey
         ),
-        // Needs attention filter
         If(varNeedsAttention, NeedsAttention = true, true)
     ),
-    "NeedsAttention", SortOrder.Descending,  // Attention items first (true > false)
-    "Created", SortOrder.Ascending            // Then oldest first (longest in queue)
+    "NeedsAttention", SortOrder.Descending,
+    "Created", SortOrder.Ascending
 )
 ```
 
-> ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint.
-
-6. Set **TemplateSize:** `varCardGalleryHeight` (fixed card height - accommodates messages section and action buttons)
-
-> ⚠️ **Power Apps Limitation:** The `TemplateSize` property cannot use `ThisItem` because it's evaluated at the gallery level, not per-item. All cards must have the same height. The expand/collapse feature works by showing/hiding the "Additional Details" section within this fixed space.
-
+> ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. The sort puts attention items first, then oldest requests (longest in queue).
+>
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
 ---
@@ -10355,14 +10316,14 @@ This section provides condensed code snippets for quick reference when building 
 ```powerfx
 Table(
     {Status: "Uploaded", Color: varColorPrimary},
-    {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
-    {Status: "Ready to Print", Color: varColorSuccess},
-    {Status: "Printing", Color: varColorWarning},
+    {Status: "Pending", Color: varColorPrimary},
+    {Status: "Ready to Print", Color: varColorPrimary},
+    {Status: "Printing", Color: varColorPrimary},
     {Status: "Completed", Color: varColorPrimary},
-    {Status: "Paid & Picked Up", Color: varColorSuccess},
-    {Status: "Rejected", Color: varColorDanger},
-    {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
-    {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
+    {Status: "Paid & Picked Up", Color: varColorPrimary},
+    {Status: "Rejected", Color: varColorPrimary},
+    {Status: "Canceled", Color: varColorPrimary},
+    {Status: "Archived", Color: varColorPrimary}
 )
 ```
 
