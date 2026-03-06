@@ -5640,8 +5640,9 @@ Set(varBaseCost,
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
 
 // Build payment record string (used for both partial and full)
-// Format matches other staff notes: "Name: details - timestamp"
+// Format: "PAID by Name: details - timestamp" (matches other automated entries)
 Set(varPaymentRecord,
+    "PAID by " &
     With({n: ddPaymentStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
     ": " & 
     Text(varFinalCost, "[$-en-US]$#,##0.00") & 
@@ -5772,11 +5773,11 @@ Set(varLoadingMessage, "")
 >
 > 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
 >
-> 💡 **Payment Note Format:** Payment notes use a simplified format that matches other staff notes:
+> 💡 **Payment Note Format:** Payment notes use the "PAID by" format to match other automated entries:
 > ```
-> Ian R.: $10.80 partial (36g) #150 - 2/6 2:54pm
+> PAID by Ian R.: $10.80 partial (36g) #150 - 2/6 2:54pm
 > ```
-> This is cleaner than the previous verbose format and displays consistently in the Staff Notes & Activity section.
+> This allows the display logic to recognize it as a PAID action and format it inline (e.g., "Ian R. - $10.80 partial (36g) #150") rather than showing it as a manual note in quotes.
 
 ---
 
@@ -7256,29 +7257,35 @@ If(
                                 )
                             },
                             datetime & " - " & action & Char(10) &
-                            shortName & Char(10) &
+                            shortName &
                             If(
                                 Len(details) > 0,
                                 If(
                                     action = "NOTE",
-                                    // Manual note - quote the whole thing
-                                    """" & details & """",
-                                    // Action entry - format reasons as bullets, quote comment after " - "
-                                    With(
-                                        {
-                                            hasComment: Find(" - ", details) > 0,
-                                            reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
-                                            commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
-                                        },
-                                        // Format reasons with header and spacing
-                                        Char(10) & "Reasons:" & Char(10) &
-                                        If(
-                                            Find("; ", reasonsPart) > 0,
-                                            Concat(ForAll(Split(reasonsPart, "; ") As reason, {line: "  - " & reason.Value}), line, Char(10)),
-                                            "  - " & reasonsPart
-                                        ) &
-                                        // Add quoted comment if present (with blank line before)
-                                        If(hasComment, Char(10) & Char(10) & """" & commentPart & """", "")
+                                    // Manual note - quote on next line
+                                    Char(10) & """" & details & """",
+                                    If(
+                                        action in ["APPROVED", "PAID"],
+                                        // APPROVED/PAID: Inline format - details on same line as name
+                                        " - " & details,
+                                        // REJECTED/REVERTED/etc: Format reasons as bullets with header
+                                        Char(10) &
+                                        With(
+                                            {
+                                                hasComment: Find(" - ", details) > 0,
+                                                reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
+                                                commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
+                                            },
+                                            // Format reasons with header and spacing
+                                            Char(10) & "Reasons:" & Char(10) &
+                                            If(
+                                                Find("; ", reasonsPart) > 0,
+                                                Concat(ForAll(Split(reasonsPart, "; ") As reason, {line: "  - " & reason.Value}), line, Char(10)),
+                                                "  - " & reasonsPart
+                                            ) &
+                                            // Add quoted comment if present (with blank line before)
+                                            If(hasComment, Char(10) & Char(10) & """" & commentPart & """", "")
+                                        )
                                     )
                                 ),
                                 ""
@@ -7299,8 +7306,19 @@ If(
 > 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
 > - Manual notes prefixed with `[NOTE]` have the prefix stripped before display
 > - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED" or "3/4 9:15am - NOTE")
-> - Line 2: Staff name (e.g., "Lauren V.")
-> - Line 3+: Details/comments (for rejections, shows each reason as a bulleted item, then quoted staff comment; for manual notes, shows the note in quotes)
+> - Line 2: Staff name, with details inline for APPROVED/PAID, or on separate lines for other actions
+>
+> **Example approval display:**
+> ```
+> 3/6 9:14am - APPROVED
+> Susan X. - 239.97g, $24.00 on Computer 1
+> ```
+>
+> **Example payment display:**
+> ```
+> 3/5 3:00pm - PAID
+> Colin F. - $25.00 (250g) #246
+> ```
 >
 > **Example rejection display:**
 > ```
@@ -7312,6 +7330,13 @@ If(
 >   - The model is messy
 >
 > "It looks awful..."
+> ```
+>
+> **Example manual note display:**
+> ```
+> 3/4 10:15am - NOTE
+> Madison L.
+> "Student requested multicolor print"
 > ```
 >
 > The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
