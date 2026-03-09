@@ -380,7 +380,7 @@ Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
 Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
 Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
 Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-Set(varDropdownSelectionFill, RGBA(186, 202, 226, 1)); // Light blue selected row background
+Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
 Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
 // --- SIZING (Tablet Layout) ---
@@ -512,8 +512,10 @@ RadiusBottomRight: varRadiusXSmall
 | `varChevronHoverFill` | Light gray | Dropdown hover arrow |
 | `varDropdownHoverFill` | Light gray | Dropdown row hover |
 | `varDropdownPressedFill` | Gray | Dropdown pressed state |
-| `varDropdownSelectionFill` | Light blue | Selection background |
+| `varDropdownSelectionFill` | Light gray | Selection background |
 | `varDropdownSelectionColor` | Dark gray | Selection text color |
+
+> 💡 **Consistency Rule:** All dropdowns and combo boxes should use the shared `varDropdown*` and `varChevron*` variables for hover, pressed, and selection states. Do not hardcode row state colors on individual controls.
 
 #### Border Radius
 

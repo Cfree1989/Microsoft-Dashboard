@@ -182,9 +182,12 @@ All text inputs and dropdowns use centralized styling variables for a clean, con
 | Chevron Background | `varChevronBackground` | `RGBA(128, 128, 128, 1)` |
 | Chevron Arrow | `varChevronFill` | `RGBA(255, 255, 255, 1)` |
 | Chevron Hover Fill | `varChevronHoverFill` | `RGBA(219, 219, 219, 1)` |
-| Row Hover Fill | `varDropdownHoverFill` | `RGBA(186, 202, 226, 1)` |
+| Row Hover Fill | `varDropdownHoverFill` | `RGBA(219, 219, 219, 1)` |
 | Pressed Fill | `varDropdownPressedFill` | `RGBA(128, 128, 128, 1)` |
-| Selection Fill | `varDropdownSelectionFill` | `RGBA(255, 255, 255, 1)` |
+| Selection Fill | `varDropdownSelectionFill` | `RGBA(219, 219, 219, 1)` |
+| Selection Text | `varDropdownSelectionColor` | `RGBA(50, 50, 50, 1)` |
+
+> 💡 **Consistency Rule:** All dropdowns and combo boxes should use the shared `varDropdown*` and `varChevron*` variables for hover, pressed, and selection states. Do not hardcode row state colors on individual controls.
 
 ### Layout Dimensions (Dynamic Sizing)
 
@@ -513,11 +516,11 @@ Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron backgroun
 Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
 Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
 Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
-Set(varDropdownHoverFill, RGBA(186, 202, 226, 1));     // Light blue row hover
+Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
 Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
 Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-Set(varDropdownSelectionFill, RGBA(255, 255, 255, 1)); // White selection background
-Set(varDropdownSelectionColor, RGBA(255, 255, 255, 1)); // White selection text
+Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
+Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
 // === LAYOUT DIMENSIONS ===
 // Modal sizing - adjust for different screen sizes or design preferences
