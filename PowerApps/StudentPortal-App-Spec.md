@@ -377,11 +377,11 @@ Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron backgroun
 Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
 Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
 Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
-Set(varDropdownHoverFill, RGBA(186, 202, 226, 1));     // Light blue row hover
+Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
 Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
 Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-Set(varDropdownSelectionFill, RGBA(255, 255, 255, 1)); // White selection background
-Set(varDropdownSelectionColor, RGBA(255, 255, 255, 1)); // White selection text
+Set(varDropdownSelectionFill, RGBA(186, 202, 226, 1)); // Light blue selected row background
+Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
 // --- SIZING (Tablet Layout) ---
 Set(varHeaderHeight, 60);   // Top header bar
@@ -510,9 +510,10 @@ RadiusBottomRight: varRadiusXSmall
 | `varChevronBackground` | Gray | Dropdown chevron bg |
 | `varChevronFill` | White | Dropdown chevron arrow |
 | `varChevronHoverFill` | Light gray | Dropdown hover arrow |
-| `varDropdownHoverFill` | Light blue | Dropdown row hover |
+| `varDropdownHoverFill` | Light gray | Dropdown row hover |
 | `varDropdownPressedFill` | Gray | Dropdown pressed state |
-| `varDropdownSelectionFill` | White | Selection background |
+| `varDropdownSelectionFill` | Light blue | Selection background |
+| `varDropdownSelectionColor` | Dark gray | Selection text color |
 
 #### Border Radius
 
@@ -1953,6 +1954,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].Department)` |
 | DefaultSelectedItems | `Blank()` |
+| SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"Associated with course number"` |
@@ -2000,6 +2002,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].ProjectType)` |
 | DefaultSelectedItems | `Parent.Default` |
+| SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What's this for?"` |
@@ -2051,6 +2054,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].Method)` |
 | DefaultSelectedItems | `Parent.Default` |
+| SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What type of printer?"` |
@@ -2138,6 +2142,7 @@ Resin:
 |----------|-------|
 | Items | *(see cascading formula below)* |
 | DefaultSelectedItems | `Parent.Default` |
+| SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `"What size printer?"` |
@@ -2221,9 +2226,11 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 |----------|-------|
 | Items | *(see cascading formula below)* |
 | DefaultSelectedItems | `Parent.Default` |
+| SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | InputTextPlaceholder | `""` |
+| Width | `Parent.Width - 36` |
 | DisplayMode | `If(IsBlank(DataCardValue8.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
@@ -2244,6 +2251,8 @@ If exporting as .STL or .OBJ you MUST scale it down in millimeters BEFORE export
 
 > 💡 **Disabled Until Method Selected:** The Color dropdown is disabled until the user selects a Method. This ensures the cascading filter shows the correct color options for the selected print method.
 
+> 💡 **Single Select:** `SelectMultiple` must stay `false` here. The SharePoint `Color` column is a required single-choice field, so allowing multiple selections creates confusing UI chips and does not match the underlying data model.
+
 74. Set **Items** (cascading filter — shows colors based on Method selection in `DataCardValue8`):
 
 ```powerfx
@@ -2262,6 +2271,80 @@ Filter(
 > 💡 **Cascading Logic:** When Method (`DataCardValue8`) = "Resin" → shows only Black, White, Gray, Clear. When Method ≠ "Resin" (Filament or blank) → shows all colors.
 
 > ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Color))`), the control may be corrupted. **Fix:** Delete `DataCardValue9`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue9`, and reapply the properties above.
+
+#### Add Live Color Preview Swatch
+
+75. With `Color_DataCard1` expanded, click **+ Insert** → **Icons** → **Circle**.
+76. **Rename it:** `cirColorPreviewBackdrop`
+77. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `DataCardValue9.X + DataCardValue9.Width + 8` |
+| Y | `DataCardValue9.Y + (DataCardValue9.Height - Self.Height) / 2` |
+| Width | `12` |
+| Height | `12` |
+| Fill | `RGBA(45, 45, 48, 1)` |
+| Visible | `DataCardValue9.Selected.Value = "White" || DataCardValue9.Selected.Value = "Matte White" || DataCardValue9.Selected.Value = "Clear" || DataCardValue9.Selected.Value = "Light Gray" || DataCardValue9.Selected.Value = "Matte Light Gray" || DataCardValue9.Selected.Value = "Silver" || DataCardValue9.Selected.Value = "Any" || DataCardValue9.Selected.Value = "Yellow" || DataCardValue9.Selected.Value = "Matte Yellow" || DataCardValue9.Selected.Value = "Gold"` |
+| AccessibleLabel | `""` |
+
+78. Click **+ Insert** → **Icons** → **Circle** again.
+79. **Rename it:** `cirColorPreview`
+80. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `cirColorPreviewBackdrop.X + 2` |
+| Y | `cirColorPreviewBackdrop.Y + 2` |
+| Width | `8` |
+| Height | `8` |
+| Visible | `!IsBlank(DataCardValue9.Selected.Value)` |
+| Fill | See formula below |
+| AccessibleLabel | `""` |
+
+81. Set **Fill** for `cirColorPreview`:
+
+```powerfx
+Switch(
+    DataCardValue9.Selected.Value,
+    "Black", RGBA(26, 26, 26, 1),
+    "Matte Black", RGBA(26, 26, 26, 1),
+    "White", RGBA(255, 255, 255, 1),
+    "Matte White", RGBA(255, 255, 255, 1),
+    "Gray", RGBA(128, 128, 128, 1),
+    "Light Gray", RGBA(211, 211, 211, 1),
+    "Matte Light Gray", RGBA(211, 211, 211, 1),
+    "Red", RGBA(204, 0, 0, 1),
+    "Matte Red", RGBA(204, 0, 0, 1),
+    "Orange", RGBA(255, 102, 0, 1),
+    "Matte Orange", RGBA(255, 102, 0, 1),
+    "Yellow", RGBA(255, 215, 0, 1),
+    "Matte Yellow", RGBA(255, 215, 0, 1),
+    "Gold", RGBA(255, 215, 0, 1),
+    "Green", RGBA(76, 175, 80, 1),
+    "Matte Green", RGBA(76, 175, 80, 1),
+    "Forest Green", RGBA(34, 139, 34, 1),
+    "Blue", RGBA(0, 71, 171, 1),
+    "Matte Blue", RGBA(0, 71, 171, 1),
+    "Cobalt Blue", RGBA(0, 102, 204, 1),
+    "Purple", RGBA(107, 63, 160, 1),
+    "Matte Purple", RGBA(107, 63, 160, 1),
+    "Brown", RGBA(93, 64, 55, 1),
+    "Light Brown", RGBA(196, 164, 132, 1),
+    "Chocolate Brown", RGBA(123, 63, 0, 1),
+    "Matte Chocolate", RGBA(123, 63, 0, 1),
+    "Copper", RGBA(184, 115, 51, 1),
+    "Bronze", RGBA(205, 127, 50, 1),
+    "Silver", RGBA(192, 192, 192, 1),
+    "Clear", RGBA(245, 245, 245, 1),
+    "Any", RGBA(224, 224, 224, 1),
+    RGBA(153, 153, 153, 1)
+)
+```
+
+> 💡 **Recommended Option 1:** This keeps the built-in ComboBox for accessibility and keyboard behavior, while adding a lightweight live swatch preview beside the control so students can immediately confirm the selected color.
+
+> 💡 **Accessibility Note:** Per Microsoft Power Apps guidance surfaced via Context7, built-in dropdown/combobox controls are preferable to homemade combo-box patterns. The preview circles are decorative only, so their `AccessibleLabel` values are intentionally blank.
 
 ---
 
@@ -2442,6 +2525,7 @@ If(
 
 | Property | Value |
 |----------|-------|
+| SelectMultiple | `false` |
 | InputTextPlaceholder | `"Select status..."` |
 
 > This ensures new submissions always start with Status = "Uploaded".

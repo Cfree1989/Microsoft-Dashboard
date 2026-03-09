@@ -1468,36 +1468,34 @@ Set(varSelectedItem, ThisItem)
 
 ### Color Indicator (Accessible Swatch + Label)
 
-20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblColorDotBackdrop`
+20. Click **+ Insert** → **Icons** → **Circle**.
+21. **Rename it:** `cirColorDotBackdrop`
 22. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"⬤"` |
 | X | `12` |
-| Y | `75` |
-| Width | `16` |
-| Height | `20` |
-| Size | `13` |
-| Color | `RGBA(45, 45, 48, 1)` |
-| Visible | `ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear"` |
+| Y | `79` |
+| Width | `12` |
+| Height | `12` |
+| Fill | `varcolormuted` |
+| Visible | `ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"` |
+| AccessibleLabel | `""` |
 
-23. Click **+ Insert** → **Text label** again.
-24. **Rename it:** `lblColorDot`
+23. Click **+ Insert** → **Icons** → **Circle** again.
+24. **Rename it:** `cirColorDot`
 25. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"⬤"` |
-| X | `13` |
-| Y | `75` |
-| Width | `14` |
-| Height | `20` |
-| Size | `11` |
-| Color | See formula below |
+| X | `14` |
+| Y | `81` |
+| Width | `8` |
+| Height | `8` |
+| Fill | See formula below |
+| AccessibleLabel | `""` |
 
-26. Set **Color** formula for `lblColorDot` (matches the actual filament color):
+26. Set **Fill** formula for `cirColorDot` (matches the actual filament color):
 
 **⬇️ FORMULA: Maps color names to display colors**
 
@@ -1506,11 +1504,11 @@ Switch(
     ThisItem.Color.Value,
     "Black", RGBA(26, 26, 26, 1),
     "Matte Black", RGBA(26, 26, 26, 1),
-    "White", RGBA(180, 180, 180, 1),
-    "Matte White", RGBA(180, 180, 180, 1),
+    "White", RGBA(255, 255, 255, 1),
+    "Matte White", RGBA(255, 255, 255, 1),
     "Gray", RGBA(128, 128, 128, 1),
     "Light Gray", RGBA(211, 211, 211, 1),
-    "Matte Light Gray", RGBA(169, 169, 169, 1),
+    "Matte Light Gray", RGBA(211, 211, 211, 1),
     "Red", RGBA(204, 0, 0, 1),
     "Matte Red", RGBA(204, 0, 0, 1),
     "Orange", RGBA(255, 102, 0, 1),
@@ -1546,16 +1544,16 @@ Switch(
 | Property | Value |
 |----------|-------|
 | Text | `ThisItem.Color.Value` |
-| X | `24` |
+| X | `28` |
 | Y | `75` |
-| Width | `138` |
+| Width | `134` |
 | Height | `20` |
 | Size | `10` |
 | Color | `varColorText` |
 
-> 💡 **Accessibility Update:** Context7 guidance for Power Apps points back to Microsoft’s canvas app accessibility docs: maintain at least `4.5:1` contrast between text and its effective background, and do not rely on color alone to communicate meaning. This pattern keeps the filament color visually accurate in `lblColorDot`, adds a dark backing circle for `White`, `Matte White`, and `Clear`, and keeps the readable label in `lblColorText` high contrast on the warm cream card background.
+> 💡 **Accessibility Update:** Context7 guidance for Power Apps points back to Microsoft’s canvas app accessibility docs: maintain at least `4.5:1` contrast between text and its effective background, and do not rely on color alone to communicate meaning. Using actual circle controls instead of stacked `⬤` labels gives both dots a true shared centerpoint, keeps the readable label in `lblColorText` high contrast on the warm cream card background, and avoids font-glyph alignment issues.
 
-> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint. Colors still match the SharePoint column formatting in `FilamentColor-Column-Formatting.json`; only the text presentation changed for readability. If `Silver`, `Any`, or `Light Gray` still feel too faint in testing, you can expand the `Visible` formula on `lblColorDotBackdrop` to include those values too.
+> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint. Colors still match the SharePoint column formatting in `FilamentColor-Column-Formatting.json`; only the presentation changed for readability and alignment. The backdrop circle is decorative, so its `AccessibleLabel` is intentionally blank. The `Visible` formula now covers the palest and lowest-contrast swatches on the warm cream card background: `White`, `Matte White`, `Clear`, `Light Gray`, `Matte Light Gray`, `Silver`, `Any`, `Yellow`, `Matte Yellow`, and `Gold`.
 
 ---
 
