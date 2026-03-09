@@ -1466,23 +1466,23 @@ Set(varSelectedItem, ThisItem)
 
 ---
 
-### Color Indicator (lblColor)
+### Color Indicator (Accessible Swatch + Label)
 
 20. Click **+ Insert** → **Text label**.
-21. **Rename it:** `lblColor`
+21. **Rename it:** `lblColorDot`
 22. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"⬤ " & ThisItem.Color.Value` |
+| Text | `"⬤"` |
 | X | `12` |
 | Y | `75` |
-| Width | `150` |
+| Width | `14` |
 | Height | `20` |
-| Size | `10` |
+| Size | `11` |
 | Color | See formula below |
 
-23. Set **Color** formula (matches the actual color):
+23. Set **Color** formula for `lblColorDot` (matches the actual filament color):
 
 **⬇️ FORMULA: Maps color names to display colors**
 
@@ -1524,7 +1524,23 @@ Switch(
 )
 ```
 
-> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint. Colors match the SharePoint column formatting in `FilamentColor-Column-Formatting.json`.
+24. Click **+ Insert** → **Text label** again.
+25. **Rename it:** `lblColorText`
+26. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `ThisItem.Color.Value` |
+| X | `24` |
+| Y | `75` |
+| Width | `138` |
+| Height | `20` |
+| Size | `10` |
+| Color | `varColorText` |
+
+> 💡 **Accessibility Update:** Context7 guidance for Power Apps points back to Microsoft’s canvas app accessibility docs: maintain at least `4.5:1` contrast between text and its effective background, and do not rely on color alone to communicate meaning. This pattern keeps the filament color visually accurate in `lblColorDot` while ensuring the readable label in `lblColorText` remains high contrast on the warm cream card background.
+
+> 💡 **Note:** Uses `ThisItem.Color.Value` because Color is a Choice field in SharePoint. Colors still match the SharePoint column formatting in `FilamentColor-Column-Formatting.json`; only the text presentation changed for readability.
 
 ---
 
@@ -8058,7 +8074,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 | Y | `16` |
 | Width | `24` |
 | Height | `24` |
-| Color | `If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), varColorDisabled)` |
+| Color | `If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorDisabled)` |
 | Tooltip | `If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")` |
 | Visible | `!varBatchSelectMode` |
 
