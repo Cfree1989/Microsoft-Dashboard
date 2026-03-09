@@ -516,8 +516,11 @@ concat('Filename "', outputs('Get_First_Filename'), '" does not match required f
    - **Title:** Click **Expression** tab (fx) → paste: `outputs('Generate_Standardized_Display_Name')` → click **Update**
    - **ReqKey:** Click **Expression** tab (fx) → paste: `outputs('Generate_ReqKey')` → click **Update**
    - **StudentEmail:** Click **Expression** tab (fx) → paste: `outputs('Get_Student_Email')` → click **Update**
+   - **NeedsAttention:** Select `No`
    - **LastAction Value:** Select `Created`
    - **LastActionAt:** Click **Expression** tab (fx) → paste: `utcNow()` → click **Update**
+
+> ⚠️ **Important:** Explicitly setting `NeedsAttention: No` ensures newly created requests don't glow in the dashboard. SharePoint column defaults are not always reliably applied.
 
 #### Action 2: Log Request Creation
 
@@ -639,6 +642,7 @@ concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))
 - [ ] ReqKey generated correctly (format: `REQ-00001`)
 - [ ] Title updated to standardized display name
 - [ ] StudentEmail populated correctly
+- [ ] **NeedsAttention set to No** (card should NOT glow in dashboard)
 - [ ] Confirmation email received with all details
 - [ ] "View all your requests" link works and opens Student Portal
 - [ ] Two AuditLog entries created (Request Created + Email Sent)
@@ -864,6 +868,7 @@ Use these exact names when renaming actions in Power Automate:
 ✅ **Standardized Display Names** — Consistent naming: FirstLast_Method_Color_ReqKey  
 ✅ **Filename Validation** — Auto-rejects invalid file names with guidance emails  
 ✅ **No Attachment Detection** — Catches submissions without files  
+✅ **NeedsAttention Reset** — Explicitly sets NeedsAttention to No so new jobs don't glow  
 ✅ **Student Notifications** — Confirmation emails with Student Portal link  
 ✅ **Complete Audit Logging** — Tracks all actions with FlowRunId and timestamps  
 ✅ **Rejection Guidance** — Specific emails tell students exactly what to fix  

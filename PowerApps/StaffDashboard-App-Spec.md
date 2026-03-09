@@ -1277,7 +1277,7 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | Width | `Parent.TemplateWidth` |
 | Height | `Parent.TemplateHeight - 8` |
 | Fill | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard))` |
-| BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBorderLight))` |
+| BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorBorderLight))` |
 | BorderThickness | `If(ThisItem.NeedsAttention, 2, 1)` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
