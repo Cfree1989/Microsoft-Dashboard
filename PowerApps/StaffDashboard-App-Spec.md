@@ -2505,6 +2505,58 @@ scrDashboard
 
 ---
 
+### Close Button (btnRejectClose)
+
+13A. Click **+ Insert** → **Button**
+13B. **Rename it:** `btnRejectClose`
+13C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recRejectModal.X + recRejectModal.Width - 40` |
+| Y | `recRejectModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+13D. Set **OnSelect:**
+
+```powerfx
+Set(varShowRejectModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtRejectComments);
+Reset(ddRejectStaff);
+Reset(chkTooSmall);
+Reset(chkGeometry);
+Reset(chkNotSolid);
+Reset(chkScale);
+Reset(chkMessy);
+Reset(chkOverhangs);
+Reset(chkNotJoined)
+```
+
+---
+
 ### Student Info (lblRejectStudent)
 
 14. Click **+ Insert** → **Text label**.
@@ -2931,6 +2983,54 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(16, 124, 16, 1)` |
+
+---
+
+### Close Button (btnApprovalClose)
+
+13A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+13B. **Rename it:** `btnApprovalClose`
+13C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recApprovalModal.X + recApprovalModal.Width - 40` |
+| Y | `recApprovalModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+13D. Set **OnSelect:**
+
+```powerfx
+Set(varShowApprovalModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtEstimatedWeight);
+Reset(txtEstimatedTime);
+Reset(txtApprovalComments);
+Reset(ddApprovalStaff);
+Reset(ddSlicedOnComputer)
+```
 
 ---
 
@@ -3558,6 +3658,51 @@ scrDashboard
 
 ---
 
+### Close Button (btnArchiveClose)
+
+13A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+13B. **Rename it:** `btnArchiveClose`
+13C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recArchiveModal.X + recArchiveModal.Width - 40` |
+| Y | `recArchiveModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+13D. Set **OnSelect:**
+
+```powerfx
+Set(varShowArchiveModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtArchiveReason);
+Reset(ddArchiveStaff)
+```
+
+---
+
 ### Warning Message (lblArchiveWarning)
 
 14. Click **+ Insert** → **Text label**.
@@ -3890,6 +4035,50 @@ scrDashboard
 
 ---
 
+### Close Button (btnCompleteClose)
+
+13A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+13B. **Rename it:** `btnCompleteClose`
+13C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recCompleteModal.X + recCompleteModal.Width - 40` |
+| Y | `recCompleteModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+13D. Set **OnSelect:**
+
+```powerfx
+Set(varShowCompleteModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddCompleteStaff)
+```
+
+---
+
 ### Warning Message (lblCompleteWarning)
 
 14. Click **+ Insert** → **Text label**.
@@ -4193,6 +4382,56 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 120, 212, 1)` |
+
+---
+
+### Close Button (btnDetailsClose)
+
+10A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+10B. **Rename it:** `btnDetailsClose`
+10C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recDetailsModal.X + recDetailsModal.Width - 40` |
+| Y | `recDetailsModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+10D. Set **OnSelect:**
+
+```powerfx
+Set(varShowDetailsModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddDetailsStaff);
+Reset(ddDetailsMethod);
+Reset(ddDetailsPrinter);
+Reset(ddDetailsColor);
+Reset(txtDetailsWeight);
+Reset(txtDetailsHours);
+Reset(txtDetailsTransaction)
+```
 
 ---
 
@@ -4975,6 +5214,57 @@ scrDashboard
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
 | Color | `RGBA(0, 158, 73, 1)` |
+
+---
+
+### Close Button (btnPaymentClose)
+
+10A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+10B. **Rename it:** `btnPaymentClose`
+10C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recPaymentModal.X + recPaymentModal.Width - 40` |
+| Y | `recPaymentModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+10D. Set **OnSelect:**
+
+```powerfx
+Set(varShowPaymentModal, 0);
+Set(varSelectedItem, Blank());
+Reset(txtPaymentTransaction);
+Reset(txtPaymentWeight);
+Reset(dpPaymentDate);
+Reset(txtPaymentNotes);
+Reset(ddPaymentStaff);
+Reset(chkOwnMaterial);
+Reset(chkPartialPickup);
+Reset(ddPaymentType)
+```
 
 ---
 
@@ -5921,6 +6211,52 @@ scrDashboard
 
 ---
 
+### Close Button (btnRevertClose)
+
+13A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+13B. **Rename it:** `btnRevertClose`
+13C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recRevertModal.X + recRevertModal.Width - 40` |
+| Y | `recRevertModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+13D. Set **OnSelect:**
+
+```powerfx
+Set(varShowRevertModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddRevertStaff);
+Reset(ddRevertTarget);
+Reset(txtRevertReason)
+```
+
+---
+
 ### Staff Dropdown Label (lblRevertStaffLabel)
 
 14. Click **+ Insert** → **Text label**.
@@ -6342,6 +6678,54 @@ scrDashboard
 
 ```powerfx
 "Batch Payment - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
+```
+
+---
+
+### Close Button (btnBatchPaymentClose)
+
+14A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+14B. **Rename it:** `btnBatchPaymentClose`
+14C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recBatchPaymentModal.X + recBatchPaymentModal.Width - 40` |
+| Y | `recBatchPaymentModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+14D. Set **OnSelect:**
+
+```powerfx
+Set(varShowBatchPaymentModal, 0);
+// Don't clear colBatchItems - let user continue selecting
+Reset(txtBatchTransaction);
+Reset(txtBatchWeight);
+Reset(ddBatchStaff);
+Reset(chkBatchOwnMaterial);
+Reset(ddBatchPaymentType)
 ```
 
 ---
@@ -7117,29 +7501,39 @@ scrDashboard
 
 ### Close Button (btnNotesClose)
 
-14. Click **+ Insert** → **Button**.
-15. **Rename it:** `btnNotesClose`
-16. Set properties:
+13A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+13B. **Rename it:** `btnNotesClose`
+13C. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"✕"` |
-| X | `recNotesModal.X + recNotesModal.Width - 45` |
-| Y | `recNotesModal.Y + 15` |
+| X | `recNotesModal.X + recNotesModal.Width - 40` |
+| Y | `recNotesModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `color.white` |
-| Color | `Color.White` |
-| HoverFill | `ColorFade(varColorNeutral, -15%)` |
-| PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `varcolorborderlight` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
 
-17. Set **OnSelect:**
+13D. Set **OnSelect:**
 
 ```powerfx
 Set(varShowNotesModal, 0);
@@ -7718,6 +8112,49 @@ Set(varSelectedItem, Blank())
 
 ---
 
+### Close Button (btnStudentNoteClose)
+
+14A. Inside `conStudentNoteModal`, click **+ Insert** → **Button** (**Classic**, NOT Modern).
+14B. **Rename it:** `btnStudentNoteClose`
+14C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recStudentNoteModal.X + recStudentNoteModal.Width - 40` |
+| Y | `recStudentNoteModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+14D. Set **OnSelect:**
+
+```powerfx
+Set(varShowStudentNoteModal, 0);
+Set(varSelectedItem, Blank())
+```
+
+---
+
 ### Note Content Display (txtStudentNoteContent)
 
 15. Inside `conStudentNoteModal`, click **+ Insert** → **Text input**.
@@ -7778,41 +8215,6 @@ Set(varSelectedItem, Blank())
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
 21. Set **OnSelect:**
-
-```powerfx
-Set(varShowStudentNoteModal, 0);
-Set(varSelectedItem, Blank())
-```
-
----
-
-### Close Button (btnStudentNoteClose)
-
-22. Inside `conStudentNoteModal`, click **+ Insert** → **Button**.
-23. **Rename it:** `btnStudentNoteClose`
-24. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"✕"` |
-| X | `recStudentNoteModal.X + recStudentNoteModal.Width - 40` |
-| Y | `recStudentNoteModal.Y + 10recStudentNoteModal.Y + 10` |
-| Width | `30` |
-| Height | `30` |
-| Fill | `Transparent` |
-| Color | `RGBA(100, 100, 100, 1)` |
-| HoverFill | `RGBA(230, 230, 230, 1)` |
-| PressedFill | `RGBA(200, 200, 200, 1)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
-| RadiusTopLeft | `15` |
-| RadiusTopRight | `15` |
-| RadiusBottomLeft | `15` |
-| RadiusBottomRight | `15` |
-| Size | `14` |
-| Font | `varAppFont` |
-
-25. Set **OnSelect:**
 
 ```powerfx
 Set(varShowStudentNoteModal, 0);
@@ -8479,6 +8881,51 @@ Set(varShowAddFileModal, ThisItem.ID)
 
 ---
 
+### Close Button (btnFileClose)
+
+15A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+15B. **Rename it:** `btnFileClose`
+15C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recFileModal.X + recFileModal.Width - 40` |
+| Y | `recFileModal.Y + 10` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `14` |
+| Font | `varAppFont` |
+
+15D. Set **OnSelect:**
+
+```powerfx
+ResetForm(frmAttachmentsEdit);
+Set(varShowAddFileModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddFileActor)
+```
+
+---
+
 ### Staff Label (lblFileStaffLabel)
 
 16. Click **+ Insert** → **Text label**.
@@ -9014,31 +9461,39 @@ scrDashboard
 
 ### Close Button (btnViewMsgClose)
 
-17. Click **+ Insert** → **Button**.
-18. **Rename it:** `btnViewMsgClose`
-19. Set properties:
+16A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+16B. **Rename it:** `btnViewMsgClose`
+16C. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"✕"` |
-| X | `recViewMsgModal.X + recViewMsgModal.Width - 45` |
+| X | `recViewMsgModal.X + recViewMsgModal.Width - 40` |
 | Y | `recViewMsgModal.Y + 10` |
-| Width | `35` |
-| Height | `35` |
-| Fill | `varColorNeutral` |
-| Color | `Color.White` |
-| HoverFill | `ColorFade(varColorNeutral, -15%)` |
-| PressedFill | `ColorFade(varColorNeutral, -25%)` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverBorderColor | `Transparent` |
+| HoverColor | `RGBA(255, 255, 255, 1)` |
+| HoverFill | `RGBA(255, 46, 46, 1)` |
+| PaddingBottom | `0` |
+| PaddingLeft | `0` |
+| PaddingRight | `0` |
+| PaddingTop | `0` |
+| PressedBorderColor | `Transparent` |
+| PressedColor | `RGBA(245, 245, 245, 1)` |
+| PressedFill | `RGBA(220, 32, 32, 1)` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `16` |
+| Size | `14` |
 | Font | `varAppFont` |
 
-20. Set **OnSelect:**
+16D. Set **OnSelect:**
 
 ```powerfx
 Set(varShowViewMessagesModal, 0);
