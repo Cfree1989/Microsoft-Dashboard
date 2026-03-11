@@ -3267,20 +3267,96 @@ If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
 
 | Property | Value |
 |----------|-------|
-| X | `28` |
-| Y | `62` |
-| Width | `Parent.TemplateWidth - 60` |
+| X | `58` |
+| Y | `86` |
+| Width | `Parent.TemplateWidth - 132` |
 | Height | `20` |
 | Size | `11` |
 | Color | `RGBA(80, 80, 80, 1)` |
+| Font | `varAppFont` |
 
 26. Set **Text:**
 
 ```powerfx
-ThisItem.Method.Value & " • " & 
-Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)) & 
-" • " & ThisItem.Color.Value
+ThisItem.Color.Value & " • " &
+ThisItem.Method.Value & " • " &
+Trim(
+    If(
+        Find("(", ThisItem.Printer.Value) > 0,
+        Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1),
+        ThisItem.Printer.Value
+    )
+)
 ```
+
+26A. Click **+ Insert** → **Icons** → **Circle**.
+26B. **Rename it:** `cirPrintColorBackdrop`
+26C. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `28` |
+| Y | `81` |
+| Width | `30` |
+| Height | `30` |
+| Fill | `RGBA(45, 45, 48, 1)` |
+| Visible | `ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"` |
+| AccessibleLabel | `""` |
+
+26D. Click **+ Insert** → **Icons** → **Circle** again.
+26E. **Rename it:** `cirPrintColorDot`
+26F. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `cirPrintColorBackdrop.X + 2` |
+| Y | `cirPrintColorBackdrop.Y + 2` |
+| Width | `26` |
+| Height | `26` |
+| Fill | See formula below |
+| AccessibleLabel | `""` |
+
+26G. Set **Fill** for `cirPrintColorDot`:
+
+```powerfx
+Switch(
+    ThisItem.Color.Value,
+    "Black", RGBA(26, 26, 26, 1),
+    "Matte Black", RGBA(26, 26, 26, 1),
+    "White", RGBA(255, 255, 255, 1),
+    "Matte White", RGBA(255, 255, 255, 1),
+    "Gray", RGBA(128, 128, 128, 1),
+    "Light Gray", RGBA(211, 211, 211, 1),
+    "Matte Light Gray", RGBA(211, 211, 211, 1),
+    "Red", RGBA(204, 0, 0, 1),
+    "Matte Red", RGBA(204, 0, 0, 1),
+    "Orange", RGBA(255, 102, 0, 1),
+    "Matte Orange", RGBA(255, 102, 0, 1),
+    "Yellow", RGBA(255, 215, 0, 1),
+    "Matte Yellow", RGBA(255, 215, 0, 1),
+    "Gold", RGBA(255, 215, 0, 1),
+    "Green", RGBA(76, 175, 80, 1),
+    "Matte Green", RGBA(76, 175, 80, 1),
+    "Forest Green", RGBA(34, 139, 34, 1),
+    "Blue", RGBA(0, 71, 171, 1),
+    "Matte Blue", RGBA(0, 71, 171, 1),
+    "Cobalt Blue", RGBA(0, 102, 204, 1),
+    "Purple", RGBA(107, 63, 160, 1),
+    "Matte Purple", RGBA(107, 63, 160, 1),
+    "Brown", RGBA(93, 64, 55, 1),
+    "Light Brown", RGBA(196, 164, 132, 1),
+    "Chocolate Brown", RGBA(123, 63, 0, 1),
+    "Matte Chocolate", RGBA(123, 63, 0, 1),
+    "Copper", RGBA(184, 115, 51, 1),
+    "Bronze", RGBA(205, 127, 50, 1),
+    "Silver", RGBA(192, 192, 192, 1),
+    "Clear", RGBA(245, 245, 245, 1),
+    "Any", RGBA(224, 224, 224, 1),
+    RGBA(153, 153, 153, 1)
+)
+```
+
+> 💡 **UI Update:** This matches your card layout by keeping one readable details label with `Color • Method • Printer`, while the swatch stays on the left for quick scanning.
 
 #### Estimate Display (Only when available)
 
