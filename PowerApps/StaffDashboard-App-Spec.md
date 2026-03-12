@@ -1179,7 +1179,7 @@ Table(
 | Height | `40` |
 | Size | `11` |
 | BorderRadius | `20` |
-| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status)))` |
+| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey), If(varNeedsAttention, NeedsAttention = true, true))))` |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
@@ -1195,6 +1195,8 @@ Table(
 > 💡 **Why these sizes?** 9 tabs × 148px = 1332px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits while remaining readable.
 >
 > ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
+>
+> 💡 **Filtered count behavior:** Each tab count intentionally uses the same search text and Needs Attention filters as the main gallery. In this low-volume app, that keeps the badges aligned with the visible result set across all statuses, including Archived.
 
 ### ✅ Step 5 Checklist
 
@@ -10909,6 +10911,25 @@ Table(
     {Status: "Rejected", Color: varColorPrimary},
     {Status: "Canceled", Color: varColorPrimary},
     {Status: "Archived", Color: varColorPrimary}
+)
+```
+
+## Status Tab Button Text
+
+```powerfx
+ThisItem.Status & " " & Text(
+    CountRows(
+        Filter(
+            PrintRequests,
+            Status.Value = ThisItem.Status,
+            If(IsBlank(varSearchText), true,
+                varSearchText in Student.DisplayName ||
+                varSearchText in StudentEmail ||
+                varSearchText in ReqKey
+            ),
+            If(varNeedsAttention, NeedsAttention = true, true)
+        )
+    )
 )
 ```
 

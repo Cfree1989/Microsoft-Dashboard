@@ -521,7 +521,7 @@ For each section, verify:
 
 | Formula | Spec | YAML | Status |
 |---------|------|------|--------|
-| **Text** | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status)))` | Same | ✅ Match |
+| **Text** | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey), If(varNeedsAttention, NeedsAttention = true, true))))` | Historical export used raw status count | ⚠️ Spec updated |
 | **OnSelect** | `Set(varSelectedStatus, ThisItem.Status)` | Same | ✅ Match |
 | **Fill** | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` | Same | ✅ Match |
 | **Color** | `If(varSelectedStatus = ThisItem.Status, If(ThisItem.Status = "Pending", Color.Black, Color.White), varColorText)` | Same | ✅ Match |
@@ -531,6 +531,8 @@ For each section, verify:
 | **PressedColor** | Same as Color formula | Same | ✅ Match |
 | **BorderColor** | `varInputBorderColor` | `varInputBorderColor` | ✅ Match |
 | **BorderThickness** | `1` | `1` | ✅ Match |
+
+> **Note:** The spec now defines search-aware and Needs Attention-aware tab counts for this low-volume app. The full dashboard screen export is not present in this repo, so the YAML column above reflects the previously audited raw-count behavior rather than a newly re-audited screen export.
 
 ---
 
