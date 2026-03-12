@@ -395,6 +395,7 @@ Set(varCurrentPage, "Dashboard");
 
 // Search and filter state
 Set(varSearchText, "");
+Set(varSortOrder, "Queue Order");
 Set(varNeedsAttention, false);
 Set(varExpandAll, false);
 
@@ -585,6 +586,7 @@ Set(varLoadingMessage, "")
 | `varQuickQueue` | Active queue statuses | Table |
 | `varSelectedStatus` | Currently selected status tab | Text |
 | `varSearchText` | Current search filter | Text |
+| `varSortOrder` | Current dashboard sort mode | Text |
 | `varNeedsAttention` | Filter for attention items only | Boolean |
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
@@ -923,6 +925,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
     btnClearFilters                   ← Step 14
     btnRefresh                        ← Step 14
+    ddSortOrder                       ← Step 14
     chkNeedsAttention                 ← Step 14
     txtSearch                         ← Step 14
     recFilterBar                      ← Step 14 (filter bar background)
@@ -1235,23 +1238,45 @@ Your Tree view should now include:
 **⬇️ FORMULA: Paste into galJobCards Items**
 
 ```powerfx
-SortByColumns(
-    Filter(
-        PrintRequests,
-        Status.Value = varSelectedStatus,
-        If(
-            IsBlank(varSearchText), 
-            true, 
-            varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey
-        ),
-        If(varNeedsAttention, NeedsAttention = true, true)
-    ),
-    "NeedsAttention", SortOrder.Descending,
-    "Created", SortOrder.Ascending
+With(
+    {
+        filteredJobs: Filter(
+            PrintRequests,
+            Status.Value = varSelectedStatus,
+            If(
+                IsBlank(varSearchText), 
+                true, 
+                varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey
+            ),
+            If(varNeedsAttention, NeedsAttention = true, true)
+        )
+    },
+    Switch(
+        varSortOrder,
+        "Student Name A-Z",
+        Sort(filteredJobs, Student.DisplayName, SortOrder.Ascending),
+        "Student Name Z-A",
+        Sort(filteredJobs, Student.DisplayName, SortOrder.Descending),
+        "Oldest First",
+        SortByColumns(filteredJobs, "Created", SortOrder.Ascending),
+        "Newest First",
+        SortByColumns(filteredJobs, "Created", SortOrder.Descending),
+        "Color A-Z",
+        Sort(filteredJobs, Color.Value, SortOrder.Ascending),
+        "Printer A-Z",
+        Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
+        SortByColumns(
+            filteredJobs,
+            "NeedsAttention", SortOrder.Descending,
+            "Created", SortOrder.Ascending
+        )
+    )
 )
 ```
 
-> ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. The sort puts attention items first, then oldest requests (longest in queue).
+> ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. `Queue Order` preserves the operational default: attention items first, then oldest requests (longest in queue).
+>
+> 💡 **Sort modes:** Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, and `Printer A-Z` from the filter bar.
 >
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
@@ -8257,11 +8282,11 @@ Your Student Note Modal should now contain these controls:
 
 # STEP 14: Adding the Filter Bar
 
-**What you're doing:** Creating a dedicated filter bar between the status tabs and job cards gallery with search and filter controls.
+**What you're doing:** Creating a dedicated filter bar between the status tabs and job cards gallery with search, sort, and filter controls.
 
-> ⚠️ **IMPORTANT:** You must create **ALL 5 controls** in this section. The filter bar won't look right if you only create some of them. The background rectangle (`recFilterBar`) provides the visual container for the other controls.
+> ⚠️ **IMPORTANT:** You must create **ALL 6 controls** in this section. The filter bar won't look right if you only create some of them. The background rectangle (`recFilterBar`) provides the visual container for the other controls.
 
-> 💡 **Design:** A clean horizontal bar with a subtle background containing search input, attention filter checkbox, refresh button, and clear button.
+> 💡 **Design:** A clean horizontal bar with a subtle background containing search input, sort dropdown, attention filter checkbox, refresh button, and clear button.
 
 ### Control Hierarchy
 
@@ -8270,6 +8295,7 @@ scrDashboard
 ├── recFilterBar              ← Background bar (CREATE THIS FIRST!)
 ├── txtSearch                 ← Search input
 ├── chkNeedsAttention         ← Checkbox filter
+├── ddSortOrder               ← Sort dropdown
 ├── btnRefresh                ← Refresh data button
 └── btnClearFilters           ← Reset button
 ```
@@ -8354,11 +8380,53 @@ Set(varSearchText, Self.Text)
 
 ---
 
+### Sort Dropdown (ddSortOrder)
+
+14. Click **+ Insert** → **Drop down**.
+15. **Rename it:** `ddSortOrder`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Printer A-Z"]` |
+| Default | `varSortOrder` |
+| X | `620` |
+| Y | `117` |
+| Width | `180` |
+| Height | `36` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| AccessibleLabel | `"Sort dashboard jobs"` |
+
+17. Set **OnChange:**
+
+```powerfx
+Set(varSortOrder, Self.Selected.Value)
+```
+
+> 💡 **Default behavior:** `Queue Order` keeps the dashboard in its normal workflow order: attention items first, then oldest jobs first.
+
+---
+
 ### Clear Filters Button (btnClearFilters)
 
-14. Click **+ Insert** → **Button**.
-15. **Rename it:** `btnClearFilters`
-16. Set properties:
+18. Click **+ Insert** → **Button**.
+19. **Rename it:** `btnClearFilters`
+20. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8381,11 +8449,13 @@ Set(varSearchText, Self.Text)
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-17. Set **OnSelect:**
+21. Set **OnSelect:**
 
 ```powerfx
 Reset(txtSearch);
 Set(varSearchText, "");
+Set(varSortOrder, "Queue Order");
+Reset(ddSortOrder);
 Set(varNeedsAttention, false);
 Reset(chkNeedsAttention)
 ```
@@ -8394,14 +8464,14 @@ Reset(chkNeedsAttention)
 
 ### Refresh Data Button (btnRefresh)
 
-18. Click **+ Insert** → **Button**.
-19. **Rename it:** `btnRefresh`
-20. Set properties:
+22. Click **+ Insert** → **Button**.
+23. **Rename it:** `btnRefresh`
+24. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"↻ Refresh"` |
-| X | `Parent.Width - 176` |
+| X | `Parent.Width - 276` |
 | Y | `117` |
 | Width | `80` |
 | Height | `varBtnHeight` |
@@ -8418,7 +8488,7 @@ Reset(chkNeedsAttention)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-21. Set **OnSelect:**
+25. Set **OnSelect:**
 
 ```powerfx
 Refresh(PrintRequests)
@@ -8460,6 +8530,7 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
    ├── recFilterBar              ← Filter bar BELOW modal containers
    ├── txtSearch
    ├── chkNeedsAttention
+   ├── ddSortOrder
    ├── btnRefresh
    ├── btnClearFilters
    ├── galJobCards               ← Gallery BELOW filter bar
@@ -10428,6 +10499,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
     recFilterBar
     txtSearch
     chkNeedsAttention
+    ddSortOrder
     lblNeedsAttention
     btnRefresh
     btnClearFilters
@@ -10843,20 +10915,40 @@ Table(
 ## Job Cards Gallery Filter
 
 ```powerfx
-// NeedsAttention items appear first, then sorted by time in queue (oldest first)
-SortByColumns(
-    Filter(
-        PrintRequests,
-        Status.Value = varSelectedStatus,
-        If(IsBlank(varSearchText), true, 
-            varSearchText in Student.DisplayName || 
-            varSearchText in StudentEmail || 
-            varSearchText in ReqKey
-        ),
-        If(varNeedsAttention, NeedsAttention = true, true)
-    ),
-    "NeedsAttention", SortOrder.Descending,  // Attention items first
-    "Created", SortOrder.Ascending            // Oldest first (longest in queue)
+// Queue Order keeps attention items first, then oldest in queue first
+With(
+    {
+        filteredJobs: Filter(
+            PrintRequests,
+            Status.Value = varSelectedStatus,
+            If(IsBlank(varSearchText), true, 
+                varSearchText in Student.DisplayName || 
+                varSearchText in StudentEmail || 
+                varSearchText in ReqKey
+            ),
+            If(varNeedsAttention, NeedsAttention = true, true)
+        )
+    },
+    Switch(
+        varSortOrder,
+        "Student Name A-Z",
+        Sort(filteredJobs, Student.DisplayName, SortOrder.Ascending),
+        "Student Name Z-A",
+        Sort(filteredJobs, Student.DisplayName, SortOrder.Descending),
+        "Oldest First",
+        SortByColumns(filteredJobs, "Created", SortOrder.Ascending),
+        "Newest First",
+        SortByColumns(filteredJobs, "Created", SortOrder.Descending),
+        "Color A-Z",
+        Sort(filteredJobs, Color.Value, SortOrder.Ascending),
+        "Printer A-Z",
+        Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
+        SortByColumns(
+            filteredJobs,
+            "NeedsAttention", SortOrder.Descending,
+            "Created", SortOrder.Ascending
+        )
+    )
 )
 ```
 
