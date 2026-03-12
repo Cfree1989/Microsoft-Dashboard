@@ -8375,7 +8375,11 @@ Set(varSearchText, Self.Text)
 | Width | `200` |
 | Height | `26` |
 | Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
+| BorderColor | `varInputBorderColor` |
+| CheckboxBorderColor | `varInputBorderColor` |
+| CheckmarkFill | `varColorText` |
+| Color | `varColorTextMuted` |
+| HoverColor | `varColorTextMuted` |
 
 12. Set **OnCheck:** `Set(varNeedsAttention, true)`
 13. Set **OnUncheck:** `Set(varNeedsAttention, false)`
