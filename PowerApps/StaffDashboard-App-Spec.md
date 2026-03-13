@@ -3408,6 +3408,10 @@ If(
 | HoverFill | `varInputHoverFill` |
 | DisabledBorderColor | `varInputBorderColor` |
 
+> 💡 **Data Storage:**
+> - `ApprovalComment` field: Clean staff note for student-facing estimate emails
+> - `StaffNotes` field: Internal audit/history entry with estimate details, comment, and timestamp
+
 ---
 
 ### Cancel Button (btnApprovalCancel)
@@ -3537,6 +3541,7 @@ IfError(
         EstimatedTime: Value(txtEstimatedTime.Text),
         EstimatedCost: varCalculatedCost,
         SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
+        ApprovalComment: txtApprovalComments.Text,
         StaffNotes: Concatenate(
             If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
             "APPROVED by " & 

@@ -65,6 +65,20 @@ Replace `FieldName` with the SharePoint internal column name (e.g., `StudentConf
 
 **Verify:** Refresh list view → New "StudentConfirmed" column should appear with all items defaulted to "No"
 
+### SharePoint Field: ApprovalComment (Required for Student-Facing Estimate Notes)
+
+**What this does:** Stores the clean note staff want students to see in estimate approval emails, separate from the internal `StaffNotes` audit trail.
+
+**Setup steps:**
+1. Go to **SharePoint** → Your site → **PrintRequests** list
+2. Click **Add column** → Select **Multiple lines of text**
+3. **Name:** `ApprovalComment`
+4. **Description:** `Student-facing note included in estimate approval emails`
+5. **Type of text:** **Plain text**
+6. Click **Save**
+
+**Verify:** Refresh list view → New `ApprovalComment` column should appear and be editable on request items
+
 ### "My Requests" View Security
 
 **What this does:** Ensures students can only see/edit their own requests for secure estimate confirmation.
@@ -883,41 +897,11 @@ Some display names differ from internal field names. Always use internal names i
    - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
 
 > **Note:** The hyperlink uses an HTML `<a href="...">` anchor tag. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expression inside the href attribute will resolve correctly.
+>
+> **Approval note behavior:** The email template below uses `ApprovalComment` as the student-facing note source. The conditional expression omits the entire **STAFF NOTE** section when the field is blank.
 
 ```
-Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},
-
-Your 3D print estimate has been Approved! Before we start printing, please review and confirm the details below.
-
-⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.
-
-ESTIMATE DETAILS:
-- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}
-- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}
-- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}
-- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}
-
-TO CONFIRM THIS ESTIMATE:
-
-<a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8">Open Student Portal</a>
-
-1. Click the link above to open the Student Portal
-2. Click "VIEW REQUESTS" to see your print requests
-3. Find your request showing "Pending" status with the estimate
-4. Click the green "CONFIRM ESTIMATE" button on your request card
-5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"
-
-If you have any questions or concerns about the estimate, please contact us before confirming.
-
-Thank you,
-LSU Digital Fabrication Lab
-
-Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
-Email: coad-fablab@lsu.edu
-Location: Room 145 Atkinson Hall
-
----
-This is an automated message from the LSU Digital Fabrication Lab.
+<p class="editor-paragraph">Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},<br><br>Your 3D print estimate is Approved! Before we start printing, please review and confirm the details below.<br><br>⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.<br><br>ESTIMATE DETAILS:<br>- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}<br>- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}<br>- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}<br>- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}@{if(empty(outputs('Get_Current_Pending_Data')?['body/ApprovalComment']), '', concat('<br><br>STAFF NOTE:<br>', outputs('Get_Current_Pending_Data')?['body/ApprovalComment']))}<br><br>TO CONFIRM THIS ESTIMATE:</p><br><p class="editor-paragraph"><a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8" class="editor-link">Open Student Portal</a><br><br>1. Click the link above to open the Student Portal<br>2. Click "VIEW REQUESTS" to see your print requests<br>3. Find your request showing "Pending" status with the estimate<br>4. Click the green "CONFIRM ESTIMATE" button on your request card<br>5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"<br><br>If you have any questions or concerns about the estimate, please contact us before confirming.<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br>Email: coad-fablab@lsu.edu<br>Location: Room 145 Atkinson Hall<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
 **✅ STUDENT PORTAL APP LINK:** The confirmation link opens the **Student Portal Power App** where students can view and confirm their estimates. This approach:
@@ -937,6 +921,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
 
 **⚠️ Prerequisites:** Before using this email, ensure you've completed:
 - Added StudentConfirmed field to PrintRequests list
+- Added ApprovalComment field to PrintRequests list
 - Built and published the Student Portal Power App (see `StudentPortal-App-Spec.md`)
 - The confirmation modal is built into the `scrMyRequests` screen (Step 10 of StudentPortal-App-Spec.md)
 
@@ -965,7 +950,7 @@ This is an automated message from the LSU Digital Fabrication Lab.
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Type `Estimate notification sent to student with confirmation link`
 
-**Test Step 7b:** Change status to "Pending" → Verify estimate email sent with cost details and logged
+**Test Step 7b:** Change status to "Pending" → Verify estimate email sent with cost details, includes the `ApprovalComment` note when provided, and is logged
 
 ---
 
@@ -1258,6 +1243,7 @@ Update these sections in the email templates for your lab:
 - [ ] Email audit entries include proper System actor and timestamps
 - [ ] No duplicate emails sent during multi-field updates
 - [ ] Cost estimates display correctly in emails
+- [ ] ApprovalComment appears in estimate emails only when staff entered a note
 - [ ] **Email content freshness test:** Make simultaneous updates to printer/method/estimates while changing status - emails should show latest values, not original trigger values
 - [ ] **RejectionReason field** appears correctly in rejection emails (both predefined choices and custom fill-in values)
 - [ ] RejectionReason changes are logged to AuditLog when staff update rejection reasons
