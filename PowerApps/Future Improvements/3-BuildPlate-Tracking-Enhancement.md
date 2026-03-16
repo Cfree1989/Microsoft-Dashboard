@@ -46,6 +46,18 @@ PrintRequests (1 record)
 
 Weight and cost recording stays exactly as-is — staff weighs whatever is being picked up and enters the combined weight. No per-plate cost calculation is added.
 
+### Relationship to ActualPrinter
+
+If **Printer Verification Enhancement** (Document 1) is also implemented, `ActualPrinter` on `PrintRequests` records the printer used at completion time. For multi-plate jobs:
+
+| Scenario | ActualPrinter Behavior |
+|----------|------------------------|
+| Single plate | Set to the machine that plate ran on (normal case) |
+| Multiple plates, same machine | Set to that machine |
+| Multiple plates, different machines | Set to the **primary** machine (the one with the most plates, or staff's judgment call) |
+
+The `BuildPlates` list provides full granularity — every plate's machine is recorded individually. `ActualPrinter` remains a single-value summary field for high-level reporting. Staff who need per-machine utilization data should query `BuildPlates` directly.
+
 ---
 
 ## SharePoint Schema Changes
@@ -532,7 +544,7 @@ Strips the dimensions from the choice value for brevity ("Prusa MK4S" instead of
 
 | Property | Value |
 |----------|-------|
-| Text | `If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)` |
+| Text | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `52` |
 | Y | `0` |
 | Width | `160` |
@@ -682,7 +694,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 
 | Property | Value |
 |----------|-------|
-| Items | `If(varSelectedItem.Method.Value = "Filament", Filter(Choices([@BuildPlates].Machine), Value <> "Form 3 (5.7×5.7×7.3in)"), Filter(Choices([@BuildPlates].Machine), Value = "Form 3 (5.7×5.7×7.3in)"))` |
+| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
 | X | `recBuildPlatesModal.X + 104` |
 | Y | `recBuildPlatesModal.Y + 452` |
 | Width | `280` |
@@ -691,11 +703,21 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Size | `10` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
 | ChevronBackground | `varChevronBackground` |
 | ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Matches the filter pattern in `ddCompletePrinter` (see Printer-Verification-Enhancement.md).
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Uses the same filter pattern as `ddCompletePrinter` in the Printer Verification Enhancement (Document 1).
 
 ##### Add Plate Button (btnBuildPlatesAdd)
 
@@ -845,7 +867,7 @@ Add after the Payment History section, before `chkPartialPickup`.
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(ThisItem.PlateNum) & "/" & Text(If(varSelectedItem.TotalBuildPlates > 0, varSelectedItem.TotalBuildPlates, CountRows(colBuildPlatesIndexed))) & "  ·  " & If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)` |
+| Text | `Text(ThisItem.PlateNum) & "/" & Text(If(varSelectedItem.TotalBuildPlates > 0, varSelectedItem.TotalBuildPlates, CountRows(colBuildPlatesIndexed))) & "  ·  " & Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `30` |
 | Y | `0` |
 | Width | `460` |
@@ -970,7 +992,7 @@ Both can be done immediately with no app changes.
 - **Payment Recording Modal:** `StaffDashboard-App-Spec.md` Step 12C
 - **SharePoint PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md` Step 4C
 - **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md` *(create this list first)*
-- **Printer Verification (machine choice values reference):** `PowerApps/Future Improvements/Printer-Verification-Enhancement.md`
+- **Printer Verification (machine choice values, ActualPrinter integration):** `PowerApps/Future Improvements/1-Printer-Verification-Enhancement.md`
 
 ---
 

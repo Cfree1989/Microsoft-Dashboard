@@ -44,6 +44,7 @@
 23. [Troubleshooting](#troubleshooting)
 24. [Quick Reference Card](#quick-reference-card)
 25. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
+26. [Future Improvements](#future-improvements) ← Planned enhancements
 
 ---
 
@@ -11172,6 +11173,18 @@ After your Staff Console is working:
 2. ✅ Train staff on using the dashboard
 3. ✅ Monitor AuditLog for proper logging
 4. 🎯 Move to Phase 4: Integration & Production
+
+## Future Improvements
+
+Enhancement specifications for planned features are documented in [`PowerApps/Future Improvements/`](Future%20Improvements/):
+
+| Document | Description |
+|----------|-------------|
+| `1-Printer-Verification-Enhancement.md` | Adds `ActualPrinter` field to track which printer was actually used vs. student's original request |
+| `2-Payer-Tracking-Enhancement.md` | Tracks who paid for a job (student vs. third party) |
+| `3-BuildPlate-Tracking-Enhancement.md` | Tracks individual gcode files/plates for multi-printer jobs |
+
+These documents follow the same conventions as this spec (variable names, styling patterns, control naming) and include SharePoint schema changes, UI mockups, and implementation steps.
 
 ---
 

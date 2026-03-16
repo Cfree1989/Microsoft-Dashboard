@@ -86,6 +86,16 @@ Use the same four options as the existing `Printer` column:
 
 This separation allows future reporting on how often student selections match actual usage — useful for understanding student behavior and informing printer labeling or documentation.
 
+### Integration with Build Plate Tracking
+
+If **Build Plate Tracking Enhancement** (Document 3) is also implemented, jobs may span multiple printers via the `BuildPlates` sub-list. In that case:
+
+- `ActualPrinter` remains a single-value field — set to the **primary** machine (the one with the most plates, or staff's judgment)
+- `BuildPlates.Machine` provides per-plate granularity for detailed utilization reporting
+- Both fields should use the same choice values to ensure consistency
+
+For single-plate jobs (the common case), `ActualPrinter` and the single plate's `Machine` will match.
+
 ---
 
 ## Complete Modal UI Changes
@@ -174,13 +184,18 @@ Add after `ddCompleteStaff`:
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
 | ChevronBackground | `varChevronBackground` |
 | ChevronFill | `varChevronFill` |
 | ChevronHoverBackground | `varChevronHoverBackground` |
 | ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
 | HoverFill | `varDropdownHoverFill` |
-| SelectionColor | `varDropdownSelectionColor` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
 | SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
 > Note: `DefaultSelectedItems` pre-selects the student's originally requested printer. Staff must actively confirm or change it before the Confirm button unlocks.
@@ -227,9 +242,8 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     ActualPrinter: {Value: ddCompletePrinter.Selected.Value},
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
-        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
         Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
-        Department: "",
+        Discipline: "",
         DisplayName: ddCompleteStaff.Selected.MemberName,
         Email: ddCompleteStaff.Selected.MemberEmail,
         JobTitle: "",
@@ -251,6 +265,7 @@ Reset(ddCompleteStaff);
 Reset(ddCompletePrinter)
 
 // btnCompleteConfirm.OnSelect — post-patch reset block — After
+// (placed after Flow C IfError block)
 Set(varShowCompleteModal, 0);
 Set(varSelectedItem, Blank());
 Reset(ddCompleteStaff);
@@ -393,6 +408,7 @@ This can be done immediately with no app changes. The column will be blank on al
 - **Change Details Modal (printer filter logic reference):** `StaffDashboard-App-Spec.md` Step 12A (Lines 4302–5114)
 - **SharePoint Schema:** `SharePoint/PrintRequests-List-Setup.md` Column 10 (Lines 230–241)
 - **Flow C — Audit Log:** `PowerAutomate/Flow-(C)-Action-LogAction.md`
+- **Build Plate Tracking (multi-printer job handling):** `PowerApps/Future Improvements/3-BuildPlate-Tracking-Enhancement.md`
 
 ---
 
