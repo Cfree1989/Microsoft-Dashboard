@@ -2046,16 +2046,18 @@ Time zone: _______________
 1. Run flow manually (Power Automate → My flows → Run)
 2. Wait for completion
 3. View run history
-4. Check outputs of "Calculate 1 Month Cutoff" and "Calculate 12 Month Cutoff"
+4. Check outputs of "Calculate 7 Day Cutoff", "Calculate 30 Day Cutoff", and "Calculate 12 Month Cutoff"
 
 **Expected Result:**
-- [ ] 1 Month Cutoff: Date approximately 30 days before current date
+- [ ] 7 Day Cutoff: Date approximately 7 days before current date
+- [ ] 30 Day Cutoff: Date approximately 30 days before current date
 - [ ] 12 Month Cutoff: Date approximately 365 days before current date
-- [ ] Both dates in ISO 8601 format (e.g., 2025-01-15T03:00:00Z)
+- [ ] All dates in ISO 8601 format (e.g., 2025-01-15T03:00:00Z)
 
 **Actual Result:**
 ```
-1 Month Cutoff: _______________
+7 Day Cutoff: _______________
+30 Day Cutoff: _______________
 12 Month Cutoff: _______________
 Format correct: [ ] Yes  [ ] No
 ```
@@ -2070,19 +2072,19 @@ Format correct: [ ] Yes  [ ] No
 
 **Prerequisites:**
 - [ ] Create test request with Status = "Rejected"
-- [ ] Manually set LastActionAt to 35 days ago in SharePoint
+- [ ] Manually set LastActionAt to 10 days ago in SharePoint
 
 **Test Steps:**
 1. Create or identify a test request
 2. Set Status to "Rejected" via SharePoint
-3. Edit LastActionAt to a date 35 days ago (past 30-day retention)
+3. Edit LastActionAt to a date 10 days ago (past 7-day retention)
 4. Run flow manually
 5. Check "Get Rejected Requests Past Retention" action output
 
 **Expected Result:**
 - [ ] Test request appears in the output
 - [ ] Only requests with Status = "Rejected" are returned
-- [ ] Only requests with LastActionAt older than 30 days are returned
+- [ ] Only requests with LastActionAt older than 7 days are returned
 
 **Actual Result:**
 ```
@@ -2101,19 +2103,19 @@ Unexpected requests: [ ] Yes  [ ] No
 
 **Prerequisites:**
 - [ ] Create test request with Status = "Canceled"
-- [ ] Manually set LastActionAt to 35 days ago
+- [ ] Manually set LastActionAt to 10 days ago
 
 **Test Steps:**
 1. Create or identify a test request
 2. Set Status to "Canceled"
-3. Edit LastActionAt to 35 days ago
+3. Edit LastActionAt to 10 days ago
 4. Run flow manually
 5. Check "Get Canceled Requests Past Retention" action output
 
 **Expected Result:**
 - [ ] Test request appears in the output
 - [ ] Only Canceled requests returned
-- [ ] Only requests older than 30 days returned
+- [ ] Only requests older than 7 days returned
 
 **Actual Result:**
 ```
@@ -2125,7 +2127,102 @@ Total requests returned: _______________
 
 ---
 
-#### TEST F-005: Get Archived Requests Filter (12-Month Retention)
+#### TEST F-005: Get Paid Pickup Requests Filter
+
+**Objective:** Verify the filter correctly identifies `Paid & Picked Up` requests eligible for auto-archive.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Paid & Picked Up"
+- [ ] Manually set LastActionAt to 35 days ago
+
+**Test Steps:**
+1. Create or identify a test request
+2. Set Status to "Paid & Picked Up"
+3. Edit LastActionAt to 35 days ago
+4. Run flow manually
+5. Check "Get Paid Pickup Requests Past Retention" action output
+
+**Expected Result:**
+- [ ] Test request appears in the output
+- [ ] Only `Paid & Picked Up` requests are returned
+- [ ] Only requests older than 30 days are returned
+
+**Actual Result:**
+```
+Test request found: [ ] Yes  [ ] No
+Total requests returned: _______________
+Unexpected requests: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-006: Paid Pickup Auto-Archived After 30 Days
+
+**Objective:** Verify eligible `Paid & Picked Up` requests are automatically archived.
+
+**Prerequisites:**
+- [ ] Test request with Status = "Paid & Picked Up"
+- [ ] LastActionAt set to 35 days ago
+
+**Test Steps:**
+1. Note the test request ID and current values
+2. Run flow manually
+3. Wait for completion
+4. Refresh the PrintRequests list item
+
+**Expected Result:**
+- [ ] Status changes from `Paid & Picked Up` to `Archived`
+- [ ] `TigerCardNumber` is preserved after the update
+- [ ] `LastAction` is updated to `Status Change`
+- [ ] `LastActionBy` resolves to the connected flow account
+- [ ] `LastActionAt` is updated to the flow run time
+- [ ] PaidPickupArchiveCount increments for this request
+
+**Actual Result:**
+```
+Status updated: [ ] Yes  [ ] No
+TigerCardNumber preserved: [ ] Yes  [ ] No
+LastAction = Status Change: [ ] Yes  [ ] No
+LastActionBy = flow account: [ ] Yes  [ ] No
+LastActionAt refreshed: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-007: Paid Pickup NOT Auto-Archived Before 30 Days
+
+**Objective:** Verify `Paid & Picked Up` requests within 30 days are not archived.
+
+**Prerequisites:**
+- [ ] Create test request with Status = "Paid & Picked Up"
+- [ ] Set LastActionAt to 20 days ago
+
+**Test Steps:**
+1. Create or identify the test request
+2. Run flow manually
+3. Refresh the item after the flow completes
+
+**Expected Result:**
+- [ ] Status remains `Paid & Picked Up`
+- [ ] Request is NOT included in "Get Paid Pickup Requests Past Retention"
+- [ ] `LastActionAt` remains unchanged
+
+**Actual Result:**
+```
+Status unchanged: [ ] Yes  [ ] No
+Excluded from auto-archive filter: [ ] Yes  [ ] No
+LastActionAt unchanged: [ ] Yes  [ ] No
+```
+
+**Status:** [ ] PASS  [ ] FAIL  [ ] BLOCKED
+
+---
+
+#### TEST F-008: Get Archived Requests Filter (12-Month Retention)
 
 **Objective:** Verify the filter correctly identifies Archived requests past 12-month retention.
 
@@ -2155,7 +2252,7 @@ Total requests returned: _______________
 
 ---
 
-#### TEST F-006: Archived Request NOT Deleted Before 12 Months
+#### TEST F-009: Archived Request NOT Deleted Before 12 Months
 
 **Objective:** Verify Archived requests within 12-month retention are NOT deleted.
 
@@ -2186,12 +2283,12 @@ AuditLog entries preserved: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-007: AuditLog Entry Deletion
+#### TEST F-010: AuditLog Entry Deletion
 
 **Objective:** Verify AuditLog entries are correctly deleted for eligible requests.
 
 **Prerequisites:**
-- [ ] Test request with Status = "Rejected", LastActionAt = 35 days ago
+- [ ] Test request with Status = "Rejected", LastActionAt = 10 days ago
 - [ ] 3+ AuditLog entries exist for this RequestID
 
 **Test Steps:**
@@ -2217,12 +2314,12 @@ All deleted: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-008: PrintRequest Record Preserved
+#### TEST F-011: PrintRequest Record Preserved
 
-**Objective:** Verify the PrintRequest record itself is NOT deleted (only AuditLog entries).
+**Objective:** Verify the PrintRequest record itself is NOT deleted during archived retention cleanup (only AuditLog entries are removed).
 
 **Prerequisites:**
-- [ ] Test request eligible for cleanup
+- [ ] Test request with Status = "Archived" and LastActionAt = 370 days ago
 - [ ] AuditLog entries for this request
 
 **Test Steps:**
@@ -2246,9 +2343,9 @@ Status unchanged: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-009: Cleanup Summary Log Entry
+#### TEST F-012: Cleanup Summary Log Entry
 
-**Objective:** Verify the flow creates a summary log entry documenting the cleanup.
+**Objective:** Verify the flow creates a summary log entry documenting auto-archive and cleanup activity.
 
 **Test Steps:**
 1. Run flow manually
@@ -2260,7 +2357,7 @@ Status unchanged: [ ] Yes  [ ] No
 - [ ] Action = "System"
 - [ ] ActorRole = "System"
 - [ ] ClientApp = "Power Automate Scheduled"
-- [ ] Notes contains counts: "Deleted X audit entries (Rejected: Y, Canceled: Z, Archived: W)"
+- [ ] Notes contains `PaidPickupArchived=`, `Rejected=`, `Canceled=`, and `Archived=` counts
 - [ ] FlowRunId populated
 
 **Actual Result:**
@@ -2275,27 +2372,27 @@ FlowRunId present: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-010: No Eligible Items (Empty Run)
+#### TEST F-013: No Eligible Items (Empty Run)
 
-**Objective:** Verify flow completes successfully when no items need cleanup.
+**Objective:** Verify flow completes successfully when no items need cleanup or auto-archive.
 
 **Prerequisites:**
 - [ ] No requests past retention periods (or test in clean environment)
 
 **Test Steps:**
-1. Ensure no requests meet cleanup criteria
+1. Ensure no requests meet cleanup or auto-archive criteria
 2. Run flow manually
 3. Check completion status and summary log
 
 **Expected Result:**
 - [ ] Flow completes without errors (green checkmarks)
-- [ ] Summary log shows "Deleted 0 audit entries"
+- [ ] Summary log shows 0 for all counts
 - [ ] No error notifications
 
 **Actual Result:**
 ```
 Flow completed: [ ] Yes  [ ] No
-Summary shows 0: [ ] Yes  [ ] No
+Summary shows 0s: [ ] Yes  [ ] No
 Any errors: [ ] Yes  [ ] No
 ```
 
@@ -2303,29 +2400,29 @@ Any errors: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-011: Large Batch Processing
+#### TEST F-014: Large Batch Processing
 
 **Objective:** Verify flow handles multiple requests without throttling errors.
 
 **Prerequisites:**
-- [ ] 10+ test requests eligible for cleanup
-- [ ] Each with 5+ AuditLog entries
+- [ ] 10+ test requests eligible for cleanup or auto-archive
+- [ ] Each deleted request has 5+ AuditLog entries
 
 **Test Steps:**
 1. Create or identify 10+ eligible requests
 2. Run flow manually
 3. Monitor for throttling errors (429)
-4. Check all entries deleted
+4. Check all expected updates/deletions completed
 
 **Expected Result:**
 - [ ] Flow completes without throttling errors
-- [ ] All eligible AuditLog entries deleted
-- [ ] Summary count matches expected total
+- [ ] All eligible requests are processed
+- [ ] Summary counts match expected totals
 
 **Actual Result:**
 ```
 Total requests processed: _______________
-Total entries deleted: _______________
+Total records deleted/archived: _______________
 Throttling errors: [ ] Yes  [ ] No
 ```
 
@@ -2333,7 +2430,7 @@ Throttling errors: [ ] Yes  [ ] No
 
 ---
 
-#### TEST F-012: Error Recovery (Continue on Failure)
+#### TEST F-015: Error Recovery (Continue on Failure)
 
 **Objective:** Verify flow continues processing if individual deletions fail.
 
@@ -2341,7 +2438,7 @@ Throttling errors: [ ] Yes  [ ] No
 1. Run flow with multiple eligible requests
 2. If a deletion fails (check run history), verify:
    - Flow continues to next item
-   - Other deletions succeed
+   - Other deletions or auto-archives succeed
    - Summary still created
 
 **Expected Result:**
@@ -2366,9 +2463,9 @@ Summary created: [ ] Yes  [ ] No
 **Flow Version:** _______________
 
 ```
-PASSED: _____ / 12
-FAILED: _____ / 12
-BLOCKED: _____ / 12
+PASSED: _____ / 15
+FAILED: _____ / 15
+BLOCKED: _____ / 15
 ```
 
 **Critical Issues Found:**

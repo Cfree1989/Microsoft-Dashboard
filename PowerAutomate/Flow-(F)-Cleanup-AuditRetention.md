@@ -3,21 +3,22 @@
 **Full Name:** PR-Cleanup: Data retention  
 **Type:** Scheduled cloud flow (Recurrence trigger)
 
-**Purpose:** Automatically clean up data for jobs in terminal states (Rejected, Canceled, Archived) beyond their retention periods. For Rejected/Canceled jobs, performs full deletion (PrintRequest + AuditLog + Messages). For Archived jobs, only removes AuditLog entries to keep the list performant while preserving job records for historical reference.
+**Purpose:** Automatically manage final-state retention for PrintRequests. Requests in `Paid & Picked Up` are auto-archived after 30 days, Rejected/Canceled requests are fully deleted after 7 days, and Archived requests have only their AuditLog history removed after 12 months to keep the list performant while preserving historical records.
 
 ---
 
 ## Retention Policy
 
-| Status | Retention Period | What Gets Deleted | Rationale |
-|--------|------------------|-------------------|-----------|
-| Rejected | 7 days | **Everything** — PrintRequest, AuditLog, Messages | Jobs never worked; minimal dispute window |
-| Canceled | 7 days | **Everything** — PrintRequest, AuditLog, Messages | Student-initiated cancellation; no business value |
-| Archived | 12 months | **AuditLog only** — PrintRequest preserved | Keeps active list fast; preserves historical records |
+| Status | Retention Period | What Happens | Rationale |
+|--------|------------------|--------------|-----------|
+| Paid & Picked Up | 30 days | **Auto-archived** — Status changes to `Archived` | Keeps active staff views focused on recent pickups |
+| Rejected | 7 days | **Everything deleted** — PrintRequest, AuditLog, Messages | Jobs never worked; minimal dispute window |
+| Canceled | 7 days | **Everything deleted** — PrintRequest, AuditLog, Messages | Student-initiated cancellation; no business value |
+| Archived | 12 months | **AuditLog only deleted** — PrintRequest preserved | Keeps active list fast; preserves historical records |
 
 **What is NOT deleted:**
 - PrintRequest records for Archived jobs (preserved indefinitely for historical lookup)
-- AuditLog entries for active jobs (any status not in the table above)
+- AuditLog entries for active jobs that have not yet reached a retention threshold
 
 ---
 
@@ -54,18 +55,21 @@
 
 > **IMPORTANT:** Read this section first to understand the loop hierarchy before building.
 
-The flow has **three main processing loops** that run **sequentially** (one after the other, NOT nested inside each other). Each main loop contains nested loops for deleting multiple related records.
+The flow has **four main processing loops** that run **sequentially** (one after the other, NOT nested inside each other). The first loop auto-archives old pickup records, and the remaining loops perform retention cleanup for final states.
 
 ```
 Flow
 ├── Recurrence (trigger)
 ├── Calculate 7 Day Cutoff
+├── Calculate 30 Day Cutoff
 ├── Calculate 12 Month Cutoff
 ├── Initialize Rejected Counter
 ├── Initialize Canceled Counter
+├── Initialize Paid Pickup Archive Counter
 ├── Initialize Archived Counter
 ├── Get Rejected Requests Past Retention
 ├── Get Canceled Requests Past Retention
+├── Get Paid Pickup Requests Past Retention
 ├── Get Archived Requests Past Retention
 │
 ├── Process Each Rejected Request          ◄── MAIN LOOP #1
@@ -88,7 +92,11 @@ Flow
 │   ├── Delete Canceled PrintRequest
 │   └── Increment Canceled Count
 │
-├── Process Each Archived Request          ◄── MAIN LOOP #3 (after #2, not inside)
+├── Process Each Paid Pickup Request       ◄── MAIN LOOP #3 (after #2, not inside)
+│   ├── Archive Paid Pickup Request
+│   └── Increment Paid Pickup Archive Count
+│
+├── Process Each Archived Request          ◄── MAIN LOOP #4 (after #3, not inside)
 │   ├── Get AuditLog Entries for Archived
 │   ├── Delete Archived Audit Entries      ◄── nested loop
 │   │   └── Delete Archived Audit Entry        (ONLY this action inside)
@@ -98,7 +106,7 @@ Flow
 ```
 
 **Key rules:**
-1. The three main loops (`Process Each Rejected/Canceled/Archived`) are **siblings** — each starts after the previous one ends
+1. The four main loops (`Process Each Rejected/Canceled/Paid Pickup/Archived`) are **siblings** — each starts after the previous one ends
 2. Nested loops (like `Delete Rejected Audit Entries`) contain **only one action** — the delete action
 3. After a nested loop ends, the next action goes in the **main loop**, not inside the nested loop
 
@@ -136,7 +144,7 @@ Flow
 
 ### Step 2: Calculate Cutoff Dates
 
-**What this does:** Calculates the date thresholds for each retention period. Items with `LastActionAt` before these dates are eligible for cleanup.
+**What this does:** Calculates the date thresholds for auto-archive and cleanup retention. Items with `LastActionAt` before these dates are eligible for the corresponding action.
 
 **UI steps:**
 
@@ -152,7 +160,17 @@ formatDateTime(addDays(utcNow(), -7), 'yyyy-MM-ddTHH:mm:ssZ')
 
 > **Why formatDateTime?** SharePoint OData filters reject timestamps with high-precision fractional seconds. This formats the date as `2026-01-10T20:25:50Z` instead of `2026-01-10T20:25:50.0337128Z`.
 
-#### Action 2: Calculate 12-Month Cutoff
+#### Action 2: Calculate 30 Day Cutoff
+1. Click **+ New step**
+2. **Search:** Type `Compose` → Select **Compose**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 30 Day Cutoff`
+4. In **Inputs**, click **Expression** tab (fx) → Paste:
+```
+formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')
+```
+5. Click **OK**
+
+#### Action 3: Calculate 12-Month Cutoff
 1. Click **+ New step**
 2. **Search:** Type `Compose` → Select **Compose**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Calculate 12 Month Cutoff`
@@ -162,13 +180,13 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 ```
 5. Click **OK**
 
-**Test Step 2:** Save → Run flow manually → Check run history → Both Compose actions should show ISO date strings (7 days ago and 365 days ago)
+**Test Step 2:** Save → Run flow manually → Check run history → All three Compose actions should show ISO date strings (7 days ago, 30 days ago, and 365 days ago)
 
 ---
 
 ### Step 3: Initialize Counter Variables
 
-**What this does:** Creates variables to track how many audit entries are deleted for the summary log.
+**What this does:** Creates variables to track how many requests are auto-archived and how many records are cleaned up for the summary log.
 
 **UI steps:**
 
@@ -190,7 +208,16 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
    - **Type:** `Integer`
    - **Value:** `0`
 
-#### Action 3: Initialize Archived Counter
+#### Action 3: Initialize Paid Pickup Archive Counter
+1. Click **+ New step**
+2. **Search:** Type `Initialize variable` → Select **Initialize variable**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Initialize Paid Pickup Archive Counter`
+4. Fill in:
+   - **Name:** `PaidPickupArchiveCount`
+   - **Type:** `Integer`
+   - **Value:** `0`
+
+#### Action 4: Initialize Archived Counter
 1. Click **+ New step**
 2. **Search:** Type `Initialize variable` → Select **Initialize variable**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Initialize Archived Counter`
@@ -205,7 +232,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 ### Step 4: Get Eligible PrintRequests
 
-**What this does:** Retrieves PrintRequests that have been in terminal states beyond their retention periods.
+**What this does:** Retrieves PrintRequests that are eligible for auto-archive or cleanup based on their current status and `LastActionAt`.
 
 > **Note:** For Choice fields in SharePoint Online, use the field name directly (e.g., `Status eq 'Rejected'`). The `/Value` suffix is only needed for Lookup columns.
 
@@ -255,7 +282,28 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
      3. Type: `'` (closing single quote)
    - **Top Count:** `100`
 
-#### Action 3: Get Archived Requests Past Retention
+#### Action 3: Get Paid Pickup Requests Past Retention
+1. Click **+ New step**
+2. **Search:** Type `Get items` → Select **Get items (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get Paid Pickup Requests Past Retention`
+4. **Configure retry policy:**
+   - Click **three dots (…)** → **Settings**
+   - **Retry policy:** Select **Exponential interval**
+   - **Count:** `4`
+   - **Interval:** `PT1M`
+   - **Minimum interval:** `PT20S`
+   - **Maximum interval:** `PT1H`
+   - Click **Done**
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Filter Query:** Build this in parts:
+     1. Type: `Status eq 'Paid & Picked Up' and LastActionAt lt '`
+     2. Click **Dynamic content** → Select **Outputs** from `Calculate 30 Day Cutoff`
+     3. Type: `'` (closing single quote)
+   - **Top Count:** `100`
+
+#### Action 4: Get Archived Requests Past Retention
 1. Click **+ New step**
 2. **Search:** Type `Get items` → Select **Get items (SharePoint)**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Get Archived Requests Past Retention`
@@ -276,7 +324,7 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
      3. Type: `'` (closing single quote)
    - **Top Count:** `100`
 
-**Test Step 4:** Save → Run flow manually → Check that Get items actions return expected results (may be empty if no items meet criteria)
+**Test Step 4:** Save → Run flow manually → Check that all Get items actions return expected results (may be empty if no items meet criteria)
 
 ---
 
@@ -511,14 +559,70 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
 
 ---
 
-### Step 7: Process Archived Requests
+### Step 7: Archive Paid Pickup Requests
+
+**What this does:** For each request that has remained in `Paid & Picked Up` for 30 days, updates the item to `Archived` and stamps automated action metadata so the normal audit flow can log the status change.
+
+**UI steps:**
+
+#### Action 1: Apply to Each Paid Pickup Request
+1. Click **+ New step** (after the `Process Each Canceled Request` loop)
+2. **Search:** Type `Apply to each` → Select **Apply to each**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Process Each Paid Pickup Request`
+4. In **Select an output from previous steps:** Click **Dynamic content** → Select **value** from `Get Paid Pickup Requests Past Retention`
+5. **Configure concurrency:**
+   - Click **three dots (…)** → **Settings**
+   - **Concurrency Control:** Turn **On**
+   - **Degree of Parallelism:** `1` (prevents SharePoint throttling)
+   - Click **Done**
+
+**Inside the Apply to each loop:**
+
+#### Action 2: Update Status to Archived
+1. Click **Add an action** (inside the loop)
+2. **Search:** Type `Update item` → Select **Update item (SharePoint)**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Archive Paid Pickup Request`
+4. **Configure retry policy:** (Exponential interval, Count: 4, Interval: PT1M, Min: PT20S, Max: PT1H)
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `PrintRequests`
+   - **Id:** Click **Dynamic content** → Under the **Get Paid Pickup Requests Past Retention** section, select **ID**
+   - **TigerCardNumber:** Click **Expression** → Type `items('Process_Each_Paid_Pickup_Request')?['TigerCardNumber']`
+   - **Status Value:** Select `Archived`
+   - **LastAction Value:** Select `Status Change`
+   - **LastActionBy Claims:** Use the connected flow account claim (for example, `i:0#.f|membership|cfree3@lsu.edu`)
+   - **LastActionAt:** Click **Expression** → Type `utcNow()`
+   - **NeedsAttention:** Type `false`
+   - If your environment marks any other fields as required, map those through from the current loop item as well.
+
+> **Why `LastActionAt = utcNow()`?** Once the item is auto-archived, the archived-retention timer should begin from the archive date, not the original pickup date.
+
+> **Why `LastAction = Status Change`?** In the live SharePoint list, `System` may not be available as a `LastAction` choice even if older setup docs mention it. `Status Change` is available and accurately describes the archive transition.
+
+> **Why `LastActionBy Claims` instead of `LastActionBy = System`?** In the live Power Automate action, `LastActionBy` is exposed as a Person/Claims field rather than plain text, so use the flow account's claims value to stamp who performed the automatic archive.
+
+> **Why explicitly map `TigerCardNumber`?** `Update item` validates required SharePoint columns even when you are not changing them. In the live flow, `TigerCardNumber` is required, so you must pass the existing value through or the action will remain invalid.
+
+#### Action 3: Increment Paid Pickup Archive Count
+1. Click **Add an action** (inside the main loop, after Update item)
+2. **Search:** Type `Increment variable` → Select **Increment variable**
+3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Increment Paid Pickup Archive Count`
+4. Fill in:
+   - **Name:** Select `PaidPickupArchiveCount`
+   - **Value:** `1`
+
+**Test Step 7:** Save → Run flow manually → Check that `Paid & Picked Up` requests past 30 days are updated to `Archived`
+
+---
+
+### Step 8: Process Archived Requests
 
 **What this does:** For each archived request past 12-month retention, deletes all associated AuditLog entries.
 
 **UI steps:**
 
 #### Action 1: Apply to Each Archived Request
-1. Click **+ New step** (after the `Process Each Canceled Request` loop)
+1. Click **+ New step** (after the `Process Each Paid Pickup Request` loop)
 2. **Search:** Type `Apply to each` → Select **Apply to each**
 3. **Rename action:** Click **three dots (…)** → **Rename** → Type `Process Each Archived Request`
 4. In **Select an output from previous steps:** Click **Dynamic content** → Select **value** from `Get Archived Requests Past Retention`
@@ -593,11 +697,11 @@ formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')
    - **Name:** Select `ArchivedCount`
    - **Value:** `1`
 
-**Test Step 7:** Save → Run flow manually → Check that Archived requests past 12-month retention have their AuditLog entries deleted
+**Test Step 8:** Save → Run flow manually → Check that Archived requests past 12-month retention have their AuditLog entries deleted
 
 ---
 
-### Step 8: Log Cleanup Summary
+### Step 9: Log Cleanup Summary
 
 **What this does:** Creates a single AuditLog entry documenting what was cleaned up, for monitoring and troubleshooting.
 
@@ -642,10 +746,10 @@ add(add(variables('RejectedCount'), variables('CanceledCount')), variables('Arch
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Click **Expression** → Paste:
    ```
-   concat('Weekly cleanup: Rejected=', variables('RejectedCount'), ' (full delete), Canceled=', variables('CanceledCount'), ' (full delete), Archived=', variables('ArchivedCount'), ' (audit only). Retention: Rejected/Canceled=7 days, Archived=365 days.')
+   concat('Weekly cleanup: PaidPickupArchived=', variables('PaidPickupArchiveCount'), ', Rejected=', variables('RejectedCount'), ' (full delete), Canceled=', variables('CanceledCount'), ' (full delete), Archived=', variables('ArchivedCount'), ' (audit only). Retention: Paid & Picked Up=30 days to Archived, Rejected/Canceled=7 days, Archived=365 days.')
    ```
 
-**Test Step 8:** Save → Run flow manually → Check AuditLog for "Audit Cleanup Run" entry with counts
+**Test Step 9:** Save → Run flow manually → Check AuditLog for "Audit Cleanup Run" entry with counts
 
 ---
 
@@ -657,14 +761,17 @@ After completing all steps, your flow should look like this:
 Recurrence (Weekly, Sunday 3 AM)
 │
 ├── Calculate 7 Day Cutoff
+├── Calculate 30 Day Cutoff
 ├── Calculate 12 Month Cutoff
 │
 ├── Initialize Rejected Counter
 ├── Initialize Canceled Counter
+├── Initialize Paid Pickup Archive Counter
 ├── Initialize Archived Counter
 │
 ├── Get Rejected Requests Past Retention
 ├── Get Canceled Requests Past Retention
+├── Get Paid Pickup Requests Past Retention
 ├── Get Archived Requests Past Retention
 │
 ├── Process Each Rejected Request (FULL DELETION)
@@ -686,6 +793,10 @@ Recurrence (Weekly, Sunday 3 AM)
 │   │       └── Delete Canceled Message
 │   ├── Delete Canceled PrintRequest
 │   └── Increment Canceled Count
+│
+├── Process Each Paid Pickup Request (ARCHIVE)
+│   ├── Archive Paid Pickup Request
+│   └── Increment Paid Pickup Archive Count
 │
 ├── Process Each Archived Request (AUDIT LOG ONLY)
 │   └── Get AuditLog Entries for Archived
@@ -731,11 +842,21 @@ Recurrence (Weekly, Sunday 3 AM)
 - [ ] Verify AuditLog entries are deleted
 - [ ] Verify PrintRequest itself is NOT deleted (still exists)
 
+### Functional Testing (Paid & Picked Up - Auto Archive)
+- [ ] Create a test PrintRequest with Status = "Paid & Picked Up"
+- [ ] Manually set `LastActionAt` to 35 days ago
+- [ ] Run flow manually
+- [ ] Verify Status changes to `Archived`
+- [ ] Verify `LastAction` and `LastActionBy` show `System`
+- [ ] Verify `LastActionAt` is updated to the archive run time
+- [ ] Verify cleanup summary shows the auto-archive count
+
 ### Edge Cases
 - [ ] No eligible items → Flow completes, summary shows 0 deleted
 - [ ] Large batch (50+ requests) → Flow completes without throttling errors
 - [ ] Mixed statuses → Only items past their specific retention are deleted
 - [ ] Rejected/Canceled with no Messages → Flow handles gracefully (empty loop)
+- [ ] Paid & Picked Up within 30 days → Not auto-archived
 - [ ] Archived jobs → Only AuditLog deleted, PrintRequest and Messages preserved
 
 ---
@@ -794,7 +915,7 @@ Recurrence (Weekly, Sunday 3 AM)
 
 **Fix:**
 1. Verify Increment variable actions are INSIDE the innermost Apply to each loop
-2. Check that variable names match exactly: `RejectedCount`, `CanceledCount`, `ArchivedCount`
+2. Check that variable names match exactly: `RejectedCount`, `CanceledCount`, `PaidPickupArchiveCount`, `ArchivedCount`
 3. Verify run-after settings aren't skipping the increment on errors
 
 ---
@@ -809,7 +930,7 @@ To change retention periods, update the Compose expressions:
 |--------|------------|
 | 7 days | `formatDateTime(addDays(utcNow(), -7), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 2 weeks | `formatDateTime(addDays(utcNow(), -14), 'yyyy-MM-ddTHH:mm:ssZ')` |
-| 1 month | `formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')` |
+| 30 days (Paid & Picked Up auto-archive) | `formatDateTime(addDays(utcNow(), -30), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 3 months | `formatDateTime(addDays(utcNow(), -90), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 6 months | `formatDateTime(addDays(utcNow(), -180), 'yyyy-MM-ddTHH:mm:ssZ')` |
 | 12 months | `formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-ddTHH:mm:ssZ')` |
@@ -834,7 +955,7 @@ If the flow hasn't run in a while and there's a large backlog:
 
 ## Key Features
 
-- **Status-Specific Retention:** 7 days for Rejected/Canceled (full delete), 12 months for Archived (audit only)
+- **Status-Specific Retention:** 30 days to auto-archive `Paid & Picked Up`, 7 days for Rejected/Canceled (full delete), 12 months for Archived (audit only)
 - **Full Cleanup for Rejected/Canceled:** Deletes PrintRequest, AuditLog entries, AND Messages — no orphaned data
 - **Preserves Archived History:** Archived PrintRequests stay indefinitely for historical reference
 - **Self-Documenting:** Creates audit entry for each cleanup run with counts
