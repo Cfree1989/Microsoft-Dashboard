@@ -9087,11 +9087,29 @@ Reset(ddFileActor)
 
 | Property | Value |
 |----------|-------|
-| Height | `180` |
+| Height | `193` |
 | Width | `460` |
 
 31. Inside the data card, click on the **DataCardValue** control (the actual attachments control).
-32. Set its **Height** to `100`.
+32. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Font | `varAppFont` |
+| Height | `113` |
+| HoverFill | `varDropdownHoverFill` |
+| ItemColor | `RGBA(255, 255, 255, 1)` |
+| ItemFill | `RGBA(56, 96, 178, 1)` |
+| ItemHoverFill | `varDropdownHoverFill` |
+| PaddingBottom | `5` |
+| PaddingLeft | `If(Self.DisplayMode = DisplayMode.Edit, 5, 0)` |
+| PaddingRight | `5` |
+| PaddingTop | `5` |
+| PressedColor | `varDropdownPressedColor` |
+| PressedFill | `varDropdownPressedFill` |
 
 27. Set **OnSuccess:**
 
