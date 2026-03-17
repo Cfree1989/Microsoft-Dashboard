@@ -1,8 +1,11 @@
 # Printer Verification Enhancement
 
-**Status:** Future Enhancement  
+> ✅ **MERGED:** This enhancement has been integrated into the main spec.  
+> See [`StaffDashboard-App-Spec.md` → Step 12A Enhancement: Printer Verification](../StaffDashboard-App-Spec.md#step-12a-enhancement-printer-verification)
+
+**Status:** ~~Future Enhancement~~ → **Integrated**  
 **Priority:** Medium  
-**Dependencies:** Complete Confirmation Modal (Step 12B)
+**Dependencies:** Complete Confirmation Modal (Step 12A)
 
 ---
 
@@ -53,48 +56,33 @@ The `Printer` field is currently doing double duty — it records both the stude
 
 ## SharePoint Schema Changes
 
-Add one new column to the `PrintRequests` list:
+> 📋 **See:** [`SharePoint/PrintRequests-List-Setup.md` → Step 4C: Printer Verification Column](../../SharePoint/PrintRequests-List-Setup.md#step-4c-add-printer-verification-column)
 
-| Column Name | Type | Required | Description |
-|-------------|------|----------|-------------|
-| `ActualPrinter` | Choice | No | The printer the job was actually printed on; set at completion time |
+The `ActualPrinter` choice column must be added to the `PrintRequests` list before implementing this enhancement.
 
-### ActualPrinter Column Choices
-
-Use the same four options as the existing `Printer` column:
-
-- Prusa MK4S (9.8×8.3×8.7in)
-- Prusa XL (14.2×14.2×14.2in)
-- Raised3D Pro 2 Plus (12.0×12.0×23in)
-- Form 3 (5.7×5.7×7.3in)
-
-### SharePoint Column Setup
-
-1. Open the `PrintRequests` list → **+ Add column** → **Choice**
-2. **Name:** `ActualPrinter`
-3. **Description:** `The printer this job was actually printed on, confirmed by staff at completion`
-4. **Choices:** (same four as above)
-5. **Require that this column contains information:** No (column is blank until completion)
-6. Click **Save**
-
-### Field Relationship
-
-| Field | Set By | When | Purpose |
-|-------|--------|------|---------|
-| `Printer` | Student (at submission) | Form submission | Records original printer request; never changed |
-| `ActualPrinter` | Staff (at completion) | Mark Complete modal | Records actual machine used |
-
-This separation allows future reporting on how often student selections match actual usage — useful for understanding student behavior and informing printer labeling or documentation.
+> ⚠️ **Important:** `ActualPrinter` must be configured as **multi-select** to support jobs that span multiple printers.
 
 ### Integration with Build Plate Tracking
 
-If **Build Plate Tracking Enhancement** (Document 3) is also implemented, jobs may span multiple printers via the `BuildPlates` sub-list. In that case:
+**Build Plate Tracking and Printer Verification are integrated features.** When Build Plate Tracking is implemented:
 
-- `ActualPrinter` remains a single-value field — set to the **primary** machine (the one with the most plates, or staff's judgment)
-- `BuildPlates.Machine` provides per-plate granularity for detailed utilization reporting
-- Both fields should use the same choice values to ensure consistency
+| Aspect | Behavior |
+|--------|----------|
+| **ActualPrinter type** | Multi-select Choice column |
+| **How it's populated** | Auto-populated from distinct `Machine` values across job's plates |
+| **UI in Complete Modal** | Read-only display (not a dropdown) — staff cannot manually edit |
+| **When set** | At completion time, derived from BuildPlates data |
 
-For single-plate jobs (the common case), `ActualPrinter` and the single plate's `Machine` will match.
+**Examples:**
+
+| Plates Configuration | ActualPrinter Value |
+|---------------------|---------------------|
+| 1 plate on MK4S | `[MK4S]` |
+| 3 plates all on MK4S | `[MK4S]` |
+| 2 plates on MK4S, 2 on XL | `[MK4S, XL]` |
+| 1 on MK4S, 1 on XL, 1 on Raised3D | `[MK4S, XL, Raised3D]` |
+
+**For jobs without Build Plate Tracking** (legacy or simple jobs), the Complete Modal shows a dropdown for manual selection, defaulting to the student's requested printer.
 
 ---
 
@@ -118,7 +106,26 @@ For single-plate jobs (the common case), `ActualPrinter` and the single plate's 
 └────────────────────────────────────────────────────┘
 ```
 
-**After** (500×370px):
+**After — With Build Plates** (500×340px):
+```
+┌────────────────────────────────────────────────────┐
+│  Mark Jane Smith Complete - REQ-00042              │
+│                                                    │
+│  ⚠️ Marking this print complete will immediately   │
+│  send a pickup notification email...               │
+│                                                    │
+│  Performing Action As: *                           │
+│  ┌─────────────────────────────────────────────┐   │
+│  │ Pick your name                              │   │
+│  └─────────────────────────────────────────────┘   │
+│                                                    │
+│  Printers Used: MK4S, XL                           │  ← read-only, auto-populated
+│  (derived from build plates)                       │
+│                                         [Cancel]  [✓ Confirm Complete] │
+└────────────────────────────────────────────────────┘
+```
+
+**After — Without Build Plates / Legacy** (500×370px):
 ```
 ┌────────────────────────────────────────────────────┐
 │  Mark Jane Smith Complete - REQ-00042              │
@@ -133,7 +140,7 @@ For single-plate jobs (the common case), `ActualPrinter` and the single plate's 
 │                                                    │
 │  Printed On: *                                     │
 │  ┌─────────────────────────────────────────────┐   │
-│  │ Prusa MK4S (9.8×8.3×8.7in)          ▼      │   │
+│  │ Prusa MK4S                              ▼   │   │  ← dropdown for manual selection
 │  └─────────────────────────────────────────────┘   │
 │  (pre-filled with student's requested printer)     │
 │                                         [Cancel]  [✓ Confirm Complete] │
@@ -172,8 +179,8 @@ Add after `ddCompleteStaff`:
 | Property | Value |
 |----------|-------|
 | Control Type | Classic/ComboBox |
-| Items | `Filter(Choices([@PrintRequests].ActualPrinter), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
-| DefaultSelectedItems | `Filter(Choices([@PrintRequests].ActualPrinter), Value = varSelectedItem.Printer.Value)` |
+| Items | `Filter(Choices([@PrintRequests].ActualPrinter), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S", "Prusa XL", "Raised3D Pro 2 Plus"], varSelectedItem.Method.Value = "Resin", Value = "Form 3", true))` |
+| DefaultSelectedItems | `Filter(Choices([@PrintRequests].ActualPrinter), StartsWith(varSelectedItem.Printer.Value, Value))` |
 | InputTextPlaceholder | `"Select printer used"` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
@@ -337,7 +344,7 @@ If physical number labels are added to machines, consider updating the SharePoin
 
 ### Phase 1: SharePoint Schema (Do Now)
 
-1. Add `ActualPrinter` column (Choice, same 4 options as `Printer`)
+1. Add `ActualPrinter` column per [`SharePoint/PrintRequests-List-Setup.md` → Step 4C](../../SharePoint/PrintRequests-List-Setup.md#step-4c-add-printer-verification-column)
 
 This can be done immediately with no app changes. The column will be blank on all existing records until the UI is updated, but the schema is ready for when the modal is built.
 
@@ -362,7 +369,7 @@ This can be done immediately with no app changes. The column will be blank on al
 3. Staff selects their name in `ddCompleteStaff`
 4. Staff confirms the pre-selected printer — no change needed
 5. Click "Confirm Complete"
-6. **Verify:** `ActualPrinter` = "Prusa MK4S (9.8×8.3×8.7in)", `Status` = "Completed"
+6. **Verify:** `ActualPrinter` = "Prusa MK4S", `Status` = "Completed"
 7. **Verify:** Audit log entry reads `"Completed"` (no correction note)
 
 ### Scenario 2: Student Picked the Wrong Printer
@@ -406,7 +413,7 @@ This can be done immediately with no app changes. The column will be blank on al
 - **Complete Confirmation Modal:** [`PowerApps/Components/CompleteConfirmationModal.yaml`](../Components/CompleteConfirmationModal.yaml)
 - **Staff Dashboard — Job Card Complete Button:** `StaffDashboard-App-Spec.md` Step 11 (Line 2226)
 - **Change Details Modal (printer filter logic reference):** `StaffDashboard-App-Spec.md` Step 12A (Lines 4302–5114)
-- **SharePoint Schema:** `SharePoint/PrintRequests-List-Setup.md` Column 10 (Lines 230–241)
+- **SharePoint Schema:** `SharePoint/PrintRequests-List-Setup.md` Step 4C (ActualPrinter column)
 - **Flow C — Audit Log:** `PowerAutomate/Flow-(C)-Action-LogAction.md`
 - **Build Plate Tracking (multi-printer job handling):** `PowerApps/Future Improvements/3-BuildPlate-Tracking-Enhancement.md`
 

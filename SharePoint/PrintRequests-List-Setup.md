@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 37 total fields (13 student-facing + 17 staff processing + 7 payment recording)
+- 38 total fields (13 student-facing + 17 staff processing + 7 payment recording + 1 printer verification)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -547,6 +547,37 @@ These columns capture actual payment details when a print is picked up.
 > - **Code** - Grant or program code (e.g., GRANT-12345, PROG-67890)
 >
 > The Transaction Number field stores the relevant reference for each type (receipt number, check number, or grant/program code).
+
+---
+
+## Step 4C: Add Printer Verification Column
+
+This column captures which printer(s) the job was actually printed on, separate from the student's original printer request. It supports **multi-select** for jobs that span multiple printers.
+
+### Column 37: ActualPrinter (Choice — Multi-Select)
+
+1. Click **+ Add column** → **Choice**
+2. **Name:** `ActualPrinter`
+3. **Description:** `The printer(s) this job was actually printed on, confirmed by staff at completion`
+4. **Choices:**
+   - Prusa MK4S
+   - Prusa XL
+   - Raised3D Pro 2 Plus
+   - Form 3
+5. **Allow multiple selections:** Yes ← **Important!**
+6. **Require that this column contains information:** No (column is blank until completion)
+7. Click **Save**
+
+> ⚠️ **Multi-Select Required:** This column MUST allow multiple selections to support jobs that use multiple printers (e.g., a large job split across MK4S and XL).
+
+> 💡 **Why Two Printer Fields?**
+>
+> | Field | Type | Set By | When | Purpose |
+> |-------|------|--------|------|---------|
+> | `Printer` | Single-select | Student | Submission | Records original printer request (often a guess) |
+> | `ActualPrinter` | **Multi-select** | System/Staff | Completion | Records actual machine(s) used |
+>
+> Students often guess which printer to select at submission time. Staff assigns jobs to whichever machine is actually available. When Build Plate Tracking is enabled, `ActualPrinter` is auto-populated from the distinct printers used across the job's plates.
 
 ---
 

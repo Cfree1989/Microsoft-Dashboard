@@ -35,28 +35,48 @@ A single print request often requires **multiple gcode files across multiple mac
 
 ### Overview
 
-Add a lightweight `BuildPlates` sub-list (one row per gcode file) linked to `PrintRequests`, plus a `TotalBuildPlates` field on the parent request. The Staff Dashboard gets a **Build Plates modal** to manage plate records and a **plate pickup checklist** inside the existing Payment Modal.
+Add a `BuildPlates` sub-list (one row per gcode file) linked to `PrintRequests`. Every job has at least one plate — a default plate is auto-created on approval using the student's requested printer. For multi-plate jobs, staff uses the **Build Plates Modal** to add plates organized by printer.
 
 ```
 PrintRequests (1 record)
-└── BuildPlates (many records — one per gcode file)
-    ├── Machine: Prusa MK4S / XL / Raised3D / Form 3
-    └── Status: Queued → Printing → Completed → Picked Up
+├── TotalBuildPlates: 5
+├── ActualPrinter: [MK4S, XL]              ← multi-select, auto-populated from plates
+└── BuildPlates (many records)
+    ├── Plate 1: Machine=MK4S, Status=Completed
+    ├── Plate 2: Machine=MK4S, Status=Completed
+    ├── Plate 3: Machine=MK4S, Status=Printing
+    ├── Plate 4: Machine=XL, Status=Queued
+    └── Plate 5: Machine=XL, Status=Queued
 ```
 
+### Key Design Points
+
+| Aspect | Design |
+|--------|--------|
+| **Default plate** | 1 plate auto-created on approval using student's requested `Printer` |
+| **Multi-plate setup** | "Add Plates/Printers" button in Approval Modal; "Manage Plates" in Change Details Modal |
+| **Plate organization** | Grouped by printer in Build Plates Modal |
+| **Plate removal** | Any plate can be removed at any time (full flexibility for re-slicing/reprinting) |
+| **Completion gate** | Job cannot be marked "Complete" until all plates are Completed or Picked Up |
+| **ActualPrinter** | Multi-select, auto-populated from distinct `Machine` values across job's plates |
+| **Partial pickup** | Payment Modal shows completed plates as checkboxes; checked plates marked "Picked Up" |
+
+### Integration with Printer Verification (ActualPrinter)
+
+Build Plate Tracking and Printer Verification are **integrated features**. The `ActualPrinter` field on `PrintRequests`:
+
+- Is a **multi-select** Choice column (not single-select)
+- Is **auto-populated** at completion time from the distinct `Machine` values across the job's plates
+- Is **read-only** in the Complete Modal (staff cannot manually edit it)
+
+| Scenario | ActualPrinter Value |
+|----------|---------------------|
+| Single plate on MK4S | `[MK4S]` |
+| 3 plates all on MK4S | `[MK4S]` |
+| 2 plates on MK4S, 2 on XL | `[MK4S, XL]` |
+| 1 plate on MK4S, 1 on XL, 1 on Raised3D | `[MK4S, XL, Raised3D]` |
+
 Weight and cost recording stays exactly as-is — staff weighs whatever is being picked up and enters the combined weight. No per-plate cost calculation is added.
-
-### Relationship to ActualPrinter
-
-If **Printer Verification Enhancement** (Document 1) is also implemented, `ActualPrinter` on `PrintRequests` records the printer used at completion time. For multi-plate jobs:
-
-| Scenario | ActualPrinter Behavior |
-|----------|------------------------|
-| Single plate | Set to the machine that plate ran on (normal case) |
-| Multiple plates, same machine | Set to that machine |
-| Multiple plates, different machines | Set to the **primary** machine (the one with the most plates, or staff's judgment call) |
-
-The `BuildPlates` list provides full granularity — every plate's machine is recorded individually. `ActualPrinter` remains a single-value summary field for high-level reporting. Staff who need per-machine utilization data should query `BuildPlates` directly.
 
 ---
 
@@ -184,59 +204,115 @@ Set(varCardGalleryHeight, 490);
 
 ---
 
-### Phase 3: Job Card — Progress Pill and Build Plates Button
+### Phase 3: Job Card — Build Plates Row
 
-Both controls are added inside `galJobCards`.
+Add a Build Plates information row **above the Details section** (below the Weight/Hours/Cost row). This row shows progress, printers in use, and a button to open the Build Plates Modal.
 
-#### Progress Pill (lblBuildPlatesProgress)
+#### Job Card Layout Reference
 
-A small read-only label in the top-right corner of the card. Visible only when `TotalBuildPlates > 0`.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Logan A Bereziuk                              1d 11h    💡 ▶   │
+│  ✉ logan.bereziuk@lsu.edu                                       │
+│  loganbereziuk_filament_black                                   │
+│                                                                 │
+│  ● Black                              🖨 Prusa MK4S             │  ← student's request
+│  ⚖ 176.15g · ⏱ ~6h · 💲 17.61                                   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ 🖨 3/5 done · Using: MK4S, XL         [Build Plates]    │ ◄── NEW ROW
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  Details [✏ Edit]                                               │
+│  [expandable details section...]                                │
+│                                                                 │
+│  Messages (0)      Notes (0)                    🖥 Computer 1   │
+│  [Messages]        [Notes]                      [Files]         │
+│                                                                 │
+│  [Print Complete]                    [Partial Payment]          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The Build Plates row is visible when `TotalBuildPlates > 0` (hidden for jobs without plate tracking).
+
+#### Build Plates Row Container (conBuildPlatesRow)
+
+| Property | Value |
+|----------|-------|
+| Control | Container |
+| Name | `conBuildPlatesRow` |
+| X | `12` |
+| Y | `[position above Details section]` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `36` |
+| Fill | `RGBA(245, 247, 250, 1)` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| Visible | `ThisItem.TotalBuildPlates > 0` |
+
+#### Progress Label (lblBuildPlatesProgress)
 
 | Property | Value |
 |----------|-------|
 | Control | Text label |
 | Name | `lblBuildPlatesProgress` |
-| Text | `Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.TotalBuildPlates) & " done"` |
-| X | `Parent.TemplateWidth - 90` |
-| Y | `8` |
-| Width | `78` |
-| Height | `20` |
-| Size | `9` |
+| Text | `"🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.TotalBuildPlates) & " done"` |
+| X | `8` |
+| Y | `0` |
+| Width | `100` |
+| Height | `Parent.Height` |
+| Size | `10` |
 | FontWeight | `FontWeight.Semibold` |
 | Color | `varColorSuccess` |
-| Align | `Align.Right` |
-| Visible | `ThisItem.TotalBuildPlates > 0` |
+| VerticalAlign | `VerticalAlign.Middle` |
 
 > 💡 Uses `colAllBuildPlates` (pre-loaded at startup) — not a live `Filter(BuildPlates, ...)` call — to avoid delegation warnings inside a gallery loop.
 
-#### Build Plates Button (btnBuildPlates)
+#### Using Printers Label (lblUsingPrinters)
 
-A full-width button at `Y = 396`, between the utility row (Y=360) and the primary action row (Y=446 after the height increase).
+Shows distinct printers being used for this job, derived from BuildPlates:
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblUsingPrinters` |
+| Text | `"Using: " & Concat(Distinct(Filter(colAllBuildPlates, RequestID = ThisItem.ID), Machine.Value), Trim(If(Find("(", Result) > 0, Left(Result, Find("(", Result) - 2), Result)), ", ")` |
+| X | `110` |
+| Y | `0` |
+| Width | `200` |
+| Height | `Parent.Height` |
+| Size | `10` |
+| Color | `varColorText` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+> 💡 Strips dimensions from printer names for brevity: "Using: MK4S, XL" instead of full names.
+
+#### Build Plates Button (btnBuildPlates)
 
 | Property | Value |
 |----------|-------|
 | Control | Button |
 | Name | `btnBuildPlates` |
-| Text | `"🖨 Build Plates"` |
-| X | `12` |
-| Y | `396` |
-| Width | `Parent.TemplateWidth - 24` |
-| Height | `varBtnHeight` |
-| Fill | `Color.White` |
-| Color | `varColorPrimary` |
-| HoverColor | `Color.White` |
-| HoverFill | `varColorPrimary` |
-| PressedFill | `ColorFade(varColorPrimary, -15%)` |
-| BorderColor | `varColorPrimary` |
-| BorderThickness | `varInputBorderThickness` |
+| Text | `"Build Plates"` |
+| X | `Parent.Width - 110` |
+| Y | `4` |
+| Width | `100` |
+| Height | `28` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
+| Size | `10` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| Visible | `!varBatchSelectMode && (ThisItem.Status.Value = "Ready to Print" \|\| ThisItem.Status.Value = "Printing" \|\| ThisItem.Status.Value = "Completed")` |
 
 **OnSelect:**
 
@@ -263,55 +339,98 @@ Set(varShowBuildPlatesModal, ThisItem.ID)
 
 ### Phase 4: Build Plates Modal (conBuildPlatesModal)
 
+#### Design Overview
+
+The Build Plates Modal organizes plates **grouped by printer**. Each printer section is collapsible, shows its plates, and has an "Add Plate" button. Staff adds new printers via the dropdown at the bottom.
+
+#### Visual Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Build Plates — Jane Smith · REQ-00042                               [✕] │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Total Plates: [ 5 ]  [Set]                           3 of 5 Completed   │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ▼ Prusa MK4S                                                    [+ Add] │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  Plate 1    ● Completed                                     [✕]   │  │
+│  │  Plate 2    ● Completed                                     [✕]   │  │
+│  │  Plate 3    ● Printing            [✓ Done]                  [✕]   │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ▼ Prusa XL                                                      [+ Add] │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  Plate 4    ● Queued              [▶ Printing]              [✕]   │  │
+│  │  Plate 5    ● Queued              [▶ Printing]              [✕]   │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Add Printer:  [ Select printer...                    ▼ ]    [+ Add]     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                  [Done]  │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Plate Removal
+
+**Any plate can be removed at any time**, regardless of status. This supports scenarios where staff needs to scrap and re-slice a job:
+
+| Status | Can Remove? | Use Case |
+|--------|-------------|----------|
+| Queued | ✅ Yes | Job not started yet |
+| Printing | ✅ Yes | Print failed, need to redo |
+| Completed | ✅ Yes | Re-slicing entire job |
+| Picked Up | ✅ Yes | Data correction |
+
+The [✕] remove button appears on ALL plate rows.
+
 #### Control Hierarchy
 
 ```
 scrDashboard
 └── conBuildPlatesModal              ← CONTAINER (Visible = varShowBuildPlatesModal > 0)
     ├── recBuildPlatesOverlay        ← Full-screen dark overlay
-    ├── recBuildPlatesModal          ← White box (600×620)
+    ├── recBuildPlatesModal          ← White box (600×680)
     ├── lblBuildPlatesTitle          ← "Build Plates — Jane Smith · REQ-00042"
     ├── btnBuildPlatesClose          ← ✕ top-right
     ├── recBuildPlatesDivider1       ← Divider under title
-    ├── lblTotalSlicedLabel          ← "Total Sliced:"
-    ├── txtTotalSliced               ← Number input (pre-filled from TotalBuildPlates)
-    ├── btnSetTotalSliced            ← Saves to PrintRequests
-    ├── lblBuildPlatesProgressModal  ← "2 of 4 Completed"
-    ├── recBuildPlatesDivider2       ← Divider above gallery
-    ├── galBuildPlates               ← One row per plate
-    │   ├── recPlateRowBg            ← Alternating row tint
-    │   ├── lblPlateLabel            ← "1/4", "2/4" etc.
-    │   ├── lblPlateMachine          ← "Prusa MK4S"
-    │   ├── lblPlateStatus           ← Colored status badge
-    │   ├── btnMarkPrinting          ← Queued → Printing
-    │   ├── btnMarkDone              ← Printing → Completed
-    │   └── btnRemovePlate           ← ✕ (Queued only)
-    ├── recBuildPlatesDivider3       ← Divider above Add section
-    ├── lblAddPlateHeader            ← "Add plate:"
-    ├── ddBuildPlatesMachine         ← Machine dropdown (filtered by Method)
-    ├── btnBuildPlatesAdd            ← "+ Add Plate"
+    ├── lblTotalPlatesLabel          ← "Total Plates:"
+    ├── txtTotalPlates               ← Number input
+    ├── btnSetTotalPlates            ← Saves to PrintRequests
+    ├── lblBuildPlatesProgress       ← "3 of 5 Completed"
+    ├── recBuildPlatesDivider2       ← Divider above printer groups
+    ├── galPrinterGroups             ← Gallery of distinct printers used
+    │   ├── lblPrinterHeader         ← "▼ Prusa MK4S"
+    │   ├── btnAddPlateUnderPrinter  ← [+ Add] button for this printer
+    │   └── galPlatesForPrinter      ← Nested gallery of plates for this printer
+    │       ├── lblPlateNum          ← "Plate 1", "Plate 2"
+    │       ├── lblPlateStatus       ← Colored status badge
+    │       ├── btnMarkPrinting      ← Queued → Printing
+    │       ├── btnMarkDone          ← Printing → Completed
+    │       └── btnRemovePlate       ← [✕] (always visible)
+    ├── recBuildPlatesDivider3       ← Divider above Add Printer section
+    ├── lblAddPrinterLabel           ← "Add Printer:"
+    ├── ddAddPrinter                 ← Printer dropdown (filtered by Method)
+    ├── btnAddPrinter                ← [+ Add] new printer group
     └── btnBuildPlatesDone           ← "Done"
 ```
 
-#### Visual Layout
+#### Data Structure for Grouped Display
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Build Plates — Jane Smith · REQ-00042                    [✕]│
-│  ────────────────────────────────────────────────────────── │
-│  Total Sliced: [ 4 ]  [Set]              2 of 4 Completed   │
-│  ────────────────────────────────────────────────────────── │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │ 1/4  Prusa MK4S        ● Queued      [▶ Printing]  [✕]│  │
-│  │ 2/4  Prusa MK4S        ● Printing    [✓ Done]         │  │
-│  │ 3/4  Prusa MK4S        ● Completed                    │  │
-│  │ 4/4  Prusa XL          ● Completed                    │  │
-│  └────────────────────────────────────────────────────────┘  │
-│  ────────────────────────────────────────────────────────── │
-│  Add plate:  [ Prusa MK4S (9.8×8.3×8.7in)          ▼ ]      │
-│              [ + Add Plate ]                                  │
-│                                                    [ Done ]  │
-└──────────────────────────────────────────────────────────────┘
+To display plates grouped by printer, use nested collections:
+
+```powerfx
+// On modal open, create collection of distinct printers
+ClearCollect(colPrintersUsed,
+    Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID), Machine.Value)
+);
+
+// The galPrinterGroups gallery uses colPrintersUsed as Items
+// Each row's nested galPlatesForPrinter filters plates by that printer:
+Filter(colBuildPlatesIndexed, Machine.Value = ThisItem.Result)
 ```
 
 #### Container (conBuildPlatesModal)
@@ -717,7 +836,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | SelectionColor | `varDropdownSelectionColor` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Uses the same filter pattern as `ddCompletePrinter` in the Printer Verification Enhancement (Document 1).
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Uses the same filter pattern as `ddCompletePrinter` in Step 12A Enhancement.
 
 ##### Add Plate Button (btnBuildPlatesAdd)
 
@@ -903,64 +1022,267 @@ Clear(colPickedUpPlates)
 
 ---
 
+### Phase 6: Approval Modal Integration
+
+Add an "Add Plates/Printers" button to the Approval Modal. When a job is approved, a default plate is auto-created using the student's requested printer.
+
+#### Visual Layout Update
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Approve Logan A Bereziuk - REQ-00240                                [✕] │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Performing Action As: *                                                 │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │ Pick your name                                                  ▼  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  Est. Weight (grams): *              Est. Print Time (hours): *          │
+│  ┌─────────────────────┐             ┌─────────────────────┐             │
+│  │ 176                 │             │ 6                   │             │
+│  └─────────────────────┘             └─────────────────────┘             │
+│                                                                          │
+│  Sliced On Computer: *                                                   │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │ Computer 1                                                      ▼  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Build Plates:  Default: 1 plate on Prusa MK4S (student's request)       │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │       [🖨 Add Plates/Printers]  (optional - for multi-plate jobs)  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                             [Cancel]    [✓ Approve]      │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+#### New Label: lblApprovePlatesInfo
+
+| Property | Value |
+|----------|-------|
+| Text | `"Build Plates:  Default: 1 plate on " & Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), varSelectedItem.Printer.Value)) & " (student's request)"` |
+| X | `recApproveModal.X + 20` |
+| Y | `[below Computer dropdown]` |
+| Width | `410` |
+| Height | `20` |
+| Size | `11` |
+| Color | `varColorTextSecondary` |
+
+#### New Button: btnApproveAddPlates
+
+| Property | Value |
+|----------|-------|
+| Text | `"🖨 Add Plates/Printers"` |
+| X | `recApproveModal.X + 20` |
+| Y | `[below lblApprovePlatesInfo]` |
+| Width | `200` |
+| Height | `32` |
+| Fill | `Color.White` |
+| Color | `varColorPrimary` |
+| HoverFill | `varColorPrimary` |
+| HoverColor | `Color.White` |
+| BorderColor | `varColorPrimary` |
+| BorderThickness | `varInputBorderThickness` |
+
+**OnSelect:**
+
+```powerfx
+// Open Build Plates modal (varSelectedItem already set from Approve button click)
+Set(varShowBuildPlatesModal, varSelectedItem.ID);
+// Load existing plates (if any)
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colPrintersUsed,
+    Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID), Machine.Value)
+)
+```
+
+#### Update btnApproveConfirm.OnSelect
+
+After the existing Patch operation, add logic to create a default plate if none exist:
+
+```powerfx
+// ... existing approval Patch and Flow C calls ...
+
+// Create default plate if staff didn't configure any
+If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
+    Patch(BuildPlates, Defaults(BuildPlates), {
+        RequestID: varSelectedItem.ID,
+        ReqKey: varSelectedItem.ReqKey,
+        Machine: varSelectedItem.Printer,
+        Status: {Value: "Queued"}
+    });
+    // Set TotalBuildPlates to 1
+    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+        TotalBuildPlates: 1
+    })
+);
+
+// Refresh collections
+ClearCollect(colAllBuildPlates, BuildPlates);
+
+// ... existing close modal / reset logic ...
+```
+
+---
+
+### Phase 7: Completion Gate Validation
+
+The "Print Complete" button should be **disabled** until all plates are Completed or Picked Up. This prevents marking a job complete while prints are still running.
+
+#### Update btnPrintComplete DisplayMode
+
+```powerfx
+// btnPrintComplete.DisplayMode (in Job Card)
+If(
+    // Check if job has plates
+    CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0,
+    // If plates exist, all must be Completed or Picked Up
+    If(
+        CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0,
+        DisplayMode.Disabled,
+        DisplayMode.Edit
+    ),
+    // If no plates, allow completion (legacy behavior)
+    DisplayMode.Edit
+)
+```
+
+#### Add Tooltip/Helper Text
+
+When the button is disabled due to incomplete plates, show a hint:
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblCompletePlatesHint` |
+| Text | `Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"])))) & " plate(s) still printing"` |
+| Visible | `ThisItem.Status.Value = "Printing" && CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0` |
+| Color | `varColorWarning` |
+| Size | `9` |
+
+#### Update Complete Modal — Auto-Populate ActualPrinter
+
+When the Complete Modal opens, auto-populate `ActualPrinter` from the job's plates:
+
+```powerfx
+// In btnPrintComplete.OnSelect (before opening modal)
+// Collect distinct printers from plates for this job
+ClearCollect(colActualPrinters,
+    Distinct(Filter(BuildPlates, RequestID = ThisItem.ID), Machine.Value)
+);
+Set(varShowCompleteModal, ThisItem.ID)
+```
+
+In the Complete Modal, `ActualPrinter` is displayed as read-only (not a dropdown):
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblActualPrinters` |
+| Text | `"Printers used: " & Concat(colActualPrinters, Trim(If(Find("(", Result) > 0, Left(Result, Find("(", Result) - 2), Result)), ", ")` |
+
+The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
+
+---
+
 ## Testing Scenarios
 
-### Scenario 1: Single-Plate Job (No Change to Existing Flow)
+### Scenario 1: Default Plate on Approval
 
-1. Open a Completed job with no BuildPlates records
-2. Click "Picked Up" to open the Payment Modal
-3. **Verify:** The "Plates being picked up" section is hidden (no completed plates exist)
-4. Record payment as normal
-5. **Verify:** Payment records correctly; no BuildPlates errors
+1. Open Approval Modal for a Pending job (student requested "Prusa MK4S")
+2. **Verify:** "Build Plates" section shows "Default: 1 plate on Prusa MK4S (student's request)"
+3. Fill in weight, hours, computer → click "Approve" (without clicking "Add Plates/Printers")
+4. **Verify:** Job moves to "Ready to Print"
+5. **Verify:** BuildPlates list has 1 record with Machine = "Prusa MK4S", Status = "Queued"
+6. **Verify:** PrintRequests.TotalBuildPlates = 1
+7. **Verify:** Job card shows "0/1 done" and "Using: MK4S"
 
-### Scenario 2: Set Up Build Plates for a New Job
+### Scenario 2: Multi-Plate Setup via Approval Modal
 
-1. Open a "Ready to Print" job card
-2. **Verify:** "🖨 Build Plates" button is visible
-3. Click it → modal opens
-4. Type `4` in Total Sliced → click "Set" → **Verify:** progress label reads "0 of 4 Completed"; job card pill shows "0/4 done"
-5. Select "Prusa MK4S (9.8×8.3×8.7in)" → click "+ Add Plate" three times
-6. Select "Prusa XL (14.2×14.2×14.2in)" → click "+ Add Plate" once
-7. **Verify:** Gallery shows 4 rows labeled 1/4, 2/4, 3/4, 4/4 with correct machine names
+1. Open Approval Modal for a Pending job
+2. Click "Add Plates/Printers" → Build Plates Modal opens
+3. Set Total Plates = 5
+4. Add Prusa MK4S → add 3 plates under it
+5. Add Prusa XL → add 2 plates under it
+6. Click "Done" → back to Approval Modal
+7. **Verify:** Build Plates section now shows "5 plates on 2 printers (MK4S, XL)"
+8. Click "Approve"
+9. **Verify:** BuildPlates list has 5 records
+10. **Verify:** Job card shows "0/5 done · Using: MK4S, XL"
 
 ### Scenario 3: Advance Plate Statuses
 
-1. With 4 plates in gallery (all Queued):
-2. Click "▶ Printing" on plates 1/4 and 2/4
-3. **Verify:** Status badge changes to "Printing" (yellow); "✓ Done" button appears; "▶ Printing" disappears
-4. Click "✓ Done" on plate 2/4
-5. **Verify:** Status badge changes to "Completed" (green); both action buttons disappear
-6. **Verify:** Progress label reads "1 of 4 Completed"
+1. Open Build Plates modal for a job with 5 plates (all Queued)
+2. Click "▶ Printing" on Plate 1 and Plate 2
+3. **Verify:** Status badges change to "Printing" (yellow)
+4. Click "✓ Done" on Plate 1
+5. **Verify:** Status badge changes to "Completed" (green)
+6. **Verify:** Progress shows "1 of 5 Completed"
+7. **Verify:** Job card shows "1/5 done"
 
-### Scenario 4: Partial Pickup via Payment Modal
+### Scenario 4: Completion Gate — Plates Not Done
 
-1. Open a Printing job with 2 Completed and 2 Printing plates
-2. Click "Partial Payment" → Payment Modal opens
-3. **Verify:** "Plates being picked up" section shows 2 checkboxes (only Completed plates)
-4. Check both boxes
-5. Enter weight and transaction number → click confirm
-6. **Verify:** Both checked plates updated to "Picked Up" in SharePoint
-7. **Verify:** Job card pill shows "2/4 done"
+1. Job has 5 plates: 3 Completed, 2 still Printing
+2. **Verify:** "Print Complete" button is **disabled** on job card
+3. **Verify:** Helper text shows "2 plate(s) still printing"
+4. Mark remaining 2 plates as Completed
+5. **Verify:** "Print Complete" button becomes **enabled**
 
-### Scenario 5: Resin Job Machine Filter
+### Scenario 5: Completion Gate — With Partial Pickup
 
-1. Open the Build Plates modal for a Resin request
-2. **Verify:** Machine dropdown shows only "Form 3 (5.7×5.7×7.3in)"
-3. Confirm "+ Add Plate" creates a plate with Machine = "Form 3..."
+1. Job has 5 plates: 2 Picked Up (student already collected), 3 Completed
+2. **Verify:** "Print Complete" button is **enabled** (Picked Up counts as done)
+3. Click "Print Complete" → Complete Modal opens
+4. **Verify:** ActualPrinter shows "Printers used: MK4S, XL" (read-only, auto-populated)
+5. Confirm completion
+6. **Verify:** Job status = "Completed", ActualPrinter = [MK4S, XL]
 
-### Scenario 6: Remove a Queued Plate
+### Scenario 6: Remove Any Plate (Full Flexibility)
 
-1. Open Build Plates modal with a Queued plate
-2. Click "✕" on the Queued row
-3. **Verify:** Row removed; plate count decreases
-4. **Verify:** "✕" is NOT visible on Printing or Completed rows
+1. Open Build Plates modal with plates in various statuses
+2. Click "✕" on a **Queued** plate → **Verify:** Removed
+3. Click "✕" on a **Printing** plate → **Verify:** Removed
+4. Click "✕" on a **Completed** plate → **Verify:** Removed
+5. **Verify:** Plate count decreases after each removal
+6. **Verify:** "✕" button is visible on ALL plates regardless of status
 
-### Scenario 7: Card Height and Button Layout
+### Scenario 7: Scrap and Re-slice Workflow
 
-1. Open the Staff Dashboard — no errors on load
-2. **Verify:** "🖨 Build Plates" button is visible on Ready to Print, Printing, and Completed cards
-3. **Verify:** Button is NOT visible on Uploaded, Pending, Rejected, Archived cards
-4. **Verify:** Primary action buttons (Approve, Start Print, Complete, Picked Up) are still positioned at the bottom of each card with correct spacing
+1. Job has 4 plates: 2 Completed, 2 Printing
+2. Print fails — need to re-slice everything
+3. Open Build Plates modal
+4. Remove all 4 plates (including Completed ones)
+5. **Verify:** All plates removed, progress shows "0 of 0 Completed"
+6. Add new plates with different configuration
+7. **Verify:** New plates appear, job can continue fresh
+
+### Scenario 8: Partial Pickup via Payment Modal
+
+1. Job has 5 plates: 3 Completed, 2 still Printing
+2. Student comes to pick up the completed pieces
+3. Click "Partial Payment" → Payment Modal opens
+4. **Verify:** "Plates being picked up" shows 3 checkboxes (only Completed plates)
+5. Check all 3 boxes, enter weight and transaction number
+6. Click confirm
+7. **Verify:** 3 plates updated to "Picked Up"
+8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
+
+### Scenario 9: Resin Job Printer Filter
+
+1. Open Build Plates modal for a Resin request
+2. **Verify:** "Add Printer" dropdown shows only "Form 3"
+3. Add Form 3 → add plates
+4. **Verify:** All plates have Machine = "Form 3"
 
 ---
 
@@ -970,18 +1292,28 @@ Clear(colPickedUpPlates)
 
 1. Create `BuildPlates` list with 4 columns
 2. Add `TotalBuildPlates` column to `PrintRequests`
+3. Change `ActualPrinter` column to **multi-select** (see SharePoint doc)
 
 Both can be done immediately with no app changes.
 
-### Phase 2: Staff Dashboard (When Updating App)
+### Phase 2: Staff Dashboard — Core Build Plates
 
 1. Add `BuildPlates` data connection
-2. Update `App.OnStart` (new variables, collections, card height)
-3. Add progress pill and Build Plates button to job card
-4. Build `conBuildPlatesModal` and all child controls
-5. Update Payment Modal button `OnSelect` to load plates
-6. Add plate pickup gallery inside `conPaymentModal`
-7. Update `btnPaymentConfirm.OnSelect` to patch picked-up plates
+2. Update `App.OnStart` (new variables, collections)
+3. Build `conBuildPlatesModal` with grouped-by-printer UI
+4. Add Build Plates row to job card (above Details section)
+
+### Phase 3: Staff Dashboard — Approval Modal Integration
+
+5. Update Approval Modal — add "Add Plates/Printers" button
+6. Update Approval Modal — auto-create default plate on approve
+
+### Phase 4: Staff Dashboard — Completion & Payment
+
+7. Add completion gate validation (disable Complete button if plates incomplete)
+8. Update Complete Modal — auto-populate ActualPrinter from plates
+9. Update Payment Modal — plate pickup checkboxes
+10. Update `btnPaymentConfirm.OnSelect` to patch picked-up plates
 
 ---
 
@@ -989,11 +1321,14 @@ Both can be done immediately with no app changes.
 
 - **Staff Dashboard App.OnStart:** `StaffDashboard-App-Spec.md` Step 3
 - **Job Card Template:** `StaffDashboard-App-Spec.md` Step 7
+- **Approval Modal:** `StaffDashboard-App-Spec.md` Step 11
+- **Complete Confirmation Modal:** `StaffDashboard-App-Spec.md` Step 12A
 - **Payment Recording Modal:** `StaffDashboard-App-Spec.md` Step 12C
-- **SharePoint PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md` Step 4C
-- **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md` *(create this list first)*
-- **Printer Verification (machine choice values, ActualPrinter integration):** `PowerApps/Future Improvements/1-Printer-Verification-Enhancement.md`
+- **SharePoint PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md`
+- **SharePoint ActualPrinter (multi-select):** `SharePoint/PrintRequests-List-Setup.md` Step 4C
+- **BuildPlates List:** Create new list per SharePoint Schema Changes section above
+- **Printer Verification Integration:** `PowerApps/StaffDashboard-App-Spec.md` → Step 12A Enhancement
 
 ---
 
-*Last Updated: March 16, 2026*
+*Last Updated: March 17, 2026*
