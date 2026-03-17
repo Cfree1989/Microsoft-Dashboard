@@ -4,6 +4,10 @@
 **Priority:** Medium  
 **Dependencies:** Payment Modal (Step 12C), Job Card Gallery (Step 6–7), App.OnStart (Step 3)
 
+**Integrates With:** Printer Verification (Enhancement #1), Multi-Payment Tracking (Enhancement #5)
+
+> 📦 **Bundle Implementation:** This enhancement is designed to be implemented alongside Printer Verification (#1) and Multi-Payment Tracking (#5). The Payment Modal plate pickup section is defined in Enhancement #5.
+
 ---
 
 ## Problem Statement
@@ -707,9 +711,9 @@ Same properties as `btnMarkPrinting` with:
 | Size | `12` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| **Visible** | `ThisItem.Status.Value = "Queued"` |
+| **Visible** | `true` |
 
-> ⚠️ Only Queued plates can be removed. Plates already Printing or Completed cannot be deleted to prevent accidental data loss.
+> 💡 **Full Removal Flexibility:** Any plate can be removed regardless of status. This supports scenarios where staff needs to scrap and re-slice a job, or correct data entry errors. The [✕] button appears on ALL plates.
 
 **OnSelect:**
 
@@ -855,6 +859,12 @@ Reset(ddBuildPlatesMachine)
 
 ### Phase 5: Payment Modal — Plate Pickup Section
 
+> 📦 **See Enhancement #5:** The full Payment Modal redesign (including plate pickup checkboxes) is documented in **Multi-Payment Tracking Enhancement (#5)**. That document contains the two-column layout with Payment History on the left and Plates Pickup on the right.
+
+#### What This Phase Adds
+
+The plate pickup section in the Payment Modal shows completed plates as checkboxes. When staff confirms payment, checked plates are marked "Picked Up" in the BuildPlates list.
+
 #### Update btnPickedUp / btnPayment OnSelect
 
 When opening the Payment Modal, load the build plates for the selected item and clear prior selections. Add these lines to the **end** of the `btnPickedUp.OnSelect` (and `btnPayment.OnSelect` for Printing status) formula, after `Set(varSelectedItem, ThisItem)`:
@@ -871,87 +881,27 @@ ClearCollect(colPickedUpPlates, Blank());
 Clear(colPickedUpPlates)
 ```
 
-#### New Controls Inside conPaymentModal
+#### Payment Modal Controls
 
-Add after the Payment History section, before `chkPartialPickup`.
-
-##### Section Header (lblPlatePickupHeader)
-
-| Property | Value |
-|----------|-------|
-| Text | `"Plates being picked up:"` |
-| X | `conPaymentModal.X + 20` |
-| Y | `conPaymentModal.Y + 460` |
-| Width | `510` |
-| Height | `22` |
-| Size | `11` |
-| FontWeight | `FontWeight.Semibold` |
-| Font | `varAppFont` |
-| Color | `varColorText` |
-| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
-
-##### Plates Gallery (galPaymentPlates)
-
-| Property | Value |
-|----------|-------|
-| Items | `Filter(colBuildPlatesIndexed, Status.Value = "Completed")` |
-| X | `conPaymentModal.X + 20` |
-| Y | `conPaymentModal.Y + 486` |
-| Width | `510` |
-| Height | `Min(140, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)` |
-| TemplateSize | `34` |
-| TemplatePadding | `2` |
-| ShowScrollbar | `true` |
-| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
-
-> 💡 **Height formula:** Grows with completed plate count up to 140px (≈4 plates). Collapses to zero (via `Visible`) when no completed plates exist, so the modal layout is unchanged for single-plate jobs.
-
-###### Row Checkbox (chkPaymentPlate) — inside template
-
-| Property | Value |
-|----------|-------|
-| Text | `""` |
-| Default | `ThisItem.ID in colPickedUpPlates.ID` |
-| X | `4` |
-| Y | `(Parent.TemplateHeight - 20) / 2` |
-| Width | `20` |
-| Height | `20` |
-| CheckmarkFill | `Color.White` |
-| Fill | `varColorPrimary` |
-| BorderColor | `varInputBorderColor` |
-
-**OnCheck:** `Collect(colPickedUpPlates, ThisItem)`
-
-**OnUncheck:** `Remove(colPickedUpPlates, ThisItem)`
-
-###### Plate Label (lblPaymentPlateLabel) — inside template
-
-| Property | Value |
-|----------|-------|
-| Text | `Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed)) & "  ·  " & Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
-| X | `30` |
-| Y | `0` |
-| Width | `460` |
-| Height | `Parent.TemplateHeight` |
-| Size | `10` |
-| Font | `varAppFont` |
-| Color | `varColorText` |
-| VerticalAlign | `VerticalAlign.Middle` |
-
-> 💡 **Example:** "2/4  ·  Prusa MK4S"
+See **Enhancement #5 → Phase 3** for the full Payment Modal layout including:
+- `galPlatesPickup` — Gallery of completed plates with checkboxes
+- `lblPlatesPickupHeader` — "PLATES BEING PICKED UP" header
+- Checkbox behavior (`OnCheck`/`OnUncheck` to manage `colPickedUpPlates`)
 
 #### Update Payment Confirm (btnPaymentConfirm OnSelect)
 
-After the existing `Patch(PrintRequests, ...)` and Flow C call, add a block to mark checked plates as Picked Up:
+See **Enhancement #5 → Phase 4** for the complete `btnPaymentConfirm.OnSelect` formula. The relevant plate-update portion:
 
 ```powerfx
-// Mark selected plates as Picked Up in BuildPlates list
+// Mark checked plates as "Picked Up" (from Build Plate Tracking)
 If(
     CountRows(colPickedUpPlates) > 0,
-    ForAll(colPickedUpPlates,
-        Patch(BuildPlates,
+    ForAll(
+        colPickedUpPlates,
+        Patch(
+            BuildPlates,
             LookUp(BuildPlates, ID = ThisRecord.ID),
-            { Status: { Value: "Picked Up" } }
+            {Status: {Value: "Picked Up"}}
         )
     )
 );
@@ -960,7 +910,7 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 Clear(colPickedUpPlates)
 ```
 
-> 💡 This runs after the main payment Patch — it is additive and does not change weight, cost, or status logic. If no plates exist or none are checked, the `If(CountRows(...) > 0, ...)` guard skips the block entirely.
+> 💡 This is integrated into the full payment confirm logic in Enhancement #5, which also creates the `Payments` record and updates `PrintRequests` running totals.
 
 ---
 

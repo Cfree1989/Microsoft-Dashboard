@@ -4,6 +4,10 @@
 **Priority:** Medium  
 **Dependencies:** Complete Confirmation Modal (Step 12A)
 
+**Integrates With:** Build Plate Tracking (Enhancement #3), Multi-Payment Tracking (Enhancement #5)
+
+> 📦 **Bundle Implementation:** This enhancement is designed to be implemented alongside Build Plate Tracking (#3) and Multi-Payment Tracking (#5). When Build Plates is active, the Complete Modal shows a **read-only** printer display (auto-derived from plates) rather than a dropdown.
+
 ---
 
 ## Problem Statement
@@ -103,7 +107,10 @@ The `ActualPrinter` choice column must be added to the `PrintRequests` list befo
 └────────────────────────────────────────────────────┘
 ```
 
-**After — With Build Plates** (500×340px):
+**After — With Build Plates (RECOMMENDED)** (500×340px):
+
+> ✅ **Use this version** when implementing alongside Build Plate Tracking (#3).
+
 ```
 ┌────────────────────────────────────────────────────┐
 │  Mark Jane Smith Complete - REQ-00042              │
@@ -122,7 +129,12 @@ The `ActualPrinter` choice column must be added to the `PrintRequests` list befo
 └────────────────────────────────────────────────────┘
 ```
 
-**After — Without Build Plates / Legacy** (500×370px):
+The `ActualPrinter` field is auto-populated from the distinct `Machine` values across the job's plates. Staff cannot manually edit it — the data comes from what was actually tracked in BuildPlates.
+
+**After — Without Build Plates / Legacy Only** (500×370px):
+
+> ⚠️ **Skip this version** if implementing Build Plate Tracking (#3). This is only needed for standalone Printer Verification without plate tracking.
+
 ```
 ┌────────────────────────────────────────────────────┐
 │  Mark Jane Smith Complete - REQ-00042              │
@@ -416,4 +428,4 @@ This can be done immediately with no app changes. The column will be blank on al
 
 ---
 
-*Last Updated: March 16, 2026*
+*Last Updated: March 17, 2026*

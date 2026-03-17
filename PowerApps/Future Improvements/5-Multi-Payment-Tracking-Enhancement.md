@@ -2,7 +2,11 @@
 
 **Status:** Future Enhancement  
 **Priority:** Critical ⚠️  
-**Dependencies:** Payment Modal (Step 12C), Build Plate Tracking (Enhancement #3), Payer Tracking (Enhancement #2), Monthly Transaction Export (Enhancement #4)
+**Dependencies:** Payment Modal (Step 12C), Payer Tracking (Enhancement #2), Monthly Transaction Export (Enhancement #4)
+
+**Integrates With:** Build Plate Tracking (Enhancement #3), Printer Verification (Enhancement #1)
+
+> 📦 **Bundle Implementation:** This enhancement is designed to be implemented alongside Build Plate Tracking (#3) and Printer Verification (#1). The Payment Modal changes in this document include the plate pickup section from Enhancement #3.
 
 > ⚠️ **URGENT:** The current system overwrites payment data when multiple payments occur for one job. Staff are already processing partial pickups, meaning **transaction data is being lost**. This enhancement should be implemented before or alongside Build Plate Tracking.
 
@@ -256,151 +260,282 @@ ClearCollect(colPayments, Blank());
 Clear(colPayments);
 ```
 
-### Phase 3: Payment Modal Updates
+### Phase 3: Payment Modal Updates — Two-Column Layout
 
-#### New: Payment History Section
+> 📐 **Layout Change:** The Payment Modal expands from 550px to **800px wide** with a two-column layout. The left column contains form fields (unchanged). The right column shows Payment History and Plates being picked up.
 
-Add a Payment History gallery **above** the payment input fields, showing all previous payments for this job:
+#### Updated Modal Dimensions
+
+| Property | Before | After |
+|----------|--------|-------|
+| `recPaymentModal.Width` | `550` | `800` |
+| `recPaymentModal.Height` | `650` (or 740) | `680` |
+
+#### Visual Layout (Two-Column)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Record Payment — Jane Smith · REQ-00042                     [✕] │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Student: Jane Smith · jane.smith@lsu.edu                        │
-│  Estimated: 147g → $14.70                                        │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│  PAYMENT HISTORY                                                 │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │  3/15  TXN-44821  85g  $8.50   Plates 1,2,3    Colin      │  │
-│  │  (No more payments recorded)                               │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│  Paid so far: 85g · $8.50                                        │
-│  Remaining estimate: ~62g · ~$6.20                               │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│  RECORD NEW PAYMENT                                              │
-│                                                                  │
-│  Final Weight (grams): *        Transaction Number: *            │
-│  ┌──────────────────────┐       ┌──────────────────────┐         │
-│  │ 62                   │       │ TXN-44890            │         │
-│  └──────────────────────┘       └──────────────────────┘         │
-│                                                                  │
-│  ☑ Payer is same as student                                      │
-│  ...                                                             │
-│                                                                  │
-│  Plates being picked up:                                         │
-│  ☑ Plate 4 · Prusa XL                                            │
-│  ☑ Plate 5 · Prusa XL                                            │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│                                            [Cancel]  [Confirm]   │
-└──────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│  Record Payment — Jane Smith · REQ-00042                                       [✕] │
+│  Student: Jane Smith · Estimated: 147g → $14.70                                    │
+├────────────────────────────────────────────┬───────────────────────────────────────┤
+│  LEFT COLUMN — FORM FIELDS                 │  RIGHT COLUMN — HISTORY & PLATES      │
+│                                            │                                       │
+│  Performing Action As: *   Payment Type: * │  PAYMENT HISTORY                      │
+│  ┌─────────────────┐       ┌─────────────┐ │  ┌─────────────────────────────────┐  │
+│  │ Colin Freeman ▼ │       │ TigerCASH ▼ │ │  │ 3/15  TXN-44821  85g   $8.50   │  │
+│  └─────────────────┘       └─────────────┘ │  │ Plates 1,2,3 · Colin            │  │
+│                                            │  └─────────────────────────────────┘  │
+│  Transaction #: *          Payment Date: * │  Paid so far: 85g · $8.50             │
+│  ┌─────────────────┐       ┌─────────────┐ │  Remaining: ~62g · ~$6.20             │
+│  │ TXN-44890       │       │ 3/17/2026 📅│ │                                       │
+│  └─────────────────┘       └─────────────┘ │  ─────────────────────────────────    │
+│                                            │                                       │
+│  Final Weight (grams): *                   │  PLATES BEING PICKED UP               │
+│  ┌─────────────────┐                       │  ┌─────────────────────────────────┐  │
+│  │ 62              │                       │  │ ☑ Plate 4/5 · Prusa XL          │  │
+│  └─────────────────┘                       │  │ ☑ Plate 5/5 · Prusa XL          │  │
+│  Final Cost: $6.20                         │  └─────────────────────────────────┘  │
+│                                            │  (Only completed plates shown)        │
+│  ☐ Student provided own material (70%)    │                                       │
+│                                            │                                       │
+│  Payment Notes (optional):                 │                                       │
+│  ┌────────────────────────────────────┐    │                                       │
+│  │                                    │    │                                       │
+│  └────────────────────────────────────┘    │                                       │
+│                                            │                                       │
+│  ☐ Partial Pickup — Student will return   │                                       │
+├────────────────────────────────────────────┴───────────────────────────────────────┤
+│  [Add More Items]                                       [Cancel]  [Record Payment] │
+└────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Control: galPaymentHistory
+#### Column Containers
+
+##### Left Column Container (conPaymentLeft)
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X` |
+| Y | `recPaymentModal.Y + 80` |
+| Width | `400` |
+| Height | `520` |
+
+> All existing form controls (staff dropdown, payment type, transaction #, date, weight, cost, checkboxes, notes) go inside this container with their existing relative positions.
+
+##### Right Column Container (conPaymentRight)
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 410` |
+| Y | `recPaymentModal.Y + 80` |
+| Width | `370` |
+| Height | `520` |
+| Visible | `CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) > 0 Or CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+> Right column only appears when there's something to show (prior payments OR completed plates to pick up).
+
+---
+
+#### Payment History Section (inside conPaymentRight)
+
+##### Header: lblPaymentHistoryHeader
+
+| Property | Value |
+|----------|-------|
+| Text | `"PAYMENT HISTORY"` |
+| X | `0` |
+| Y | `0` |
+| Width | `350` |
+| Height | `24` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `varColorText` |
+| Visible | `CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) > 0` |
+
+##### Gallery: galPaymentHistory
 
 | Property | Value |
 |----------|-------|
 | Items | `Sort(Filter(Payments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)` |
-| X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 120` |
-| Width | `560` |
-| Height | `Min(120, CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) * 32 + 8)` |
-| TemplateSize | `30` |
+| X | `0` |
+| Y | `28` |
+| Width | `350` |
+| Height | `Min(100, CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) * 44)` |
+| TemplateSize | `42` |
+| TemplatePadding | `2` |
+| Fill | `RGBA(248, 249, 250, 1)` |
 | Visible | `CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) > 0` |
 
-##### Row Template (inside gallery)
+##### Row Template (inside galPaymentHistory)
 
 | Control | Property | Value |
 |---------|----------|-------|
-| lblPaymentDate | Text | `Text(ThisItem.PaymentDate, "m/d")` |
-| lblPaymentTxn | Text | `ThisItem.TransactionNumber` |
-| lblPaymentWeight | Text | `Text(ThisItem.Weight) & "g"` |
-| lblPaymentAmount | Text | `Text(ThisItem.Amount, "[$-en-US]$#,##0.00")` |
-| lblPaymentPlates | Text | `"Plates " & ThisItem.PlatesPickedUp` |
-| lblPaymentStaff | Text | `ThisItem.RecordedBy.DisplayName` |
+| lblHistDate | Text | `Text(ThisItem.PaymentDate, "m/d")` |
+| lblHistDate | Width | `40` |
+| lblHistTxn | Text | `ThisItem.TransactionNumber` |
+| lblHistTxn | Width | `90` |
+| lblHistWeight | Text | `Text(ThisItem.Weight) & "g"` |
+| lblHistWeight | Width | `45` |
+| lblHistAmount | Text | `Text(ThisItem.Amount, "[$-en-US]$#,##0.00")` |
+| lblHistAmount | Width | `60` |
+| lblHistPlates | Text | `If(!IsBlank(ThisItem.PlatesPickedUp), "Plates " & ThisItem.PlatesPickedUp, "")` |
+| lblHistPlates | Y | `22` (second row) |
+| lblHistStaff | Text | `ThisItem.RecordedBy.DisplayName` |
+| lblHistStaff | Y | `22` (second row) |
 
-#### Control: lblPaidSoFar
+##### Summary Labels
+
+| Control | Property | Value |
+|---------|----------|-------|
+| lblPaidSoFar | Text | `"Paid so far: " & Text(Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight)) & "g · " & Text(Sum(Filter(Payments, RequestID = varSelectedItem.ID), Amount), "[$-en-US]$#,##0.00")` |
+| lblPaidSoFar | Y | `galPaymentHistory.Y + galPaymentHistory.Height + 8` |
+| lblPaidSoFar | FontWeight | `FontWeight.Semibold` |
+| lblPaidSoFar | Color | `varColorSuccess` |
+| lblRemainingEst | Text | `"Remaining: ~" & Text(Max(0, varSelectedItem.EstWeight - Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight))) & "g · ~" & Text(Max(0, (varSelectedItem.EstWeight - Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight)) * varFilamentRate), "[$-en-US]$#,##0.00")` |
+| lblRemainingEst | Y | `lblPaidSoFar.Y + 20` |
+| lblRemainingEst | Color | `varColorTextSecondary` |
+
+---
+
+#### Plates Pickup Section (inside conPaymentRight)
+
+> 📦 **From Build Plate Tracking (#3):** This section shows completed plates as checkboxes. Staff checks which plates are being picked up with this payment.
+
+##### Divider: recPlatesDivider
 
 | Property | Value |
 |----------|-------|
-| Text | `"Paid so far: " & Text(Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight)) & "g · " & Text(Sum(Filter(Payments, RequestID = varSelectedItem.ID), Amount), "[$-en-US]$#,##0.00")` |
-| Visible | `CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) > 0` |
+| X | `0` |
+| Y | `lblRemainingEst.Y + 36` |
+| Width | `350` |
+| Height | `1` |
+| Fill | `varColorBorderLight` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+##### Header: lblPlatesPickupHeader
+
+| Property | Value |
+|----------|-------|
+| Text | `"PLATES BEING PICKED UP"` |
+| X | `0` |
+| Y | `recPlatesDivider.Y + 12` |
+| Width | `350` |
+| Height | `24` |
 | FontWeight | `FontWeight.Semibold` |
-| Color | `varColorSuccess` |
+| Size | `11` |
+| Color | `varColorText` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
 
-#### Control: lblRemainingEstimate
+##### Gallery: galPlatesPickup
 
 | Property | Value |
 |----------|-------|
-| Text | `"Remaining estimate: ~" & Text(varSelectedItem.EstWeight - Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight)) & "g · ~" & Text((varSelectedItem.EstWeight - Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight)) * varFilamentRate, "[$-en-US]$#,##0.00")` |
-| Visible | `CountRows(Filter(Payments, RequestID = varSelectedItem.ID)) > 0` |
-| Color | `varColorTextSecondary` |
+| Items | `Filter(colBuildPlatesIndexed, Status.Value = "Completed")` |
+| X | `0` |
+| Y | `lblPlatesPickupHeader.Y + 28` |
+| Width | `350` |
+| Height | `Min(140, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)` |
+| TemplateSize | `34` |
+| TemplatePadding | `2` |
+| Fill | `RGBA(248, 249, 250, 1)` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+##### Row Template (inside galPlatesPickup)
+
+| Control | Property | Value |
+|---------|----------|-------|
+| chkPlate | Control | Checkbox |
+| chkPlate | Default | `ThisItem.ID in colPickedUpPlates.ID` |
+| chkPlate | OnCheck | `Collect(colPickedUpPlates, ThisItem)` |
+| chkPlate | OnUncheck | `Remove(colPickedUpPlates, ThisItem)` |
+| chkPlate | X | `4` |
+| chkPlate | Width | `20` |
+| lblPlateName | Text | `"Plate " & Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed)) & " · " & Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
+| lblPlateName | X | `30` |
+
+##### Helper Text: lblPlatesHint
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Only completed plates shown)"` |
+| Y | `galPlatesPickup.Y + galPlatesPickup.Height + 4` |
+| Size | `9` |
+| Color | `varColorTextMuted` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
 
 ### Phase 4: Update Payment Confirm Logic
 
-Replace the single `Patch(PrintRequests, ...)` with a two-step operation:
+Replace the single `Patch(PrintRequests, ...)` with a multi-step operation that:
+1. Creates a `Payments` record
+2. Updates `PrintRequests` running totals
+3. Marks checked plates as "Picked Up" (from Build Plate Tracking #3)
 
 ```powerfx
 // btnPaymentConfirm.OnSelect
 
+// Calculate final cost (same logic as current payment modal)
+Set(varBaseCost, Max(varMinimumCost, Value(txtPaymentWeight.Text) * If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)));
+Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+
 // 1. Create new Payment record
-Patch(
-    Payments,
-    Defaults(Payments),
-    {
-        RequestID: varSelectedItem.ID,
-        ReqKey: varSelectedItem.ReqKey,
-        TransactionNumber: txtTransactionNumber.Text,
-        Weight: Value(txtFinalWeight.Text),
-        Amount: Value(txtFinalWeight.Text) * If(
-            chkStudentOwnMaterial.Value,
-            varFilamentRate * 0.3,
-            varFilamentRate
-        ),
-        PaymentType: ddPaymentType.Selected,
-        PaymentDate: Today(),
-        PayerName: If(
-            chkPayerSameAsStudent.Value,
-            varSelectedItem.Student.DisplayName,
-            txtPayerName.Text
-        ),
-        PayerTigerCard: If(
-            chkPayerSameAsStudent.Value,
-            varSelectedItem.TigerCardNumber,
-            txtPayerTigerCard.Text
-        ),
-        PlatesPickedUp: Concat(colPickedUpPlates, Text(PlateNum), ", "),
-        RecordedBy: {
-            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-            Department: "",
-            DisplayName: ddPaymentStaff.Selected.MemberName,
-            Email: ddPaymentStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        StudentOwnMaterial: chkStudentOwnMaterial.Value
-    }
+Set(varNewPayment, 
+    Patch(
+        Payments,
+        Defaults(Payments),
+        {
+            RequestID: varSelectedItem.ID,
+            ReqKey: varSelectedItem.ReqKey,
+            TransactionNumber: txtPaymentTransaction.Text,
+            Weight: Value(txtPaymentWeight.Text),
+            Amount: varFinalCost,
+            PaymentType: {Value: ddPaymentType.Selected.Value},
+            PaymentDate: dpPaymentDate.SelectedDate,
+            PayerName: If(
+                chkPayerSameAsStudent.Value,
+                varSelectedItem.Student.DisplayName,
+                txtPayerName.Text
+            ),
+            PayerTigerCard: If(
+                chkPayerSameAsStudent.Value,
+                varSelectedItem.TigerCardNumber,
+                txtPayerTigerCard.Text
+            ),
+            PlatesPickedUp: If(
+                CountRows(colPickedUpPlates) > 0,
+                Concat(colPickedUpPlates, Text(PlateNum), ", "),
+                ""
+            ),
+            RecordedBy: {
+                Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                Department: "",
+                DisplayName: ddPaymentStaff.Selected.MemberName,
+                Email: ddPaymentStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            StudentOwnMaterial: chkOwnMaterial.Value
+        }
+    )
 );
 
 // 2. Update PrintRequests running totals
+// Note: Query Payments AFTER the new record is created to include it in totals
 With(
     {
-        totalWeight: Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight),
-        totalCost: Sum(Filter(Payments, RequestID = varSelectedItem.ID), Amount),
-        allPlatesDone: CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) = 0
+        wTotalWeight: Sum(Filter(Payments, RequestID = varSelectedItem.ID), Weight),
+        wTotalCost: Sum(Filter(Payments, RequestID = varSelectedItem.ID), Amount),
+        wAllPlatesPickedUp: CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0 Or
+            CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) - CountRows(colPickedUpPlates) <= 0
     },
     Patch(
         PrintRequests,
         LookUp(PrintRequests, ID = varSelectedItem.ID),
         {
-            FinalWeight: totalWeight,
-            FinalCost: totalCost,
-            PaymentDate: Today(),
+            FinalWeight: wTotalWeight,
+            FinalCost: wTotalCost,
+            PaymentDate: dpPaymentDate.SelectedDate,
             Status: If(
-                allPlatesDone && CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) = 0,
+                wAllPlatesPickedUp && !chkPartialPickup.Value,
                 {Value: "Paid & Picked Up"},
                 varSelectedItem.Status
             ),
@@ -418,25 +553,51 @@ With(
     )
 );
 
-// 3. Update BuildPlates status (existing logic)
-ForAll(
-    colPickedUpPlates,
-    Patch(
-        BuildPlates,
-        LookUp(BuildPlates, ID = ThisRecord.ID),
-        {Status: {Value: "Picked Up"}}
+// 3. Mark checked plates as "Picked Up" (Build Plate Tracking integration)
+If(
+    CountRows(colPickedUpPlates) > 0,
+    ForAll(
+        colPickedUpPlates,
+        Patch(
+            BuildPlates,
+            LookUp(BuildPlates, ID = ThisRecord.ID),
+            {Status: {Value: "Picked Up"}}
+        )
     )
 );
 
-// 4. Refresh collections
+// 4. Call Flow C for audit logging (same as existing)
+IfError(
+    'Flow-(C)-Action-LogAction'.Run(
+        Text(varSelectedItem.ID),
+        If(chkPartialPickup.Value, "Partial Payment", "Status Change"),
+        If(chkPartialPickup.Value, "Payment", "Status"),
+        "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") & 
+        If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", ""),
+        ddPaymentStaff.Selected.MemberEmail
+    ),
+    Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+);
+
+// 5. Refresh collections
 ClearCollect(colAllBuildPlates, BuildPlates);
 Clear(colPickedUpPlates);
 
-// 5. Notify and close
+// 6. Reset form and close modal
+Reset(txtPaymentTransaction);
+Reset(txtPaymentWeight);
+Reset(dpPaymentDate);
+Reset(txtPaymentNotes);
+Reset(ddPaymentStaff);
+Reset(chkOwnMaterial);
+Reset(chkPartialPickup);
+Reset(ddPaymentType);
 Notify("Payment recorded!", NotificationType.Success);
 Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank())
 ```
+
+> 💡 **Integration Note:** Step 3 (marking plates as Picked Up) comes from Build Plate Tracking Enhancement #3. If no plates are checked or no plates exist, this step is skipped via the `If(CountRows(...) > 0, ...)` guard.
 
 ---
 
