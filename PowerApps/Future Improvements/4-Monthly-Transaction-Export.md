@@ -2,7 +2,7 @@
 
 **Status:** Future Enhancement  
 **Priority:** Medium  
-**Dependencies:** Payer Tracking Enhancement (optional but recommended)
+**Dependencies:** Multi-Payment Tracking Enhancement (#5, required), Payer Tracking Enhancement (#2, optional but recommended)
 
 ---
 
@@ -36,26 +36,35 @@ Create an in-app export feature that generates an Excel spreadsheet of all trans
 
 ### Column Mapping
 
+> ⚠️ **Data Source Change:** With Multi-Payment Tracking (#5), this export queries the `Payments` list instead of `PrintRequests`. Each row represents one actual transaction, enabling accurate tracking of partial pickups and multiple payments per job.
+
 | Excel Column | SharePoint Source | Notes |
 |--------------|-------------------|-------|
-| A: Machine | `Method.Value` | "Prusa" for Filament, "Resin" for Resin |
-| B: $/Unit | `varFilamentRate` or `varResinRate` | Based on Method |
-| C: Unit Amount | `FinalWeight` | Actual weight in grams |
-| D: Cost | `FinalCost` | Amount charged |
-| E: Payer | `PayerName` | From Payer Tracking Enhancement (falls back to `Student.DisplayName`) |
-| F: Notes | `PaymentNotes` | Staff notes from payment |
-| G: Course Number | `CourseNumber` | Student's course |
-| H: Date | `PaymentDate` | Payment date |
-| I: Transaction Number | `TransactionNumber` | TigerCASH/Check/Code reference |
-| J: Processed By | `LastActionBy.DisplayName` | Staff who processed payment |
-| L: Request ID | `ReqKey` | e.g., "REQ-00042" |
+| A: Machine | `LookUp(PrintRequests, ID = RequestID).Method.Value` | "Prusa" for Filament, "Resin" for Resin |
+| B: $/Unit | Rate based on Method | `varFilamentRate` or `varResinRate` |
+| C: Unit Amount | `Weight` | Actual weight in grams (from Payments) |
+| D: Cost | `Amount` | Amount charged (from Payments) |
+| E: Payer | `PayerName` | From Payments record (or falls back via lookup) |
+| F: Notes | `LookUp(PrintRequests, ID = RequestID).PaymentNotes` | Staff notes from parent request |
+| G: Course Number | `LookUp(PrintRequests, ID = RequestID).CourseNumber` | Student's course |
+| H: Date | `PaymentDate` | Payment date (from Payments) |
+| I: Transaction Number | `TransactionNumber` | TigerCASH/Check/Code reference (from Payments) |
+| J: Processed By | `RecordedBy.DisplayName` | Staff who processed this payment |
+| K: Request ID | `ReqKey` | e.g., "REQ-00042" (from Payments) |
 
 ### Data Filter
 
+> 💡 **Why Power Automate:** The `Month()` and `Year()` functions are NOT delegable in Power Apps, meaning only the first 500-2,000 records would be processed. Power Automate handles the full dataset using OData filters.
+
+**Power Automate OData Filter (recommended):**
+```
+PaymentDate ge '@{formatDateTime(startOfMonth(variables('SelectedDate')), 'yyyy-MM-dd')}' and PaymentDate lt '@{formatDateTime(addDays(endOfMonth(variables('SelectedDate')), 1), 'yyyy-MM-dd')}'
+```
+
+**Power Apps Preview (for UI only, not for export):**
 ```powerfx
 Filter(
-    PrintRequests,
-    Status.Value = "Paid & Picked Up" &&
+    Payments,
     Month(PaymentDate) = varSelectedMonth &&
     Year(PaymentDate) = varSelectedYear
 )
@@ -149,18 +158,28 @@ Power Apps cannot directly create Excel files. Use a Power Automate flow trigger
 
 **Steps:**
 
-1. **Get Items** - Query SharePoint `PrintRequests` list
-   - Filter: `Status eq 'Paid & Picked Up'`
-   - Additional filter in flow for month/year on `PaymentDate`
+1. **Initialize Variables**
+   - `SelectedDate` (string): Compose a date from Month/Year inputs → `@{concat(triggerBody()['text_1'], '-', triggerBody()['text'], '-01')}`
 
-2. **Create Excel Table** - Use "Create table" action in Excel Online
+2. **Get Payments** - Query SharePoint `Payments` list
+   - OData Filter: `PaymentDate ge '@{formatDateTime(startOfMonth(variables('SelectedDate')), 'yyyy-MM-dd')}' and PaymentDate lt '@{formatDateTime(addDays(endOfMonth(variables('SelectedDate')), 1), 'yyyy-MM-dd')}'`
+   - This returns ALL payments for the selected month (no delegation limits)
+
+3. **Get Parent Request Details** - For each payment, get the parent `PrintRequests` item
+   - Use `Get item` action with `RequestID` to fetch Method, CourseNumber, etc.
+   - Consider batching with "Get items" + Filter array for better performance
+
+4. **Create Excel Table** - Use "Create table" action in Excel Online
    - Location: OneDrive or SharePoint document library
    - Create new file: `TigerCASH-Log-{Month}-{Year}.xlsx`
 
-3. **Add Rows** - For each item, add row to table
+5. **Add Rows** - For each payment, add row to table
    - Map columns per specification above
+   - Combine payment data with parent request data
 
-4. **Return File** - Return file content or download URL to PowerApps
+6. **Return File** - Return file content or download URL to PowerApps
+
+> 💡 **Performance Tip:** Instead of calling "Get item" for each payment, use "Get items" on PrintRequests with an `ID` filter for all unique RequestIDs, then use Filter array in the flow to match them up. This reduces API calls significantly.
 
 #### PowerApps Button OnSelect
 
@@ -384,12 +403,15 @@ Patch(
 
 - Power Automate license (included with most Microsoft 365 plans)
 - SharePoint site for file storage (or OneDrive)
+- **Multi-Payment Tracking Enhancement (#5)** - Creates the `Payments` list that this export queries
+  - Without it: Export queries `PrintRequests` directly (original behavior, loses multi-payment data)
+  - With it: Export queries `Payments` list (one row per actual transaction)
 
 ### Recommended
 
-- **Payer Tracking Enhancement** - For accurate "Payer" column
-  - Without it: Falls back to `Student.DisplayName`
-  - With it: Uses `PayerName` (correct even for third-party payments)
+- **Payer Tracking Enhancement (#2)** - For accurate "Payer" column
+  - Without it: Falls back to `Student.DisplayName` via lookup
+  - With it: Uses `PayerName` from Payments record (correct even for third-party payments)
 
 ---
 
@@ -420,13 +442,16 @@ Patch(
 
 ## Sample Output
 
-Expected Excel output matching current TigerCASH log format:
+Expected Excel output matching current TigerCASH log format. Note how REQ-00042 appears twice — this is a partial pickup scenario where the student paid for two separate portions on different days:
 
-| Machine | $/Unit | Unit Amount | Cost | Payer | Notes | Course Number | Date | Transaction Number | Processed By | Status | Request ID |
-|---------|--------|-------------|------|-------|-------|---------------|------|--------------------|--------------|--------|------------|
-| Prusa | 0.10 | 115 | $11.50 | Ryan Atkinson | | Personal | 3/2/2026 | 214 | Colin | Closed | REQ-00042 |
-| Prusa | 0.10 | 49 | $4.90 | Lily Bacas | | ID1712 | 3/2/2026 | 215 | Colin | Closed | REQ-00043 |
-| Prusa | 0.10 | 173 | $17.30 | Caitlin Mclin | | ID1712 | 3/2/2026 | 216 | Madison | Closed | REQ-00044 |
+| Machine | $/Unit | Unit Amount | Cost | Payer | Notes | Course Number | Date | Transaction Number | Processed By | Request ID |
+|---------|--------|-------------|------|-------|-------|---------------|------|--------------------|--------------|------------|
+| Prusa | 0.10 | 85 | $8.50 | Jane Smith | Partial - plates 1-3 | ID1712 | 3/15/2026 | TXN-44821 | Colin | REQ-00042 |
+| Prusa | 0.10 | 62 | $6.20 | Jane Smith | Remaining plates | ID1712 | 3/16/2026 | TXN-44890 | Colin | REQ-00042 |
+| Prusa | 0.10 | 49 | $4.90 | Lily Bacas | | ID1712 | 3/16/2026 | TXN-44891 | Colin | REQ-00043 |
+| Resin | 0.25 | 173 | $43.25 | Caitlin Mclin | | ID1712 | 3/17/2026 | TXN-44900 | Madison | REQ-00044 |
+
+> 💡 **Key Difference:** With Multi-Payment Tracking, each row represents one actual transaction from the `Payments` list. Finance gets exactly what they need: one row per swipe/check/code entry, even when multiple payments apply to the same job.
 
 ---
 
@@ -438,4 +463,4 @@ Expected Excel output matching current TigerCASH log format:
 
 ---
 
-*Last Updated: March 3, 2026*
+*Last Updated: March 17, 2026*
