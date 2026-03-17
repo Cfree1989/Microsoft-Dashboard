@@ -165,22 +165,18 @@ Finance needs each transaction recorded separately while also seeing the total j
 |------|-------|--------|--------------|
 | 1 | — | Job: 4 Completed, 2 Printing | — |
 | 2 | Student | Sends cancellation email | — |
-| 3 | Staff | Sees email, needs to handle partial completion | — |
-| 4 | Staff | **Option A:** Mark job Canceled, eat the material cost | Status: `Canceled`, plates orphaned |
-| 5 | Staff | **Option B:** Contact student — they must pay for completed work | — |
-| 6 | Staff | If student agrees to pay for 4 pieces: | — |
-| 7 | Staff | Removes 2 printing plates (stop the prints) | 4 Completed, 0 Printing |
-| 8 | Staff | Updates Total to 4 | — |
-| 9 | Staff | "Print Complete" now enabled | — |
-| 10 | Staff | Marks complete, records payment for 4 pieces | Status: `Paid & Picked Up` |
-| 11 | — | Student picks up (or staff disposes if student declines) | — |
+| 3 | Staff | Sees email, contacts student — they must pay for completed work | — |
+| 4 | Staff | Removes 2 printing plates (stop the prints) | 4 plates remain (all Completed) |
+| 5 | Staff | "Print Complete" now enabled (all plates done) | — |
+| 6 | Staff | Marks complete, records payment for 4 pieces | Status: `Paid & Picked Up` |
+| 7 | — | Student picks up completed pieces | — |
 
-**Policy question:** What happens to completed prints when a job is canceled? Current system doesn't enforce payment for partial work.
+**Policy:** Students must pay for any completed work when canceling a job.
 
-**Possible states after cancellation:**
-- `Canceled` with plates in mixed states (messy data)
-- `Paid & Picked Up` for partial work (cleaner, but requires payment)
-- Staff manually archives with notes explaining situation
+**Workflow:**
+1. Remove incomplete plates (stop any in-progress prints)
+2. Mark job complete, record payment for completed work
+3. Status: `Paid & Picked Up`
 
 ---
 
@@ -227,29 +223,7 @@ Finance needs each transaction recorded separately while also seeing the total j
 
 ---
 
-### Edge Case 6: TotalBuildPlates Mismatch
-
-**Scenario:** Staff set TotalBuildPlates = 5, but only created 3 plate records. Student sees "2/5 done" even though only 3 plates exist.
-
-| Step | Actor | Action | System State |
-|------|-------|--------|--------------|
-| 1 | Staff | Sets Total = 5 in modal | TotalBuildPlates: 5 |
-| 2 | Staff | Adds only 3 plates (got distracted, forgot 2) | BuildPlates: 3 records |
-| 3 | Staff | Marks all 3 plates Completed | 3/5 done displayed |
-| 4 | Staff | Tries to click "Print Complete" | — |
-| 5 | System | Gate check: All existing plates are Completed | Button enabled (gate passes) |
-| 6 | Staff | Completes job | Status: `Completed` |
-| 7 | — | Job card showed "3/5 done" — misleading but not blocking | — |
-
-**Key insight:** The completion gate checks actual plate records, not `TotalBuildPlates`. The mismatch causes confusing UI but doesn't break functionality.
-
-**Why this happens:** `TotalBuildPlates` is set manually (staff types "5") but plate records are created one-by-one. If staff doesn't finish adding plates, the numbers diverge.
-
-**Possible fix:** Add validation warning when `TotalBuildPlates ≠ CountRows(plates)` at completion time.
-
----
-
-### Edge Case 7: Rapid Status Changes (Race Condition)
+### Edge Case 6: Rapid Status Changes (Race Condition)
 
 **Scenario:** Two staff members have the same job's Build Plates Modal open. Both try to update the same plate simultaneously.
 
@@ -279,22 +253,18 @@ Finance needs each transaction recorded separately while also seeing the total j
 | Multi-plate multi-printer | Medium | Low | ✅ Yes |
 | Partial pickup | High | Medium | ✅ Yes (with partial payment flow) |
 | Print failure / re-slice | High | Medium | ✅ Yes (via plate removal) |
-| Cancellation after partial | High | High | ⚠️ Policy gap — no enforced handling |
+| Cancellation after partial | High | Medium | ✅ Yes (student pays for completed work) |
 | Printer reassignment | Medium | Low | ⚠️ Workaround needed (delete/recreate) |
 | Legacy zero-plate jobs | Low | Low | ✅ Yes (fallback behavior) |
-| TotalBuildPlates mismatch | Medium | Medium | ⚠️ Confusing UI, no validation |
 | Concurrent edits | Medium | Low | ⚠️ Stale UI possible, no data corruption |
 
 ---
 
 ## Recommendations
 
-1. ~~**Create `Payments` list**~~ → ✅ Documented in [Enhancement #5](../PowerApps/Future%20Improvements/5-Multi-Payment-Tracking-Enhancement.md)
-2. **Add confirmation dialog** when removing non-Queued plates (prevents accidental deletion of completed work)
-3. **Add validation warning** at completion if `TotalBuildPlates ≠ actual plate count`
-4. **Allow Machine edit** on Queued/Printing plates (avoids delete/recreate workaround)
-5. **Define cancellation policy** for jobs with completed plates
-6. **Consider refresh mechanism** for Build Plates Modal to handle concurrent access
+1. **Add confirmation dialog** when removing non-Queued plates (prevents accidental deletion of completed work)
+2. **Allow Machine edit** on Queued/Printing plates (avoids delete/recreate workaround)
+3. **Consider refresh mechanism** for Build Plates Modal to handle concurrent access
 
 ---
 

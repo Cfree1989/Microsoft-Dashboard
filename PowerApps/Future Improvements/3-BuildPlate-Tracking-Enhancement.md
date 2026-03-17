@@ -39,9 +39,8 @@ Add a `BuildPlates` sub-list (one row per gcode file) linked to `PrintRequests`.
 
 ```
 PrintRequests (1 record)
-├── TotalBuildPlates: 5
 ├── ActualPrinter: [MK4S, XL]              ← multi-select, auto-populated from plates
-└── BuildPlates (many records)
+└── BuildPlates (5 records)               ← count derived: CountRows(plates)
     ├── Plate 1: Machine=MK4S, Status=Completed
     ├── Plate 2: Machine=MK4S, Status=Completed
     ├── Plate 3: Machine=MK4S, Status=Printing
@@ -119,25 +118,6 @@ Create a new SharePoint list at the site root. No item-level permissions require
 #### Permissions
 
 Stop inheriting permissions. Keep staff/owner groups with full access. Remove any group that includes students.
-
----
-
-### New Field on `PrintRequests`: `TotalBuildPlates`
-
-Add one column to the existing `PrintRequests` list:
-
-| Column Name | Type | Required | Default | Description |
-|-------------|------|----------|---------|-------------|
-| `TotalBuildPlates` | Number | No | 0 | Total gcode files sliced for this request |
-
-**Setup:**
-1. Click **+ Add column** → **Number**
-2. **Name:** `TotalBuildPlates`
-3. **Number of decimal places:** 0
-4. **Default value:** 0
-5. Click **Save**
-
-> 💡 This drives the denominator in plate labels ("1/**4**", "2/**4**"). Set once at slicing time. May be set before all individual plate rows are created in `BuildPlates`.
 
 ---
 
@@ -233,7 +213,7 @@ Add a Build Plates information row **above the Details section** (below the Weig
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The Build Plates row is visible when `TotalBuildPlates > 0` (hidden for jobs without plate tracking).
+The Build Plates row is visible when plates exist (hidden for legacy jobs without plate tracking).
 
 #### Build Plates Row Container (conBuildPlatesRow)
 
@@ -250,7 +230,7 @@ The Build Plates row is visible when `TotalBuildPlates > 0` (hidden for jobs wit
 | RadiusTopRight | `4` |
 | RadiusBottomLeft | `4` |
 | RadiusBottomRight | `4` |
-| Visible | `ThisItem.TotalBuildPlates > 0` |
+| Visible | `CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0` |
 
 #### Progress Label (lblBuildPlatesProgress)
 
@@ -258,7 +238,7 @@ The Build Plates row is visible when `TotalBuildPlates > 0` (hidden for jobs wit
 |----------|-------|
 | Control | Text label |
 | Name | `lblBuildPlatesProgress` |
-| Text | `"🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.TotalBuildPlates) & " done"` |
+| Text | `"🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done"` |
 | X | `8` |
 | Y | `0` |
 | Width | `100` |
@@ -539,68 +519,14 @@ Reset(ddBuildPlatesMachine)
 | Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-#### Total Sliced Input (txtTotalSliced)
-
-| Property | Value |
-|----------|-------|
-| Default | `Text(varSelectedItem.TotalBuildPlates)` |
-| X | `recBuildPlatesModal.X + 124` |
-| Y | `recBuildPlatesModal.Y + 66` |
-| Width | `60` |
-| Height | `28` |
-| Size | `11` |
-| Font | `varAppFont` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| Format | `TextInputFormat.Number` |
-| HintText | `"0"` |
-
-#### Set Button (btnSetTotalSliced)
-
-| Property | Value |
-|----------|-------|
-| Text | `"Set"` |
-| X | `recBuildPlatesModal.X + 192` |
-| Y | `recBuildPlatesModal.Y + 66` |
-| Width | `50` |
-| Height | `28` |
-| Fill | `varColorPrimary` |
-| Color | `Color.White` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
-| RadiusTopLeft | `varBtnBorderRadius` |
-| RadiusTopRight | `varBtnBorderRadius` |
-| RadiusBottomLeft | `varBtnBorderRadius` |
-| RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
-| Font | `varAppFont` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisplayMode | `If(IsBlank(txtTotalSliced.Text) \|\| !IsNumeric(txtTotalSliced.Text), DisplayMode.Disabled, DisplayMode.Edit)` |
-
-**OnSelect:**
-
-```powerfx
-Patch(PrintRequests,
-    LookUp(PrintRequests, ID = varSelectedItem.ID),
-    { TotalBuildPlates: Value(txtTotalSliced.Text) }
-);
-// Refresh varSelectedItem so the progress label updates immediately
-Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
-// Refresh colAllBuildPlates so job card progress pills stay current
-ClearCollect(colAllBuildPlates, BuildPlates);
-Notify("Total updated.", NotificationType.Success)
-```
-
 #### Progress Label (lblBuildPlatesProgressModal)
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(CountRows(Filter(colBuildPlatesIndexed, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & " of " & Text(If(varSelectedItem.TotalBuildPlates > 0, varSelectedItem.TotalBuildPlates, CountRows(colBuildPlatesIndexed))) & " Completed"` |
-| X | `recBuildPlatesModal.X + 260` |
+| Text | `Text(CountRows(Filter(colBuildPlatesIndexed, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & " of " & Text(CountRows(colBuildPlatesIndexed)) & " Completed"` |
+| X | `recBuildPlatesModal.X + 124` |
 | Y | `recBuildPlatesModal.Y + 66` |
-| Width | `320` |
+| Width | `456` |
 | Height | `28` |
 | Size | `11` |
 | FontWeight | `FontWeight.Semibold` |
@@ -646,7 +572,7 @@ Notify("Total updated.", NotificationType.Success)
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(ThisItem.PlateNum) & "/" & Text(If(varSelectedItem.TotalBuildPlates > 0, varSelectedItem.TotalBuildPlates, CountRows(colBuildPlatesIndexed)))` |
+| Text | `Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed))` |
 | X | `8` |
 | Y | `0` |
 | Width | `40` |
@@ -986,7 +912,7 @@ Add after the Payment History section, before `chkPartialPickup`.
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(ThisItem.PlateNum) & "/" & Text(If(varSelectedItem.TotalBuildPlates > 0, varSelectedItem.TotalBuildPlates, CountRows(colBuildPlatesIndexed))) & "  ·  " & Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
+| Text | `Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed)) & "  ·  " & Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `30` |
 | Y | `0` |
 | Width | `460` |
@@ -1120,10 +1046,6 @@ If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
         ReqKey: varSelectedItem.ReqKey,
         Machine: varSelectedItem.Printer,
         Status: {Value: "Queued"}
-    });
-    // Set TotalBuildPlates to 1
-    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-        TotalBuildPlates: 1
     })
 );
 
@@ -1204,8 +1126,8 @@ The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
 3. Fill in weight, hours, computer → click "Approve" (without clicking "Add Plates/Printers")
 4. **Verify:** Job moves to "Ready to Print"
 5. **Verify:** BuildPlates list has 1 record with Machine = "Prusa MK4S", Status = "Queued"
-6. **Verify:** PrintRequests.TotalBuildPlates = 1
-7. **Verify:** Job card shows "0/1 done" and "Using: MK4S"
+6. **Verify:** Job card shows "0/1 done" (derived from BuildPlates count)
+7. **Verify:** Job card shows "Using: MK4S"
 
 ### Scenario 2: Multi-Plate Setup via Approval Modal
 
@@ -1291,8 +1213,7 @@ The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
 ### Phase 1: SharePoint (Do First)
 
 1. Create `BuildPlates` list with 4 columns
-2. Add `TotalBuildPlates` column to `PrintRequests`
-3. Change `ActualPrinter` column to **multi-select** (see SharePoint doc)
+2. Change `ActualPrinter` column to **multi-select** (see SharePoint doc)
 
 Both can be done immediately with no app changes.
 
