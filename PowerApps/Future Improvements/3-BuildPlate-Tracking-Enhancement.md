@@ -583,21 +583,37 @@ Reset(ddBuildPlatesMachine)
 | Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-##### Machine Label (lblPlateMachine) — inside template
+##### Machine Dropdown (drpPlateMachine) — inside template
 
-Strips the dimensions from the choice value for brevity ("Prusa MK4S" instead of "Prusa MK4S (9.8×8.3×8.7in)"):
+Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up to preserve history.
 
 | Property | Value |
 |----------|-------|
-| Text | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
+| Items | `colAvailablePrinters` |
+| DefaultSelectedItems | `[ThisItem.Machine]` |
 | X | `52` |
-| Y | `0` |
+| Y | `8` |
 | Width | `160` |
-| Height | `Parent.TemplateHeight` |
+| Height | `36` |
 | Size | `10` |
 | Font | `varAppFont` |
-| Color | `varColorText` |
-| VerticalAlign | `VerticalAlign.Middle` |
+| BorderColor | `If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Transparent)` |
+| ChevronBackground | `If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Transparent)` |
+| DisplayMode | `If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled)` |
+
+**OnChange:**
+
+```powerfx
+Patch(BuildPlates,
+    LookUp(BuildPlates, ID = ThisItem.ID),
+    { Machine: drpPlateMachine.Selected }
+);
+// Refresh collections
+ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
+ClearCollect(colBuildPlatesIndexed, AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID))));
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
+```
 
 ##### Status Badge (lblPlateStatus) — inside template
 
@@ -1205,6 +1221,19 @@ The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
 2. **Verify:** "Add Printer" dropdown shows only "Form 3"
 3. Add Form 3 → add plates
 4. **Verify:** All plates have Machine = "Form 3"
+
+### Scenario 10: Machine Edit on Queued/Printing Plate
+
+1. Create a plate with Machine = MK4S, Status = Queued
+2. **Verify:** Machine dropdown is enabled
+3. Change Machine from MK4S to XL
+4. **Verify:** Plate now shows Machine = XL
+5. Mark plate as Printing
+6. **Verify:** Machine dropdown still enabled
+7. Change Machine from XL to MK3S
+8. **Verify:** Plate shows Machine = MK3S
+9. Mark plate as Completed
+10. **Verify:** Machine dropdown is now disabled (locked)
 
 ---
 

@@ -1,9 +1,6 @@
 # Printer Verification Enhancement
 
-> ✅ **MERGED:** This enhancement has been integrated into the main spec.  
-> See [`StaffDashboard-App-Spec.md` → Step 12A Enhancement: Printer Verification](../StaffDashboard-App-Spec.md#step-12a-enhancement-printer-verification)
-
-**Status:** ~~Future Enhancement~~ → **Integrated**  
+**Status:** Future Enhancement  
 **Priority:** Medium  
 **Dependencies:** Complete Confirmation Modal (Step 12A)
 

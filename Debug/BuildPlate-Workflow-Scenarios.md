@@ -189,15 +189,11 @@ Finance needs each transaction recorded separately while also seeing the total j
 | 1 | Staff | Created plate: MK4S, Queued | — |
 | 2 | Staff | Marked "▶ Printing" | Plate: MK4S, Printing |
 | 3 | — | MK4S breaks down | Physical issue |
-| 4 | Staff | Needs to reassign to XL | — |
-| 5 | Staff | **Current system:** Cannot change Machine on existing plate | ❌ No edit capability |
-| 6 | Staff | **Workaround:** Remove the MK4S plate, add new XL plate | — |
-| 7 | Staff | Removes MK4S plate (even though marked Printing) | Plate deleted |
-| 8 | Staff | Adds new XL plate, marks Printing | New plate: XL, Printing |
+| 4 | Staff | Opens Build Plates Modal, taps Machine dropdown on the plate | — |
+| 5 | Staff | Changes Machine from MK4S to XL | Plate: XL, Printing |
+| 6 | Staff | Continues workflow normally | — |
 
-**Gap identified:** No way to edit a plate's Machine after creation. Workaround is delete + recreate, which loses the "Printing" status history.
-
-**Possible enhancement:** Allow Machine edit on Queued/Printing plates (not Completed/Picked Up).
+**Key insight:** Machine can be edited on Queued or Printing plates. Once a plate is Completed or Picked Up, the Machine is locked (history preserved).
 
 ---
 
@@ -254,17 +250,16 @@ Finance needs each transaction recorded separately while also seeing the total j
 | Partial pickup | High | Medium | ✅ Yes (with partial payment flow) |
 | Print failure / re-slice | High | Medium | ✅ Yes (via plate removal) |
 | Cancellation after partial | High | Medium | ✅ Yes (student pays for completed work) |
-| Printer reassignment | Medium | Low | ⚠️ Workaround needed (delete/recreate) |
+| Printer reassignment | Medium | Low | ✅ Yes (edit Machine on Queued/Printing plates) |
 | Legacy zero-plate jobs | Low | Low | ✅ Yes (fallback behavior) |
 | Concurrent edits | Medium | Low | ⚠️ Stale UI possible, no data corruption |
 
 ---
 
-## Recommendations
+## Future Considerations
 
-1. **Add confirmation dialog** when removing non-Queued plates (prevents accidental deletion of completed work)
-2. **Allow Machine edit** on Queued/Printing plates (avoids delete/recreate workaround)
-3. **Consider refresh mechanism** for Build Plates Modal to handle concurrent access
+- Add confirmation dialog when removing non-Queued plates
+- Add refresh mechanism for Build Plates Modal to handle concurrent access
 
 ---
 
