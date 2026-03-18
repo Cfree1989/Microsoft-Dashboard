@@ -27,6 +27,40 @@
 
 ---
 
+### Required Prerequisite: AuditLog Action Choices
+
+Before building or testing this flow, make sure the SharePoint `AuditLog.Action` choice column already includes every value the app may log.
+
+1. Go to SharePoint → **Site contents** → **AuditLog** list
+2. Click **Settings** (gear) → **List settings**
+3. Under **Columns**, click **Action**
+4. Verify the choices include:
+   - Created
+   - Updated
+   - Status Change
+   - File Added
+   - Comment Added
+   - Assigned
+   - Approved
+   - Picked Up
+   - Started
+   - Completed
+   - Email Sent
+   - Rejected
+   - Canceled by Student
+   - Partial Payment
+   - Plate Added
+   - Plate Removed
+   - Plate Status Change
+   - System
+5. Click **OK** to save if you added anything missing
+
+> ⚠️ **Why this matters:** If Power Apps sends an action value that is not allowed by the `AuditLog.Action` choice column, Flow C will fail when it tries to create the AuditLog item.
+>
+> 📋 **Canonical setup reference:** `SharePoint/AuditLog-List-Setup.md`
+
+---
+
 ### Step 2: Add Input Parameters
 
 **What this does:** Defines the 5 parameters that Power Apps will send to the flow when staff perform actions (approve, reject, update fields, etc.).
@@ -595,30 +629,12 @@ Update the Validate Required Inputs expression to match your actual internal nam
 - The action value being logged (e.g., "Approved") isn't in the list of valid choices
 
 **Fix:**
-1. Go to SharePoint → **Site contents** → **AuditLog** list
-2. Click **Settings** (gear) → **List settings**
-3. Under **Columns**, click on **Action**
-4. Add missing choices. **Recommended full list:**
-   - Created
-   - Updated
-   - Status Change
-   - File Added
-   - Comment Added
-   - Assigned
-   - **Approved** ← Add this
-   - **Picked Up** ← Add this
-   - **Started** ← Add this
-   - **Completed** ← Add this
-   - Email Sent
-   - Rejected
-   - System
-   - **Partial Payment** ← Add this (for multi-payment tracking)
-   - **Plate Added** ← Add this (for build plate tracking)
-   - **Plate Removed** ← Add this (for build plate tracking)
-   - **Plate Status Change** ← Add this (for build plate tracking)
-5. Click **OK** to save
+1. Go back to the required setup section above: **Required Prerequisite: AuditLog Action Choices**
+2. Compare the failing action against the full AuditLog `Action` choice list
+3. Add any missing values in SharePoint, then save the column
+4. Re-run the flow from Power Apps
 
-**Note:** Add any action values your app might log to prevent future failures.
+**Note:** The required baseline list is documented in this file and in `SharePoint/AuditLog-List-Setup.md`. Keep those two docs in sync whenever new action types are introduced.
 
 ---
 

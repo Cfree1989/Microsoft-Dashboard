@@ -19,7 +19,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 **Related Documents:**
 - **PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md`
 - **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md`
-- **Multi-Payment Tracking Enhancement:** `PowerApps/Future Improvements/5-Multi-Payment-Tracking-Enhancement.md`
+- **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
+- **Monthly Transaction Export Spec:** `PowerApps/Future Improvements/4-Monthly-Transaction-Export.md`
 
 ---
 
@@ -242,7 +243,7 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 
 ## Monthly Transaction Export
 
-This list is the source for the Monthly Transaction Export (Enhancement #4). The export queries:
+This list is the source for the Monthly Transaction Export documented in `PowerApps/Future Improvements/4-Monthly-Transaction-Export.md`. The export queries:
 
 ```powerfx
 Filter(

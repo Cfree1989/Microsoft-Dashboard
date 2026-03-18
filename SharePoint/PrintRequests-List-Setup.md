@@ -17,6 +17,12 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 - Status formatting with color-coded visual indicators
 - Payment recording with estimate vs actual tracking
 
+**Related Documents:**
+- **AuditLog List:** `SharePoint/AuditLog-List-Setup.md`
+- **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md`
+- **Payments List:** `SharePoint/Payments-List-Setup.md`
+- **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
+
 ---
 
 ## Step 1: Create the List
@@ -555,7 +561,7 @@ These columns capture actual payment details when a print is picked up.
 3. **Description:** `Name of person who paid (if different from student)`
 4. Click **Save**
 
-> 💡 **Purpose:** Tracks who actually paid for the print job. Often the student pays for themselves, but sometimes a friend, parent, or grant administrator pays on their behalf. This field supports the Multi-Payment Tracking feature.
+> 💡 **Purpose:** Tracks who actually paid for the print job. Often the student pays for themselves, but sometimes a friend, parent, or grant administrator pays on their behalf. In the merged workflow, this field supports the `Payments` list and partial-pickup payment history.
 
 ### Column 38: PayerTigerCard (Single line of text)
 
@@ -564,7 +570,7 @@ These columns capture actual payment details when a print is picked up.
 3. **Description:** `TigerCard number of payer (for remote charging if different from student)`
 4. Click **Save**
 
-> 💡 **Purpose:** When the payer is different from the student, this captures their TigerCard number for payment processing. Used with the Payer Tracking and Multi-Payment features.
+> 💡 **Purpose:** When the payer is different from the student, this captures their TigerCard number for payment processing. In the merged workflow, it supports the `Payments` list record for each transaction.
 
 ---
 
@@ -572,7 +578,7 @@ These columns capture actual payment details when a print is picked up.
 
 This column captures which printer(s) the job was actually printed on, separate from the student's original printer request. It supports **multi-select** for jobs that span multiple printers.
 
-### Column 37: ActualPrinter (Choice — Multi-Select)
+### Column 39: ActualPrinter (Choice — Multi-Select)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `ActualPrinter`
@@ -595,7 +601,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 > | `Printer` | Single-select | Student | Submission | Records original printer request (often a guess) |
 > | `ActualPrinter` | **Multi-select** | System/Staff | Completion | Records actual machine(s) used |
 >
-> Students often guess which printer to select at submission time. Staff assigns jobs to whichever machine is actually available. When Build Plate Tracking is enabled, `ActualPrinter` is auto-populated from the distinct printers used across the job's plates.
+> Students often guess which printer to select at submission time. Staff assigns jobs to whichever machine is actually available. In the merged workflow, `ActualPrinter` is auto-populated from the distinct printers used across the job's `BuildPlates` records.
 
 ---
 
@@ -720,6 +726,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 17 staff processing columns added (including RejectionComment, ApprovalComment, and SlicedOnComputer)
 - [ ] All 9 payment recording columns added (including PayerName and PayerTigerCard)
+- [ ] ActualPrinter added as a multi-select Choice column
 - [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin

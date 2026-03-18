@@ -69,6 +69,10 @@ The AuditLog list provides complete tracking for all actions, changes, and syste
    - Email Sent
    - Rejected
    - Canceled by Student
+   - Partial Payment
+   - Plate Added
+   - Plate Removed
+   - Plate Status Change
    - System
 5. **Require that this column contains information:** Yes
 6. Click **Save**
@@ -217,7 +221,7 @@ The AuditLog list provides complete tracking for all actions, changes, and syste
 | Title | Single line | Yes | Human-readable action summary |
 | RequestID | Number | Yes | Links to PrintRequests.ID |
 | ReqKey | Single line | No | Request identifier (REQ-00001) |
-| Action | Choice | Yes | Created; Updated; Status Change; File Added; Comment Added; Assigned; Approved; Picked Up; Started; Completed; Email Sent; Rejected; Canceled by Student; System |
+| Action | Choice | Yes | Created; Updated; Status Change; File Added; Comment Added; Assigned; Approved; Picked Up; Started; Completed; Email Sent; Rejected; Canceled by Student; Partial Payment; Plate Added; Plate Removed; Plate Status Change; System |
 | ActionAt | DateTime | Yes | When action occurred (UTC) |
 | FieldName | Single line | No | Which field changed |
 | OldValue | Multi-line | No | Previous value before change |
@@ -289,7 +293,7 @@ FlowRunId: "08586653536760461208"
 - [ ] List created with name "AuditLog"
 - [ ] All 13 columns added (plus Title)
 - [ ] RequestID is Number type with 0 decimal places
-- [ ] Action has all 13 choices (including Approved, Picked Up, Started, Completed)
+- [ ] Action has all 18 choices (including Partial Payment, Plate Added, Plate Removed, and Plate Status Change)
 - [ ] ActionAt has "Include time" enabled
 - [ ] Actor is Person type (allows null)
 - [ ] ActorRole has choices: Student, Staff, System

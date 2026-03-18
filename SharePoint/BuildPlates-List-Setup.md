@@ -19,7 +19,7 @@ The BuildPlates list enables staff to track multiple build plates (gcode files) 
 **Related Documents:**
 - **PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md`
 - **Payments List:** `SharePoint/Payments-List-Setup.md`
-- **Build Plate Tracking Enhancement:** `PowerApps/Future Improvements/3-BuildPlate-Tracking-Enhancement.md`
+- **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
 
 ---
 
