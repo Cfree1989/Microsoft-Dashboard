@@ -1851,6 +1851,7 @@ This row displays build plate progress, printers in use, and a button to open th
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
+Set(varBuildPlatesOpenedFromApproval, false);
 // Load sorted plates for this request
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
@@ -2268,6 +2269,7 @@ Go back inside `galJobCards` gallery template. We'll place buttons at the **bott
 
 ```powerfx
 Set(varShowApprovalModal, ThisItem.ID);
+Set(varBuildPlatesOpenedFromApproval, false);
 Set(varSelectedItem, ThisItem)
 ```
 
@@ -3165,6 +3167,8 @@ Set(varLoadingMessage, "")
 **What you're doing:** Creating a dialog for staff to enter weight/time estimates before approving a request.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+>
+> **Nested Modal UX:** If staff opens Build Plates from inside Approval, the Approval modal should be hidden while Build Plates is open, then shown again when Build Plates closes.
 
 ### Control Hierarchy (Container-Based)
 
@@ -3210,9 +3214,9 @@ scrDashboard
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0)` |
-| **Visible** | `varShowApprovalModal > 0` |
+| **Visible** | `varShowApprovalModal > 0 && varShowBuildPlatesModal = 0` |
 
-> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility!
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility. The added `varShowBuildPlatesModal = 0` condition prevents the approval modal from remaining visible behind the Build Plates modal.
 
 ---
 
@@ -3707,6 +3711,7 @@ If(
 
 ```powerfx
 // Open Build Plates modal (varSelectedItem already set from Approve button click)
+Set(varBuildPlatesOpenedFromApproval, true);
 Set(varShowBuildPlatesModal, varSelectedItem.ID);
 // Load existing plates (if any)
 ClearCollect(colBuildPlates,
@@ -3721,6 +3726,8 @@ ClearCollect(colPrintersUsed,
 ```
 
 > 💡 **Optional Pre-Configuration:** Staff can optionally click this button to configure multiple plates/printers before approval. If they don't, a default plate is auto-created when they click "Confirm Approval".
+>
+> `varBuildPlatesOpenedFromApproval` tracks that this modal was opened from Approval, so closing Build Plates returns staff to the Approval modal instead of clearing the current request context.
 >
 > Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` stays consistent in the modal and pickup flows.
 
@@ -5096,7 +5103,7 @@ Filter(
         {selectedMethod: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
         If(
             selectedMethod = "Filament",
-            Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
+            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"),
             selectedMethod = "Resin",
             Value = "Form 3 (5.7×5.7×7.3in)",
             true
@@ -8297,6 +8304,8 @@ scrDashboard
 | Fill | `RGBA(0, 0, 0, 0)` |
 | **Visible** | `varShowBuildPlatesModal > 0` |
 
+> 💡 **Modal Stacking Rule:** When this modal is opened from the Approval modal, it acts like a child modal. It should fully cover the screen, and the Approval modal should be hidden until Build Plates closes.
+
 ---
 
 ### Modal Overlay (recBuildPlatesOverlay)
@@ -8374,12 +8383,13 @@ scrDashboard
 
 ```powerfx
 Set(varShowBuildPlatesModal, 0);
-Set(varSelectedItem, Blank());
+If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
 ClearCollect(colBuildPlates, Blank());
 Clear(colBuildPlates);
 ClearCollect(colBuildPlatesIndexed, Blank());
 Clear(colBuildPlatesIndexed);
-Reset(ddBuildPlatesMachine)
+Reset(ddBuildPlatesMachine);
+Set(varBuildPlatesOpenedFromApproval, false)
 ```
 
 ---
@@ -8464,6 +8474,8 @@ Reset(ddBuildPlatesMachine)
 | Height | `320` |
 | TemplateSize | `52` |
 | TemplatePadding | `2` |
+| Fill | `Color.Transparent` |
+| TemplateFill | `Color.Transparent` |
 | ShowScrollbar | `true` |
 
 > Important: if you started from a stock browse gallery, remove the default children before wiring up the controls below. `galBuildPlates` should not display placeholder SharePoint fields such as `Compliance Asset Id` or `Color Tag`.
@@ -8511,8 +8523,8 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 |----------|-------|
 | Control | Dropdown |
 | Name | `drpPlateMachine` |
-| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
-| DefaultSelectedItems | `[ThisItem.Machine]` |
+| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
+| Default | `ThisItem.Machine.Value` |
 | X | `52` |
 | Y | `8` |
 | Width | `160` |
@@ -8537,7 +8549,7 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 ```
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3.
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and either `Raise3D`/`Raised3D` choice spelling. Resin jobs show only Form 3.
 >
 > The aliased `plate` / `priorPlate` version avoids the parser ambiguity that can happen when `ThisRecord` is reused inside the nested `Filter(...)`.
 
@@ -8713,7 +8725,8 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 |----------|-------|
 | Control | Dropdown |
 | Name | `ddBuildPlatesMachine` |
-| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
+| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
+| Default | `""` |
 | X | `recBuildPlatesModal.X + 104` |
 | Y | `recBuildPlatesModal.Y + 452` |
 | Width | `280` |
@@ -8736,7 +8749,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | SelectionColor | `varDropdownSelectionColor` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Uses the same filter pattern as other printer dropdowns.
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and either `Raise3D`/`Raised3D` choice spelling. Resin jobs show only Form 3. Uses the same filter pattern as other printer dropdowns.
 
 ---
 
@@ -8764,20 +8777,20 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisplayMode | `If(IsBlank(ddBuildPlatesMachine.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+| DisplayMode | `If(IsBlank(ddBuildPlatesMachine.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
 
 **OnSelect:**
 
 ```powerfx
-Patch(BuildPlates,
-    Defaults(BuildPlates),
-    {
-        RequestID: varSelectedItem.ID,
-        ReqKey: varSelectedItem.ReqKey,
-        Machine: { Value: ddBuildPlatesMachine.Selected.Value },
-        Status: { Value: "Queued" }
-    }
-);
+    Patch(BuildPlates,
+        Defaults(BuildPlates),
+        {
+            RequestID: varSelectedItem.ID,
+            ReqKey: varSelectedItem.ReqKey,
+            Machine: ddBuildPlatesMachine.Selected,
+            Status: { Value: "Queued" }
+        }
+    );
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
@@ -8819,12 +8832,13 @@ Reset(ddBuildPlatesMachine)
 
 ```powerfx
 Set(varShowBuildPlatesModal, 0);
-Set(varSelectedItem, Blank());
+If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
 ClearCollect(colBuildPlates, Blank());
 Clear(colBuildPlates);
 ClearCollect(colBuildPlatesIndexed, Blank());
 Clear(colBuildPlatesIndexed);
-Reset(ddBuildPlatesMachine)
+Reset(ddBuildPlatesMachine);
+Set(varBuildPlatesOpenedFromApproval, false)
 ```
 
 > 💡 **Same as Close button:** Both buttons close the modal and clean up collections.
@@ -12253,11 +12267,11 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 ### Scenario 2: Multi-Plate Setup via Approval Modal
 
 1. Open Approval Modal for a Pending job
-2. Click "Add Plates/Printers" → Build Plates Modal opens
+2. Click "Add Plates/Printers" → Build Plates Modal opens and the Approval modal is hidden
 3. Set Total Plates = 5
 4. Add Prusa MK4S → add 3 plates under it
 5. Add Prusa XL → add 2 plates under it
-6. Click "Done" → back to Approval Modal
+6. Click "Done" → Build Plates closes and the Approval modal returns
 7. **Verify:** Build Plates section now shows "5 plates on 2 printers (MK4S, XL)"
 8. Click "Approve"
 9. **Verify:** BuildPlates list has 5 records
