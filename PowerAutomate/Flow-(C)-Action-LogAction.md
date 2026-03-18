@@ -612,6 +612,10 @@ Update the Validate Required Inputs expression to match your actual internal nam
    - Email Sent
    - Rejected
    - System
+   - **Partial Payment** ← Add this (for multi-payment tracking)
+   - **Plate Added** ← Add this (for build plate tracking)
+   - **Plate Removed** ← Add this (for build plate tracking)
+   - **Plate Status Change** ← Add this (for build plate tracking)
 5. Click **OK** to save
 
 **Note:** Add any action values your app might log to prevent future failures.

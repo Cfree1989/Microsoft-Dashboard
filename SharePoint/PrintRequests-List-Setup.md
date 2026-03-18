@@ -10,7 +10,7 @@
 The PrintRequests list is the core data store for the Fabrication Lab 3D Print Request Management System. It contains all student submissions and staff processing information.
 
 **Key Features:**
-- 38 total fields (13 student-facing + 17 staff processing + 7 payment recording + 1 printer verification)
+- 40 total fields (13 student-facing + 17 staff processing + 9 payment recording + 1 printer verification)
 - Item-level security ensuring students see only their requests
 - Attachment support for 3D model files
 - Version history enabled for change tracking
@@ -548,6 +548,24 @@ These columns capture actual payment details when a print is picked up.
 >
 > The Transaction Number field stores the relevant reference for each type (receipt number, check number, or grant/program code).
 
+### Column 37: PayerName (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `PayerName`
+3. **Description:** `Name of person who paid (if different from student)`
+4. Click **Save**
+
+> 💡 **Purpose:** Tracks who actually paid for the print job. Often the student pays for themselves, but sometimes a friend, parent, or grant administrator pays on their behalf. This field supports the Multi-Payment Tracking feature.
+
+### Column 38: PayerTigerCard (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `PayerTigerCard`
+3. **Description:** `TigerCard number of payer (for remote charging if different from student)`
+4. Click **Save**
+
+> 💡 **Purpose:** When the payer is different from the student, this captures their TigerCard number for payment processing. Used with the Payer Tracking and Multi-Payment features.
+
 ---
 
 ## Step 4C: Add Printer Verification Column
@@ -688,6 +706,8 @@ This column captures which printer(s) the job was actually printed on, separate 
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
 | StudentOwnMaterial | Yes/No | No | No | Student provided own material (70% discount) |
 | PaymentType | Choice | No | TigerCASH | Payment method (TigerCASH, Check, Code) |
+| PayerName | Single line | No | - | Name of person who paid (if different from student) |
+| PayerTigerCard | Single line | No | - | TigerCard number of payer (for remote charging) |
 
 ---
 
@@ -699,7 +719,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - [ ] Version history enabled
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
 - [ ] All 17 staff processing columns added (including RejectionComment, ApprovalComment, and SlicedOnComputer)
-- [ ] All 7 payment recording columns added
+- [ ] All 9 payment recording columns added (including PayerName and PayerTigerCard)
 - [ ] Status has all 9 choices with default "Uploaded"
 - [ ] Priority has 4 choices with default "Normal"
 - [ ] Method has choices: Filament, Resin

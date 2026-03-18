@@ -27,7 +27,8 @@
 15. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
 16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
 17. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
-18. [Building the Notes Modal](#step-13-building-the-notes-modal)
+18. [Building the Build Plates Modal](#step-12f-building-the-build-plates-modal)
+19. [Building the Notes Modal](#step-13-building-the-notes-modal)
 19. [Building the Student Note Modal](#step-13b-building-the-student-note-modal)
 20. [Adding Search and Filters](#step-14-adding-search-and-filters)
 18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
@@ -51,12 +52,17 @@
 
 Before you start, make sure you have:
 
-- [ ] **SharePoint lists created**: `PrintRequests`, `AuditLog`, `Staff`
+- [ ] **SharePoint lists created**: `PrintRequests`, `AuditLog`, `Staff`, `BuildPlates`, `Payments`
 - [ ] **Power Automate flows working**: Flow A (PR-Create), Flow B (PR-Audit), Flow C (PR-Action)
 - [ ] **Staff list populated**: At least one staff member with `Active = Yes`
 - [ ] **Power Apps license**: Standard license included with Microsoft 365
+- [ ] **PrintRequests.ActualPrinter**: Configured as multi-select Choice column (supports jobs spanning multiple printers)
 
 > ⚠️ **IMPORTANT:** Complete Phases 1 and 2 (SharePoint + Flows) before building the Staff Console. The app depends on these being set up correctly.
+
+> 💡 **New SharePoint Lists:**
+> - **BuildPlates** — Tracks individual build plates (gcode files) per job. See `SharePoint/BuildPlates-List-Setup.md`
+> - **Payments** — Tracks individual payment transactions per job. See `SharePoint/Payments-List-Setup.md`
 
 > 💡 **Optional:** Flow F (PR-Cleanup) handles automatic AuditLog retention and can be set up after the system is operational. See `PowerAutomate/Flow-(F)-Cleanup-AuditRetention.md`.
 
@@ -300,6 +306,8 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
    - [x] **PrintRequests**
    - [x] **AuditLog**
    - [x] **Staff**
+   - [x] **BuildPlates**
+   - [x] **Payments**
 10. Click **Connect**.
 
 ### Adding the Office365Users Connector
@@ -336,6 +344,8 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 - ✅ PrintRequests
 - ✅ AuditLog  
 - ✅ Staff
+- ✅ BuildPlates
+- ✅ Payments
 - ✅ Office365Users
 
 **In the Power Automate panel**, you should see:
@@ -413,6 +423,7 @@ Set(varShowViewMessagesModal, 0);
 Set(varShowStudentNoteModal, 0);
 Set(varShowRevertModal, 0);
 Set(varShowBatchPaymentModal, 0);
+Set(varShowBuildPlatesModal, 0);
 
 // === BATCH PAYMENT MODE ===
 // Controls multi-select batch payment functionality
@@ -443,6 +454,19 @@ ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 
 // Track count for change detection (CountRows on local collection is safe)
 Set(varPrevAttentionCount, CountRows(colNeedsAttention));
+
+// === BUILD PLATE TRACKING ===
+// Pre-load all plate records so job card progress pills don't trigger per-card delegation
+ClearCollect(colAllBuildPlates, BuildPlates);
+// Initialize working collections as typed empty tables so formulas still resolve when SharePoint lists are empty
+ClearCollect(colBuildPlates, FirstN(BuildPlates, 0));
+ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(BuildPlates, 0), PlateNum, Blank()));
+ClearCollect(colPickedUpPlates, AddColumns(FirstN(BuildPlates, 0), PlateNum, Blank()));
+Clear(colPickedUpPlates);
+ClearCollect(colPrintersUsed, FirstN(Distinct(BuildPlates, Machine.Value), 0));
+
+// === PAYMENT TRACKING ===
+ClearCollect(colPayments, FirstN(Payments, 0));
 
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
@@ -532,7 +556,7 @@ Set(varModalMargin, 40);                           // Margin from screen edges
 
 // Gallery template sizes
 Set(varTabGalleryHeight, 148);                     // Status tabs gallery height
-Set(varCardGalleryHeight, 450);                    // Job cards gallery template size
+Set(varCardGalleryHeight, 490);                    // Job cards gallery template size (increased for Build Plates row)
 
 // Message bubble layout
 Set(varMessageBubbleWidth, 0.85);                  // Message bubble width as % of container
@@ -600,6 +624,7 @@ Set(varLoadingMessage, "")
 | `varShowStudentNoteModal` | ID of item for student note modal (0=hidden) | Number |
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
 | `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
+| `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
 | `varBatchTotalEstWeight` | Sum of estimated weights for batch items (calculation temp) | Number |
@@ -612,6 +637,12 @@ Set(varLoadingMessage, "")
 | `varLoadingMessage` | Custom message shown during loading | Text |
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
+| `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
+| `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
+| `colBuildPlatesIndexed` | `colBuildPlates` with added `PlateNum` column (1, 2, 3…) for labels | Table |
+| `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
+| `colPrintersUsed` | Distinct printers used for current item | Table |
+| `colPayments` | Payment records for current modal context | Table |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per gram for resin printing | Number |
@@ -665,7 +696,7 @@ Set(varLoadingMessage, "")
 | `varModalMaxHeightExpanded` | Expanded modal height (with payment history) | Number |
 | `varModalMargin` | Margin from screen edges for modals | Number |
 | `varTabGalleryHeight` | Status tabs gallery template height | Number |
-| `varCardGalleryHeight` | Job cards gallery template size | Number |
+| `varCardGalleryHeight` | Job cards gallery template size (490 - includes Build Plates row) | Number |
 | `varMessageBubbleWidth` | Message bubble width as % of container | Number |
 | `varOwnMaterialDiscount` | Discount multiplier for own material (0.30 = 30%) | Number |
 | `varSupportEmail` | Help/support email address | Text |
@@ -808,6 +839,21 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblBatchTitle
         recBatchPaymentModal
         recBatchPaymentOverlay
+    ▼ conBuildPlatesModal             ← Step 12F (Build Plates Modal Container)
+        btnBuildPlatesClose
+        btnBuildPlatesDone
+        btnBuildPlatesAdd
+        ddBuildPlatesMachine
+        lblAddPlateHeader
+        recBuildPlatesDivider3
+        galBuildPlates
+        lblBuildPlatesProgressModal
+        lblTotalSlicedLabel
+        recBuildPlatesDivider2
+        recBuildPlatesDivider1
+        lblBuildPlatesTitle
+        recBuildPlatesModal
+        recBuildPlatesOverlay
     ▼ conPaymentModal                 ← Step 12C (Payment Modal Container)
         btnPaymentConfirm
         btnPaymentCancel
@@ -815,17 +861,35 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         chkPartialPickup
         txtPaymentNotes
         lblPaymentNotesLabel
-        dpPaymentDate
-        lblPaymentDateLabel
+        txtPayerTigerCard
+        lblPayerTigerCardLabel
+        txtPayerName
+        lblPayerNameLabel
+        chkPayerSameAsStudent
+        chkOwnMaterial
         lblPaymentCostValue
         lblPaymentCostLabel
         txtPaymentWeight
         lblPaymentWeightLabel
+        dpPaymentDate
+        lblPaymentDateLabel
         txtPaymentTransaction
         lblPaymentTransLabel
+        ddPaymentType
+        lblPaymentTypeLabel
         ddPaymentStaff
         lblPaymentStaffLabel
+        lblPlatesHint
+        galPlatesPickup
+        lblPlatesPickupHeader
+        recPlatesDivider
+        lblRemainingEst
+        lblPaidSoFar
+        galPaymentHistory
+        lblPaymentHistoryHeader
+        recPaymentVerticalDivider
         lblPaymentStudent
+        btnPaymentClose
         lblPaymentTitle
         recPaymentModal
         recPaymentOverlay
@@ -959,6 +1023,9 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblCreated                    ← Step 7
         lblJobId                      ← Step 7
         btnViewNotes                  ← Step 7 (opens Notes Modal)
+        ▼ conBuildPlatesRow           ← Step 7 (Build Plates progress row)
+            lblBuildPlatesProgress
+            btnBuildPlates
         lblEstimates                  ← Step 7 (shows after approval)
         lblColor                      ← Step 7
         btnStudentNote                ← Step 7 (opens Student Note Modal, visible only if note exists)
@@ -1445,7 +1512,7 @@ With(
 
 | Property | Value |
 |----------|-------|
-| Text | `"🖨 " & Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value))` |
+| Text | `"🖨 " & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0, Concat(Distinct(Filter(colAllBuildPlates, RequestID = ThisItem.ID), Machine.Value), Trim(If(Find("(", ThisRecord.Result) > 0, Left(ThisRecord.Result, Find("(", ThisRecord.Result) - 2), ThisRecord.Result)), ", "), Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)))` |
 | X | `Parent.TemplateWidth / 2` |
 | Y | `55` |
 | Width | `Parent.TemplateWidth / 2 - 16` |
@@ -1453,7 +1520,7 @@ With(
 | Size | `10` |
 | Color | `varColorTextMuted` |
 
-> 💡 **Why this formula?** The Printer column includes dimensions (e.g., "Prusa XL (14.2×14.2×14.2in)") to help students check if their model fits. This formula strips the dimensions for cleaner display on staff cards, showing just "Prusa XL".
+> 💡 **Why this formula?** If build plates exist for this job, shows the actual printers being used (from `colAllBuildPlates`). Otherwise, falls back to the student's requested printer. Dimensions (e.g., "(14.2×14.2×14.2in)") are stripped for cleaner display.
 
 ### Student Note Button (btnStudentNote)
 
@@ -1684,7 +1751,124 @@ Set(varShowNotesModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **Note:** This button opens the Notes Modal (Step 13) which displays both Student Notes and Staff Notes, and allows staff to add new notes.
+---
+
+### Build Plates Row (conBuildPlatesRow)
+
+This row displays build plate progress, printers in use, and a button to open the Build Plates Modal. It appears only when plates exist for the job.
+
+**Job Card Layout with Build Plates:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Logan A Bereziuk                              1d 11h    💡 ▶   │
+│  ✉ logan.bereziuk@lsu.edu                                       │
+│  loganbereziuk_filament_black                                   │
+│                                                                 │
+│  ● Black                              🖨 Prusa MK4S             │
+│  ⚖ 176.15g · ⏱ ~6h · 💲 17.61                                   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ 🖨 3/5 done · Using: MK4S, XL         [Build Plates]    │ ◄── BUILD PLATES ROW
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  Details                                                        │
+│  [expandable details section...]                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**34a.** Click **+ Insert** → **Layout** → **Container**.
+**34b.** **Rename it:** `conBuildPlatesRow`
+**34c.** Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `12` |
+| Y | `125` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `36` |
+| Fill | `RGBA(245, 247, 250, 1)` |
+| RadiusTopLeft | `4` |
+| RadiusTopRight | `4` |
+| RadiusBottomLeft | `4` |
+| RadiusBottomRight | `4` |
+| **Visible** | `CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0` |
+
+> 💡 **Visibility:** Row only appears when plates exist for this job. Uses `colAllBuildPlates` (pre-loaded at startup) to avoid per-card delegation.
+
+#### Progress Label (lblBuildPlatesProgress)
+
+**34d.** With `conBuildPlatesRow` selected, click **+ Insert** → **Text label**.
+**34e.** **Rename it:** `lblBuildPlatesProgress`
+**34f.** Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done"` |
+| X | `8` |
+| Y | `0` |
+| Width | `100` |
+| Height | `Parent.Height` |
+| Size | `10` |
+| Font | `varAppFont` |
+| Color | `varColorTextMuted` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+> 💡 **Formula:** Counts plates with "Completed" or "Picked Up" status vs total plates. Example: "🖨 3/5 done"
+
+#### Build Plates Button (btnBuildPlates)
+
+**34g.** Click **+ Insert** → **Button**.
+**34h.** **Rename it:** `btnBuildPlates`
+**34i.** Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Build Plates"` |
+| X | `Parent.Width - 110` |
+| Y | `5` |
+| Width | `100` |
+| Height | `25` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| HoverColor | `Color.White` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `9` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+> Note: This is a small in-card button, so uses Height: 25 and Size: 9 to match other card buttons like btnViewNotes.
+
+**34m.** Set **OnSelect:**
+
+```powerfx
+Set(varSelectedItem, ThisItem);
+// Load sorted plates for this request
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
+);
+// Add sequential PlateNum (1, 2, 3…) for use in plate labels
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(
+        colBuildPlates,
+        "PlateNum",
+        CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID))
+    )
+);
+// Collect distinct printers used
+ClearCollect(colPrintersUsed,
+    Distinct(Filter(BuildPlates, RequestID = ThisItem.ID), Machine.Value)
+);
+Set(varShowBuildPlatesModal, ThisItem.ID)
+```
+
+> 💡 **OnSelect:** Loads plate data into working collections, then opens the Build Plates Modal (Step 12F).
 
 ---
 
@@ -2250,19 +2434,78 @@ Set(varLoadingMessage, "")
 | Font | `varAppFont` |
 | Visible | `ThisItem.Status.Value = "Printing"` |
 
-20. Set **OnSelect:**
+20. Set **DisplayMode:**
 
 ```powerfx
+// Completion Gate: All plates must be Completed or Picked Up
+If(
+    // Check if job has plates
+    CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0,
+    // If plates exist, all must be Completed or Picked Up
+    If(
+        CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0,
+        DisplayMode.Disabled,
+        DisplayMode.Edit
+    ),
+    // If no plates, allow completion (legacy behavior)
+    DisplayMode.Edit
+)
+```
+
+> 💡 **Completion Gate:** The button is disabled until all build plates are marked as "Completed" or "Picked Up". This prevents marking a job complete while prints are still running. Jobs without plates (legacy) can be completed normally.
+
+21. Set **OnSelect:**
+
+```powerfx
+// Collect distinct printers from plates for this job
+ClearCollect(colActualPrinters,
+    Distinct(Filter(BuildPlates, RequestID = ThisItem.ID), Machine.Value)
+);
 Set(varShowCompleteModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> 💡 **Safety Check:** This opens the Complete Confirmation Modal (built in Step 12A) instead of immediately marking the print complete. This prevents accidental status changes and ensures staff intentionally confirms before the student receives a pickup notification email.
+> 💡 **Safety Check:** This collects the actual printers used (from build plates), then opens the Complete Confirmation Modal (built in Step 12A). The modal displays the printers in a read-only label and saves them to the `ActualPrinter` field upon confirmation.
+
+### Completion Gate Hint (lblCompletePlatesHint)
+
+This label appears when the Print Complete button is disabled due to incomplete plates, helping staff understand why they can't mark the job complete yet.
+
+22. Click **+ Insert** → **Text label**.
+23. **Rename it:** `lblCompletePlatesHint`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `12` |
+| Y | `Parent.TemplateHeight - varBtnHeight - 30` |
+| Width | `(Parent.TemplateWidth - 28) / 2` |
+| Height | `16` |
+| Font | `varAppFont` |
+| Size | `9` |
+| Color | `varColorWarning` |
+| Align | `Align.Center` |
+
+25. Set **Text:**
+
+```powerfx
+Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"])))) & " plate(s) still printing"
+```
+
+26. Set **Visible:**
+
+```powerfx
+ThisItem.Status.Value = "Printing" && 
+CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0 &&
+CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0
+```
+
+> 💡 **Completion Gate Hint:** This warning message appears above the disabled "Print Complete" button when plates are still in "Queued" or "Printing" status. It tells staff exactly how many plates need to finish before the job can be marked complete.
 
 ### Picked Up Button (btnPickedUp)
 
-21. Click **+ Insert** → **Button**.
-22. **Rename it:** `btnPickedUp`
+27. Click **+ Insert** → **Button**.
+28. **Rename it:** `btnPickedUp`
 23. Set properties:
 
 | Property | Value |
@@ -2289,19 +2532,30 @@ Set(varSelectedItem, ThisItem)
 
 > ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
 
-24. Set **OnSelect:**
+29. Set **OnSelect:**
 
 ```powerfx
-Set(varShowPaymentModal, ThisItem.ID);
-Set(varSelectedItem, ThisItem)
+Set(varSelectedItem, ThisItem);
+ClearCollect(colPayments,
+    Sort(Filter(Payments, RequestID = ThisItem.ID), PaymentDate, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colPickedUpPlates, Blank());
+Clear(colPickedUpPlates);
+Set(varShowPaymentModal, ThisItem.ID)
 ```
 
-> 💡 **Note:** This opens the Payment Modal (built in Step 12C) where staff enters the transaction number, final weight, and payment details. When opened from "Printing" status, it records a partial payment (student picking up completed portions while the rest continues printing). When opened from "Completed" status, staff can choose partial or full pickup.
+> 💡 **Note:** This opens the Payment Modal (built in Step 12C) and pre-loads both `Payments` history and the build-plate pickup checklist for the selected request. When opened from "Printing" status, it records a partial payment while the rest continues printing. When opened from "Completed" status, staff can record either a final pickup or another partial pickup.
 
 ### Edit Details Button (btnEditDetails)
 
-25. Click **+ Insert** → **Button**.
-26. **Rename it:** `btnEditDetails`
+30. Click **+ Insert** → **Button**.
+31. **Rename it:** `btnEditDetails`
 27. Set properties:
 
 | Property | Value |
@@ -2914,22 +3168,24 @@ scrDashboard
 └── conApprovalModal             ← CONTAINER (set Visible here only!)
     ├── btnApprovalConfirm       ← Confirm Approval button
     ├── btnApprovalCancel        ← Cancel button
+    ├── btnApproveAddPlates      ← Open Build Plates modal button (right side)
+    ├── lblApprovePlatesInfo     ← "Build Plates: 1 plate on..." (right side)
+    ├── ddSlicedOnComputer       ← Slicing computer dropdown (right side)
+    ├── lblSlicedOnLabel         ← "Computer:" (right side)
     ├── txtApprovalComments      ← Multi-line text input
     ├── lblApprovalCommentsLabel ← "Additional Comments:"
     ├── lblApprovalCostValue     ← Auto-calculated cost display
     ├── lblApprovalCostLabel     ← "Estimated Cost:"
-    ├── txtEstimatedTime         ← Time input field (required)
-    ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours): *"
-    ├── lblWeightValidation      ← Weight validation error message
+    ├── txtEstimatedTime         ← Time input field
+    ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours):"
     ├── txtEstimatedWeight       ← Weight input field
-    ├── lblApprovalWeightLabel   ← "Estimated Weight (grams): *"
-    ├── ddSlicedOnComputer       ← Slicing computer dropdown
-    ├── lblSlicedOnLabel         ← "Sliced On Computer:"
+    ├── lblApprovalWeightLabel   ← "Estimated Weight (grams):"
     ├── ddApprovalStaff          ← Staff dropdown
-    ├── lblApprovalStaffLabel    ← "Performing Action As: *"
+    ├── lblApprovalStaffLabel    ← "Performing Action As:"
     ├── lblApprovalStudent       ← Student name and email
+    ├── btnApprovalClose         ← X close button (top-right)
     ├── lblApprovalTitle         ← "Approve Request - REQ-00042"
-    ├── recApprovalModal         ← White modal box (725px tall)
+    ├── recApprovalModal         ← White modal box (644px tall)
     └── recApprovalOverlay       ← Dark semi-transparent background
 ```
 
@@ -2982,14 +3238,10 @@ scrDashboard
 | X | `(Parent.Width - 600) / 2` |
 | Y | `(Parent.Height - 725) / 2` |
 | Width | `600` |
-| Height | `725` |
+| Height | `644` |
 | Fill | `varColorBgCard` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
 
-> 💡 **Modal Height:** 725px to accommodate slicing computer dropdown and required time field.
+> 💡 **Layout:** Side-by-side design with weight/time/cost on left, computer/plates on right.
 
 ---
 
@@ -3133,7 +3385,7 @@ Reset(ddSlicedOnComputer)
 
 ---
 
-### Slicing Computer Label (lblSlicedOnLabel)
+### Slicing Computer Label (lblSlicedOnLabel) — Right Side
 
 23. Click **+ Insert** → **Text label**.
 24. **Rename it:** `lblSlicedOnLabel`
@@ -3141,16 +3393,17 @@ Reset(ddSlicedOnComputer)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Sliced On Computer: *"` |
-| X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 165` |
+| Text | `"Computer:"` |
+| X | `670` |
+| Y | `189` |
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
 
 ---
 
-### Slicing Computer Dropdown (ddSlicedOnComputer)
+### Slicing Computer Dropdown (ddSlicedOnComputer) — Right Side
 
 26. Click **+ Insert** → **Combo box**.
 27. **Rename it:** `ddSlicedOnComputer`
@@ -3159,18 +3412,20 @@ Reset(ddSlicedOnComputer)
 | Property | Value |
 |----------|-------|
 | Items | `colSlicingComputers` |
-| X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 190` |
-| Width | `200` |
+| X | `670` |
+| Y | `211` |
+| Width | `270` |
 | Height | `36` |
 | DisplayFields | `["Name"]` |
 | SearchFields | `["Name"]` |
 | DefaultSelectedItems | `Blank()` |
+| InputTextPlaceholder | `"Where is the sliced file?"` |
+| IsSearchable | `false` |
+| SelectMultiple | `false` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisabledBorderColor | `varInputBorderColor` |
 | ChevronBackground | `varChevronBackground` |
 | ChevronFill | `varChevronFill` |
 | ChevronHoverBackground | `varChevronHoverBackground` |
@@ -3183,7 +3438,7 @@ Reset(ddSlicedOnComputer)
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
 
-> 💡 **Note:** This field is required. Staff must select which computer was used for slicing; it will display on the job card after approval.
+> 💡 **Layout:** Computer dropdown is positioned on the right side of the modal, aligned with the Build Plates section below it.
 
 ---
 
@@ -3195,12 +3450,13 @@ Reset(ddSlicedOnComputer)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Estimated Weight (grams): *"` |
+| Text | `"Estimated Weight (grams):"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 240` |
+| Y | `recApprovalModal.Y + 165` |
 | Width | `250` |
-| Height | `20` |
+| Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
 
 ---
 
@@ -3214,114 +3470,82 @@ Reset(ddSlicedOnComputer)
 |----------|-------|
 | Format | `TextFormat.Number` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 265` |
-| Width | `200` |
+| Y | `recApprovalModal.Y + 190` |
+| Width | `236` |
 | Height | `36` |
 | HintText | `"Enter weight in grams (e.g., 25)"` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
+| Size | `11` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
-
----
-
-### Weight Validation Label (lblWeightValidation)
-
-35. Click **+ Insert** → **Text label**.
-36. **Rename it:** `lblWeightValidation`
-37. Set properties:
-
-| Property | Value |
-|----------|-------|
-| X | `recApprovalModal.X + 230` |
-| Y | `recApprovalModal.Y + 270` |
-| Width | `200` |
-| Height | `25` |
-| Size | `11` |
-| Color | `RGBA(209, 52, 56, 1)` |
-
-32. Set **Text:**
-
-```powerfx
-If(
-    IsBlank(txtEstimatedWeight.Text), 
-    "⚠️ Weight is required",
-    !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0,
-    "⚠️ Enter a valid weight > 0",
-    ""
-)
-```
-
-33. Set **Visible** (this is an exception - conditional visibility within the container):
-
-```powerfx
-IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value(txtEstimatedWeight.Text) <= 0
-```
-
-> 💡 **Note:** This validation label has its OWN Visible formula because it should only appear when validation fails, even when the container is visible.
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
 
 ---
 
 ### Time Label (lblApprovalTimeLabel)
 
-38. Click **+ Insert** → **Text label**.
-39. **Rename it:** `lblApprovalTimeLabel`
-40. Set properties:
+35. Click **+ Insert** → **Text label**.
+36. **Rename it:** `lblApprovalTimeLabel`
+37. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Estimated Print Time (hours): *"` |
+| Text | `"Estimated Print Time (hours):"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 315` |
+| Y | `recApprovalModal.Y + 240` |
 | Width | `300` |
-| Height | `20` |
+| Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
-
-> ⚠️ **Required Field:** Print time is now required (changed from optional).
+| Size | `11` |
 
 ---
 
 ### Time Input (txtEstimatedTime)
 
-41. Click **+ Insert** → **Text input**.
-42. **Rename it:** `txtEstimatedTime`
-43. Set properties:
+38. Click **+ Insert** → **Text input**.
+39. **Rename it:** `txtEstimatedTime`
+40. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Format | `TextFormat.Number` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 340` |
+| Y | `recApprovalModal.Y + 265` |
 | Width | `200` |
 | Height | `36` |
 | HintText | `"Enter hours (e.g., 2.5)"` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
+| Size | `11` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
 
 ---
 
 ### Cost Label (lblApprovalCostLabel)
 
-44. Click **+ Insert** → **Text label**.
-45. **Rename it:** `lblApprovalCostLabel`
-46. Set properties:
+41. Click **+ Insert** → **Text label**.
+42. **Rename it:** `lblApprovalCostLabel`
+43. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Estimated Cost:"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 395` |
-| Width | `150` |
+| Y | `recApprovalModal.Y + 320` |
+| Width | `267` |
 | Height | `25` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
@@ -3330,21 +3554,20 @@ IsBlank(txtEstimatedWeight.Text) || !IsNumeric(txtEstimatedWeight.Text) || Value
 
 ### Cost Value Display (lblApprovalCostValue)
 
-47. Click **+ Insert** → **Text label**.
-48. **Rename it:** `lblApprovalCostValue`
-49. Set properties:
+44. Click **+ Insert** → **Text label**.
+45. **Rename it:** `lblApprovalCostValue`
+46. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 420` |
-| Width | `200` |
-| Height | `40` |
+| Y | `recApprovalModal.Y + 345` |
+| Width | `280` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `24` |
-| Color | `RGBA(16, 124, 16, 1)` |
+| Color | `varColorSuccess` |
 
-50. Set **Text:**
+47. Set **Text:**
 
 ```powerfx
 If(
@@ -3370,15 +3593,15 @@ If(
 
 ### Comments Label (lblApprovalCommentsLabel)
 
-51. Click **+ Insert** → **Text label**.
-52. **Rename it:** `lblApprovalCommentsLabel`
-53. Set properties:
+48. Click **+ Insert** → **Text label**.
+49. **Rename it:** `lblApprovalCommentsLabel`
+50. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Additional Comments (optional):"` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 475` |
+| Y | `recApprovalModal.Y + 400` |
 | Width | `300` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3387,26 +3610,28 @@ If(
 
 ### Comments Text Input (txtApprovalComments)
 
-54. Click **+ Insert** → **Text input**.
-55. **Rename it:** `txtApprovalComments`
-56. Set properties:
+51. Click **+ Insert** → **Text input**.
+52. **Rename it:** `txtApprovalComments`
+53. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recApprovalModal.X + 20` |
-| Y | `recApprovalModal.Y + 500` |
+| Y | `recApprovalModal.Y + 425` |
 | Width | `560` |
-| Height | `80` |
+| Height | `100` |
 | HintText | `"Add any special instructions for this job..."` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
 
 > 💡 **Data Storage:**
 > - `ApprovalComment` field: Clean staff note for student-facing estimate emails
@@ -3414,19 +3639,99 @@ If(
 
 ---
 
+### Build Plates Info Label (lblApprovePlatesInfo) — Right Side
+
+54. Click **+ Insert** → **Text label**.
+55. **Rename it:** `lblApprovePlatesInfo`
+56. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `643` |
+| Y | `263` |
+| Width | `324` |
+| Height | `23` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+
+57. Set **Text:**
+
+```powerfx
+"Build Plates:  " & 
+If(
+    CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) > 0,
+    Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " plate(s) configured",
+    "1 plate on " & 
+    Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
+        Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), 
+        varSelectedItem.Printer.Value))
+)
+```
+
+> 💡 **Dynamic Display:** Shows "X plate(s) configured" if staff has added plates via the Build Plates modal, otherwise shows the default plate that will be auto-created upon approval.
+
+---
+
+### Add Plates Button (btnApproveAddPlates) — Right Side
+
+58. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+59. **Rename it:** `btnApproveAddPlates`
+60. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"🖨 Add Plates/Printers"` |
+| X | `703` |
+| Y | `286` |
+| Width | `200` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimary` |
+| HoverColor | `Color.White` |
+| BorderColor | `varColorPrimary` |
+| BorderThickness | `varInputBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Font | `varAppFont` |
+| Size | `12` |
+
+61. Set **OnSelect:**
+
+```powerfx
+// Open Build Plates modal (varSelectedItem already set from Approve button click)
+Set(varShowBuildPlatesModal, varSelectedItem.ID);
+// Load existing plates (if any)
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colPrintersUsed,
+    Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID), Machine.Value)
+)
+```
+
+> 💡 **Optional Pre-Configuration:** Staff can optionally click this button to configure multiple plates/printers before approval. If they don't, a default plate is auto-created when they click "Confirm Approval".
+
+---
+
 ### Cancel Button (btnApprovalCancel)
 
-57. Click **+ Insert** → **Button**.
-58. **Rename it:** `btnApprovalCancel`
-59. Set properties:
+62. Click **+ Insert** → **Button**.
+63. **Rename it:** `btnApprovalCancel`
+64. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recApprovalModal.X + 300` |
-| Y | `recApprovalModal.Y + 635` |
+| Y | `recApprovalModal.Y + 560` |
 | Width | `120` |
-| Height | `varBtnHeight` |
+| Height | `36` |
 | Fill | `varColorNeutral` |
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
@@ -3441,7 +3746,7 @@ If(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-60. Set **OnSelect:**
+65. Set **OnSelect:**
 
 ```powerfx
 Set(varShowApprovalModal, 0);
@@ -3457,23 +3762,23 @@ Reset(ddSlicedOnComputer)
 
 ### Confirm Approval Button (btnApprovalConfirm)
 
-61. Click **+ Insert** → **Button**.
-62. **Rename it:** `btnApprovalConfirm`
-63. Set properties:
+66. Click **+ Insert** → **Button**.
+67. **Rename it:** `btnApprovalConfirm`
+68. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"✓ Confirm Approval"` |
+| Text | `"Confirm Approval"` |
 | X | `recApprovalModal.X + 430` |
-| Y | `recApprovalModal.Y + 635` |
+| Y | `recApprovalModal.Y + 560` |
 | Width | `150` |
-| Height | `varBtnHeight` |
+| Height | `36` |
 | Fill | `varColorSuccess` |
 | Color | `Color.White` |
-| HoverFill | `varColorSuccessHover` |
+| HoverFill | `ColorFade(varColorSuccess, -15%)` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| BorderColor | `ColorFade(Self.Fill, -15%)` |
+| BorderThickness | `1` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -3482,7 +3787,7 @@ Reset(ddSlicedOnComputer)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-64. Set **DisplayMode:**
+69. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -3501,7 +3806,7 @@ If(
 
 > ⚠️ **Required Fields:** Staff, sliced on computer, weight, AND time are all required for the confirm button to be enabled.
 
-65. Set **OnSelect:**
+70. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -3567,6 +3872,20 @@ IfError(
         Notify("Approved, but could not log to audit.", NotificationType.Warning),
         Notify("Approved! Student will receive estimate email.", NotificationType.Success)
     );
+    
+    // === CREATE DEFAULT BUILD PLATE ===
+    // If staff didn't configure plates via "Add Plates/Printers" button, auto-create one
+    If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
+        Patch(BuildPlates, Defaults(BuildPlates), {
+            RequestID: varSelectedItem.ID,
+            ReqKey: varSelectedItem.ReqKey,
+            Machine: varSelectedItem.Printer,
+            Status: {Value: "Queued"}
+        })
+    );
+    // Refresh plate collections for job cards
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    
     // Close modal and reset
     Set(varShowApprovalModal, 0);
     Set(varSelectedItem, Blank());
@@ -3985,11 +4304,12 @@ scrDashboard
 └── conCompleteModal          ← CONTAINER (set Visible here only!)
     ├── btnCompleteConfirm    ← Confirm Complete button
     ├── btnCompleteCancel     ← Cancel button
+    ├── lblActualPrinters     ← Read-only printers display (auto-populated from plates)
     ├── ddCompleteStaff       ← Staff dropdown
     ├── lblCompleteStaffLabel ← "Performing Action As: *"
     ├── lblCompleteWarning    ← Warning about email notification
     ├── lblCompleteTitle      ← "Mark [Student Name] Complete - REQ-00042"
-    ├── recCompleteModal      ← White modal box
+    ├── recCompleteModal      ← White modal box (340px tall)
     └── recCompleteOverlay    ← Dark semi-transparent background
 ```
 
@@ -4040,10 +4360,12 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 500) / 2` |
-| Y | `(Parent.Height - 260) / 2` |
+| Y | `(Parent.Height - 340) / 2` |
 | Width | `500` |
-| Height | `260` |
+| Height | `340` |
 | Fill | `varColorBgCard` |
+
+> 💡 **Modal Height:** 340px to accommodate the printers used display (auto-populated from build plates).
 
 ---
 
@@ -4185,17 +4507,54 @@ Reset(ddCompleteStaff)
 
 ---
 
+### Printers Used Label (lblActualPrinters)
+
+23. Click **+ Insert** → **Text label**.
+24. **Rename it:** `lblActualPrinters`
+25. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recCompleteModal.X + 20` |
+| Y | `recCompleteModal.Y + 190` |
+| Width | `460` |
+| Height | `40` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorTextMuted` |
+
+26. Set **Text:**
+
+```powerfx
+"Printers used: " & 
+If(
+    CountRows(colActualPrinters) > 0,
+    Concat(
+        colActualPrinters, 
+        Trim(If(Find("(", ThisRecord.Result) > 0, Left(ThisRecord.Result, Find("(", ThisRecord.Result) - 2), ThisRecord.Result)), 
+        ", "
+    ),
+    Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
+        Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), 
+        varSelectedItem.Printer.Value))
+) & Char(10) & "(derived from build plates)"
+```
+
+> 💡 **Read-Only Display:** Unlike the legacy dropdown approach, this label shows the actual printers used based on the job's build plates. Staff cannot manually edit this — the data comes from what was tracked in the BuildPlates list. If no plates exist, it falls back to displaying the student's originally requested printer.
+
+---
+
 ### Cancel Button (btnCompleteCancel)
 
-23. Click **+ Insert** → **Button**.
-24. **Rename it:** `btnCompleteCancel`
-25. Set properties:
+27. Click **+ Insert** → **Button**.
+28. **Rename it:** `btnCompleteCancel`
+29. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recCompleteModal.X + 200` |
-| Y | `recCompleteModal.Y + 200` |
+| Y | `recCompleteModal.Y + 280` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -4224,15 +4583,15 @@ Reset(ddCompleteStaff)
 
 ### Confirm Complete Button (btnCompleteConfirm)
 
-27. Click **+ Insert** → **Button**.
-28. **Rename it:** `btnCompleteConfirm`
-29. Set properties:
+31. Click **+ Insert** → **Button**.
+32. **Rename it:** `btnCompleteConfirm`
+33. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Confirm Complete"` |
 | X | `recCompleteModal.X + 330` |
-| Y | `recCompleteModal.Y + 200` |
+| Y | `recCompleteModal.Y + 280` |
 | Width | `150` |
 | Height | `varBtnHeight` |
 | Fill | `varColorPrimary` |
@@ -4250,16 +4609,28 @@ Reset(ddCompleteStaff)
 | Font | `varAppFont` |
 | DisplayMode | `If(IsBlank(ddCompleteStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
 
-30. Set **OnSelect:**
+34. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Completing print...");
 
-// Update SharePoint item
+// Determine ActualPrinter from plates (or fall back to student's requested printer)
+Set(varActualPrinterValue, 
+    If(
+        CountRows(colActualPrinters) > 0,
+        // Use first printer from plates (multi-select will use all values)
+        First(colActualPrinters).Result,
+        // Fall back to student's requested printer
+        varSelectedItem.Printer.Value
+    )
+);
+
+// Update SharePoint item with ActualPrinter
 Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
+    ActualPrinter: {Value: varActualPrinterValue},
     LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
     LastActionBy: {
         Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
@@ -4272,13 +4643,25 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     LastActionAt: Now()
 });
 
-// Log action via Flow C
+// Log action via Flow C with conditional printer correction note
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
         Text(varSelectedItem.ID),              // RequestID
         "Status Change",                       // Action
         "Status",                              // FieldName
-        "Completed",                           // NewValue
+        Concatenate(
+            "Completed",
+            If(
+                varActualPrinterValue <> varSelectedItem.Printer.Value,
+                " (Printer: " &
+                    Trim(If(Find("(", varActualPrinterValue) > 0,
+                        Left(varActualPrinterValue, Find("(", varActualPrinterValue) - 2),
+                        varActualPrinterValue)) &
+                    If(CountRows(colActualPrinters) > 1, " + " & Text(CountRows(colActualPrinters) - 1) & " more", "") &
+                ")",
+                ""
+            )
+        ),                                     // NewValue
         ddCompleteStaff.Selected.MemberEmail   // ActorEmail
     ),
     Notify("Marked complete, but could not log to audit.", NotificationType.Warning),
@@ -4296,6 +4679,8 @@ Set(varLoadingMessage, "")
 ```
 
 > 💡 **Email Notification:** When the status changes to "Completed", Flow B automatically sends a pickup notification email to the student. This modal ensures staff intentionally confirms before that email is sent.
+
+> 💡 **ActualPrinter:** The `ActualPrinter` field is auto-populated from the job's build plates. If the actual printer(s) differ from the student's original request, the audit log includes a note showing which printer(s) were used.
 
 ---
 
@@ -5122,51 +5507,70 @@ Set(varLoadingMessage, "")
 
 # STEP 12C: Building the Payment Recording Modal
 
-**What you're doing:** Creating a modal that captures payment details when staff marks an item as "Picked Up". This ensures transaction numbers, actual weights, and final costs are recorded for accounting and reconciliation.
+**What you're doing:** Creating a payment modal that records **one row per actual transaction** in the `Payments` list, updates the `PrintRequests` running totals, and lets staff mark completed build plates as picked up during payment.
 
-> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+> 🎯 **Layout approach:** Unlike some earlier modals, this one stays simple: one top-level overlay container and a single **1100px-wide** modal. Do **not** add inner left/right containers. Just place the controls directly on the modal using absolute positioning, like the earlier modal steps.
 
-> 💡 **Why this matters:** Previously, clicking "Picked Up" immediately changed the status without recording any payment details. This modal requires staff to enter the actual weight (measured from the finished print), which auto-calculates the final cost, plus the TigerCASH transaction number for reconciliation.
+> ⚠️ **Trigger:** This modal opens when staff clicks the `"💰 Picked Up"` button on `Completed` items, or the `"💰 Partial Payment"` button on `Printing` items.
 
-> ⚠️ **Trigger:** This modal opens when staff clicks the "💰 Picked Up" button on items with Status = "Completed".
-
-### Key Concept: Estimates vs Actuals
+### Key Concept: Estimates vs Running Totals
 
 | Stage | Weight Field | Cost Field | When Set |
 |-------|--------------|------------|----------|
-| **Estimate** | EstimatedWeight | EstimatedCost | At approval (slicer prediction) |
-| **Actual** | FinalWeight | FinalCost | At pickup (physical measurement) |
+| **Estimate** | `EstimatedWeight` | `EstimatedCost` | At approval |
+| **Actual running total** | `FinalWeight` | `FinalCost` | Updated after each payment |
 
-### Control Hierarchy (Container-Based)
+### Control Hierarchy
 
 ```
 scrDashboard
-└── conPaymentModal           ← CONTAINER (set Visible here only!)
-    ├── btnPaymentConfirm     ← Record Payment button (changes color based on partial)
-    ├── btnPaymentCancel      ← Cancel button
-    ├── btnAddMoreItems       ← Batch mode button (adds item to batch, enters multi-select)
-    ├── chkPartialPickup      ← Partial pickup checkbox (keeps status as Completed)
-    ├── txtPaymentNotes       ← Multi-line text input
-    ├── lblPaymentNotesLabel  ← "Payment Notes (optional):"
-    ├── txtPaymentHistory     ← Prior payments display (conditional)
-    ├── lblPaymentHistoryHeader ← "⚠️ Prior Payments" (conditional)
-    ├── chkOwnMaterial        ← Own material checkbox (70% discount)
-    ├── dpPaymentDate         ← Date picker (default: Today())
-    ├── lblPaymentDateLabel   ← "Payment Date: *"
-    ├── lblPaymentCostValue   ← Auto-calculated cost display (reflects discount)
-    ├── lblPaymentCostLabel   ← "Final Cost:"
-    ├── txtPaymentWeight      ← Weight input (pre-filled with EstimatedWeight)
-    ├── lblPaymentWeightLabel ← "Final Weight (grams): *"
-    ├── txtPaymentTransaction ← Transaction number input (required)
-    ├── lblPaymentTransLabel  ← "Transaction Number: *" (dynamic based on payment type)
-    ├── ddPaymentType         ← Payment type dropdown (TigerCASH, Check, Code)
-    ├── lblPaymentTypeLabel   ← "Payment Type: *"
-    ├── ddPaymentStaff        ← Staff dropdown
-    ├── lblPaymentStaffLabel  ← "Performing Action As: *"
-    ├── lblPaymentStudent     ← Student name and estimated vs final info
-    ├── lblPaymentTitle       ← "Record Payment - REQ-00042"
-    ├── recPaymentModal       ← White modal box (dynamic height)
-    └── recPaymentOverlay     ← Dark semi-transparent background
+└── conPaymentModal               ← CONTAINER (set Visible here only!)
+    ├── btnPaymentConfirm
+    ├── btnPaymentCancel
+    ├── btnAddMoreItems
+    ├── chkPartialPickup
+    ├── lblPlatesHint
+    ├── galPlatesPickup
+    │   ├── chkPlate
+    │   └── lblPlateName
+    ├── lblPlatesPickupHeader
+    ├── recPlatesDivider
+    ├── lblRemainingEst
+    ├── lblPaidSoFar
+    ├── galPaymentHistory
+    │   ├── lblHistDate
+    │   ├── lblHistTxn
+    │   ├── lblHistWeight
+    │   ├── lblHistAmount
+    │   ├── lblHistPlates
+    │   └── lblHistStaff
+    ├── lblPaymentHistoryHeader
+    ├── txtPaymentNotes
+    ├── lblPaymentNotesLabel
+    ├── txtPayerTigerCard
+    ├── lblPayerTigerCardLabel
+    ├── txtPayerName
+    ├── lblPayerNameLabel
+    ├── chkPayerSameAsStudent
+    ├── chkOwnMaterial
+    ├── lblPaymentCostValue
+    ├── lblPaymentCostLabel
+    ├── txtPaymentWeight
+    ├── lblPaymentWeightLabel
+    ├── dpPaymentDate
+    ├── lblPaymentDateLabel
+    ├── txtPaymentTransaction
+    ├── lblPaymentTransLabel
+    ├── ddPaymentType
+    ├── lblPaymentTypeLabel
+    ├── ddPaymentStaff
+    ├── lblPaymentStaffLabel
+    ├── recPaymentVerticalDivider
+    ├── lblPaymentStudent
+    ├── btnPaymentClose
+    ├── lblPaymentTitle
+    ├── recPaymentModal
+    └── recPaymentOverlay
 ```
 
 ---
@@ -5187,7 +5591,7 @@ scrDashboard
 | Fill | `RGBA(0, 0, 0, 0)` |
 | **Visible** | `varShowPaymentModal > 0` |
 
-> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
+> 💡 **Key Point:** As with the other modals, set `Visible` only on the container.
 
 ---
 
@@ -5215,45 +5619,41 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - If(!IsBlank(varSelectedItem.PaymentNotes), 740, 650)) / 2` |
-| Width | `550` |
-| Height | `If(!IsBlank(varSelectedItem.PaymentNotes), 740, 650)` |
+| X | `(Parent.Width - 1100) / 2` |
+| Y | `(Parent.Height - 680) / 2` |
+| Width | `1100` |
+| Height | `680` |
 | Fill | `varColorBgCard` |
-| RadiusTopLeft | `8` |
-| RadiusTopRight | `8` |
-| RadiusBottomLeft | `8` |
-| RadiusBottomRight | `8` |
 
-> 💡 **Dynamic Height:** The modal grows taller (740px vs 650px) when there are prior payments to display. This ensures the payment history section fits without crowding other controls.
+> 💡 **No nested layout containers:** The extra width gives plenty of room for the payment form and history panel without additional container complexity.
 
 ---
 
 ### Modal Title (lblPaymentTitle)
 
-8. Click **+ Insert** → **Text label**.
-9. **Rename it:** `lblPaymentTitle`
-10. Set properties:
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblPaymentTitle`
+13. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `If(varSelectedItem.Status.Value = "Printing", "Partial Payment - ", "Record Payment - ") & varSelectedItem.ReqKey` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 20` |
-| Width | `510` |
+| Width | `520` |
 | Height | `30` |
-| Font | `Font.'Open Sans'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `20` |
-| Color | `RGBA(0, 158, 73, 1)` |
+| Color | `varColorSuccess` |
 
 ---
 
 ### Close Button (btnPaymentClose)
 
-10A. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
-10B. **Rename it:** `btnPaymentClose`
-10C. Set properties:
+14. Click **+ Insert** → **Button** (**Classic**, NOT Modern).
+15. **Rename it:** `btnPaymentClose`
+16. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -5283,7 +5683,7 @@ scrDashboard
 | Size | `14` |
 | Font | `varAppFont` |
 
-10D. Set **OnSelect:**
+17. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -5295,73 +5695,99 @@ Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
-Reset(ddPaymentType)
+Reset(ddPaymentType);
+Reset(chkPayerSameAsStudent);
+Reset(txtPayerName);
+Reset(txtPayerTigerCard);
+Clear(colPickedUpPlates);
+Clear(colPayments)
 ```
 
 ---
 
 ### Student Info (lblPaymentStudent)
 
-11. Click **+ Insert** → **Text label**.
-12. **Rename it:** `lblPaymentStudent`
-13. Set properties:
+18. Click **+ Insert** → **Text label**.
+19. **Rename it:** `lblPaymentStudent`
+20. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 55` |
-| Width | `510` |
+| Width | `520` |
 | Height | `40` |
 | Size | `12` |
 | Color | `varColorTextMuted` |
 
-14. Set **Text:**
+21. Set **Text:**
 
 ```powerfx
 "Student: " & varSelectedItem.Student.DisplayName & Char(10) &
-"Estimated: " & Text(varSelectedItem.EstimatedWeight) & "g → $" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
+"Estimated: " & Text(varSelectedItem.EstimatedWeight) & "g → $" &
+Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 ```
+
+---
+
+### Vertical Divider (recPaymentVerticalDivider)
+
+22. Click **+ Insert** → **Rectangle**.
+23. **Rename it:** `recPaymentVerticalDivider`
+24. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 555` |
+| Y | `recPaymentModal.Y + 88` |
+| Width | `1` |
+| Height | `520` |
+| Fill | `varColorBorderLight` |
+| Visible | `CountRows(colPayments) > 0 Or CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0 Or !IsBlank(varSelectedItem.FinalCost)` |
 
 ---
 
 ### Staff Label (lblPaymentStaffLabel)
 
-15. Click **+ Insert** → **Text label**.
-16. **Rename it:** `lblPaymentStaffLabel`
-17. Set properties:
+25. Click **+ Insert** → **Text label**.
+26. **Rename it:** `lblPaymentStaffLabel`
+27. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Performing Action As: *"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 105` |
-| Width | `200` |
-| Height | `20` |
+| Y | `recPaymentModal.Y + 110` |
+| Width | `240` |
+| Height | `29` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
 
 ---
 
 ### Staff Dropdown (ddPaymentStaff)
 
-18. Click **+ Insert** → **Combo box**.
-19. **Rename it:** `ddPaymentStaff`
-20. Set properties:
+28. Click **+ Insert** → **Combo box** (**Classic**).
+29. **Rename it:** `ddPaymentStaff`
+30. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `colStaff` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 130` |
-| Width | `300` |
+| Y | `recPaymentModal.Y + 135` |
+| Width | `240` |
 | Height | `36` |
 | DisplayFields | `["MemberName"]` |
-| SearchFields | `["MemberName"]` |
+| SearchFields | `["MemberEmail"]` |
 | DefaultSelectedItems | `Blank()` |
+| IsSearchable | `false` |
+| SelectMultiple | `false` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisabledBorderColor | `varInputBorderColor` |
 | ChevronBackground | `varChevronBackground` |
 | ChevronFill | `varChevronFill` |
 | ChevronHoverBackground | `varChevronHoverBackground` |
@@ -5378,32 +5804,34 @@ Reset(ddPaymentType)
 
 ### Payment Type Label (lblPaymentTypeLabel)
 
-21. Click **+ Insert** → **Text label**.
-22. **Rename it:** `lblPaymentTypeLabel`
-23. Set properties:
+31. Click **+ Insert** → **Text label**.
+32. **Rename it:** `lblPaymentTypeLabel`
+33. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Payment Type: *"` |
-| X | `recPaymentModal.X + 340` |
-| Y | `recPaymentModal.Y + 105` |
+| X | `recPaymentModal.X + 280` |
+| Y | `recPaymentModal.Y + 110` |
 | Width | `180` |
-| Height | `20` |
+| Height | `29` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
 
 ---
 
 ### Payment Type Dropdown (ddPaymentType)
 
-24. Click **+ Insert** → **Drop down**.
-25. **Rename it:** `ddPaymentType`
-26. Set properties:
+34. Click **+ Insert** → **Drop down** (**Classic**).
+35. **Rename it:** `ddPaymentType`
+36. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `["TigerCASH", "Check", "Code"]` |
-| X | `recPaymentModal.X + 340` |
-| Y | `recPaymentModal.Y + 130` |
+| X | `recPaymentModal.X + 280` |
+| Y | `recPaymentModal.Y + 135` |
 | Width | `180` |
 | Height | `36` |
 | Default | `"TigerCASH"` |
@@ -5411,7 +5839,6 @@ Reset(ddPaymentType)
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisabledBorderColor | `varInputBorderColor` |
 | ChevronBackground | `varChevronBackground` |
 | ChevronFill | `varChevronFill` |
 | ChevronHoverBackground | `varChevronHoverBackground` |
@@ -5424,29 +5851,27 @@ Reset(ddPaymentType)
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
 
-> 💡 **Payment Types:**
-> - **TigerCASH** - Standard campus payment (receipt number)
-> - **Check** - Paper check payment (check number)
-> - **Code** - Grant or program code (e.g., GRANT-12345)
+> 💡 **Payment types:** `TigerCASH` for standard campus payments, `Check` for checks, and `Code` for grants/program codes.
 
 ---
 
 ### Transaction Label (lblPaymentTransLabel)
 
-27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblPaymentTransLabel`
-29. Set properties:
+37. Click **+ Insert** → **Text label**.
+38. **Rename it:** `lblPaymentTransLabel`
+39. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | See formula below |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 180` |
-| Width | `250` |
-| Height | `20` |
+| Y | `recPaymentModal.Y + 190` |
+| Width | `240` |
+| Height | `29` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
 
-Set **Text** (dynamic based on payment type):
+40. Set **Text:**
 
 ```powerfx
 Switch(
@@ -5462,27 +5887,29 @@ Switch(
 
 ### Transaction Input (txtPaymentTransaction)
 
-30. Click **+ Insert** → **Text input**.
-31. **Rename it:** `txtPaymentTransaction`
-32. Set properties:
+41. Click **+ Insert** → **Text input** (**Classic**).
+42. **Rename it:** `txtPaymentTransaction`
+43. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 205` |
-| Width | `250` |
+| Y | `recPaymentModal.Y + 215` |
+| Width | `240` |
 | Height | `36` |
-| HintText | See formula below |
+| Format | `TextFormat.Text` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
 
-Set **HintText** (dynamic based on payment type):
+44. Set **HintText:**
 
 ```powerfx
 Switch(
@@ -5494,90 +5921,131 @@ Switch(
 )
 ```
 
+> 💡 **Important:** This field is `TextFormat.Text`, not number-only. Checks and grant/program codes may contain letters.
+
+---
+
+### Date Label (lblPaymentDateLabel)
+
+45. Click **+ Insert** → **Text label**.
+46. **Rename it:** `lblPaymentDateLabel`
+47. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payment Date: *"` |
+| X | `recPaymentModal.X + 280` |
+| Y | `recPaymentModal.Y + 190` |
+| Width | `180` |
+| Height | `29` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+
+---
+
+### Date Picker (dpPaymentDate)
+
+48. Click **+ Insert** → **Date picker** (**Classic**).
+49. **Rename it:** `dpPaymentDate`
+50. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 280` |
+| Y | `recPaymentModal.Y + 215` |
+| Width | `180` |
+| Height | `36` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| IconBackground | `varChevronBackground` |
+| IconFill | `RGBA(255, 255, 255, 1)` |
+
 ---
 
 ### Weight Label (lblPaymentWeightLabel)
 
-33. Click **+ Insert** → **Text label**.
-34. **Rename it:** `lblPaymentWeightLabel`
-35. Set properties:
+51. Click **+ Insert** → **Text label**.
+52. **Rename it:** `lblPaymentWeightLabel`
+53. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Final Weight (grams): *"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 255` |
+| Y | `recPaymentModal.Y + 270` |
 | Width | `250` |
-| Height | `20` |
+| Height | `33` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 
 ---
 
 ### Weight Input (txtPaymentWeight)
 
-36. Click **+ Insert** → **Text input**.
-37. **Rename it:** `txtPaymentWeight`
-38. Set properties:
+54. Click **+ Insert** → **Text input** (**Classic**).
+55. **Rename it:** `txtPaymentWeight`
+56. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Format | `TextFormat.Number` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 280` |
+| Y | `recPaymentModal.Y + 295` |
 | Width | `150` |
 | Height | `36` |
+| Format | `TextFormat.Number` |
 | HintText | `"Weight in grams"` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
-
-39. Set **Default:**
-- none.
-
-> 💡 **Pre-fill:** The weight input pre-fills with the estimated weight. Staff should update this with the actual measured weight of the finished print.
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
 
 ---
 
 ### Cost Label (lblPaymentCostLabel)
 
-40. Click **+ Insert** → **Text label**.
-41. **Rename it:** `lblPaymentCostLabel`
-42. Set properties:
+57. Click **+ Insert** → **Text label**.
+58. **Rename it:** `lblPaymentCostLabel`
+59. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Final Cost:"` |
-| X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 330` |
-| Width | `150` |
-| Height | `25` |
+| X | `recPaymentModal.X + 190` |
+| Y | `recPaymentModal.Y + 270` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Height | `25` |
 | Size | `14` |
 
 ---
 
 ### Cost Value Display (lblPaymentCostValue)
 
-43. Click **+ Insert** → **Text label**.
-44. **Rename it:** `lblPaymentCostValue`
-45. Set properties:
+60. Click **+ Insert** → **Text label**.
+61. **Rename it:** `lblPaymentCostValue`
+62. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 355` |
-| Width | `200` |
-| Height | `40` |
+| X | `recPaymentModal.X + 190` |
+| Y | `recPaymentModal.Y + 292` |
+| Width | `270` |
+| Height | `42` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Bold` |
 | Size | `24` |
-| Color | `RGBA(0, 158, 73, 1)` |
+| Color | `varColorSuccess` |
 
-40. Set **Text:**
+63. Set **Text:**
 
 ```powerfx
 If(
@@ -5602,248 +6070,492 @@ If(
 )
 ```
 
-> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart. When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount).
+> 💰 **Pricing:** Uses the same centralized pricing variables from `App.OnStart`.
 
 ---
 
 ### Own Material Checkbox (chkOwnMaterial)
 
-> 💡 **Use Case:** When students provide their own filament/resin, they receive a 70% discount (pay only 30% of normal cost). This is recorded in the SharePoint `StudentOwnMaterial` field for tracking.
-
-46. Click **+ Insert** → **Checkbox**.
-47. **Rename it:** `chkOwnMaterial`
-48. Set properties:
+64. Click **+ Insert** → **Checkbox** (**Classic**).
+65. **Rename it:** `chkOwnMaterial`
+66. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Student provided own material (70% discount)"` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 400` |
-| Width | `510` |
+| Y | `recPaymentModal.Y + 350` |
+| Width | `420` |
 | Height | `32` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Color | `RGBA(0, 158, 73, 1)` |
-
-> 💰 **Discount Logic:** When checked, the `lblPaymentCostValue` display and final cost calculation both apply a 70% discount (multiply by 0.30).
+| Color | `varColorNeutral` |
+| CheckboxBorderColor | `varInputBorderColor` |
+| CheckmarkFill | `RGBA(0, 0, 0, 1)` |
+| HoverColor | `RGBA(0, 18, 107, 1)` |
 
 ---
 
-### Date Label (lblPaymentDateLabel)
+### Payer Same-As-Student Checkbox (chkPayerSameAsStudent)
 
-49. Click **+ Insert** → **Text label**.
-50. **Rename it:** `lblPaymentDateLabel`
-51. Set properties:
+67. Click **+ Insert** → **Checkbox** (**Classic**).
+68. **Rename it:** `chkPayerSameAsStudent`
+69. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Date: *"` |
-| X | `recPaymentModal.X + 300` |
-| Y | `recPaymentModal.Y + 180` |
-| Width | `150` |
-| Height | `20` |
+| Text | `"Payer is the student on this request"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 390` |
+| Width | `420` |
+| Height | `32` |
+| Default | `true` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Color | `varColorNeutral` |
+| CheckboxBorderColor | `varInputBorderColor` |
 
 ---
 
-### Date Picker (dpPaymentDate)
+### Payer Name Label (lblPayerNameLabel)
 
-52. Click **+ Insert** → **Date picker**.
-53. **Rename it:** `dpPaymentDate`
-54. Set properties:
+70. Click **+ Insert** → **Text label**.
+71. **Rename it:** `lblPayerNameLabel`
+72. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `recPaymentModal.X + 300` |
-| Y | `recPaymentModal.Y + 205` |
+| Text | `"Payer Name: *"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 430` |
 | Width | `200` |
-| Height | `36` |
-| DefaultDate | `Today()` |
+| Height | `20` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
 
 ---
 
-### Payment History Section (Conditional)
+### Payer Name Input (txtPayerName)
 
-> 💡 **Conditional Display:** This section only appears when there are prior payments recorded in PaymentNotes (indicating partial payments were already made). It shows staff what has already been collected before they process another payment.
-
-55. Click **+ Insert** → **Text label**.
-56. **Rename it:** `lblPaymentHistoryHeader`
-57. Set properties:
+73. Click **+ Insert** → **Text input** (**Classic**).
+74. **Rename it:** `txtPayerName`
+75. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"⚠️ Prior Payments on This Job"` |
+| Default | `If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, "")` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 440` |
-| Width | `510` |
+| Y | `recPaymentModal.Y + 455` |
+| Width | `420` |
+| Height | `36` |
+| DisplayMode | `If(chkPayerSameAsStudent.Value, DisplayMode.Disabled, DisplayMode.Edit)` |
+| HintText | `"Who is paying?"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+---
+
+### Payer Tiger Card Label (lblPayerTigerCardLabel)
+
+76. Click **+ Insert** → **Text label**.
+77. **Rename it:** `lblPayerTigerCardLabel`
+78. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payer Tiger Card: *"` |
+| X | `recPaymentModal.X + 20` |
+| Y | `recPaymentModal.Y + 510` |
+| Width | `200` |
 | Height | `20` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `11` |
-| Color | `RGBA(180, 100, 0, 1)` |
-| Visible | `!IsBlank(varSelectedItem.PaymentNotes)` |
+| Size | `12` |
 
-58. Click **+ Insert** → **Text input**.
-59. **Rename it:** `txtPaymentHistory`
-60. Set properties:
+---
+
+### Payer Tiger Card Input (txtPayerTigerCard)
+
+79. Click **+ Insert** → **Text input** (**Classic**).
+80. **Rename it:** `txtPayerTigerCard`
+81. Set properties:
 
 | Property | Value |
 |----------|-------|
+| Default | `If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, "")` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + 462` |
-| Width | `510` |
-| Height | `55` |
-| Mode | `TextMode.MultiLine` |
-| DisplayMode | `DisplayMode.View` |
-| Size | `10` |
-| Color | `RGBA(80, 80, 80, 1)` |
-| Fill | `RGBA(255, 248, 230, 1)` |
-| BorderColor | `RGBA(220, 180, 100, 1)` |
-| Visible | `!IsBlank(varSelectedItem.PaymentNotes)` |
-
-61. Set **Default** (parse and display payment history):
-
-```powerfx
-Concat(
-    ForAll(
-        Split(varSelectedItem.PaymentNotes, " | ") As entry,
-        With(
-            {
-                text: entry.Value,
-                colonPos: Find(":", entry.Value),
-                hashPos: Find("#", entry.Value)
-            },
-            With(
-                {
-                    staffName: If(colonPos > 0, Left(text, Max(0, colonPos - 1)), ""),
-                    datetime: Last(Split(text, " - ")).Value,
-                    // Everything between ":" and the last " - " is the payment details
-                    middlePart: If(colonPos > 0, 
-                        Trim(Mid(text, colonPos + 2, Max(0, Len(text) - colonPos - Len(Last(Split(text, " - ")).Value) - 4))),
-                        "")
-                },
-                With(
-                    {
-                        // Split middle part at "#" to get amount and transaction+note
-                        amountPart: If(hashPos > colonPos, Trim(Mid(text, colonPos + 2, Max(0, hashPos - colonPos - 2))), middlePart),
-                        afterHash: If(hashPos > 0, Trim(Mid(text, hashPos + 1, Max(0, Len(text) - hashPos - Len(Last(Split(text, " - ")).Value) - 3))), ""),
-                        isPartial: Find("partial", text) > 0
-                    },
-                    With(
-                        {
-                            transNum: If(Find(" ", afterHash) > 0, Left(afterHash, Find(" ", afterHash) - 1), afterHash),
-                            noteText: If(Find(" - ", afterHash) > 0, Trim(Mid(afterHash, Find(" - ", afterHash) + 3, Len(afterHash))), "")
-                        },
-                        datetime & " - " & If(isPartial, "PARTIAL PAYMENT", "PAYMENT") & Char(10) &
-                        staffName & Char(10) &
-                        "Transaction #" & transNum & " - " & amountPart & 
-                        If(!IsBlank(noteText), " - """ & noteText & """", "") &
-                        Char(10) & Char(10)
-                    )
-                )
-            )
-        )
-    ),
-    Value
-)
-```
-
-> 💡 **Formatted display:** Each payment entry is parsed and displayed to match the Staff Notes format:
-> ```
-> 2/9 11:21AM - PARTIAL PAYMENT
-> Conrad F.
-> Transaction #150 - $6.00 partial (60g) - "Picking up part so they can work on it while the rest finishes."
-> ```
-> This makes it consistent with how Staff Notes & Activity entries are displayed.
-
-> 💡 **Why this matters:** Staff can see exactly what payments have been recorded before processing another partial or final pickup. This prevents confusion about what's already been collected.
+| Y | `recPaymentModal.Y + 535` |
+| Width | `420` |
+| Height | `36` |
+| DisplayMode | `If(chkPayerSameAsStudent.Value, DisplayMode.Disabled, DisplayMode.Edit)` |
+| HintText | `"TigerCard number"` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 
 ---
 
 ### Notes Label (lblPaymentNotesLabel)
 
-> ⚠️ **Dynamic Y Position:** This control and all controls below it shift down when payment history is visible.
-
-62. Click **+ Insert** → **Text label**.
-63. **Rename it:** `lblPaymentNotesLabel`
-64. Set properties:
+82. Click **+ Insert** → **Text label**.
+83. **Rename it:** `lblPaymentNotesLabel`
+84. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `If(varSelectedItem.Status.Value = "Printing", "Partial Payment Notes (optional):", "Payment Notes (optional):")` |
+| Text | `If(varSelectedItem.Status.Value = "Printing", "Partial Payment Notes", "Payment Notes")` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 525, 440)` |
-| Width | `300` |
+| Y | `recPaymentModal.Y + 585` |
+| Width | `420` |
 | Height | `20` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+
+> 💡 **Note:** `txtPaymentNotes` is now optional context for staff and audit logging. It is **not** the payment history source anymore.
 
 ---
 
 ### Notes Text Input (txtPaymentNotes)
 
-65. Click **+ Insert** → **Text input**.
-66. **Rename it:** `txtPaymentNotes`
-67. Set properties:
+85. Click **+ Insert** → **Text input** (**Classic**).
+86. **Rename it:** `txtPaymentNotes`
+87. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 547, 462)` |
-| Width | `510` |
-| Height | `50` |
-| HintText | `"Any discrepancies, special circumstances..."` |
+| Y | `recPaymentModal.Y + 610` |
+| Width | `420` |
+| Height | `45` |
+| HintText | `"Any discrepancies, exceptions, or staff notes..."` |
 | Font | `varAppFont` |
-| Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
+
+---
+
+### Payment History Header (lblPaymentHistoryHeader)
+
+88. Click **+ Insert** → **Text label**.
+89. **Rename it:** `lblPaymentHistoryHeader`
+90. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"PAYMENT HISTORY"` |
+| X | `recPaymentModal.X + 590` |
+| Y | `recPaymentModal.Y + 110` |
+| Width | `460` |
+| Height | `24` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `varColorText` |
+| Visible | `CountRows(colPayments) > 0` |
+
+---
+
+### Payment History Gallery (galPaymentHistory)
+
+91. Click **+ Insert** → **Vertical gallery**.
+92. **Rename it:** `galPaymentHistory`
+93. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Sort(colPayments, PaymentDate, SortOrder.Ascending)` |
+| X | `recPaymentModal.X + 590` |
+| Y | `recPaymentModal.Y + 138` |
+| Width | `460` |
+| Height | `Min(150, CountRows(colPayments) * 46)` |
+| TemplateSize | `44` |
+| TemplatePadding | `2` |
+| Fill | `RGBA(248, 249, 250, 1)` |
+| Visible | `CountRows(colPayments) > 0` |
+
+94. Inside the `galPaymentHistory` **template**, add the following **Text label** controls.
+
+> 💡 **Important:** These are all labels placed **inside the gallery row template**. They are **not** separate controls placed directly on the modal canvas. Insert each one while `galPaymentHistory` is selected and you are editing the template.
+
+| Control | Property | Value |
+|---------|----------|-------|
+| `lblHistDate` | Text | `Text(ThisItem.PaymentDate, "m/d")` |
+| `lblHistDate` | X | `6` |
+| `lblHistDate` | Y | `4` |
+| `lblHistTxn` | Text | `ThisItem.TransactionNumber` |
+| `lblHistTxn` | X | `52` |
+| `lblHistTxn` | Y | `4` |
+| `lblHistWeight` | Text | `Text(ThisItem.Weight) & "g"` |
+| `lblHistWeight` | X | `210` |
+| `lblHistWeight` | Y | `4` |
+| `lblHistAmount` | Text | `Text(ThisItem.Amount, "[$-en-US]$#,##0.00")` |
+| `lblHistAmount` | X | `270` |
+| `lblHistAmount` | Y | `4` |
+| `lblHistPlates` | Text | `If(!IsBlank(ThisItem.PlatesPickedUp), "Plates " & ThisItem.PlatesPickedUp, "")` |
+| `lblHistPlates` | X | `52` |
+| `lblHistPlates` | Y | `22` |
+| `lblHistStaff` | Text | `ThisItem.RecordedBy.DisplayName` |
+| `lblHistStaff` | X | `270` |
+| `lblHistStaff` | Y | `22` |
+
+95. These six labels create a two-line payment history row:
+
+| Row | Controls |
+|-----|----------|
+| Top row | `lblHistDate`, `lblHistTxn`, `lblHistWeight`, `lblHistAmount` |
+| Bottom row | `lblHistPlates`, `lblHistStaff` |
+
+> 💡 **Source of truth:** This gallery reads from the `Payments` list. Do not parse payment history out of `PrintRequests.PaymentNotes`.
+
+---
+
+### Paid So Far Label (lblPaidSoFar)
+
+95. Click **+ Insert** → **Text label**.
+96. **Rename it:** `lblPaidSoFar`
+97. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 590` |
+| Y | `galPaymentHistory.Y + galPaymentHistory.Height + 8` |
+| Width | `460` |
+| Height | `20` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `varColorSuccess` |
+
+98. Set **Text:**
+
+```powerfx
+"Paid so far: " &
+Text(
+    If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
+) & "g · " &
+Text(
+    If(CountRows(colPayments) > 0, Sum(colPayments, Amount), Coalesce(varSelectedItem.FinalCost, 0)),
+    "[$-en-US]$#,##0.00"
+)
+```
+
+---
+
+### Remaining Estimate Label (lblRemainingEst)
+
+99. Click **+ Insert** → **Text label**.
+100. **Rename it:** `lblRemainingEst`
+101. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 590` |
+| Y | `lblPaidSoFar.Y + 20` |
+| Width | `460` |
+| Height | `20` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+
+102. Set **Text:**
+
+```powerfx
+With(
+    {
+        wPaidWeight: If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
+    },
+    "Remaining: ~" & Text(Max(0, varSelectedItem.EstWeight - wPaidWeight)) & "g · ~" &
+    Text(
+        Max(
+            0,
+            (varSelectedItem.EstWeight - wPaidWeight) *
+            If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)
+        ),
+        "[$-en-US]$#,##0.00"
+    )
+)
+```
+
+---
+
+### Plates Divider (recPlatesDivider)
+
+103. Click **+ Insert** → **Rectangle**.
+104. **Rename it:** `recPlatesDivider`
+105. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recPaymentModal.X + 590` |
+| Y | `lblRemainingEst.Y + 34` |
+| Width | `460` |
+| Height | `1` |
+| Fill | `varColorBorderLight` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+---
+
+### Plates Pickup Header (lblPlatesPickupHeader)
+
+106. Click **+ Insert** → **Text label**.
+107. **Rename it:** `lblPlatesPickupHeader`
+108. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"PLATES BEING PICKED UP"` |
+| X | `recPaymentModal.X + 590` |
+| Y | `recPlatesDivider.Y + 12` |
+| Width | `460` |
+| Height | `24` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `11` |
+| Color | `varColorText` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+---
+
+### Plates Pickup Gallery (galPlatesPickup)
+
+109. Click **+ Insert** → **Vertical gallery**.
+110. **Rename it:** `galPlatesPickup`
+111. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `Filter(colBuildPlatesIndexed, Status.Value = "Completed")` |
+| X | `recPaymentModal.X + 590` |
+| Y | `lblPlatesPickupHeader.Y + 28` |
+| Width | `460` |
+| Height | `Min(170, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)` |
+| TemplateSize | `34` |
+| TemplatePadding | `2` |
+| Fill | `RGBA(248, 249, 250, 1)` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
+
+112. Inside the template, add a checkbox named `chkPlate` and a label named `lblPlateName`.
+
+113. Set `chkPlate` properties:
+
+| Property | Value |
+|----------|-------|
+| X | `4` |
+| Y | `2` |
+| Width | `20` |
+| Height | `28` |
+| Default | `ThisItem.ID in colPickedUpPlates.ID` |
+
+114. Set `chkPlate.OnCheck`:
+
+```powerfx
+Collect(colPickedUpPlates, ThisItem)
+```
+
+115. Set `chkPlate.OnUncheck`:
+
+```powerfx
+Remove(colPickedUpPlates, ThisItem)
+```
+
+116. Set `lblPlateName` properties:
+
+| Property | Value |
+|----------|-------|
+| X | `30` |
+| Y | `6` |
+| Width | `410` |
+| Height | `22` |
+| Font | `varAppFont` |
+| Size | `10` |
+
+117. Set `lblPlateName.Text`:
+
+```powerfx
+"Plate " & Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed)) &
+" · " &
+Trim(
+    If(
+        Find("(", ThisItem.Machine.Value) > 0,
+        Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2),
+        ThisItem.Machine.Value
+    )
+)
+```
+
+---
+
+### Plates Hint (lblPlatesHint)
+
+118. Click **+ Insert** → **Text label**.
+119. **Rename it:** `lblPlatesHint`
+120. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Only completed plates shown)"` |
+| X | `recPaymentModal.X + 590` |
+| Y | `galPlatesPickup.Y + galPlatesPickup.Height + 4` |
+| Width | `460` |
+| Height | `16` |
+| Font | `varAppFont` |
+| Size | `9` |
+| Color | `varColorTextMuted` |
+| Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
 
 ---
 
 ### Partial Pickup Checkbox (chkPartialPickup)
 
-> 💡 **Use Case:** When students pick up only some of their printed items and will return for the rest. This keeps the job in "Completed" status so staff can process another payment later. This checkbox only appears when the Payment Modal is opened from "Completed" status — when opened from "Printing" status, partial payment is automatic (the job continues printing).
-
-68. Click **+ Insert** → **Checkbox**.
-69. **Rename it:** `chkPartialPickup`
-70. Set properties:
+121. Click **+ Insert** → **Checkbox** (**Classic**).
+122. **Rename it:** `chkPartialPickup`
+123. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Partial Pickup — Student will return for remaining items"` |
-| X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 605, 520)` |
-| Width | `510` |
+| X | `recPaymentModal.X + 590` |
+| Y | `recPaymentModal.Y + 585` |
+| Width | `460` |
 | Height | `32` |
-| FontItalic | `true` |
-| Color | `RGBA(150, 100, 0, 1)` |
+| Font | `varAppFont` |
+| Italic | `true` |
+| Color | `varColorNeutral` |
+| CheckboxBorderColor | `varInputBorderColor` |
+| CheckmarkFill | `RGBA(0, 0, 0, 1)` |
+| HoverColor | `RGBA(0, 18, 107, 1)` |
 | Visible | `varSelectedItem.Status.Value = "Completed"` |
 
-> ⚠️ **Behavior:** When checked, the status stays "Completed" instead of changing to "Paid & Picked Up". Payment details are recorded in PaymentNotes, and staff can process additional payments when the student returns. When the modal is opened from "Printing" status, this checkbox is hidden because partial payment is automatic — the job continues printing.
+> ⚠️ **Behavior:** If the modal is opened from `Printing`, the payment is automatically partial and this checkbox stays hidden.
 
 ---
 
 ### Add More Items Button (btnAddMoreItems)
 
-> 💡 **Use Case:** When a student is picking up multiple jobs at once (their own or friends'), staff can click this button to enter batch select mode. The current item is added to a batch collection, the modal closes, and staff can select additional "Completed" items from the gallery before processing them all in one transaction.
-
-71. Click **+ Insert** → **Button**.
-72. **Rename it:** `btnAddMoreItems`
-73. Set properties:
+124. Click **+ Insert** → **Button** (**Classic**).
+125. **Rename it:** `btnAddMoreItems`
+126. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"+ Add More Items"` |
-| X | `recPaymentModal.X + 20` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
+| Text | `"Add More Items"` |
+| X | `recPaymentModal.X + 590` |
+| Y | `recPaymentModal.Y + 625` |
 | Width | `140` |
 | Height | `varBtnHeight` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
-| HoverFill | `ColorFade(varColorPrimary, -15%)` |
-| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
@@ -5855,22 +6567,13 @@ Concat(
 | Font | `varAppFont` |
 | Visible | `varSelectedItem.Status.Value = "Completed"` |
 
-> ⚠️ **Visibility:** This button only appears when the Payment Modal is opened from "Completed" status. When opened from "Printing" status (for partial payments during active printing), batch mode is not available.
-
-74. Set **OnSelect:**
+127. Set **OnSelect:**
 
 ```powerfx
-// Add current item to batch collection
 Collect(colBatchItems, varSelectedItem);
-
-// Enable batch select mode
 Set(varBatchSelectMode, true);
-
-// Close this modal
 Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank());
-
-// Reset modal fields
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
 Reset(dpPaymentDate);
@@ -5879,8 +6582,11 @@ Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
 Reset(ddPaymentType);
-
-// Notify user
+Reset(chkPayerSameAsStudent);
+Reset(txtPayerName);
+Reset(txtPayerTigerCard);
+Clear(colPickedUpPlates);
+Clear(colPayments);
 Notify("Batch mode enabled. Select more Completed items, then click 'Process Batch Payment'.", NotificationType.Information)
 ```
 
@@ -5888,15 +6594,15 @@ Notify("Batch mode enabled. Select more Completed items, then click 'Process Bat
 
 ### Cancel Button (btnPaymentCancel)
 
-75. Click **+ Insert** → **Button**.
-76. **Rename it:** `btnPaymentCancel`
-77. Set properties:
+128. Click **+ Insert** → **Button** (**Classic**).
+129. **Rename it:** `btnPaymentCancel`
+130. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recPaymentModal.X + 250` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
+| X | `recPaymentModal.X + 780` |
+| Y | `recPaymentModal.Y + 625` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -5913,7 +6619,7 @@ Notify("Batch mode enabled. Select more Completed items, then click 'Process Bat
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-78. Set **OnSelect:**
+131. Set **OnSelect:**
 
 ```powerfx
 Set(varShowPaymentModal, 0);
@@ -5925,30 +6631,35 @@ Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
-Reset(ddPaymentType)
+Reset(ddPaymentType);
+Reset(chkPayerSameAsStudent);
+Reset(txtPayerName);
+Reset(txtPayerTigerCard);
+Clear(colPickedUpPlates);
+Clear(colPayments)
 ```
 
 ---
 
 ### Confirm Payment Button (btnPaymentConfirm)
 
-79. Click **+ Insert** → **Button**.
-80. **Rename it:** `btnPaymentConfirm`
-81. Set properties:
+132. Click **+ Insert** → **Button** (**Classic**).
+133. **Rename it:** `btnPaymentConfirm`
+134. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `If(chkPartialPickup.Value, "✓ Record Partial Payment", "✓ Record Payment")` |
-| X | `recPaymentModal.X + 380` |
-| Y | `recPaymentModal.Y + If(!IsBlank(varSelectedItem.PaymentNotes), 650, 565)` |
-| Width | `150` |
+| Text | `If(chkPartialPickup.Value, "Record Partial Payment", "Record Payment")` |
+| X | `recPaymentModal.X + 920` |
+| Y | `recPaymentModal.Y + 625` |
+| Width | `130` |
 | Height | `varBtnHeight` |
 | Fill | `If(chkPartialPickup.Value, varColorWarning, varColorSuccess)` |
 | Color | `Color.White` |
-| HoverFill | `ColorFade(Self.Fill, -15%)` |
-| PressedFill | `ColorFade(Self.Fill, -25%)` |
-| BorderColor | `Transparent` |
-| BorderThickness | `0` |
+| HoverFill | `If(chkPartialPickup.Value, ColorFade(varColorWarning, -15%), ColorFade(varColorSuccess, -15%))` |
+| PressedFill | `If(chkPartialPickup.Value, ColorFade(varColorWarning, -25%), ColorFade(varColorSuccess, -25%))` |
+| BorderColor | `ColorFade(Self.Fill, -15%)` |
+| BorderThickness | `1` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -5957,141 +6668,154 @@ Reset(ddPaymentType)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-> 💡 **Button changes color:** Green for full pickup, Orange for partial pickup.
-
-82. Set **DisplayMode:**
+135. Set **DisplayMode:**
 
 ```powerfx
 If(
-    !IsBlank(ddPaymentStaff.Selected) && 
-    !IsBlank(txtPaymentTransaction.Text) &&
-    !IsBlank(txtPaymentWeight.Text) && 
-    IsNumeric(txtPaymentWeight.Text) && 
-    Value(txtPaymentWeight.Text) > 0,
-    DisplayMode.Edit,
-    DisplayMode.Disabled
+    IsBlank(ddPaymentStaff.Selected) ||
+    IsBlank(ddPaymentType.Selected.Value) ||
+    IsBlank(Trim(txtPaymentTransaction.Text)) ||
+    !IsNumeric(txtPaymentWeight.Text) ||
+    Value(txtPaymentWeight.Text) <= 0 ||
+    (
+        !chkPayerSameAsStudent.Value &&
+        (
+            IsBlank(Trim(txtPayerName.Text)) ||
+            IsBlank(Trim(txtPayerTigerCard.Text))
+        )
+    ) ||
+    (
+        CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0 &&
+        CountRows(colPickedUpPlates) = 0
+    ),
+    DisplayMode.Disabled,
+    DisplayMode.Edit
 )
 ```
 
-83. Set **OnSelect:**
+> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown.
+
+136. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Recording payment...");
 
-// Calculate cost from weight picked up (with discount if own material)
-Set(varBaseCost, 
+// Calculate this transaction's cost
+Set(varBaseCost,
     Max(
         varMinimumCost,
-        Value(txtPaymentWeight.Text) * If(
-            varSelectedItem.Method.Value = "Resin",
-            varResinRate,
-            varFilamentRate
-        )
+        Value(txtPaymentWeight.Text) *
+        If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)
     )
 );
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
 
-// Build payment record string (used for both partial and full)
-// Format: "PAID by Name: details - timestamp" (matches other automated entries)
-Set(varPaymentRecord,
-    "PAID by " &
-    With({n: ddPaymentStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-    ": " & 
-    Text(varFinalCost, "[$-en-US]$#,##0.00") & 
-    If(chkPartialPickup.Value, " partial", "") &
-    " (" & txtPaymentWeight.Text & "g" &
-    If(chkOwnMaterial.Value, ", own material", "") &
-    ") #" & txtPaymentTransaction.Text &
-    If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
-    " - " & Text(Now(), "m/d h:mmam/pm")
+// Create a new Payments record
+Set(varNewPayment,
+    Patch(
+        Payments,
+        Defaults(Payments),
+        {
+            RequestID: varSelectedItem.ID,
+            ReqKey: varSelectedItem.ReqKey,
+            TransactionNumber: txtPaymentTransaction.Text,
+            Weight: Value(txtPaymentWeight.Text),
+            Amount: varFinalCost,
+            PaymentType: {Value: ddPaymentType.Selected.Value},
+            PaymentDate: dpPaymentDate.SelectedDate,
+            PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
+            PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
+            PlatesPickedUp: If(
+                CountRows(colPickedUpPlates) > 0,
+                Concat(colPickedUpPlates, Text(PlateNum), ", "),
+                ""
+            ),
+            RecordedBy: {
+                Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                Department: "",
+                DisplayName: ddPaymentStaff.Selected.MemberName,
+                Email: ddPaymentStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            StudentOwnMaterial: chkOwnMaterial.Value
+        }
+    )
 );
 
-// Update SharePoint item - conditional on partial pickup or Printing status
-// Using LookUp to get fresh record avoids concurrency conflicts
+// Mark checked completed plates as picked up
 If(
-    chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing",
-    // PARTIAL PAYMENT: Keep status unchanged (Completed or Printing), append to PaymentNotes
-    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-        // Status stays "Completed" - don't change it
-        PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
-        TransactionNumber: If(
-            IsBlank(varSelectedItem.TransactionNumber),
-            txtPaymentTransaction.Text,
-            varSelectedItem.TransactionNumber & ", " & txtPaymentTransaction.Text
-        ),
-        PaymentNotes: Concatenate(
-            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
-            varPaymentRecord
-        ),
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
-        LastActionBy: {
-            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-            Discipline: "",
-            DisplayName: ddPaymentStaff.Selected.MemberName,
-            Email: ddPaymentStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now(),
-        StaffNotes: Concatenate(
-            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-            varPaymentRecord
+    CountRows(colPickedUpPlates) > 0,
+    ForAll(
+        colPickedUpPlates,
+        Patch(
+            BuildPlates,
+            LookUp(BuildPlates, ID = ThisRecord.ID),
+            {Status: {Value: "Picked Up"}}
         )
-    }),
-    // FULL PICKUP: Change status to Paid & Picked Up, record final details
-    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-        Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-        PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddPaymentType.Selected.Value),
-        TransactionNumber: If(
-            IsBlank(varSelectedItem.TransactionNumber),
-            txtPaymentTransaction.Text,
-            varSelectedItem.TransactionNumber & ", " & txtPaymentTransaction.Text
-        ),
-        FinalWeight: Value(txtPaymentWeight.Text),
-        FinalCost: varFinalCost,
-        StudentOwnMaterial: chkOwnMaterial.Value,
-        PaymentDate: dpPaymentDate.SelectedDate,
-        PaymentNotes: Concatenate(
-            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
-            varPaymentRecord
-        ),
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-        LastActionBy: {
-            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-            Discipline: "",
-            DisplayName: ddPaymentStaff.Selected.MemberName,
-            Email: ddPaymentStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now(),
-        StaffNotes: Concatenate(
-            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-            varPaymentRecord
-        )
-    })
+    )
 );
 
-// Log action via Flow C
-IfError(
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),
-        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Partial Payment", "Status Change"),
-        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Payment", "Status"),
-        If(chkPartialPickup.Value || varSelectedItem.Status.Value = "Printing", "Partial: $" & Text(varFinalCost, "[$-en-US]#,##0.00"), "Paid & Picked Up"),
-        ddPaymentStaff.Selected.MemberEmail
-    ),
-    Notify("Could not log payment.", NotificationType.Error),
-    If(
-        varSelectedItem.Status.Value = "Printing",
-        Notify("Payment recorded! Job continues printing.", NotificationType.Success),
-        If(
-            chkPartialPickup.Value,
-            Notify("Partial payment recorded! Job stays in Completed for remaining items.", NotificationType.Warning),
-            Notify("Payment recorded! Item marked as picked up.", NotificationType.Success)
-        )
+// Refresh supporting collections
+ClearCollect(colPayments,
+    Sort(Filter(Payments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+);
+ClearCollect(colAllBuildPlates, BuildPlates);
+
+// Update running totals and status on the parent request
+With(
+    {
+        wResultStatus:
+            If(
+                chkPartialPickup.Value ||
+                varSelectedItem.Status.Value = "Printing" ||
+                CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
+                varSelectedItem.Status,
+                {Value: "Paid & Picked Up"}
+            )
+    },
+    Patch(
+        PrintRequests,
+        LookUp(PrintRequests, ID = varSelectedItem.ID),
+        {
+            FinalWeight: Sum(colPayments, Weight),
+            FinalCost: Sum(colPayments, Amount),
+            PaymentDate: dpPaymentDate.SelectedDate,
+            StudentOwnMaterial: chkOwnMaterial.Value,
+            Status: wResultStatus,
+            PaymentNotes: If(
+                IsBlank(Trim(txtPaymentNotes.Text)),
+                varSelectedItem.PaymentNotes,
+                Concatenate(
+                    If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
+                    "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
+                )
+            ),
+            LastAction: {Value: "Picked Up"},
+            LastActionBy: {
+                Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                Department: "",
+                DisplayName: ddPaymentStaff.Selected.MemberName,
+                Email: ddPaymentStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            LastActionAt: Now()
+        }
+    );
+    IfError(
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(varSelectedItem.ID),
+            If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
+            If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
+            "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+            If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", "") &
+            If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
+            ddPaymentStaff.Selected.MemberEmail
+        ),
+        Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
     )
 );
 
@@ -6106,32 +6830,27 @@ Reset(ddPaymentStaff);
 Reset(chkOwnMaterial);
 Reset(chkPartialPickup);
 Reset(ddPaymentType);
+Reset(chkPayerSameAsStudent);
+Reset(txtPayerName);
+Reset(txtPayerTigerCard);
+Clear(colPickedUpPlates);
+Clear(colPayments);
+Notify("Payment recorded!", NotificationType.Success);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> 💡 **Partial Payment Behavior:**
-> 
-> | Source Status | Checkbox | Status After | Use Case |
-> |---------------|----------|--------------|----------|
-> | Printing | Hidden (forced partial) | Stays "Printing" | Student picks up completed portions while rest continues printing |
-> | Completed | Checked | Stays "Completed" | Student picks up some items, will return for rest |
-> | Completed | Unchecked | "Paid & Picked Up" | Full pickup, job complete |
->
-> - TransactionNumber is updated (so it displays on the job card)
-> - Payment details appended to PaymentNotes (creates a log)
-> - Staff can process another pickup later for partial payments
-> - Final pickup (unchecked from Completed) records to FinalWeight/FinalCost/StudentOwnMaterial fields
->
-> 💡 **Own Material Discount:** When `chkOwnMaterial` is checked, the cost is reduced to 30% of the base price (70% discount). This is recorded in the `StudentOwnMaterial` field and noted in the PaymentNotes audit trail.
->
-> 💡 **Payment Note Format:** Payment notes use the "PAID by" format to match other automated entries:
-> ```
-> PAID by Ian R.: $10.80 partial (36g) #150 - 2/6 2:54pm
-> ```
-> This allows the display logic to recognize it as a PAID action and format it inline (e.g., "Ian R. - $10.80 partial (36g) #150") rather than showing it as a manual note in quotes.
+### Final Behavior Summary
+
+| Source Status | Plates Picked | Partial Checkbox | Status After |
+|---------------|---------------|------------------|--------------|
+| `Printing` | Some completed plates | Hidden | stays `Printing` |
+| `Completed` | Some plates | Checked or implied by remaining plates | stays `Completed` |
+| `Completed` | All remaining plates | Unchecked | `Paid & Picked Up` |
+
+> 💡 **Merged result:** Payment history now comes from the `Payments` list, build-plate pickup is part of the modal itself, and `PrintRequests.FinalWeight` / `FinalCost` remain the running totals used elsewhere in the app.
 
 ---
 
@@ -7426,9 +8145,657 @@ ForAll(
 
 ---
 
+# STEP 12F: Building the Build Plates Modal
+
+**What you're doing:** Creating a modal for managing build plates (gcode files) across multiple printers. This modal allows staff to add, remove, and track the status of individual plates for a single print request.
+
+> 🎯 **Use Case:** A student submits a large or multi-part model that gets sliced into 5 gcode files — 3 running on MK4S machines and 2 on the XL. The Build Plates Modal lets staff track each plate's progress (Queued → Printing → Completed → Picked Up) and know exactly which pieces are done.
+
+### Design Overview
+
+The Build Plates Modal organizes plates as a scrollable list. Staff can:
+- Add new plates (selecting which printer)
+- Change a plate's assigned printer (while Queued or Printing)
+- Advance plate status (Queued → Printing → Completed)
+- Remove any plate (for re-slicing scenarios)
+
+### Visual Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Build Plates — Jane Smith · REQ-00042                               [✕] │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Total Sliced:                                       3 of 5 Completed    │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  1/5    [Prusa MK4S ▼]    ● Completed                        [✕]  │  │
+│  │  2/5    [Prusa MK4S ▼]    ● Completed                        [✕]  │  │
+│  │  3/5    [Prusa MK4S ▼]    ● Printing      [✓ Done]           [✕]  │  │
+│  │  4/5    [Prusa XL   ▼]    ● Queued        [▶ Printing]       [✕]  │  │
+│  │  5/5    [Prusa XL   ▼]    ● Queued        [▶ Printing]       [✕]  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Add plate:  [ Select printer...                    ▼ ]    [+ Add Plate] │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                  [Done]  │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Plate Removal Flexibility
+
+**Any plate can be removed at any time**, regardless of status. This supports scenarios where staff needs to scrap and re-slice a job:
+
+| Status | Can Remove? | Use Case |
+|--------|-------------|----------|
+| Queued | ✅ Yes | Job not started yet |
+| Printing | ✅ Yes | Print failed, need to redo |
+| Completed | ✅ Yes | Re-slicing entire job |
+| Picked Up | ✅ Yes | Data correction |
+
+The [✕] remove button appears on ALL plate rows.
+
+### Control Hierarchy
+
+```
+scrDashboard
+└── conBuildPlatesModal              ← CONTAINER (Visible = varShowBuildPlatesModal > 0)
+    ├── recBuildPlatesOverlay        ← Full-screen dark overlay
+    ├── recBuildPlatesModal          ← White box (600×620)
+    ├── lblBuildPlatesTitle          ← "Build Plates — Jane Smith · REQ-00042"
+    ├── btnBuildPlatesClose          ← ✕ top-right
+    ├── recBuildPlatesDivider1       ← Divider under title
+    ├── lblTotalSlicedLabel          ← "Total Sliced:"
+    ├── lblBuildPlatesProgressModal  ← "3 of 5 Completed"
+    ├── recBuildPlatesDivider2       ← Divider above plates gallery
+    ├── galBuildPlates               ← Gallery of plates
+    │   ├── recPlateRowBg            ← Alternating row background
+    │   ├── lblPlateLabel            ← "1/5", "2/5"
+    │   ├── drpPlateMachine          ← Printer dropdown
+    │   ├── lblPlateStatus           ← Colored status badge
+    │   ├── btnMarkPrinting          ← Queued → Printing
+    │   ├── btnMarkDone              ← Printing → Completed
+    │   └── btnRemovePlate           ← [✕] (always visible)
+    ├── recBuildPlatesDivider3       ← Divider above Add Plate section
+    ├── lblAddPlateHeader            ← "Add plate:"
+    ├── ddBuildPlatesMachine         ← Printer dropdown
+    ├── btnBuildPlatesAdd            ← [+ Add Plate]
+    └── btnBuildPlatesDone           ← "Done"
+```
+
+---
+
+### Modal Container (conBuildPlatesModal)
+
+| Property | Value |
+|----------|-------|
+| Control | Container |
+| Name | `conBuildPlatesModal` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowBuildPlatesModal > 0` |
+
+---
+
+### Modal Overlay (recBuildPlatesOverlay)
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recBuildPlatesOverlay` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorOverlay` |
+
+---
+
+### Modal Content Box (recBuildPlatesModal)
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recBuildPlatesModal` |
+| X | `(Parent.Width - 600) / 2` |
+| Y | `(Parent.Height - 620) / 2` |
+| Width | `600` |
+| Height | `620` |
+| Fill | `varColorBgCard` |
+| RadiusTopLeft | `8` |
+| RadiusTopRight | `8` |
+| RadiusBottomLeft | `8` |
+| RadiusBottomRight | `8` |
+
+---
+
+### Modal Title (lblBuildPlatesTitle)
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblBuildPlatesTitle` |
+| Text | `"Build Plates — " & varSelectedItem.Title & " · " & varSelectedItem.ReqKey` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 18` |
+| Width | `520` |
+| Height | `26` |
+| Size | `14` |
+| FontWeight | `FontWeight.Semibold` |
+| Font | `varAppFont` |
+| Color | `varColorText` |
+
+---
+
+### Close Button (btnBuildPlatesClose)
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnBuildPlatesClose` |
+| Text | `"✕"` |
+| X | `recBuildPlatesModal.X + 562` |
+| Y | `recBuildPlatesModal.Y + 16` |
+| Width | `24` |
+| Height | `24` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverFill | `RGBA(200, 200, 200, 0.3)` |
+| HoverColor | `varColorText` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| Size | `14` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+**OnSelect:**
+
+```powerfx
+Set(varShowBuildPlatesModal, 0);
+Set(varSelectedItem, Blank());
+ClearCollect(colBuildPlates, Blank());
+Clear(colBuildPlates);
+ClearCollect(colBuildPlatesIndexed, Blank());
+Clear(colBuildPlatesIndexed);
+Reset(ddBuildPlatesMachine)
+```
+
+---
+
+### Divider 1 (recBuildPlatesDivider1)
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recBuildPlatesDivider1` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 52` |
+| Width | `560` |
+| Height | `1` |
+| Fill | `varColorBorderLight` |
+
+---
+
+### Total Sliced Label (lblTotalSlicedLabel)
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblTotalSlicedLabel` |
+| Text | `"Total Sliced:"` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 66` |
+| Width | `100` |
+| Height | `28` |
+| Size | `11` |
+| FontWeight | `FontWeight.Semibold` |
+| Font | `varAppFont` |
+| Color | `varColorText` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+---
+
+### Progress Label (lblBuildPlatesProgressModal)
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblBuildPlatesProgressModal` |
+| Text | `Text(CountRows(Filter(colBuildPlatesIndexed, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & " of " & Text(CountRows(colBuildPlatesIndexed)) & " Completed"` |
+| X | `recBuildPlatesModal.X + 124` |
+| Y | `recBuildPlatesModal.Y + 66` |
+| Width | `456` |
+| Height | `28` |
+| Size | `11` |
+| FontWeight | `FontWeight.Semibold` |
+| Font | `varAppFont` |
+| Color | `varColorSuccess` |
+| Align | `Align.Right` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+---
+
+### Divider 2 (recBuildPlatesDivider2)
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recBuildPlatesDivider2` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 102` |
+| Width | `560` |
+| Height | `1` |
+| Fill | `varColorBorderLight` |
+
+---
+
+### Build Plates Gallery (galBuildPlates)
+
+| Property | Value |
+|----------|-------|
+| Control | Vertical Gallery |
+| Name | `galBuildPlates` |
+| Items | `colBuildPlatesIndexed` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 110` |
+| Width | `560` |
+| Height | `320` |
+| TemplateSize | `52` |
+| TemplatePadding | `2` |
+| ShowScrollbar | `true` |
+
+---
+
+#### Row Background (recPlateRowBg) — inside gallery template
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recPlateRowBg` |
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.TemplateWidth` |
+| Height | `Parent.TemplateHeight` |
+| Fill | `If(Mod(ThisItem.PlateNum, 2) = 0, RGBA(245, 247, 250, 1), RGBA(255, 255, 255, 1))` |
+
+---
+
+#### Plate Label (lblPlateLabel) — inside gallery template
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblPlateLabel` |
+| Text | `Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed))` |
+| X | `8` |
+| Y | `0` |
+| Width | `40` |
+| Height | `Parent.TemplateHeight` |
+| Size | `11` |
+| FontWeight | `FontWeight.Semibold` |
+| Font | `varAppFont` |
+| Color | `varColorText` |
+| VerticalAlign | `VerticalAlign.Middle` |
+
+---
+
+#### Machine Dropdown (drpPlateMachine) — inside gallery template
+
+Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up to preserve history.
+
+| Property | Value |
+|----------|-------|
+| Control | Dropdown |
+| Name | `drpPlateMachine` |
+| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
+| DefaultSelectedItems | `[ThisItem.Machine]` |
+| X | `52` |
+| Y | `8` |
+| Width | `160` |
+| Height | `36` |
+| Size | `10` |
+| Font | `varAppFont` |
+| BorderColor | `If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)` |
+| ChevronBackground | `If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Color.Transparent)` |
+| DisplayMode | `If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled)` |
+
+**OnChange:**
+
+```powerfx
+Patch(BuildPlates,
+    LookUp(BuildPlates, ID = ThisItem.ID),
+    { Machine: drpPlateMachine.Selected }
+);
+// Refresh collections
+ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
+ClearCollect(colBuildPlatesIndexed, AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID))));
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
+```
+
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3.
+
+---
+
+#### Status Badge (lblPlateStatus) — inside gallery template
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblPlateStatus` |
+| Text | `ThisItem.Status.Value` |
+| X | `216` |
+| Y | `10` |
+| Width | `84` |
+| Height | `32` |
+| Size | `9` |
+| FontWeight | `FontWeight.Semibold` |
+| Font | `varAppFont` |
+| Align | `Align.Center` |
+| VerticalAlign | `VerticalAlign.Middle` |
+| Fill | `Switch(ThisItem.Status.Value, "Queued", RGBA(230, 230, 230, 1), "Printing", RGBA(255, 243, 205, 1), "Completed", RGBA(200, 230, 201, 1), "Picked Up", RGBA(187, 222, 251, 1), RGBA(230, 230, 230, 1))` |
+| Color | `Switch(ThisItem.Status.Value, "Queued", RGBA(80, 80, 80, 1), "Printing", RGBA(130, 80, 0, 1), "Completed", RGBA(27, 94, 32, 1), "Picked Up", RGBA(13, 71, 161, 1), RGBA(80, 80, 80, 1))` |
+
+---
+
+#### Mark Printing Button (btnMarkPrinting) — inside gallery template
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnMarkPrinting` |
+| Text | `"▶ Printing"` |
+| X | `308` |
+| Y | `10` |
+| Width | `90` |
+| Height | `32` |
+| Fill | `varColorWarning` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `9` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| **Visible** | `ThisItem.Status.Value = "Queued"` |
+
+**OnSelect:**
+
+```powerfx
+Patch(BuildPlates,
+    LookUp(BuildPlates, ID = ThisItem.ID),
+    { Status: { Value: "Printing" } }
+);
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colAllBuildPlates, BuildPlates)
+```
+
+---
+
+#### Mark Done Button (btnMarkDone) — inside gallery template
+
+Same properties as `btnMarkPrinting` with:
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnMarkDone` |
+| Text | `"✓ Done"` |
+| X | `308` |
+| Y | `10` |
+| Width | `90` |
+| Height | `32` |
+| Fill | `varColorSuccess` |
+| Color | `Color.White` |
+| HoverFill | `varColorSuccessHover` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `9` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| **Visible** | `ThisItem.Status.Value = "Printing"` |
+
+**OnSelect:**
+
+```powerfx
+Patch(BuildPlates,
+    LookUp(BuildPlates, ID = ThisItem.ID),
+    { Status: { Value: "Completed" } }
+);
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colAllBuildPlates, BuildPlates)
+```
+
+---
+
+#### Remove Button (btnRemovePlate) — inside gallery template
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnRemovePlate` |
+| Text | `"✕"` |
+| X | `524` |
+| Y | `14` |
+| Width | `24` |
+| Height | `24` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverFill | `RGBA(220, 50, 50, 0.15)` |
+| HoverColor | `varColorDanger` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| Size | `12` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| **Visible** | `true` |
+
+> 💡 **Full Removal Flexibility:** Any plate can be removed regardless of status. This supports scenarios where staff needs to scrap and re-slice a job, or correct data entry errors. The [✕] button appears on ALL plates.
+
+**OnSelect:**
+
+```powerfx
+Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colAllBuildPlates, BuildPlates)
+```
+
+---
+
+### Divider 3 (recBuildPlatesDivider3)
+
+| Property | Value |
+|----------|-------|
+| Control | Rectangle |
+| Name | `recBuildPlatesDivider3` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 438` |
+| Width | `560` |
+| Height | `1` |
+| Fill | `varColorBorderLight` |
+
+---
+
+### Machine Dropdown (ddBuildPlatesMachine)
+
+| Property | Value |
+|----------|-------|
+| Control | Dropdown |
+| Name | `ddBuildPlatesMachine` |
+| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"], varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
+| X | `recBuildPlatesModal.X + 104` |
+| Y | `recBuildPlatesModal.Y + 452` |
+| Width | `280` |
+| Height | `32` |
+| Font | `varAppFont` |
+| Size | `10` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and Raised3D. Resin jobs show only Form 3. Uses the same filter pattern as other printer dropdowns.
+
+---
+
+### Add Plate Button (btnBuildPlatesAdd)
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnBuildPlatesAdd` |
+| Text | `"+ Add Plate"` |
+| X | `recBuildPlatesModal.X + 396` |
+| Y | `recBuildPlatesModal.Y + 452` |
+| Width | `100` |
+| Height | `32` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisplayMode | `If(IsBlank(ddBuildPlatesMachine.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+
+**OnSelect:**
+
+```powerfx
+Patch(BuildPlates,
+    Defaults(BuildPlates),
+    {
+        RequestID: varSelectedItem.ID,
+        ReqKey: varSelectedItem.ReqKey,
+        Machine: { Value: ddBuildPlatesMachine.Selected.Value },
+        Status: { Value: "Queued" }
+    }
+);
+ClearCollect(colBuildPlates,
+    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+);
+ClearCollect(colBuildPlatesIndexed,
+    AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+);
+ClearCollect(colAllBuildPlates, BuildPlates);
+Reset(ddBuildPlatesMachine)
+```
+
+---
+
+### Done Button (btnBuildPlatesDone)
+
+| Property | Value |
+|----------|-------|
+| Control | Button |
+| Name | `btnBuildPlatesDone` |
+| Text | `"Done"` |
+| X | `recBuildPlatesModal.X + 460` |
+| Y | `recBuildPlatesModal.Y + 572` |
+| Width | `120` |
+| Height | `varBtnHeight` |
+| Fill | `varColorPrimary` |
+| Color | `Color.White` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| BorderColor | `Transparent` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+**OnSelect:**
+
+```powerfx
+Set(varShowBuildPlatesModal, 0);
+Set(varSelectedItem, Blank());
+ClearCollect(colBuildPlates, Blank());
+Clear(colBuildPlates);
+ClearCollect(colBuildPlatesIndexed, Blank());
+Clear(colBuildPlatesIndexed);
+Reset(ddBuildPlatesMachine)
+```
+
+> 💡 **Same as Close button:** Both buttons close the modal and clean up collections.
+
+---
+
+### ✅ Step 12F Checklist
+
+Before moving on, verify:
+
+- [ ] `conBuildPlatesModal` container visible when `varShowBuildPlatesModal > 0`
+- [ ] Title shows student name and ReqKey from `varSelectedItem`
+- [ ] Gallery displays plates with sequential numbering (1/5, 2/5, etc.)
+- [ ] Status badges show correct colors (gray=Queued, yellow=Printing, green=Completed, blue=Picked Up)
+- [ ] "▶ Printing" button appears only for Queued plates
+- [ ] "✓ Done" button appears only for Printing plates
+- [ ] Remove [✕] button appears on ALL plates
+- [ ] Machine dropdown is editable for Queued/Printing plates, disabled for Completed/Picked Up
+- [ ] Method filter works: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raised3D
+- [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
+- [ ] Removing a plate deletes the BuildPlates record
+- [ ] Progress label updates when plate statuses change
+- [ ] Close and Done buttons both reset collections and close modal
+
+---
+
 # STEP 13: Building the Notes Modal
 
 **What you're doing:** Creating a modal that displays both Student Notes (from submission) and Staff Notes (including system audit entries), and allows staff to add new notes.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
@@ -10802,6 +12169,275 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 1. Check your SharePoint Method column choices
 2. Ensure they're exactly "Filament" and "Resin" (case-sensitive)
 3. Or update the formula to match your actual choices
+
+---
+
+# Step 18: Testing the App
+
+**What you're doing:** Comprehensive testing of all Staff Dashboard features including build plate tracking, printer verification, and multi-payment workflows.
+
+---
+
+## Build Plate Tracking Tests
+
+### Scenario 1: Default Plate on Approval
+
+1. Open Approval Modal for a Pending job (student requested "Prusa MK4S")
+2. **Verify:** "Build Plates" section shows "Default: 1 plate on Prusa MK4S (student's request)"
+3. Fill in weight, hours, computer → click "Approve" (without clicking "Add Plates/Printers")
+4. **Verify:** Job moves to "Ready to Print"
+5. **Verify:** BuildPlates list has 1 record with Machine = "Prusa MK4S", Status = "Queued"
+6. **Verify:** Job card shows "0/1 done" (derived from BuildPlates count)
+7. **Verify:** Job card shows "Using: MK4S"
+
+### Scenario 2: Multi-Plate Setup via Approval Modal
+
+1. Open Approval Modal for a Pending job
+2. Click "Add Plates/Printers" → Build Plates Modal opens
+3. Set Total Plates = 5
+4. Add Prusa MK4S → add 3 plates under it
+5. Add Prusa XL → add 2 plates under it
+6. Click "Done" → back to Approval Modal
+7. **Verify:** Build Plates section now shows "5 plates on 2 printers (MK4S, XL)"
+8. Click "Approve"
+9. **Verify:** BuildPlates list has 5 records
+10. **Verify:** Job card shows "0/5 done · Using: MK4S, XL"
+
+### Scenario 3: Advance Plate Statuses
+
+1. Open Build Plates modal for a job with 5 plates (all Queued)
+2. Click "▶ Printing" on Plate 1 and Plate 2
+3. **Verify:** Status badges change to "Printing" (yellow)
+4. Click "✓ Done" on Plate 1
+5. **Verify:** Status badge changes to "Completed" (green)
+6. **Verify:** Progress shows "1 of 5 Completed"
+7. **Verify:** Job card shows "1/5 done"
+
+### Scenario 4: Completion Gate — Plates Not Done
+
+1. Job has 5 plates: 3 Completed, 2 still Printing
+2. **Verify:** "Print Complete" button is **disabled** on job card
+3. **Verify:** Helper text shows "2 plate(s) still printing"
+4. Mark remaining 2 plates as Completed
+5. **Verify:** "Print Complete" button becomes **enabled**
+
+### Scenario 5: Completion Gate — With Partial Pickup
+
+1. Job has 5 plates: 2 Picked Up (student already collected), 3 Completed
+2. **Verify:** "Print Complete" button is **enabled** (Picked Up counts as done)
+3. Click "Print Complete" → Complete Modal opens
+4. **Verify:** ActualPrinter shows "Printers used: MK4S, XL" (read-only, auto-populated)
+5. Confirm completion
+6. **Verify:** Job status = "Completed", ActualPrinter = [MK4S, XL]
+
+### Scenario 6: Remove Any Plate (Full Flexibility)
+
+1. Open Build Plates modal with plates in various statuses
+2. Click "✕" on a **Queued** plate → **Verify:** Removed
+3. Click "✕" on a **Printing** plate → **Verify:** Removed
+4. Click "✕" on a **Completed** plate → **Verify:** Removed
+5. **Verify:** Plate count decreases after each removal
+6. **Verify:** "✕" button is visible on ALL plates regardless of status
+
+### Scenario 7: Scrap and Re-slice Workflow
+
+1. Job has 4 plates: 2 Completed, 2 Printing
+2. Print fails — need to re-slice everything
+3. Open Build Plates modal
+4. Remove all 4 plates (including Completed ones)
+5. **Verify:** All plates removed, progress shows "0 of 0 Completed"
+6. Add new plates with different configuration
+7. **Verify:** New plates appear, job can continue fresh
+
+### Scenario 8: Partial Pickup via Payment Modal
+
+1. Job has 5 plates: 3 Completed, 2 still Printing
+2. Student comes to pick up the completed pieces
+3. Click "Partial Payment" → Payment Modal opens
+4. **Verify:** "Plates being picked up" shows 3 checkboxes (only Completed plates)
+5. Check all 3 boxes, enter weight and transaction number
+6. Click confirm
+7. **Verify:** 3 plates updated to "Picked Up"
+8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
+
+### Scenario 9: Resin Job Printer Filter
+
+1. Open Build Plates modal for a Resin request
+2. **Verify:** "Add Printer" dropdown shows only "Form 3"
+3. Add Form 3 → add plates
+4. **Verify:** All plates have Machine = "Form 3"
+
+### Scenario 10: Machine Edit on Queued/Printing Plate
+
+1. Create a plate with Machine = MK4S, Status = Queued
+2. **Verify:** Machine dropdown is enabled
+3. Change Machine from MK4S to XL
+4. **Verify:** Plate now shows Machine = XL
+5. Mark plate as Printing
+6. **Verify:** Machine dropdown still enabled
+7. Change Machine from XL to MK3S
+8. **Verify:** Plate shows Machine = MK3S
+9. Mark plate as Completed
+10. **Verify:** Machine dropdown is now disabled (locked)
+
+---
+
+## Printer Verification Tests
+
+### Scenario 11: Student Picked the Correct Printer
+
+1. Open Complete Confirmation Modal for a Printing item
+2. `ddCompletePrinter` pre-selects the printer already on the record (e.g., "Prusa MK4S...")
+3. Staff selects their name in `ddCompleteStaff`
+4. Staff confirms the pre-selected printer — no change needed
+5. Click "Confirm Complete"
+6. **Verify:** `ActualPrinter` = "Prusa MK4S", `Status` = "Completed"
+7. **Verify:** Audit log entry reads `"Completed"` (no correction note)
+
+### Scenario 12: Student Picked the Wrong Printer
+
+1. Open Complete Confirmation Modal for a Printing item (record shows "Prusa MK4S...")
+2. `ddCompletePrinter` pre-selects "Prusa MK4S..."
+3. Staff changes the dropdown to "Raised3D Pro 2 Plus..."
+4. Staff selects their name and clicks "Confirm Complete"
+5. **Verify:** `ActualPrinter` = "Raised3D Pro 2 Plus (12.0×12.0×23in)"
+6. **Verify:** `Printer` still = "Prusa MK4S (9.8×8.3×8.7in)" (original request preserved)
+7. **Verify:** Audit log entry reads `"Completed (Printer corrected: Prusa MK4S → Raised3D Pro 2 Plus)"`
+
+### Scenario 13: Resin Job Printer Filter
+
+1. Open Complete Confirmation Modal for a Resin Printing item
+2. `ddCompletePrinter` should only show "Form 3 (5.7×5.7×7.3in)" as an option (filtered by Method)
+3. Confirm it is the only available choice
+4. Staff confirms and clicks "Confirm Complete"
+5. **Verify:** `ActualPrinter` = "Form 3 (5.7×5.7×7.3in)"
+
+### Scenario 14: Confirm Button Blocked Until Printer Selected
+
+1. Open Complete Confirmation Modal
+2. Select a name in `ddCompleteStaff` but do not select a printer
+3. **Verify:** "Confirm Complete" button remains disabled
+4. Select a printer in `ddCompletePrinter`
+5. **Verify:** "Confirm Complete" button becomes active
+
+### Scenario 15: Cancel Resets All Controls
+
+1. Open Complete Confirmation Modal
+2. Select a staff name and a printer
+3. Click "Cancel"
+4. Re-open the modal for the same item
+5. **Verify:** Both `ddCompleteStaff` and `ddCompletePrinter` are blank (not carrying over previous selections)
+
+---
+
+## Multi-Payment Tracking Tests
+
+### Scenario 16: Single Payment (Normal Case)
+
+1. Job with 1 plate, student picks up everything at once
+2. Staff records payment: 115g, $11.50, TXN-12345
+3. **Verify:** `Payments` has 1 record
+4. **Verify:** `PrintRequests.FinalWeight` = 115, `FinalCost` = $11.50
+5. **Verify:** Monthly export shows 1 row
+
+### Scenario 17: Two Partial Payments
+
+1. Job with 5 plates
+2. Day 1: 3 plates done, student picks up, pays $8.50 (TXN-44821)
+3. **Verify:** `Payments` has 1 record, `PrintRequests.FinalCost` = $8.50
+4. Day 2: 2 plates done, student picks up remaining, pays $6.20 (TXN-44890)
+5. **Verify:** `Payments` has 2 records
+6. **Verify:** `PrintRequests.FinalWeight` = 147, `FinalCost` = $14.70
+7. **Verify:** Monthly export shows 2 rows
+
+### Scenario 18: Payment History Display
+
+1. Job with existing payment
+2. Open Payment Modal for additional payment
+3. **Verify:** Payment History section shows previous payment(s)
+4. **Verify:** "Paid so far" shows running total
+5. **Verify:** "Remaining estimate" calculates correctly
+
+### Scenario 19: Different Payers
+
+1. Day 1: Student pays for first pickup
+2. Day 2: Student's friend pays for second pickup (different payer)
+3. **Verify:** Payment 1 has student's name as payer
+4. **Verify:** Payment 2 has friend's name as payer
+5. **Verify:** Monthly export shows correct payer for each row
+
+### Scenario 20: Mixed Payment Types
+
+1. First payment: TigerCASH
+2. Second payment: Check
+3. Third payment: Grant Code
+4. **Verify:** Each `Payments` record has correct `PaymentType`
+5. **Verify:** Export shows payment type per row
+
+### Scenario 21: Backward Compatibility
+
+1. Existing job with payment recorded before this enhancement (data in `PrintRequests` fields only)
+2. Open Payment Modal
+3. **Verify:** Payment History is empty (no `Payments` records)
+4. **Verify:** System still shows `FinalWeight`/`FinalCost` from `PrintRequests`
+5. New payment creates first `Payments` record
+
+---
+
+## Core Workflow Tests
+
+### Scenario 22: Complete Approval-to-Pickup Workflow
+
+1. New job appears with Status = "Uploaded"
+2. Click "Approve" → Approval Modal opens
+3. Configure build plates (or accept default)
+4. Fill estimates → click "Approve"
+5. **Verify:** Status = "Ready to Print", plates created
+6. Click "Start Print" → Status = "Printing"
+7. Update plate statuses as prints complete
+8. All plates done → "Print Complete" enabled
+9. Click "Print Complete" → verify ActualPrinter auto-populated
+10. Student pays → record payment with plate pickup
+11. **Verify:** Status = "Paid & Picked Up", all plates = "Picked Up"
+
+### Scenario 23: Rejection Workflow
+
+1. Job with Status = "Uploaded" or "Pending"
+2. Click "Reject" → Rejection Modal opens
+3. Select reason, add notes → click "Confirm Reject"
+4. **Verify:** Status = "Rejected"
+5. **Verify:** Audit log shows rejection with reason
+
+### Scenario 24: Archive Workflow
+
+1. Completed job (any terminal status)
+2. Click "Archive" button
+3. **Verify:** Job moves to Archived status
+4. **Verify:** Job no longer appears in active tabs
+
+---
+
+## Testing Checklist
+
+Use this checklist to verify all features work correctly:
+
+- [ ] **Build Plates:** Default plate created on approval
+- [ ] **Build Plates:** Multi-plate/multi-printer setup works
+- [ ] **Build Plates:** Plate status transitions (Queued → Printing → Completed)
+- [ ] **Build Plates:** Completion gate blocks until all plates done
+- [ ] **Build Plates:** Plates can be removed at any status
+- [ ] **Printer Verification:** Correct printer pre-selected
+- [ ] **Printer Verification:** Wrong printer can be corrected
+- [ ] **Printer Verification:** Audit log notes correction
+- [ ] **Printer Verification:** Resin jobs filter to Form 3 only
+- [ ] **Payments:** Single payment records correctly
+- [ ] **Payments:** Multiple partial payments accumulate
+- [ ] **Payments:** Payment history displays in modal
+- [ ] **Payments:** Different payers tracked per payment
+- [ ] **Payments:** Plate pickup checkboxes work
+- [ ] **Core:** Full workflow from submission to pickup
+- [ ] **Core:** Rejection workflow with reason
+- [ ] **Core:** Archive moves jobs out of active view
 
 ---
 
