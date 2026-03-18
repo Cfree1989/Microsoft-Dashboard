@@ -523,9 +523,9 @@ Screens:
                     // Add sequential PlateNum (1, 2, 3…) for use in plate labels
                     ClearCollect(colBuildPlatesIndexed,
                         AddColumns(
-                            colBuildPlates,
-                            "PlateNum",
-                            CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID))
+                            colBuildPlates As plate,
+                            PlateNum,
+                            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
                         )
                     );
                     // Collect distinct printers used
@@ -980,7 +980,7 @@ Screens:
                         Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
                     );
                     ClearCollect(colBuildPlatesIndexed,
-                        AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                        AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                     );
                     ClearCollect(colPickedUpPlates, Blank());
                     Clear(colPickedUpPlates);
@@ -2271,7 +2271,7 @@ Screens:
                         Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
                     );
                     ClearCollect(colBuildPlatesIndexed,
-                        AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                        AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                     );
                     ClearCollect(colPrintersUsed,
                         Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID), Machine.Value)
@@ -3652,129 +3652,144 @@ Screens:
                     Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
 
                     // Create a new Payments record
-                    Set(varNewPayment,
-                        Patch(
-                            Payments,
-                            Defaults(Payments),
-                            {
-                                RequestID: varSelectedItem.ID,
-                                ReqKey: varSelectedItem.ReqKey,
-                                TransactionNumber: txtPaymentTransaction.Text,
-                                Weight: Value(txtPaymentWeight.Text),
-                                Amount: varFinalCost,
-                                PaymentType: {Value: ddPaymentType.Selected.Value},
-                                PaymentDate: dpPaymentDate.SelectedDate,
-                                PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
-                                PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
-                                PlatesPickedUp: If(
-                                    CountRows(colPickedUpPlates) > 0,
-                                    Concat(colPickedUpPlates, Text(PlateNum), ", "),
-                                    ""
-                                ),
-                                RecordedBy: {
-                                    Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-                                    Department: "",
-                                    DisplayName: ddPaymentStaff.Selected.MemberName,
-                                    Email: ddPaymentStaff.Selected.MemberEmail,
-                                    JobTitle: "",
-                                    Picture: ""
-                                },
-                                StudentOwnMaterial: chkOwnMaterial.Value
-                            }
-                        )
-                    );
-
-                    // Mark checked completed plates as picked up
-                    If(
-                        CountRows(colPickedUpPlates) > 0,
-                        ForAll(
-                            colPickedUpPlates,
-                            Patch(
-                                BuildPlates,
-                                LookUp(BuildPlates, ID = ThisRecord.ID),
-                                {Status: {Value: "Picked Up"}}
-                            )
-                        )
-                    );
-
-                    // Refresh supporting collections
-                    ClearCollect(colPayments,
-                        Sort(Filter(Payments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
-                    );
-                    ClearCollect(colAllBuildPlates, BuildPlates);
-
-                    // Update running totals and status on the parent request
-                    With(
-                        {
-                            wResultStatus:
-                                If(
-                                    chkPartialPickup.Value ||
-                                    varSelectedItem.Status.Value = "Printing" ||
-                                    CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
-                                    varSelectedItem.Status,
-                                    {Value: "Paid & Picked Up"}
+                    Set(
+                        varPaymentSaved,
+                        IfError(
+                            Set(
+                                varNewPayment,
+                                Patch(
+                                    Payments,
+                                    Defaults(Payments),
+                                    {
+                                        RequestID: varSelectedItem.ID,
+                                        ReqKey: varSelectedItem.ReqKey,
+                                        TransactionNumber: txtPaymentTransaction.Text,
+                                        Weight: Value(txtPaymentWeight.Text),
+                                        Amount: varFinalCost,
+                                        PaymentType: {Value: ddPaymentType.Selected.Value},
+                                        PaymentDate: dpPaymentDate.SelectedDate,
+                                        PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
+                                        PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
+                                        PlatesPickedUp: If(
+                                            CountRows(colPickedUpPlates) > 0,
+                                            Concat(colPickedUpPlates, Text(PlateNum), ", "),
+                                            ""
+                                        ),
+                                        RecordedBy: {
+                                            Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                                            Department: "",
+                                            DisplayName: ddPaymentStaff.Selected.MemberName,
+                                            Email: ddPaymentStaff.Selected.MemberEmail,
+                                            JobTitle: "",
+                                            Picture: ""
+                                        },
+                                        StudentOwnMaterial: chkOwnMaterial.Value
+                                    }
                                 )
-                        },
-                        Patch(
-                            PrintRequests,
-                            LookUp(PrintRequests, ID = varSelectedItem.ID),
+                            );
+                            true,
+                            Notify("Failed to save payment.", NotificationType.Error);
+                            false
+                        )
+                    );
+
+                    If(
+                        varPaymentSaved,
+                        // Mark checked completed plates as picked up
+                        If(
+                            CountRows(colPickedUpPlates) > 0,
+                            ForAll(
+                                colPickedUpPlates,
+                                Patch(
+                                    BuildPlates,
+                                    LookUp(BuildPlates, ID = ThisRecord.ID),
+                                    {Status: {Value: "Picked Up"}}
+                                )
+                            )
+                        );
+
+                        // Refresh supporting collections
+                        ClearCollect(colPayments,
+                            Sort(Filter(Payments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+                        );
+                        ClearCollect(colAllBuildPlates, BuildPlates);
+
+                        // Update running totals and status on the parent request
+                        With(
                             {
-                                FinalWeight: Sum(colPayments, Weight),
-                                FinalCost: Sum(colPayments, Amount),
-                                PaymentDate: dpPaymentDate.SelectedDate,
-                                StudentOwnMaterial: chkOwnMaterial.Value,
-                                Status: wResultStatus,
-                                PaymentNotes: If(
-                                    IsBlank(Trim(txtPaymentNotes.Text)),
-                                    varSelectedItem.PaymentNotes,
-                                    Concatenate(
-                                        If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
-                                        "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
+                                wResultStatus:
+                                    If(
+                                        chkPartialPickup.Value ||
+                                        varSelectedItem.Status.Value = "Printing" ||
+                                        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
+                                        varSelectedItem.Status,
+                                        {Value: "Paid & Picked Up"}
+                                    )
+                            },
+                            Patch(
+                                PrintRequests,
+                                LookUp(PrintRequests, ID = varSelectedItem.ID),
+                                {
+                                    FinalWeight: Sum(colPayments, Weight),
+                                    FinalCost: Sum(colPayments, Amount),
+                                    PaymentDate: dpPaymentDate.SelectedDate,
+                                    StudentOwnMaterial: chkOwnMaterial.Value,
+                                    Status: wResultStatus,
+                                    PaymentNotes: If(
+                                        IsBlank(Trim(txtPaymentNotes.Text)),
+                                        varSelectedItem.PaymentNotes,
+                                        Concatenate(
+                                            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
+                                            "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
+                                        )
+                                    ),
+                                    LastAction: {Value: "Picked Up"},
+                                    LastActionBy: {
+                                        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                                        Department: "",
+                                        DisplayName: ddPaymentStaff.Selected.MemberName,
+                                        Email: ddPaymentStaff.Selected.MemberEmail,
+                                        JobTitle: "",
+                                        Picture: ""
+                                    },
+                                    LastActionAt: Now()
+                                }
+                            );
+                            IfError(
+                                Set(
+                                    varPaymentAuditResult,
+                                    'Flow-(C)-Action-LogAction'.Run(
+                                        Text(varSelectedItem.ID),
+                                        If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
+                                        If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
+                                        "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                                        If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", "") &
+                                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
+                                        ddPaymentStaff.Selected.MemberEmail
                                     )
                                 ),
-                                LastAction: {Value: "Picked Up"},
-                                LastActionBy: {
-                                    Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-                                    Department: "",
-                                    DisplayName: ddPaymentStaff.Selected.MemberName,
-                                    Email: ddPaymentStaff.Selected.MemberEmail,
-                                    JobTitle: "",
-                                    Picture: ""
-                                },
-                                LastActionAt: Now()
-                            }
+                                Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+                            )
                         );
-                        IfError(
-                            'Flow-(C)-Action-LogAction'.Run(
-                                Text(varSelectedItem.ID),
-                                If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
-                                If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
-                                "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                                If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", "") &
-                                If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
-                                ddPaymentStaff.Selected.MemberEmail
-                            ),
-                            Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
-                        )
-                    );
 
-                    // Close modal and reset
-                    Set(varShowPaymentModal, 0);
-                    Set(varSelectedItem, Blank());
-                    Reset(txtPaymentTransaction);
-                    Reset(txtPaymentWeight);
-                    Reset(dpPaymentDate);
-                    Reset(txtPaymentNotes);
-                    Reset(ddPaymentStaff);
-                    Reset(chkOwnMaterial);
-                    Reset(chkPartialPickup);
-                    Reset(ddPaymentType);
-                    Reset(chkPayerSameAsStudent);
-                    Reset(txtPayerName);
-                    Reset(txtPayerTigerCard);
-                    Clear(colPickedUpPlates);
-                    Clear(colPayments);
-                    Notify("Payment recorded!", NotificationType.Success);
+                        // Close modal and reset
+                        Set(varShowPaymentModal, 0);
+                        Set(varSelectedItem, Blank());
+                        Reset(txtPaymentTransaction);
+                        Reset(txtPaymentWeight);
+                        Reset(dpPaymentDate);
+                        Reset(txtPaymentNotes);
+                        Reset(ddPaymentStaff);
+                        Reset(chkOwnMaterial);
+                        Reset(chkPartialPickup);
+                        Reset(ddPaymentType);
+                        Reset(chkPayerSameAsStudent);
+                        Reset(txtPayerName);
+                        Reset(txtPayerTigerCard);
+                        Clear(colPickedUpPlates);
+                        Clear(colPayments);
+                        Notify("Payment recorded!", NotificationType.Success)
+                    );
 
                     // === HIDE LOADING ===
                     Set(varIsLoading, false);
@@ -4306,7 +4321,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =Font.'Open Sans'
                   Height: =16
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Blank()
                   Size: =9
                   Text: ="(Only completed plates shown)"
                   Visible: =CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0
@@ -6583,7 +6598,8 @@ Screens:
                   HoverColor: =Color.White
                   HoverFill: =varColorPrimaryHover
                   OnSelect: |-
-                    =Set(varIsLoading, true);
+                    =// === SHOW LOADING ===
+                    Set(varIsLoading, true);
                     Set(varLoadingMessage, "Completing print...");
 
                     // Determine ActualPrinter from plates (or fall back to student's requested printer)
@@ -6598,51 +6614,69 @@ Screens:
                     );
 
                     // Update SharePoint item with ActualPrinter
-                    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-                        Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
-                        ActualPrinter: {Value: varActualPrinterValue},
-                        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-                        LastActionBy: {
-                            Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
-                            Discipline: "",
-                            DisplayName: ddCompleteStaff.Selected.MemberName,
-                            Email: ddCompleteStaff.Selected.MemberEmail,
-                            JobTitle: "",
-                            Picture: ""
-                        },
-                        LastActionAt: Now()
-                    });
-
-                    // Log action via Flow C with conditional printer correction note
-                    IfError(
-                        'Flow-(C)-Action-LogAction'.Run(
-                            Text(varSelectedItem.ID),              // RequestID
-                            "Status Change",                       // Action
-                            "Status",                              // FieldName
-                            Concatenate(
-                                "Completed",
-                                If(
-                                    varActualPrinterValue <> varSelectedItem.Printer.Value,
-                                    " (Printer: " &
-                                        Trim(If(Find("(", varActualPrinterValue) > 0,
-                                            Left(varActualPrinterValue, Find("(", varActualPrinterValue) - 2),
-                                            varActualPrinterValue)) &
-                                        If(CountRows(colActualPrinters) > 1, " + " & Text(CountRows(colActualPrinters) - 1) & " more", "") &
-                                    ")",
-                                    ""
-                                )
-                            ),                                     // NewValue
-                            ddCompleteStaff.Selected.MemberEmail   // ActorEmail
-                        ),
-                        Notify("Marked complete, but could not log to audit.", NotificationType.Warning)
+                    Set(
+                        varCompleteSaved,
+                        IfError(
+                            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+                                Status: LookUp(Choices(PrintRequests.Status), Value = "Completed"),
+                                ActualPrinter: If(
+                                    CountRows(colActualPrinters) > 0,
+                                    ForAll(colActualPrinters As printer, {Value: printer.Value}),
+                                    Table({Value: varSelectedItem.Printer.Value})
+                                ),
+                                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+                                LastActionBy: {
+                                    Claims: "i:0#.f|membership|" & ddCompleteStaff.Selected.MemberEmail,
+                                    Discipline: "",
+                                    DisplayName: ddCompleteStaff.Selected.MemberName,
+                                    Email: ddCompleteStaff.Selected.MemberEmail,
+                                    JobTitle: "",
+                                    Picture: ""
+                                },
+                                LastActionAt: Now()
+                            });
+                            true,
+                            Notify("Failed to mark print complete.", NotificationType.Error);
+                            false
+                        )
                     );
 
-                    Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success);
+                    If(
+                        varCompleteSaved,
+                        // Log action via Flow C with conditional printer correction note
+                        IfError(
+                            Set(
+                                varCompleteAuditResult,
+                                'Flow-(C)-Action-LogAction'.Run(
+                                    Text(varSelectedItem.ID),              // RequestID
+                                    "Status Change",                       // Action
+                                    "Status",                              // FieldName
+                                    Concatenate(
+                                        "Completed",
+                                        If(
+                                            varActualPrinterValue <> varSelectedItem.Printer.Value,
+                                            " (Printer: " &
+                                                Trim(If(Find("(", varActualPrinterValue) > 0,
+                                                    Left(varActualPrinterValue, Find("(", varActualPrinterValue) - 2),
+                                                    varActualPrinterValue)) &
+                                                If(CountRows(colActualPrinters) > 1, " + " & Text(CountRows(colActualPrinters) - 1) & " more", "") &
+                                            ")",
+                                            ""
+                                        )
+                                    ),                                     // NewValue
+                                    ddCompleteStaff.Selected.MemberEmail   // ActorEmail
+                                )
+                            ),
+                            Notify("Marked complete, but could not log to audit.", NotificationType.Warning)
+                        );
 
-                    // Close modal and reset
-                    Set(varShowCompleteModal, 0);
-                    Set(varSelectedItem, Blank());
-                    Reset(ddCompleteStaff);
+                        Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success);
+
+                        // Close modal and reset
+                        Set(varShowCompleteModal, 0);
+                        Set(varSelectedItem, Blank());
+                        Reset(ddCompleteStaff)
+                    );
 
                     // === HIDE LOADING ===
                     Set(varIsLoading, false);
@@ -6748,8 +6782,8 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =26
-                  Size: =14
-                  Text: ="Build Plates — " & varSelectedItem.Title & " · " & varSelectedItem.ReqKey
+                  Size: =10
+                  Text: ="Build Plates — " & " · " & varSelectedItem.ReqKey
                   Width: =520
                   X: =recBuildPlatesModal.X + 20
                   Y: =recBuildPlatesModal.Y + 18
@@ -6979,7 +7013,7 @@ Screens:
                           );
                           // Refresh collections
                           ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
-                          ClearCollect(colBuildPlatesIndexed, AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID))));
+                          ClearCollect(colBuildPlatesIndexed, AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))));
                           ClearCollect(colAllBuildPlates, BuildPlates);
                           ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
                         PressedColor: =RGBA(255, 255, 255, 1)
@@ -7028,7 +7062,7 @@ Screens:
                               Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
                           );
                           ClearCollect(colBuildPlatesIndexed,
-                              AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                              AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                           );
                           ClearCollect(colAllBuildPlates, BuildPlates)
                         PressedBorderColor: =Self.Fill
@@ -7066,7 +7100,7 @@ Screens:
                               Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
                           );
                           ClearCollect(colBuildPlatesIndexed,
-                              AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                              AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                           );
                           ClearCollect(colAllBuildPlates, BuildPlates)
                         PressedBorderColor: =Self.Fill
@@ -7101,7 +7135,7 @@ Screens:
                               Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
                           );
                           ClearCollect(colBuildPlatesIndexed,
-                              AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                              AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                           );
                           ClearCollect(colAllBuildPlates, BuildPlates)
                         PressedBorderColor: =Self.Fill
@@ -7169,7 +7203,7 @@ Screens:
                         Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
                     );
                     ClearCollect(colBuildPlatesIndexed,
-                        AddColumns(colBuildPlates, "PlateNum", CountRows(Filter(colBuildPlates, ID <= ThisRecord.ID)))
+                        AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
                     );
                     ClearCollect(colAllBuildPlates, BuildPlates);
                     Reset(ddBuildPlatesMachine)
