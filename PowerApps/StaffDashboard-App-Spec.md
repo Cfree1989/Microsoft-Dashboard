@@ -1512,7 +1512,7 @@ With(
 
 | Property | Value |
 |----------|-------|
-| Text | `"🖨 " & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0, Concat(Distinct(Filter(colAllBuildPlates, RequestID = ThisItem.ID), Machine.Value), Trim(If(Find("(", ThisRecord.Result) > 0, Left(ThisRecord.Result, Find("(", ThisRecord.Result) - 2), ThisRecord.Result)), ", "), Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)))` |
+| Text | `"🖨 " & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0, Concat(Distinct(Filter(colAllBuildPlates, RequestID = ThisItem.ID), Machine.Value), Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)), ", "), Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)))` |
 | X | `Parent.TemplateWidth / 2` |
 | Y | `55` |
 | Width | `Parent.TemplateWidth / 2 - 16` |
@@ -1521,6 +1521,8 @@ With(
 | Color | `varColorTextMuted` |
 
 > 💡 **Why this formula?** If build plates exist for this job, shows the actual printers being used (from `colAllBuildPlates`). Otherwise, falls back to the student's requested printer. Dimensions (e.g., "(14.2×14.2×14.2in)") are stripped for cleaner display.
+>
+> When `Distinct(...)` is used in these printer-summary formulas, reference the single-column output as `Value`.
 
 ### Student Note Button (btnStudentNote)
 
@@ -3131,9 +3133,10 @@ IfError(
         "Rejected",                            // NewValue
         ddRejectStaff.Selected.MemberEmail     // ActorEmail
     ),
-    Notify("Could not log rejection.", NotificationType.Error),
-    Notify("Request rejected. Student will be notified.", NotificationType.Success)
+    Notify("Could not log rejection.", NotificationType.Error)
 );
+
+Notify("Request rejected. Student will be notified.", NotificationType.Success);
 
 // Close modal and reset
 Set(varShowRejectModal, 0);
@@ -3828,8 +3831,10 @@ Set(varCalculatedCost,
 // Update SharePoint item with error handling
 // ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names
 // Using LookUp to get fresh record avoids concurrency conflicts
-IfError(
-    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+Set(
+    varApprovalSaved,
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
         NeedsAttention: false,
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
@@ -3856,11 +3861,16 @@ IfError(
             If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
             " - " & Text(Now(), "m/d h:mmam/pm")
         )
-    }),
-    // ERROR: Patch failed
-    Set(varIsLoading, false);
-    Notify("Failed to save approval. Please try again.", NotificationType.Error),
-    // SUCCESS: Continue with Flow logging
+    });
+        true,
+        Set(varIsLoading, false);
+        Notify("Failed to save approval. Please try again.", NotificationType.Error);
+        false
+    )
+);
+
+If(
+    varApprovalSaved,
     IfError(
         'Flow-(C)-Action-LogAction'.Run(
             Text(varSelectedItem.ID),              // RequestID
@@ -3869,9 +3879,9 @@ IfError(
             "Pending",                             // NewValue
             ddApprovalStaff.Selected.MemberEmail   // ActorEmail
         ),
-        Notify("Approved, but could not log to audit.", NotificationType.Warning),
-        Notify("Approved! Student will receive estimate email.", NotificationType.Success)
+        Notify("Approved, but could not log to audit.", NotificationType.Warning)
     );
+    Notify("Approved! Student will receive estimate email.", NotificationType.Success);
     
     // === CREATE DEFAULT BUILD PLATE ===
     // If staff didn't configure plates via "Add Plates/Printers" button, auto-create one
@@ -3902,8 +3912,9 @@ Set(varLoadingMessage, "")
 ```
 
 > 💡 **Error Handling Pattern:**
-> - The outer `IfError` catches Patch failures
-> - The inner `IfError` catches Flow failures (approval still saved even if logging fails)
+> - `varApprovalSaved` captures whether the request save succeeded
+> - `IfError(...)` is used only for failure handling, not as a mixed success/error branch
+> - Flow logging is attempted only after the save succeeds, and the success `Notify(...)` is called separately
 > - Loading overlay prevents double-clicks during operation
 
 ---
@@ -4272,9 +4283,10 @@ IfError(
         "Archived",                            // NewValue
         ddArchiveStaff.Selected.MemberEmail    // ActorEmail
     ),
-    Notify("Could not log archive.", NotificationType.Error),
-    Notify("Request archived successfully.", NotificationType.Success)
+    Notify("Could not log archive.", NotificationType.Error)
 );
+
+Notify("Request archived successfully.", NotificationType.Success);
 
 // Close modal and reset
 Set(varShowArchiveModal, 0);
@@ -4531,7 +4543,7 @@ If(
     CountRows(colActualPrinters) > 0,
     Concat(
         colActualPrinters, 
-        Trim(If(Find("(", ThisRecord.Result) > 0, Left(ThisRecord.Result, Find("(", ThisRecord.Result) - 2), ThisRecord.Result)), 
+        Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)), 
         ", "
     ),
     Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
@@ -4621,7 +4633,7 @@ Set(varActualPrinterValue,
     If(
         CountRows(colActualPrinters) > 0,
         // Use first printer from plates (multi-select will use all values)
-        First(colActualPrinters).Result,
+        First(colActualPrinters).Value,
         // Fall back to student's requested printer
         varSelectedItem.Printer.Value
     )
@@ -4664,9 +4676,10 @@ IfError(
         ),                                     // NewValue
         ddCompleteStaff.Selected.MemberEmail   // ActorEmail
     ),
-    Notify("Marked complete, but could not log to audit.", NotificationType.Warning),
-    Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success)
+    Notify("Marked complete, but could not log to audit.", NotificationType.Warning)
 );
+
+Notify("Marked as completed! Student will receive pickup email.", NotificationType.Success);
 
 // Close modal and reset
 Set(varShowCompleteModal, 0);
@@ -5479,9 +5492,10 @@ IfError(
         varChangeDesc,                         // NewValue
         ddDetailsStaff.Selected.MemberEmail    // ActorEmail
     ),
-    Notify("Could not log changes.", NotificationType.Error),
-    Notify("Print details updated successfully!", NotificationType.Success)
+    Notify("Could not log changes.", NotificationType.Error)
 );
+
+Notify("Print details updated successfully!", NotificationType.Success);
 
 // Close modal and reset
 Set(varShowDetailsModal, 0);
@@ -6373,17 +6387,19 @@ With(
     {
         wPaidWeight: If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
     },
-    "Remaining: ~" & Text(Max(0, varSelectedItem.EstWeight - wPaidWeight)) & "g · ~" &
+    "Remaining: ~" & Text(Max(0, varSelectedItem.EstimatedWeight - wPaidWeight)) & "g · ~" &
     Text(
         Max(
             0,
-            (varSelectedItem.EstWeight - wPaidWeight) *
+            (varSelectedItem.EstimatedWeight - wPaidWeight) *
             If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)
         ),
         "[$-en-US]$#,##0.00"
     )
 )
 ```
+
+> Use `EstimatedWeight` here to match the `PrintRequests` schema documented throughout this spec.
 
 ---
 
@@ -8200,6 +8216,8 @@ The [✕] remove button appears on ALL plate rows.
 
 ### Control Hierarchy
 
+Before customizing this gallery, either insert a blank vertical gallery or delete the default browse-gallery template children first. The final template should contain only the plate controls documented below, not stock controls like `Image3`, `Title3`, `Subtitle3`, `NextArrow3`, or bindings to unrelated default fields such as `Compliance Asset Id` or `Color Tag`.
+
 ```
 scrDashboard
 └── conBuildPlatesModal              ← CONTAINER (Visible = varShowBuildPlatesModal > 0)
@@ -8409,6 +8427,8 @@ Reset(ddBuildPlatesMachine)
 | TemplateSize | `52` |
 | TemplatePadding | `2` |
 | ShowScrollbar | `true` |
+
+> Important: if you started from a stock browse gallery, remove the default children before wiring up the controls below. `galBuildPlates` should not display placeholder SharePoint fields such as `Compliance Asset Id` or `Color Tag`.
 
 ---
 
