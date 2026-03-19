@@ -413,6 +413,7 @@ Set(varExpandAll, false);
 // These control which modal is visible (0 = hidden, ID = visible for that item)
 Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
+Set(varBuildPlatesOpenedFromApproval, false);
 Set(varShowArchiveModal, 0);
 Set(varShowCompleteModal, 0);
 Set(varShowDetailsModal, 0);
@@ -556,7 +557,7 @@ Set(varModalMargin, 40);                           // Margin from screen edges
 
 // Gallery template sizes
 Set(varTabGalleryHeight, 148);                     // Status tabs gallery height
-Set(varCardGalleryHeight, 490);                    // Job cards gallery template size (increased for Build Plates row)
+Set(varCardGalleryHeight, 450);                    // Job cards gallery template size (increased for Build Plates row)
 
 // Message bubble layout
 Set(varMessageBubbleWidth, 0.85);                  // Message bubble width as % of container
@@ -614,6 +615,7 @@ Set(varLoadingMessage, "")
 | `varNeedsAttention` | Filter for attention items only | Boolean |
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
+| `varBuildPlatesOpenedFromApproval` | Tracks whether Build Plates was opened from the Approval modal | Boolean |
 | `varShowArchiveModal` | ID of item being archived (0=hidden) | Number |
 | `varShowCompleteModal` | ID of item being marked complete (0=hidden) | Number |
 | `varShowDetailsModal` | ID of item for detail changes (0=hidden) | Number |
@@ -843,7 +845,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnBuildPlatesClose
         btnBuildPlatesDone
         btnBuildPlatesAdd
-        ddBuildPlatesMachine
         lblAddPlateHeader
         recBuildPlatesDivider3
         galBuildPlates
@@ -1287,7 +1288,8 @@ Your Tree view should now include:
 1. Click on **scrDashboard** in the Tree view (not inside the status tabs gallery).
 2. Click **+ Insert** → **Blank vertical gallery**.
 3. **Rename it:** `galJobCards`
-4. Set properties:
+4. Set properties.
+5. **Replace the `Visible` property** with the exact formula below so the Approval modal is hidden whenever the Build Plates modal is open:
 
 | Property | Value |
 |----------|-------|
@@ -1381,7 +1383,7 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-4. Set **OnSelect:**
+4. Set **OnSelect** exactly as follows:
 
 ```powerfx
 If(
@@ -1758,6 +1760,7 @@ Set(varSelectedItem, ThisItem)
 ### Build Plates Row (conBuildPlatesRow)
 
 This row displays build plate progress, printers in use, and a button to open the Build Plates Modal. It appears only when plates exist for the job.
+Because approved jobs default to at least one build plate, single-plate jobs should still show this row as `0/1 done` and later `1/1 done` when complete. Do not hide the row just because there is only one plate.
 
 **Job Card Layout with Build Plates:**
 ```
@@ -1816,6 +1819,8 @@ This row displays build plate progress, printers in use, and a button to open th
 | VerticalAlign | `VerticalAlign.Middle` |
 
 > 💡 **Formula:** Counts plates with "Completed" or "Picked Up" status vs total plates. Example: "🖨 3/5 done"
+>
+> For single-plate jobs, this should read `🖨 0/1 done` while queued/printing and `🖨 1/1 done` once the plate is completed or picked up. This is preferred over hiding the summary for one-plate jobs.
 
 #### Build Plates Button (btnBuildPlates)
 
@@ -2265,7 +2270,7 @@ Go back inside `galJobCards` gallery template. We'll place buttons at the **bott
 | Font | `varAppFont` |
 | Visible | `ThisItem.Status.Value = "Uploaded"` |
 
-4. Set **OnSelect:**
+4. Set **OnSelect** exactly as follows:
 
 ```powerfx
 Set(varShowApprovalModal, ThisItem.ID);
@@ -2717,7 +2722,8 @@ scrDashboard
 1. Click on **scrDashboard** in Tree view.
 2. Click **+ Insert** → **Layout** → **Container**.
 3. **Rename it:** `conRejectModal`
-4. Set properties:
+4. Set properties.
+5. Replace the `Visible` property with the exact formula shown below.
 
 | Property | Value |
 |----------|-------|
@@ -3206,6 +3212,7 @@ scrDashboard
 2. Click **+ Insert** → **Layout** → **Container**.
 3. **Rename it:** `conApprovalModal`
 4. Set properties:
+5. Replace the `Visible` property with the exact formula shown below.
 
 | Property | Value |
 |----------|-------|
@@ -3217,6 +3224,8 @@ scrDashboard
 | **Visible** | `varShowApprovalModal > 0 && varShowBuildPlatesModal = 0` |
 
 > 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility. The added `varShowBuildPlatesModal = 0` condition prevents the approval modal from remaining visible behind the Build Plates modal.
+>
+> **If you still see Approval behind Build Plates:** The live app formula on `conApprovalModal.Visible` has not been updated yet. The fix is not visual styling alone; it must be this exact visibility formula.
 
 ---
 
@@ -3707,7 +3716,7 @@ If(
 | Font | `varAppFont` |
 | Size | `12` |
 
-61. Set **OnSelect:**
+61. Set **OnSelect** exactly as follows:
 
 ```powerfx
 // Open Build Plates modal (varSelectedItem already set from Approve button click)
@@ -3730,6 +3739,8 @@ ClearCollect(colPrintersUsed,
 > `varBuildPlatesOpenedFromApproval` tracks that this modal was opened from Approval, so closing Build Plates returns staff to the Approval modal instead of clearing the current request context.
 >
 > Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` stays consistent in the modal and pickup flows.
+>
+> **Expected result:** Once this button is clicked, staff should only see the Build Plates modal. The Approval modal title, body, and buttons should not remain visible in the background.
 
 ---
 
@@ -5581,12 +5592,8 @@ scrDashboard
     ├── lblRemainingEst
     ├── lblPaidSoFar
     ├── galPaymentHistory
-    │   ├── lblHistDate
-    │   ├── lblHistTxn
-    │   ├── lblHistWeight
-    │   ├── lblHistAmount
-    │   ├── lblHistPlates
-    │   └── lblHistStaff
+    │   ├── recHistRowBg
+    │   └── lblHistSummary
     ├── lblPaymentHistoryHeader
     ├── txtPaymentNotes
     ├── lblPaymentNotesLabel
@@ -5784,7 +5791,7 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 | X | `recPaymentModal.X + 555` |
 | Y | `recPaymentModal.Y + 88` |
 | Width | `1` |
-| Height | `520` |
+| Height | `btnPaymentCancel.Y - recPaymentVerticalDivider.Y - 18` |
 | Fill | `varColorBorderLight` |
 | Visible | `CountRows(colPayments) > 0 Or CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0 Or !IsBlank(varSelectedItem.FinalCost)` |
 
@@ -6284,6 +6291,8 @@ If(
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
 
+> 🧹 **Remove legacy control:** If you still have an older `txtPaymentHistory` text box from a previous draft of this modal, delete it. Payment history should come only from `galPaymentHistory` bound to the `Payments` list.
+
 ---
 
 ### Payment History Header (lblPaymentHistoryHeader)
@@ -6317,47 +6326,88 @@ If(
 |----------|-------|
 | Items | `Sort(colPayments, PaymentDate, SortOrder.Ascending)` |
 | X | `recPaymentModal.X + 590` |
-| Y | `recPaymentModal.Y + 138` |
+| Y | `lblPaymentHistoryHeader.Y + lblPaymentHistoryHeader.Height + 4` |
 | Width | `460` |
-| Height | `Min(150, CountRows(colPayments) * 46)` |
-| TemplateSize | `44` |
-| TemplatePadding | `2` |
-| Fill | `RGBA(248, 249, 250, 1)` |
+| Height | `Min(98, CountRows(colPayments) * 32 + 2)` |
+| TemplateSize | `32` |
+| TemplatePadding | `0` |
+| Fill | `Color.Transparent` |
+| ShowScrollbar | `false` |
 | Visible | `CountRows(colPayments) > 0` |
 
-94. Inside the `galPaymentHistory` **template**, add the following **Text label** controls.
+94. Use a **blank vertical gallery layout** for this control, or delete any stock template controls that Power Apps inserts automatically. This history row is a single compact line, not the default gallery layout.
 
-> 💡 **Important:** These are all labels placed **inside the gallery row template**. They are **not** separate controls placed directly on the modal canvas. Insert each one while `galPaymentHistory` is selected and you are editing the template.
+95. Inside the `galPaymentHistory` **template**, add these two controls:
+
+> 💡 **Important:** These controls are placed **inside the gallery row template**. They are **not** separate controls placed directly on the modal canvas. Insert each one while `galPaymentHistory` is selected and you are editing the template.
 
 | Control | Property | Value |
 |---------|----------|-------|
-| `lblHistDate` | Text | `Text(ThisItem.PaymentDate, "m/d")` |
-| `lblHistDate` | X | `6` |
-| `lblHistDate` | Y | `4` |
-| `lblHistTxn` | Text | `ThisItem.TransactionNumber` |
-| `lblHistTxn` | X | `52` |
-| `lblHistTxn` | Y | `4` |
-| `lblHistWeight` | Text | `Text(ThisItem.Weight) & "g"` |
-| `lblHistWeight` | X | `210` |
-| `lblHistWeight` | Y | `4` |
-| `lblHistAmount` | Text | `Text(ThisItem.Amount, "[$-en-US]$#,##0.00")` |
-| `lblHistAmount` | X | `270` |
-| `lblHistAmount` | Y | `4` |
-| `lblHistPlates` | Text | `If(!IsBlank(ThisItem.PlatesPickedUp), "Plates " & ThisItem.PlatesPickedUp, "")` |
-| `lblHistPlates` | X | `52` |
-| `lblHistPlates` | Y | `22` |
-| `lblHistStaff` | Text | `ThisItem.RecordedBy.DisplayName` |
-| `lblHistStaff` | X | `270` |
-| `lblHistStaff` | Y | `22` |
+| `recHistRowBg` | X | `0` |
+| `recHistRowBg` | Y | `1` |
+| `recHistRowBg` | Width | `448` |
+| `recHistRowBg` | Height | `28` |
+| `recHistRowBg` | Fill | `RGBA(219, 219, 219, 1)` |
+| `lblHistSummary` | X | `10` |
+| `lblHistSummary` | Y | `5` |
+| `lblHistSummary` | Width | `432` |
+| `lblHistSummary` | Height | `18` |
+| `lblHistSummary` | Font | `varAppFont` |
+| `lblHistSummary` | Size | `10` |
+| `lblHistSummary` | Wrap | `false` |
 
-95. These six labels create a two-line payment history row:
+96. Set `lblHistSummary.Text`:
 
-| Row | Controls |
-|-----|----------|
-| Top row | `lblHistDate`, `lblHistTxn`, `lblHistWeight`, `lblHistAmount` |
-| Bottom row | `lblHistPlates`, `lblHistStaff` |
+```powerfx
+Text(ThisItem.PaymentDate, "[$-en-US]mm/dd/yyyy") &
+" · #" & ThisItem.TransactionNumber &
+" · " & Text(ThisItem.Weight) & "g" &
+" · " & Text(ThisItem.Amount, "[$-en-US]$#,##0.00") &
+With(
+    {
+        wPlateText: Trim(Coalesce(ThisItem.PlatesPickedUp, ""))
+    },
+    If(
+        IsBlank(wPlateText),
+        "",
+        With(
+            {
+                wPlateParts: Filter(
+                    Split(Substitute(wPlateText, " ", ""), ",") As platePart,
+                    !IsBlank(platePart.Value)
+                )
+            },
+            With(
+                {
+                    wPlateCount: CountRows(wPlateParts),
+                    wMinPlate: Min(wPlateParts, Value(Value)),
+                    wMaxPlate: Max(wPlateParts, Value(Value))
+                },
+                " · " &
+                If(wPlateCount = 1, "Plate ", "Plates ") &
+                If(
+                    wPlateCount > 1 && wPlateCount = wMaxPlate - wMinPlate + 1,
+                    Text(wMinPlate) & "-" & Text(wMaxPlate),
+                    Concat(wPlateParts As platePart, platePart.Value, ",")
+                )
+            )
+        )
+    )
+) &
+If(
+    !IsBlank(ThisItem.RecordedBy.DisplayName),
+    " · " & ThisItem.RecordedBy.DisplayName,
+    ""
+)
+```
 
 > 💡 **Source of truth:** This gallery reads from the `Payments` list. Do not parse payment history out of `PrintRequests.PaymentNotes`.
+>
+> 💡 **Layout rule:** Everything in the right column below this gallery should be positioned from the control above it, not from a fixed `Y` value. That keeps the modal layout stable whether history is shown or hidden.
+>
+> 💡 **Visual target:** Each payment should render as one compact gray row with inline `·` separators, matching the generated mockup. Avoid multi-line stacked labels here unless you intentionally redesign the row.
+>
+> 💡 **Plate formatting rule:** Show `Plate 4` for one plate, `Plates 1-3` for consecutive ranges, and `Plates 1,3,5` for non-consecutive pickups.
 
 ---
 
@@ -6370,7 +6420,7 @@ If(
 | Property | Value |
 |----------|-------|
 | X | `recPaymentModal.X + 590` |
-| Y | `galPaymentHistory.Y + galPaymentHistory.Height + 8` |
+| Y | `If(galPaymentHistory.Visible, galPaymentHistory.Y + galPaymentHistory.Height + 8, recPaymentModal.Y + 110)` |
 | Width | `460` |
 | Height | `20` |
 | Font | `varAppFont` |
@@ -6402,7 +6452,7 @@ Text(
 | Property | Value |
 |----------|-------|
 | X | `recPaymentModal.X + 590` |
-| Y | `lblPaidSoFar.Y + 20` |
+| Y | `lblPaidSoFar.Y + lblPaidSoFar.Height + 4` |
 | Width | `460` |
 | Height | `20` |
 | Font | `varAppFont` |
@@ -6441,7 +6491,7 @@ With(
 | Property | Value |
 |----------|-------|
 | X | `recPaymentModal.X + 590` |
-| Y | `lblRemainingEst.Y + 34` |
+| Y | `lblRemainingEst.Y + lblRemainingEst.Height + 12` |
 | Width | `460` |
 | Height | `1` |
 | Fill | `varColorBorderLight` |
@@ -6459,7 +6509,7 @@ With(
 |----------|-------|
 | Text | `"PLATES BEING PICKED UP"` |
 | X | `recPaymentModal.X + 590` |
-| Y | `recPlatesDivider.Y + 12` |
+| Y | `recPlatesDivider.Y + recPlatesDivider.Height + 12` |
 | Width | `460` |
 | Height | `24` |
 | Font | `varAppFont` |
@@ -6480,7 +6530,7 @@ With(
 |----------|-------|
 | Items | `Filter(colBuildPlatesIndexed, Status.Value = "Completed")` |
 | X | `recPaymentModal.X + 590` |
-| Y | `lblPlatesPickupHeader.Y + 28` |
+| Y | `lblPlatesPickupHeader.Y + lblPlatesPickupHeader.Height + 4` |
 | Width | `460` |
 | Height | `Min(170, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)` |
 | TemplateSize | `34` |
@@ -6570,7 +6620,7 @@ Trim(
 |----------|-------|
 | Text | `"Partial Pickup — Student will return for remaining items"` |
 | X | `recPaymentModal.X + 590` |
-| Y | `recPaymentModal.Y + 585` |
+| Y | `btnPaymentConfirm.Y - Self.Height - 8` |
 | Width | `460` |
 | Height | `32` |
 | Font | `varAppFont` |
@@ -6595,7 +6645,7 @@ Trim(
 |----------|-------|
 | Text | `"Add More Items"` |
 | X | `recPaymentModal.X + 590` |
-| Y | `recPaymentModal.Y + 625` |
+| Y | `recPaymentModal.Y + recPaymentModal.Height - Self.Height - 20` |
 | Width | `140` |
 | Height | `varBtnHeight` |
 | Fill | `varColorPrimary` |
@@ -6647,8 +6697,8 @@ Notify("Batch mode enabled. Select more Completed items, then click 'Process Bat
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recPaymentModal.X + 780` |
-| Y | `recPaymentModal.Y + 625` |
+| X | `btnPaymentConfirm.X - Self.Width - 20` |
+| Y | `recPaymentModal.Y + recPaymentModal.Height - Self.Height - 20` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -6696,8 +6746,8 @@ Clear(colPayments)
 | Property | Value |
 |----------|-------|
 | Text | `If(chkPartialPickup.Value, "Record Partial Payment", "Record Payment")` |
-| X | `recPaymentModal.X + 920` |
-| Y | `recPaymentModal.Y + 625` |
+| X | `recPaymentModal.X + recPaymentModal.Width - Self.Width - 30` |
+| Y | `recPaymentModal.Y + recPaymentModal.Height - Self.Height - 20` |
 | Width | `130` |
 | Height | `varBtnHeight` |
 | Fill | `If(chkPartialPickup.Value, varColorWarning, varColorSuccess)` |
@@ -6806,10 +6856,10 @@ If(
     If(
         CountRows(colPickedUpPlates) > 0,
         ForAll(
-            colPickedUpPlates,
+            colPickedUpPlates As pickedPlate,
             Patch(
                 BuildPlates,
-                LookUp(BuildPlates, ID = ThisRecord.ID),
+                LookUp(BuildPlates, ID = pickedPlate.ID),
                 {Status: {Value: "Picked Up"}}
             )
         )
@@ -8215,7 +8265,7 @@ ForAll(
 ### Design Overview
 
 The Build Plates Modal organizes plates as a scrollable list. Staff can:
-- Add new plates (selecting which printer)
+- Add new plates with a default printer, then adjust the row's printer if needed
 - Change a plate's assigned printer (while Queued or Printing)
 - Advance plate status (Queued → Printing → Completed)
 - Remove any plate (for re-slicing scenarios)
@@ -8240,7 +8290,7 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 │  └────────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  Add plate:  [ Select printer...                    ▼ ]    [+ Add Plate] │
+│  Add plate:                                               [+ Add Plate] │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                  [Done]  │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -8284,8 +8334,7 @@ scrDashboard
     │   └── btnRemovePlate           ← [✕] (always visible)
     ├── recBuildPlatesDivider3       ← Divider above Add Plate section
     ├── lblAddPlateHeader            ← "Add plate:"
-    ├── ddBuildPlatesMachine         ← Printer dropdown
-    ├── btnBuildPlatesAdd            ← [+ Add Plate]
+    ├── btnBuildPlatesAdd            ← [+ Add Plate] (uses default printer)
     └── btnBuildPlatesDone           ← "Done"
 ```
 
@@ -8305,6 +8354,8 @@ scrDashboard
 | **Visible** | `varShowBuildPlatesModal > 0` |
 
 > 💡 **Modal Stacking Rule:** When this modal is opened from the Approval modal, it acts like a child modal. It should fully cover the screen, and the Approval modal should be hidden until Build Plates closes.
+>
+> **Troubleshooting:** If the Build Plates modal appears but the Approval modal is still visible behind it, re-check `conApprovalModal.Visible`. This behavior is controlled by the Approval container, not the Build Plates container.
 
 ---
 
@@ -8379,7 +8430,7 @@ scrDashboard
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-**OnSelect:**
+**Replace the existing `OnSelect` formula with:**
 
 ```powerfx
 Set(varShowBuildPlatesModal, 0);
@@ -8388,7 +8439,6 @@ ClearCollect(colBuildPlates, Blank());
 Clear(colBuildPlates);
 ClearCollect(colBuildPlatesIndexed, Blank());
 Clear(colBuildPlatesIndexed);
-Reset(ddBuildPlatesMachine);
 Set(varBuildPlatesOpenedFromApproval, false)
 ```
 
@@ -8523,8 +8573,9 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 |----------|-------|
 | Control | Dropdown |
 | Name | `drpPlateMachine` |
-| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
-| Default | `ThisItem.Machine.Value` |
+| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
+| Value | `"DisplayValue"` |
+| Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `52` |
 | Y | `8` |
 | Width | `160` |
@@ -8540,7 +8591,7 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 ```powerfx
 Patch(BuildPlates,
     LookUp(BuildPlates, ID = ThisItem.ID),
-    { Machine: drpPlateMachine.Selected }
+    { Machine: { Value: drpPlateMachine.Selected.Value } }
 );
 // Refresh collections
 ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
@@ -8549,7 +8600,9 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 ```
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and either `Raise3D`/`Raised3D` choice spelling. Resin jobs show only Form 3.
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and any printer choice that starts with `Raise` (covers `Raise3D`, `Raised3D`, and spaced variants like `Raise 3D`). Resin jobs show only Form 3.
+>
+> **Modal-only display cleanup:** In this modal, the dropdown shows shortened labels like `Prusa MK4S` and `Raise3D Pro 2 Plus`, but the app still patches the original full SharePoint choice value behind the scenes.
 >
 > The aliased `plate` / `priorPlate` version avoids the parser ambiguity that can happen when `ThisRecord` is reused inside the nested `Filter(...)`.
 
@@ -8600,9 +8653,9 @@ ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 | Size | `9` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| **Visible** | `ThisItem.Status.Value = "Queued"` |
+| **Visible** | `ThisItem.Status.Value = "Queued" && varSelectedItem.Status.Value = "Printing"` |
 
-**OnSelect:**
+**Replace the existing `OnSelect` formula with:**
 
 ```powerfx
 Patch(BuildPlates,
@@ -8617,6 +8670,8 @@ ClearCollect(colBuildPlatesIndexed,
 );
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
+
+> 💡 **Parent status gate:** Staff should not mark an individual plate as `Printing` until the parent request itself has been moved to `Printing` from the job card. This keeps plate-level progress aligned with the request's overall status.
 
 ---
 
@@ -8648,7 +8703,7 @@ Same properties as `btnMarkPrinting` with:
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `ThisItem.Status.Value = "Printing"` |
 
-**OnSelect:**
+**Replace the existing `OnSelect` formula with:**
 
 ```powerfx
 Patch(BuildPlates,
@@ -8719,40 +8774,6 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 
 ---
 
-### Machine Dropdown (ddBuildPlatesMachine)
-
-| Property | Value |
-|----------|-------|
-| Control | Dropdown |
-| Name | `ddBuildPlatesMachine` |
-| Items | `Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true))` |
-| Default | `""` |
-| X | `recBuildPlatesModal.X + 104` |
-| Y | `recBuildPlatesModal.Y + 452` |
-| Width | `280` |
-| Height | `32` |
-| Font | `varAppFont` |
-| Size | `10` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| DisabledBorderColor | `varInputBorderColor` |
-| ChevronBackground | `varChevronBackground` |
-| ChevronFill | `varChevronFill` |
-| ChevronHoverBackground | `varChevronHoverBackground` |
-| ChevronHoverFill | `varChevronHoverFill` |
-| ChevronDisabledBackground | `varChevronBackground` |
-| ChevronDisabledFill | `varChevronBackground` |
-| HoverFill | `varDropdownHoverFill` |
-| PressedFill | `varDropdownPressedFill` |
-| PressedColor | `varDropdownPressedColor` |
-| SelectionFill | `varDropdownSelectionFill` |
-| SelectionColor | `varDropdownSelectionColor` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and either `Raise3D`/`Raised3D` choice spelling. Resin jobs show only Form 3. Uses the same filter pattern as other printer dropdowns.
-
----
-
 ### Add Plate Button (btnBuildPlatesAdd)
 
 | Property | Value |
@@ -8760,7 +8781,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Control | Button |
 | Name | `btnBuildPlatesAdd` |
 | Text | `"+ Add Plate"` |
-| X | `recBuildPlatesModal.X + 396` |
+| X | `recBuildPlatesModal.X + 460` |
 | Y | `recBuildPlatesModal.Y + 452` |
 | Width | `100` |
 | Height | `32` |
@@ -8777,28 +8798,57 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisplayMode | `If(IsBlank(ddBuildPlatesMachine.Selected.Value), DisplayMode.Disabled, DisplayMode.Edit)` |
+| DisplayMode | `DisplayMode.Edit` |
+
+> 💡 **Simplified UX:** `+ Add Plate` now creates a new plate immediately. Staff can change the machine afterward using the row dropdown, so a second printer picker at the bottom is no longer needed.
+>
+> **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3.
 
 **OnSelect:**
 
 ```powerfx
-    Patch(BuildPlates,
-        Defaults(BuildPlates),
-        {
-            RequestID: varSelectedItem.ID,
-            ReqKey: varSelectedItem.ReqKey,
-            Machine: ddBuildPlatesMachine.Selected,
-            Status: { Value: "Queued" }
-        }
-    );
+Patch(BuildPlates,
+    Defaults(BuildPlates),
+    {
+        RequestID: varSelectedItem.ID,
+        ReqKey: varSelectedItem.ReqKey,
+        Machine: Coalesce(
+            LookUp(
+                Filter(
+                    Choices([@BuildPlates].Machine),
+                    If(
+                        varSelectedItem.Method.Value = "Filament",
+                        StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                        varSelectedItem.Method.Value = "Resin",
+                        Value = "Form 3 (5.7×5.7×7.3in)",
+                        true
+                    )
+                ),
+                Value = varSelectedItem.Printer.Value
+            ),
+            First(
+                Filter(
+                    Choices([@BuildPlates].Machine),
+                    If(
+                        varSelectedItem.Method.Value = "Filament",
+                        StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                        varSelectedItem.Method.Value = "Resin",
+                        Value = "Form 3 (5.7×5.7×7.3in)",
+                        true
+                    )
+                )
+            )
+        ),
+        Status: { Value: "Queued" }
+    }
+);
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
     AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
-Reset(ddBuildPlatesMachine)
+ClearCollect(colAllBuildPlates, BuildPlates)
 ```
 
 ---
@@ -8828,7 +8878,7 @@ Reset(ddBuildPlatesMachine)
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 
-**OnSelect:**
+**Replace the existing `OnSelect` formula with:**
 
 ```powerfx
 Set(varShowBuildPlatesModal, 0);
@@ -8837,7 +8887,6 @@ ClearCollect(colBuildPlates, Blank());
 Clear(colBuildPlates);
 ClearCollect(colBuildPlatesIndexed, Blank());
 Clear(colBuildPlatesIndexed);
-Reset(ddBuildPlatesMachine);
 Set(varBuildPlatesOpenedFromApproval, false)
 ```
 
@@ -8857,7 +8906,10 @@ Before moving on, verify:
 - [ ] "✓ Done" button appears only for Printing plates
 - [ ] Remove [✕] button appears on ALL plates
 - [ ] Machine dropdown is editable for Queued/Printing plates, disabled for Completed/Picked Up
-- [ ] Method filter works: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raised3D
+- [ ] `▶ Printing` only appears after the parent request has been moved to `Printing`
+- [ ] `+ Add Plate` creates a new queued plate immediately without a second dropdown at the bottom
+- [ ] New plates default to the request's current printer when valid, otherwise fall back to the first valid machine for that method
+- [ ] Method filter works on the row dropdown: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raise3D-family printers
 - [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
 - [ ] Removing a plate deletes the BuildPlates record
 - [ ] Progress label updates when plate statuses change
@@ -12268,24 +12320,28 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. Open Approval Modal for a Pending job
 2. Click "Add Plates/Printers" → Build Plates Modal opens and the Approval modal is hidden
-3. Set Total Plates = 5
-4. Add Prusa MK4S → add 3 plates under it
-5. Add Prusa XL → add 2 plates under it
-6. Click "Done" → Build Plates closes and the Approval modal returns
-7. **Verify:** Build Plates section now shows "5 plates on 2 printers (MK4S, XL)"
-8. Click "Approve"
-9. **Verify:** BuildPlates list has 5 records
-10. **Verify:** Job card shows "0/5 done · Using: MK4S, XL"
+3. **Verify:** You do not see the Approval modal title, body fields, or action buttons behind the Build Plates modal
+4. Set Total Plates = 5
+5. Add Prusa MK4S → add 3 plates under it
+6. Add Prusa XL → add 2 plates under it
+7. Click "Done" → Build Plates closes and the Approval modal returns
+8. **Verify:** Build Plates section now shows "5 plates on 2 printers (MK4S, XL)"
+9. Click "Approve"
+10. **Verify:** BuildPlates list has 5 records
+11. **Verify:** Job card shows "0/5 done · Using: MK4S, XL"
 
 ### Scenario 3: Advance Plate Statuses
 
 1. Open Build Plates modal for a job with 5 plates (all Queued)
-2. Click "▶ Printing" on Plate 1 and Plate 2
-3. **Verify:** Status badges change to "Printing" (yellow)
-4. Click "✓ Done" on Plate 1
-5. **Verify:** Status badge changes to "Completed" (green)
-6. **Verify:** Progress shows "1 of 5 Completed"
-7. **Verify:** Job card shows "1/5 done"
+2. **Verify:** "▶ Printing" is hidden because the parent request is not yet in `Printing`
+3. Use the main job card `"Start Printing"` button
+4. Re-open Build Plates modal
+5. Click "▶ Printing" on Plate 1 and Plate 2
+6. **Verify:** Status badges change to "Printing" (yellow)
+7. Click "✓ Done" on Plate 1
+8. **Verify:** Status badge changes to "Completed" (green)
+9. **Verify:** Progress shows "1 of 5 Completed"
+10. **Verify:** Job card shows "1/5 done"
 
 ### Scenario 4: Completion Gate — Plates Not Done
 
@@ -12497,7 +12553,7 @@ Use this checklist to verify all features work correctly:
 
 - [ ] **Build Plates:** Default plate created on approval
 - [ ] **Build Plates:** Multi-plate/multi-printer setup works
-- [ ] **Build Plates:** Plate status transitions (Queued → Printing → Completed)
+- [ ] **Build Plates:** Plate status transitions are gated by parent request status (`Queued` plates cannot be marked `Printing` until the job is in `Printing`)
 - [ ] **Build Plates:** Completion gate blocks until all plates done
 - [ ] **Build Plates:** Plates can be removed at any status
 - [ ] **Printer Verification:** Correct printer pre-selected
