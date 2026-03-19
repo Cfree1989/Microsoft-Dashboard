@@ -505,7 +505,7 @@ These columns capture actual payment details when a print is picked up.
 
 1. Click **+ Add column** → **Currency**
 2. **Name:** `FinalCost`
-3. **Description:** `Actual cost charged (calculated from FinalWeight)`
+3. **Description:** `Running total cost charged for this request (rolled up from Payments)`
 4. **Currency format:** $ English (United States)
 5. **Number of decimal places:** 2
 6. Click **Save**
@@ -707,13 +707,15 @@ This column captures which printer(s) the job was actually printed on, separate 
 |--------|------|----------|---------|---------|
 | TransactionNumber | Single line | No | - | Reference number (receipt, check, or grant/program code) |
 | FinalWeight | Number | No | - | Actual weight of finished print (grams) |
-| FinalCost | Currency | No | - | Actual cost charged (from FinalWeight) |
+| FinalCost | Currency | No | - | Running total charged for this request (from Payments) |
 | PaymentDate | Date | No | - | Date payment was recorded |
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
 | StudentOwnMaterial | Yes/No | No | No | Student provided own material (70% discount) |
 | PaymentType | Choice | No | TigerCASH | Payment method (TigerCASH, Check, Code) |
 | PayerName | Single line | No | - | Name of person who paid (if different from student) |
 | PayerTigerCard | Single line | No | - | TigerCard number of payer (for remote charging) |
+
+> 💡 **Source-of-truth note:** These fields are parent-level convenience values. When `Payments` rows exist, treat those rows as the canonical transaction history and treat `FinalWeight`, `FinalCost`, and `PaymentDate` here as request rollups.
 
 ---
 

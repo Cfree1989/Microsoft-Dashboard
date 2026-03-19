@@ -431,6 +431,10 @@ Set(varShowBuildPlatesModal, 0);
 Set(varBatchSelectMode, false);
 ClearCollect(colBatchItems, Blank());
 Clear(colBatchItems);
+ClearCollect(colBatchSucceededItems, Blank());
+Clear(colBatchSucceededItems);
+ClearCollect(colBatchFailedItems, Blank());
+Clear(colBatchFailedItems);
 
 // Batch calculation variables (used during batch payment processing)
 Set(varBatchTotalEstWeight, 0);
@@ -630,10 +634,12 @@ Set(varLoadingMessage, "")
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
+| `colBatchSucceededItems` | Batch items saved successfully in the current run | Table |
+| `colBatchFailedItems` | Batch items that failed validation or patching in the current run | Table |
 | `varBatchTotalEstWeight` | Sum of estimated weights for batch items (calculation temp) | Number |
 | `varBatchCombinedWeight` | Combined final weight entered for batch (calculation temp) | Number |
 | `varBatchItemCount` | Number of items in batch (calculation temp) | Number |
-| `varBatchFinalCost` | Total final cost for batch (calculation temp) | Number |
+| `varBatchFinalCost` | Sum of the per-item charges for the current batch run | Number |
 | `varBatchProcessedCount` | Count of items processed (for notification) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
@@ -6477,7 +6483,7 @@ If(
 >
 > 💡 **Plate formatting rule:** Show `Plate 4` for one plate, `Plates 1-3` for consecutive ranges, and `Plates 1,3,5` for non-consecutive pickups.
 >
-> ⚠️ **Durability rule:** `PlatesPickedUp` is a human-readable display snapshot only. Store the stable per-plate keys in `Payments.PlateIDsPickedUp` and use those for audit/history logic. `PlateNum` can change after removals or re-slicing.
+> ⚠️ **Durability rule:** `PlatesPickedUp` is a human-readable display snapshot only. Store the best available pickup-time keys in `Payments.PlateIDsPickedUp`, but treat the `Payments` row itself as the canonical financial record if plates are later re-sliced, replaced, or renumbered. `PlateNum` can change after removals or re-slicing.
 
 ---
 
@@ -6741,7 +6747,10 @@ Trim(
 127. Set **OnSelect:**
 
 ```powerfx
-Collect(colBatchItems, varSelectedItem);
+If(
+    !(varSelectedItem.ID in colBatchItems.ID),
+    Collect(colBatchItems, varSelectedItem)
+);
 Set(varBatchSelectMode, true);
 Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank());
@@ -6762,6 +6771,8 @@ Notify("Batch mode enabled. Select more Completed items, then click 'Process Bat
 ```
 
 > ⚠️ **Batch contract:** Once staff switches into batch mode, they are building a **final pickup** across multiple completed requests. For any selected request that has build plates, batch processing will mark **all remaining eligible completed plates** as `Picked Up`. If staff needs to pick up only some of a request's completed plates, they must stay in the single-request Payment Modal instead of batch mode.
+>
+> 💡 **Deduping safeguard:** `btnAddMoreItems` uses an `ID` guard so the same request cannot be appended twice through the modal path.
 
 ---
 
@@ -6875,7 +6886,36 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Recording payment...");
 
-// Calculate this transaction's cost
+// Refresh and revalidate immediately before saving to reduce stale-state duplicates
+Refresh(PrintRequests);
+Refresh(BuildPlates);
+Refresh(Payments);
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments);
+Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
+
+If(
+    IsBlank(varSelectedItem) || !(varSelectedItem.Status.Value in ["Printing", "Completed"]),
+    Notify("This request is no longer eligible for payment. Close and reopen the modal before trying again.", NotificationType.Error),
+
+    ClearCollect(
+        colPayments,
+        Sort(Filter(colAllPayments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+    );
+    ClearCollect(
+        colBuildPlates,
+        Sort(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+    );
+    ClearCollect(
+        colBuildPlatesIndexed,
+        AddColumns(
+            colBuildPlates As plate,
+            PlateNum,
+            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
+        )
+    );
+
+    // Calculate this transaction's cost
 Set(varBaseCost,
     Max(
         varMinimumCost,
@@ -7096,6 +7136,8 @@ If(
     Clear(colPickedUpPlates);
     Clear(colPayments);
     Notify("Payment recorded!", NotificationType.Success)
+);
+
 );
 
 // === HIDE LOADING ===
@@ -7581,7 +7623,7 @@ Set(varLoadingMessage, "")
 
 # STEP 12E: Building the Batch Payment Modal
 
-**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a combined weight and single transaction number.
+**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a shared transaction header: one transaction number, one payer, one payment date, and one combined weight.
 
 > 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
 >
@@ -7589,7 +7631,9 @@ Set(varLoadingMessage, "")
 >
 > ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: create one `Payments` row per batch item, mark the picked-up build plates, then recompute `PrintRequests.FinalWeight` / `FinalCost` from `Payments`. Do not rely on `PaymentNotes` alone for history.
 >
-> ⚠️ **Stable identity rule:** Any request with build plates must persist stable `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text. `PlateNum` is display-only and must not be treated as the durable identifier.
+> ⚠️ **Pricing note:** Batch weight is still allocated across the selected requests proportionally, but each saved `Payments` row must price that request using its own `Method.Value` (`Filament` vs `Resin`).
+>
+> ⚠️ **Stable identity rule:** Any request with build plates should still persist `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text, but that snapshot is operational context only. If plates are later re-sliced or replaced, the `Payments` row remains the canonical history.
 
 > ⚠️ **Reminder:** Use Classic controls as described in Step 10. Classic TextInput uses `.Text`, Classic Button uses `Fill`/`Color` properties.
 
@@ -7604,6 +7648,7 @@ Set(varLoadingMessage, "")
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
 - Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
+- All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, and `PaymentDate`, because accounting treats the batch as one real-world transaction.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -7613,6 +7658,10 @@ scrDashboard
     ├── chkBatchOwnMaterial       ← Own material checkbox (applies to all)
     ├── lblBatchCostValue         ← Auto-calculated combined cost
     ├── lblBatchCostLabel         ← "Total Cost:"
+    ├── dpBatchPaymentDate        ← Shared payment date picker
+    ├── lblBatchPaymentDateLabel  ← "Payment Date: *"
+    ├── txtBatchPayerName         ← Shared payer name input
+    ├── lblBatchPayerNameLabel    ← "Payer Name: *"
     ├── txtBatchWeight            ← Combined weight input
     ├── lblBatchWeightLabel       ← "Combined Weight (grams): *"
     ├── txtBatchTransaction       ← Transaction number input
@@ -7672,9 +7721,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 650) / 2` |
+| Y | `(Parent.Height - 720) / 2` |
 | Width | `600` |
-| Height | `650` |
+| Height | `720` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -7748,6 +7797,8 @@ scrDashboard
 Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
+Reset(txtBatchPayerName);
+Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
 Reset(chkBatchOwnMaterial);
@@ -7909,15 +7960,15 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 ---
 
-### Weight Label (lblBatchWeightLabel)
+### Payer Name Label (lblBatchPayerNameLabel)
 
 38. Click **+ Insert** → **Text label**.
-39. **Rename it:** `lblBatchWeightLabel`
+39. **Rename it:** `lblBatchPayerNameLabel`
 40. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Combined Weight (grams): *"` |
+| Text | `"Payer Name: *"` |
 | X | `recBatchPaymentModal.X + 20` |
 | Y | `recBatchPaymentModal.Y + 160` |
 | Width | `200` |
@@ -7926,16 +7977,100 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 ---
 
-### Weight Input (txtBatchWeight)
+### Payer Name Input (txtBatchPayerName)
 
 41. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
-42. **Rename it:** `txtBatchWeight`
+42. **Rename it:** `txtBatchPayerName`
 43. Set properties:
 
 | Property | Value |
 |----------|-------|
+| Default | `""` |
 | X | `recBatchPaymentModal.X + 20` |
 | Y | `recBatchPaymentModal.Y + 185` |
+| Width | `270` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+
+---
+
+### Payment Date Label (lblBatchPaymentDateLabel)
+
+44. Click **+ Insert** → **Text label**.
+45. **Rename it:** `lblBatchPaymentDateLabel`
+46. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payment Date: *"` |
+| X | `recBatchPaymentModal.X + 310` |
+| Y | `recBatchPaymentModal.Y + 160` |
+| Width | `140` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Payment Date Picker (dpBatchPaymentDate)
+
+47. Click **+ Insert** → **Date picker** (**Classic**).
+48. **Rename it:** `dpBatchPaymentDate`
+49. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 310` |
+| Y | `recBatchPaymentModal.Y + 185` |
+| Width | `130` |
+| Height | `36` |
+| DefaultDate | `Today()` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| IconBackground | `varChevronBackground` |
+| IconFill | `RGBA(255, 255, 255, 1)` |
+
+---
+
+### Weight Label (lblBatchWeightLabel)
+
+50. Click **+ Insert** → **Text label**.
+51. **Rename it:** `lblBatchWeightLabel`
+52. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Combined Weight (grams): *"` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 245` |
+| Width | `200` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Weight Input (txtBatchWeight)
+
+53. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
+54. **Rename it:** `txtBatchWeight`
+55. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 270` |
 | Width | `150` |
 | Height | `36` |
 | Font | `varAppFont` |
@@ -7951,7 +8086,7 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 | RadiusBottomLeft | `varInputBorderRadius` |
 | RadiusBottomRight | `varInputBorderRadius` |
 
-44. Set **Default:**
+56. Set **Default:**
 
 ```powerfx
 Text(Sum(colBatchItems, EstimatedWeight))
@@ -7963,15 +8098,15 @@ Text(Sum(colBatchItems, EstimatedWeight))
 
 ### Cost Label (lblBatchCostLabel)
 
-45. Click **+ Insert** → **Text label**.
-46. **Rename it:** `lblBatchCostLabel`
-47. Set properties:
+57. Click **+ Insert** → **Text label**.
+58. **Rename it:** `lblBatchCostLabel`
+59. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Total Cost:"` |
 | X | `recBatchPaymentModal.X + 190` |
-| Y | `recBatchPaymentModal.Y + 160` |
+| Y | `recBatchPaymentModal.Y + 245` |
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -7980,14 +8115,14 @@ Text(Sum(colBatchItems, EstimatedWeight))
 
 ### Cost Value (lblBatchCostValue)
 
-48. Click **+ Insert** → **Text label**.
-49. **Rename it:** `lblBatchCostValue`
-50. Set properties:
+60. Click **+ Insert** → **Text label**.
+61. **Rename it:** `lblBatchCostValue`
+62. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recBatchPaymentModal.X + 190` |
-| Y | `recBatchPaymentModal.Y + 185` |
+| Y | `recBatchPaymentModal.Y + 270` |
 | Width | `150` |
 | Height | `36` |
 | Size | `16` |
@@ -7995,38 +8130,60 @@ Text(Sum(colBatchItems, EstimatedWeight))
 | Color | `varColorSuccess` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-51. Set **Text:**
+63. Set **Text:**
 
 ```powerfx
 With(
     {
-        baseCost: Max(
-            Value(txtBatchWeight.Text) * varFilamentRate,
-            varMinimumCost
-        )
+        totalEstWeight: Sum(colBatchItems, EstimatedWeight),
+        itemCount: CountRows(colBatchItems),
+        enteredWeight: Value(txtBatchWeight.Text)
     },
     Text(
-        If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+        Sum(
+            ForAll(
+                colBatchItems As batchItem,
+                With(
+                    {
+                        allocatedWeight: If(
+                            totalEstWeight > 0,
+                            Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
+                            Round(enteredWeight / itemCount, 2)
+                        ),
+                        baseCost: Max(
+                            If(
+                                batchItem.Method.Value = "Resin",
+                                allocatedWeight * varResinRate,
+                                allocatedWeight * varFilamentRate
+                            ),
+                            varMinimumCost
+                        )
+                    },
+                    If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
+                )
+            ),
+            Value
+        ),
         "[$-en-US]$#,##0.00"
     )
 )
 ```
 
-> 💡 **Auto-calculated:** Cost updates in real-time based on weight and own material discount. Uses the same rate variables as single-item payment.
+> 💡 **Auto-calculated:** Cost updates in real-time from the entered combined weight, then prices each request with its own method-specific rate before summing the per-item charges.
 
 ---
 
 ### Own Material Checkbox (chkBatchOwnMaterial)
 
-52. Click **+ Insert** → **Checkbox**.
-53. **Rename it:** `chkBatchOwnMaterial`
-54. Set properties:
+64. Click **+ Insert** → **Checkbox**.
+65. **Rename it:** `chkBatchOwnMaterial`
+66. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Student provides own material (70% discount)"` |
 | X | `recBatchPaymentModal.X + 360` |
-| Y | `recBatchPaymentModal.Y + 185` |
+| Y | `recBatchPaymentModal.Y + 270` |
 | Width | `220` |
 | Height | `36` |
 | Size | `11` |
@@ -8035,15 +8192,15 @@ With(
 
 ### Items Header (lblBatchItemsHeader)
 
-55. Click **+ Insert** → **Text label**.
-56. **Rename it:** `lblBatchItemsHeader`
-57. Set properties:
+67. Click **+ Insert** → **Text label**.
+68. **Rename it:** `lblBatchItemsHeader`
+69. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Selected Items:"` |
 | X | `recBatchPaymentModal.X + 20` |
-| Y | `recBatchPaymentModal.Y + 235` |
+| Y | `recBatchPaymentModal.Y + 320` |
 | Width | `560` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -8053,17 +8210,17 @@ With(
 
 ### Items Gallery (galBatchItems)
 
-58. Click **+ Insert** → **Blank vertical gallery**.
-59. **Rename it:** `galBatchItems`
-60. Set properties:
+70. Click **+ Insert** → **Blank vertical gallery**.
+71. **Rename it:** `galBatchItems`
+72. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `colBatchItems` |
 | X | `recBatchPaymentModal.X + 20` |
-| Y | `recBatchPaymentModal.Y + 260` |
+| Y | `recBatchPaymentModal.Y + 345` |
 | Width | `560` |
-| Height | `280` |
+| Height | `230` |
 | TemplateSize | `35` |
 | TemplatePadding | `2` |
 
@@ -8137,7 +8294,7 @@ If(
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recBatchPaymentModal.X + 320` |
-| Y | `recBatchPaymentModal.Y + 560` |
+| Y | `recBatchPaymentModal.Y + 630` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -8159,6 +8316,8 @@ If(
 Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
+Reset(txtBatchPayerName);
+Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
 Reset(chkBatchOwnMaterial);
@@ -8177,7 +8336,7 @@ Reset(ddBatchPaymentType)
 |----------|-------|
 | Text | `"Record Batch Payment"` |
 | X | `recBatchPaymentModal.X + 450` |
-| Y | `recBatchPaymentModal.Y + 560` |
+| Y | `recBatchPaymentModal.Y + 630` |
 | Width | `130` |
 | Height | `varBtnHeight` |
 | Fill | `varColorSuccess` |
@@ -8199,6 +8358,8 @@ Reset(ddBatchPaymentType)
 If(
     !IsBlank(ddBatchStaff.Selected) && 
     !IsBlank(txtBatchTransaction.Text) &&
+    !IsBlank(Trim(txtBatchPayerName.Text)) &&
+    !IsBlank(dpBatchPaymentDate.SelectedDate) &&
     !IsBlank(txtBatchWeight.Text) && 
     IsNumeric(txtBatchWeight.Text) && 
     Value(txtBatchWeight.Text) > 0 &&
@@ -8215,19 +8376,20 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Processing batch payment...");
 
-// === STEP 1: CONCURRENCY CHECK ===
-// Refresh data and verify all items are still eligible final pickups
+// === STEP 1: REFRESH SHARED SNAPSHOTS ===
 Refresh(PrintRequests);
 Refresh(BuildPlates);
 Refresh(Payments);
 ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colAllPayments, Payments);
+Clear(colBatchSucceededItems);
+Clear(colBatchFailedItems);
+
 If(
     CountRows(Filter(PrintRequests, ID in colBatchItems.ID && Status.Value <> "Completed")) > 0,
-    // One or more parent requests changed - abort
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
-    Notify("One or more items are no longer in 'Completed' status. Please cancel and try again.", NotificationType.Error),
+    Notify("One or more items are no longer in 'Completed' status. Please remove them from the batch and try again.", NotificationType.Error),
 
     CountRows(
         Filter(
@@ -8239,135 +8401,207 @@ If(
             )
         )
     ) > 0,
-    // A build-plate-backed request is no longer a valid final pickup
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
     Notify("One or more selected requests are no longer valid final pickups. Remove those items from the batch and try again.", NotificationType.Error),
 
-    // === STEP 2: CALCULATE VALUES AND PROCESS ===
-    // Store calculated values in variables for use in ForAll
+    // === STEP 2: CALCULATE SHARED VALUES ===
     Set(varBatchTotalEstWeight, Sum(colBatchItems, EstimatedWeight));
     Set(varBatchCombinedWeight, Value(txtBatchWeight.Text));
     Set(varBatchItemCount, CountRows(colBatchItems));
-    Set(varBatchFinalCost, 
-        If(
-            chkBatchOwnMaterial.Value,
-            Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost) * varOwnMaterialDiscount,
-            Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost)
+    Set(
+        varBatchFinalCost,
+        Sum(
+            ForAll(
+                colBatchItems As batchItem,
+                With(
+                    {
+                        wAllocatedWeight: If(
+                            varBatchTotalEstWeight > 0,
+                            Round((batchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                            Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                        ),
+                        wBaseCost: Max(
+                            If(
+                                batchItem.Method.Value = "Resin",
+                                wAllocatedWeight * varResinRate,
+                                wAllocatedWeight * varFilamentRate
+                            ),
+                            varMinimumCost
+                        )
+                    },
+                    If(chkBatchOwnMaterial.Value, wBaseCost * varOwnMaterialDiscount, wBaseCost)
+                )
+            ),
+            Value
         )
     );
-    
-    // === STEP 3: PROCESS EACH ITEM ===
+
+    // === STEP 3: PROCESS EACH ITEM WITH PER-ITEM REVALIDATION ===
     ForAll(
         colBatchItems As BatchItem,
+        Refresh(PrintRequests);
+        Refresh(BuildPlates);
+        Refresh(Payments);
         With(
             {
+                wLatestRequest: LookUp(PrintRequests, ID = BatchItem.ID),
+                wLatestBuildPlates: SortByColumns(Filter(BuildPlates, RequestID = BatchItem.ID), "ID", SortOrder.Ascending),
+                wPriorPayments: Filter(Payments, RequestID = BatchItem.ID),
                 wBatchWeight: If(
                     varBatchTotalEstWeight > 0,
                     Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
                     Round(varBatchCombinedWeight / varBatchItemCount, 2)
                 ),
-                wBatchCost: If(
-                    varBatchTotalEstWeight > 0,
-                    Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchFinalCost, 2),
-                    Round(varBatchFinalCost / varBatchItemCount, 2)
-                ),
-                wRemainingCompletedPlates:
-                    SortByColumns(
-                        Filter(colAllBuildPlates, RequestID = BatchItem.ID, Status.Value = "Completed"),
-                        "ID",
-                        SortOrder.Ascending
+                wRemainingCompletedPlates: Filter(BuildPlates, RequestID = BatchItem.ID, Status.Value = "Completed"),
+                wStaffShortName:
+                    With(
+                        {n: ddBatchStaff.Selected.MemberName},
+                        Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."
                     )
             },
-            // Mark all remaining completed plates as picked up for build-plate-backed requests
-            If(
-                CountRows(wRemainingCompletedPlates) > 0,
-                ForAll(
-                    wRemainingCompletedPlates As pickedPlate,
-                    Patch(
-                        BuildPlates,
-                        LookUp(BuildPlates, ID = pickedPlate.ID),
-                        {Status: {Value: "Picked Up"}}
+            With(
+                {
+                    wBatchCost: If(
+                        chkBatchOwnMaterial.Value,
+                        Max(
+                            If(
+                                BatchItem.Method.Value = "Resin",
+                                wBatchWeight * varResinRate,
+                                wBatchWeight * varFilamentRate
+                            ),
+                            varMinimumCost
+                        ) * varOwnMaterialDiscount,
+                        Max(
+                            If(
+                                BatchItem.Method.Value = "Resin",
+                                wBatchWeight * varResinRate,
+                                wBatchWeight * varFilamentRate
+                            ),
+                            varMinimumCost
+                        )
+                    )
+                },
+                If(
+                    IsBlank(wLatestRequest) || wLatestRequest.Status.Value <> "Completed",
+                    Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: "Status changed before save"}),
+
+                    CountRows(wLatestBuildPlates) > 0 &&
+                    (
+                        CountRows(Filter(wLatestBuildPlates, Status.Value in ["Queued", "Printing"])) > 0 ||
+                        CountRows(wRemainingCompletedPlates) = 0
+                    ),
+                    Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: "Plate status changed before save"}),
+
+                    IfError(
+                        If(
+                            CountRows(wRemainingCompletedPlates) > 0,
+                            ForAll(
+                                wRemainingCompletedPlates As pickedPlate,
+                                Patch(
+                                    BuildPlates,
+                                    LookUp(BuildPlates, ID = pickedPlate.ID),
+                                    {Status: {Value: "Picked Up"}}
+                                )
+                            )
+                        );
+
+                        Patch(
+                            Payments,
+                            Defaults(Payments),
+                            {
+                                RequestID: BatchItem.ID,
+                                ReqKey: BatchItem.ReqKey,
+                                TransactionNumber: txtBatchTransaction.Text,
+                                Weight: wBatchWeight,
+                                Amount: wBatchCost,
+                                PaymentType: {Value: ddBatchPaymentType.Selected.Value},
+                                PaymentDate: dpBatchPaymentDate.SelectedDate,
+                                PayerName: Trim(txtBatchPayerName.Text),
+                                PayerTigerCard: "",
+                                PlatesPickedUp: If(
+                                    CountRows(wRemainingCompletedPlates) > 0,
+                                    Concat(
+                                        AddColumns(
+                                            wRemainingCompletedPlates As plate,
+                                            PlateNum,
+                                            CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
+                                        ),
+                                        Text(PlateNum),
+                                        ", "
+                                    ),
+                                    ""
+                                ),
+                                PlateIDsPickedUp: If(
+                                    CountRows(wRemainingCompletedPlates) > 0,
+                                    Concat(wRemainingCompletedPlates, PlateKey, ", "),
+                                    ""
+                                ),
+                                RecordedBy: {
+                                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                                    Department: "",
+                                    DisplayName: ddBatchStaff.Selected.MemberName,
+                                    Email: ddBatchStaff.Selected.MemberEmail,
+                                    JobTitle: "",
+                                    Picture: ""
+                                },
+                                StudentOwnMaterial: chkBatchOwnMaterial.Value
+                            }
+                        );
+
+                        Patch(
+                            PrintRequests,
+                            LookUp(PrintRequests, ID = BatchItem.ID),
+                            {
+                                Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+                                FinalWeight: Sum(wPriorPayments, Weight) + wBatchWeight,
+                                FinalCost: Sum(wPriorPayments, Amount) + wBatchCost,
+                                PaymentDate: If(CountRows(wPriorPayments) > 0, Max(Max(wPriorPayments, PaymentDate), dpBatchPaymentDate.SelectedDate), dpBatchPaymentDate.SelectedDate),
+                                TransactionNumber: txtBatchTransaction.Text,
+                                StudentOwnMaterial: chkBatchOwnMaterial.Value,
+                                PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
+                                StaffNotes: Concatenate(
+                                    If(IsBlank(BatchItem.StaffNotes), "", BatchItem.StaffNotes & " | "),
+                                    "PAID (BATCH) by " & wStaffShortName &
+                                    ": " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
+                                    " (" & Text(wBatchWeight) & "g) #" & txtBatchTransaction.Text &
+                                    " " & ddBatchPaymentType.Selected.Value &
+                                    If(
+                                        CountRows(wRemainingCompletedPlates) > 0,
+                                        " (Plate IDs " & Concat(wRemainingCompletedPlates, PlateKey, ",") & ")",
+                                        ""
+                                    ) &
+                                    " - " & Text(Now(), "m/d h:mmam/pm")
+                                ),
+                                LastActionBy: {
+                                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                                    Discipline: "",
+                                    DisplayName: ddBatchStaff.Selected.MemberName,
+                                    Email: ddBatchStaff.Selected.MemberEmail,
+                                    JobTitle: "",
+                                    Picture: ""
+                                },
+                                LastActionAt: Now(),
+                                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
+                            }
+                        );
+
+                        Collect(colBatchSucceededItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey}),
+                        Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: Coalesce(FirstError.Message, "Unknown error")})
                     )
                 )
-            );
-
-            // Create canonical payment history row
-            Patch(
-                Payments,
-                Defaults(Payments),
-                {
-                    RequestID: BatchItem.ID,
-                    ReqKey: BatchItem.ReqKey,
-                    TransactionNumber: txtBatchTransaction.Text,
-                    Weight: wBatchWeight,
-                    Amount: wBatchCost,
-                    PaymentType: {Value: ddBatchPaymentType.Selected.Value},
-                    PaymentDate: Today(),
-                    PayerName: BatchItem.Student.DisplayName,
-                    PayerTigerCard: BatchItem.TigerCardNumber,
-                    PlatesPickedUp: If(
-                        CountRows(wRemainingCompletedPlates) > 0,
-                        Concat(
-                            AddColumns(
-                                wRemainingCompletedPlates As plate,
-                                PlateNum,
-                                CountRows(Filter(colAllBuildPlates As priorPlate, priorPlate.RequestID = BatchItem.ID && priorPlate.ID <= plate.ID))
-                            ),
-                            Text(PlateNum),
-                            ", "
-                        ),
-                        ""
-                    ),
-                    PlateIDsPickedUp: If(
-                        CountRows(wRemainingCompletedPlates) > 0,
-                        Concat(wRemainingCompletedPlates, PlateKey, ", "),
-                        ""
-                    ),
-                    RecordedBy: {
-                        Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                        Department: "",
-                        DisplayName: ddBatchStaff.Selected.MemberName,
-                        Email: ddBatchStaff.Selected.MemberEmail,
-                        JobTitle: "",
-                        Picture: ""
-                    },
-                    StudentOwnMaterial: chkBatchOwnMaterial.Value
-                }
-            );
-
-            // Recompute parent totals from Payments and move request to final state
-            Patch(
-                PrintRequests,
-                LookUp(PrintRequests, ID = BatchItem.ID),
-                {
-                    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-                    FinalWeight: Sum(Filter(colAllPayments, RequestID = BatchItem.ID), Weight),
-                    FinalCost: Sum(Filter(colAllPayments, RequestID = BatchItem.ID), Amount),
-                    PaymentDate: Max(Filter(colAllPayments, RequestID = BatchItem.ID), PaymentDate),
-                    TransactionNumber: txtBatchTransaction.Text,
-                    StudentOwnMaterial: chkBatchOwnMaterial.Value,
-                    PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
-                    LastActionBy: {
-                        Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                        Discipline: "",
-                        DisplayName: ddBatchStaff.Selected.MemberName,
-                        Email: ddBatchStaff.Selected.MemberEmail,
-                        JobTitle: "",
-                        Picture: ""
-                    },
-                    LastActionAt: Now(),
-                    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
-                }
             )
         )
     );
 
-    // === STEP 4: LOG ACTIONS VIA FLOW ===
+    // === STEP 4: REFRESH SNAPSHOTS AND LOG SUCCESSES ===
+    Refresh(PrintRequests);
+    Refresh(BuildPlates);
+    Refresh(Payments);
     ClearCollect(colAllBuildPlates, BuildPlates);
     ClearCollect(colAllPayments, Payments);
     ForAll(
-        colBatchItems As BatchItem,
+        colBatchSucceededItems As BatchItem,
         IfError(
             'Flow-(C)-Action-LogAction'.Run(
                 Text(BatchItem.ID),
@@ -8390,26 +8624,31 @@ If(
         )
     );
 
-    // === STEP 5: REFRESH, CLEANUP, AND NOTIFY ===
-    // Store count before clearing for notification
-    Set(varBatchProcessedCount, varBatchItemCount);
+    // === STEP 5: CLEANUP AND NOTIFY ===
+    Set(varBatchProcessedCount, CountRows(colBatchSucceededItems));
+    If(
+        CountRows(colBatchFailedItems) = 0,
+        Clear(colBatchItems);
+        Set(varBatchSelectMode, false);
+        Set(varShowBatchPaymentModal, 0);
+        Reset(txtBatchTransaction);
+        Reset(txtBatchPayerName);
+        Reset(dpBatchPaymentDate);
+        Reset(txtBatchWeight);
+        Reset(ddBatchStaff);
+        Reset(chkBatchOwnMaterial);
+        Reset(ddBatchPaymentType);
+        Notify(varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") & " processed successfully!", NotificationType.Success),
 
-    ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colAllPayments, Payments);
-    Clear(colBatchItems);
-    Set(varBatchSelectMode, false);
-    Set(varShowBatchPaymentModal, 0);
+        RemoveIf(colBatchItems, Not(ID in colBatchFailedItems.ID));
+        Reset(txtBatchWeight);
+        Notify(
+            Text(CountRows(colBatchSucceededItems)) & " of " & Text(varBatchItemCount) &
+            " items processed. Review and retry: " & Concat(colBatchFailedItems, ReqKey, ", "),
+            NotificationType.Warning
+        )
+    );
 
-    // Reset form fields
-    Reset(txtBatchTransaction);
-    Reset(txtBatchWeight);
-    Reset(ddBatchStaff);
-    Reset(chkBatchOwnMaterial);
-    Reset(ddBatchPaymentType);
-    
-    // Success notification
-    Notify(varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") & " processed successfully!", NotificationType.Success);
-    
     // === HIDE LOADING ===
     Set(varIsLoading, false);
     Set(varLoadingMessage, "")
@@ -8421,6 +8660,10 @@ If(
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
 > 💡 **Batch history guidance:** Canonical payment history must come from the `Payments` rows created for each batch item. Do not treat appended `PaymentNotes` text as authoritative history.
+>
+> 💡 **Mixed-method pricing guidance:** The cost preview and each saved `Payments.Amount` value now branch on each request's `Method.Value`, so resin rows are not accidentally charged at the filament rate.
+>
+> 💡 **Retry guidance:** Failures are tracked per item. Successful rows stay saved, while failed items remain in `colBatchItems` so staff can review and retry only the unfinished subset.
 >
 > 💡 **Plate handling guidance:** For requests with build plates, batch payment is intentionally narrower than the single-item Payment Modal. Step 12E always picks up every remaining completed plate for the request. If the student is only taking some of the completed pieces, go back to Step 12C instead.
 
@@ -8987,7 +9230,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `true` |
 
-> 💡 **Full Removal Flexibility:** Any plate can be removed regardless of status. This supports scenarios where staff needs to scrap and re-slice a job, or correct data entry errors. The [✕] button appears on ALL plates.
+> 💡 **Flexible plate history:** Any plate can be removed regardless of status. This supports scrapping, re-slicing, and partial-failure recovery where the plate layout changes over time. Historical `Payments` rows remain the canonical transaction record; any stored plate IDs are the pickup-time snapshot only.
 
 **OnSelect:**
 

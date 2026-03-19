@@ -177,7 +177,7 @@ In the Staff Dashboard, this list is accessed via:
 - **Working collection:** `colBuildPlates` (plates for current selection)
 - **Indexed collection:** `colBuildPlatesIndexed` (with `PlateNum` for display)
 
-> 💡 `PlateNum` in Power Apps is display-only. Use the stored `PlateKey` column whenever payment history or audit logging needs a stable identifier that survives re-slicing or row removal.
+> 💡 `PlateNum` in Power Apps is display-only. Use the stored `PlateKey` column for the best available pickup-time and audit snapshot, but remember that build plates are operational artifacts: staff may re-slice, replace, or remove plates later while the canonical financial history remains in `Payments`.
 
 ### ActualPrinter Auto-Population
 

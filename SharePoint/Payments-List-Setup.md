@@ -63,6 +63,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 5. Click **Save**
 
 > 💡 **Purpose:** The unique identifier for this payment transaction. Format depends on PaymentType (receipt for TigerCASH, check number for Check, code for grants).
+>
+> 💡 **Batch note:** If one checkout covers multiple requests, create one `Payments` row per request but reuse the same `TransactionNumber` across all rows created from that shared transaction.
 
 ### Column 4: Weight (Number)
 
@@ -105,6 +107,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
+> 💡 **Batch note:** For batched checkouts, reuse the same payment date on every `Payments` row created from that transaction.
+
 ### Column 8: PayerName (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
@@ -113,6 +117,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 4. Click **Save**
 
 > 💡 **Purpose:** Tracks who actually paid for this transaction. May differ from the student who submitted the request (e.g., friend, parent, grant administrator).
+>
+> 💡 **Batch note:** For batched checkouts, stamp the same payer name on every `Payments` row generated from that single real-world transaction.
 
 ### Column 9: PayerTigerCard (Single line of text)
 
@@ -134,10 +140,10 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `PlateIDsPickedUp`
-3. **Description:** `Stable PlateKey values collected in this transaction`
+3. **Description:** `PlateKey snapshot captured at pickup time for this transaction`
 4. Click **Save**
 
-> ⚠️ **Important:** This is the durable link to the actual build plates picked up. `PlatesPickedUp` is only a human-readable display snapshot and may drift if visible plate numbering changes later.
+> ⚠️ **Important:** This stores the best available plate snapshot at pickup time. `PlatesPickedUp` is only a human-readable display snapshot, and even `PlateIDsPickedUp` can become historical context rather than a live 1:1 map if staff later re-slice, replace, or renumber plates. The canonical transaction record is still the `Payments` row itself.
 
 ### Column 12: RecordedBy (Person)
 
@@ -227,6 +233,8 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 | `PaymentType` | **Deprecated** — each payment has its own type |
 
 > 💡 **Backward Compatibility:** Existing jobs with payment data in PrintRequests (but no Payments records) continue to work. The system checks for Payments records first; if none exist, it uses the legacy single-value fields.
+>
+> 💡 **Canonical ledger rule:** Reporting and reconciliation should read transaction details from `Payments` first. `PrintRequests` payment fields are convenience rollups for the parent request, not the source of truth for individual transactions.
 
 ---
 
