@@ -8042,6 +8042,8 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 | IconBackground | `varChevronBackground` |
 | IconFill | `RGBA(255, 255, 255, 1)` |
 
+> ⚠️ **Build-order reminder:** Create both `txtBatchPayerName` and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
+
 ---
 
 ### Weight Label (lblBatchWeightLabel)
@@ -8149,17 +8151,21 @@ With(
                             totalEstWeight > 0,
                             Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
                             Round(enteredWeight / itemCount, 2)
-                        ),
-                        baseCost: Max(
-                            If(
-                                batchItem.Method.Value = "Resin",
-                                allocatedWeight * varResinRate,
-                                allocatedWeight * varFilamentRate
-                            ),
-                            varMinimumCost
                         )
                     },
-                    If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
+                    With(
+                        {
+                            baseCost: Max(
+                                If(
+                                    batchItem.Method.Value = "Resin",
+                                    allocatedWeight * varResinRate,
+                                    allocatedWeight * varFilamentRate
+                                ),
+                                varMinimumCost
+                            )
+                        },
+                        If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
+                    )
                 )
             ),
             Value
@@ -8420,17 +8426,21 @@ If(
                             varBatchTotalEstWeight > 0,
                             Round((batchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
                             Round(varBatchCombinedWeight / varBatchItemCount, 2)
-                        ),
-                        wBaseCost: Max(
-                            If(
-                                batchItem.Method.Value = "Resin",
-                                wAllocatedWeight * varResinRate,
-                                wAllocatedWeight * varFilamentRate
-                            ),
-                            varMinimumCost
                         )
                     },
-                    If(chkBatchOwnMaterial.Value, wBaseCost * varOwnMaterialDiscount, wBaseCost)
+                    With(
+                        {
+                            wBaseCost: Max(
+                                If(
+                                    batchItem.Method.Value = "Resin",
+                                    wAllocatedWeight * varResinRate,
+                                    wAllocatedWeight * varFilamentRate
+                                ),
+                                varMinimumCost
+                            )
+                        },
+                        If(chkBatchOwnMaterial.Value, wBaseCost * varOwnMaterialDiscount, wBaseCost)
+                    )
                 )
             ),
             Value
@@ -8708,6 +8718,28 @@ If using Modern buttons, the correct syntax is `'ButtonAppearance'.Primary` (wit
 **Cause:** One of the function's arguments is an error value (usually from `.Text` not being recognized).
 
 **Fix:** Fix the TextInput control type issue first. Once `txtBatchWeight.Text` resolves correctly, these functions will work.
+
+#### Error: "Name isn't valid. 'txtBatchPayerName' isn't recognized." / "Name isn't valid. 'dpBatchPaymentDate' isn't recognized."
+
+**Cause:** The updated batch formulas were pasted before the new shared transaction-header controls were created.
+
+**Fix:** Add the missing controls from Step 12E first:
+- `txtBatchPayerName`
+- `dpBatchPaymentDate`
+
+Then re-paste these formulas:
+- `btnBatchPaymentClose.OnSelect`
+- `btnBatchPaymentCancel.OnSelect`
+- `btnBatchPaymentConfirm.DisplayMode`
+- `btnBatchPaymentConfirm.OnSelect`
+
+#### Error: "Name isn't valid. 'allocatedWeight' isn't recognized." / "Name isn't valid. 'wAllocatedWeight' isn't recognized."
+
+**Cause:** Power Fx can reject sibling local-variable references inside the same record literal of a `With(...)`.
+
+**Fix:** Use the nested `With(...)` version shown in this guide for both:
+- `lblBatchCostValue.Text`
+- the `Set(varBatchFinalCost, ...)` block inside `btnBatchPaymentConfirm.OnSelect`
 
 #### Error: "The function 'Patch' has some invalid arguments." / "Invalid argument type (Table). Expecting a Record value instead."
 
