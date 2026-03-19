@@ -989,7 +989,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblRejectTitle
         recRejectModal
         recRejectOverlay
-    audNotification                   ← Step 17F (Audio notification - invisible)
     tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
     btnClearFilters                   ← Step 14
     btnRefresh                        ← Step 14
@@ -997,6 +996,14 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     chkNeedsAttention                 ← Step 14
     txtSearch                         ← Step 14
     recFilterBar                      ← Step 14 (filter bar background)
+    ▼ conBatchSelectionFooter         ← Step 15 (Batch Selection Footer - floating above gallery)
+        btnProcessBatchPayment
+        btnBatchCancel
+        lblBatchStudents
+        lblBatchEstTotal
+        lblBatchCount
+        lblBatchModeActive
+        recBatchFooterBg
     ▼ galJobCards                     ← Step 6
         btnCardSendMessage            ← Step 16C
         lblUnreadBadge                ← Step 16B (text on top)
@@ -1039,14 +1046,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblSubmittedTime              ← Step 7
         lblStudentName                ← Step 7
         recCardBackground             ← Step 7
-    ▼ conBatchSelectionFooter         ← Step 15 (Batch Selection Footer)
-        btnProcessBatchPayment
-        btnBatchCancel
-        lblBatchStudents
-        lblBatchEstTotal
-        lblBatchCount
-        lblBatchModeActive
-        recBatchFooterBg
     lblEmptyState                     ← Step 9
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
@@ -1056,7 +1055,51 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     btnNavDashboard                   ← Step 4
     lblAppTitle                       ← Step 4
     recHeader                         ← Step 4
+    ▸ grpSoundNotification            ← Step 17F (group at bottom for invisible audio control)
 ```
+
+Collapsed version (containers closed) for quick reference:
+
+```
+▼ App
+▼ scrDashboard
+    ▸ conLoadingOverlay               ← Step 17E (Loading — TOP for highest z-order)
+    ▸ conViewMessagesModal            ← Step 17D
+    ▸ conFileModal                    ← Step 16
+    ▸ conNotesModal                   ← Step 13
+    ▸ conStudentNoteModal             ← Step 13B
+    ▸ conBatchPaymentModal            ← Step 12E
+    ▸ conBuildPlatesModal             ← Step 12F
+    ▸ conPaymentModal                 ← Step 12C
+    ▸ conDetailsModal                 ← Step 12B
+    ▸ conRevertModal                  ← Step 12D
+    ▸ conCompleteModal                ← Step 12A
+    ▸ conArchiveModal                 ← Step 12
+    ▸ conApprovalModal                ← Step 11
+    ▸ conRejectModal                  ← Step 10
+    tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
+    btnClearFilters                   ← Step 14
+    btnRefresh                        ← Step 14
+    ddSortOrder                       ← Step 14
+    chkNeedsAttention                 ← Step 14
+    txtSearch                         ← Step 14
+    recFilterBar                      ← Step 14 (filter bar background)
+    ▸ conBatchSelectionFooter         ← Step 15 (Batch Selection Footer - floating above gallery)
+    ▸ galJobCards                     ← Step 6
+    lblEmptyState                     ← Step 9
+    ▸ galStatusTabs                   ← Step 5
+    lblUserName                       ← Step 4
+    btnNavAnalytics                   ← Step 4
+    btnNavAdmin                       ← Step 4
+    btnNavDashboard                   ← Step 4
+    lblAppTitle                       ← Step 4
+    recHeader                         ← Step 4
+    ▸ grpSoundNotification            ← Step 17F
+```
+
+> 💡 **Tree View Stacking Rule:** For overlapping controls on the same screen, items higher in Tree view appear in front of items below them. Use **Bring to front / Send to back** to adjust visual stacking.
+
+> 💡 **Important:** Tree view order affects visual layering, but it does **not** control runtime tab/accessibility order. Logical control order is based on control position (`X`/`Y`) when the app is saved.
 
 ### Key Rules
 
@@ -1065,6 +1108,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
 | **App = formulas only** | Only put formulas like `OnStart` here. Never visual elements. |
 | **scrDashboard = all visuals** | All rectangles, labels, buttons, galleries go here. |
 | **Modals use Containers** | Each modal is wrapped in a Container control — set Visible on container only! |
+| **Higher in Tree view = in front** | If controls overlap visually, the one higher in Tree view sits on top. |
 | **Galleries are special** | If you select a gallery and then Insert, the new control goes INSIDE that gallery's template. |
 | **Containers are special** | If you select a container and then Insert, the new control goes INSIDE that container. |
 | **Rename immediately** | After adding a control, rename it right away (click name in Tree view). |
@@ -12074,7 +12118,7 @@ The Audio control must have **Start** = `varPlaySound` and **OnEnd** = `Set(varP
 
 ## Control Placement in Tree View
 
-Add the new controls to your Tree view. The Timer and Audio controls are invisible and can be placed near the filter bar controls.
+Add the new controls to your Tree view. The Timer and Audio controls are invisible. The timer can sit near the filter bar controls, and the audio control can be wrapped in `grpSoundNotification` at the bottom of the screen tree.
 
 ```
 ▼ scrDashboard
@@ -12083,7 +12127,6 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
     ▼ conViewMessagesModal            ← Unified Messages Modal
         ...
     ...other modal containers...
-    audNotification                   ← NEW: Audio control (invisible)
     tmrAutoRefresh                    ← NEW: Timer control (invisible)
     recFilterBar
     txtSearch
@@ -12094,9 +12137,10 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
     btnClearFilters
     galJobCards
     ...
+    ▸ grpSoundNotification            ← NEW: Group at bottom
 ```
 
-> 💡 **Z-Order:** The Timer and Audio controls don't need specific z-ordering since they're invisible.
+> 💡 **Z-Order:** The Timer and Audio controls don't need specific z-ordering since they're invisible. Keeping `grpSoundNotification` at the bottom is fine.
 
 ---
 
