@@ -440,6 +440,8 @@ Clear(colBatchFailedItems);
 Set(varBatchTotalEstWeight, 0);
 Set(varBatchCombinedWeight, 0);
 Set(varBatchItemCount, 0);
+Set(varBatchLastItemID, 0);
+Set(varBatchLastItemWeight, 0);
 Set(varBatchFinalCost, 0);
 Set(varBatchProcessedCount, 0);
 
@@ -639,6 +641,8 @@ Set(varLoadingMessage, "")
 | `varBatchTotalEstWeight` | Sum of estimated weights for batch items (calculation temp) | Number |
 | `varBatchCombinedWeight` | Combined final weight entered for batch (calculation temp) | Number |
 | `varBatchItemCount` | Number of items in batch (calculation temp) | Number |
+| `varBatchLastItemID` | ID of the last batch item (receives rounding remainder) | Number |
+| `varBatchLastItemWeight` | Weight for last batch item after remainder adjustment | Number |
 | `varBatchFinalCost` | Sum of the per-item charges for the current batch run | Number |
 | `varBatchProcessedCount` | Count of items processed (for notification) | Number |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
@@ -2698,9 +2702,11 @@ Set(varSelectedItem, ThisItem)
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
-| Visible | `ThisItem.Status.Value in ["Printing", "Completed"] && !varBatchSelectMode` |
+| Visible | `ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up"] && !varBatchSelectMode` |
 
 > ⚠️ **Batch Mode:** Button is hidden when `varBatchSelectMode = true` to allow clicking the card for batch selection.
+
+> ⚠️ **Recovery path:** Revert is now available on `Paid & Picked Up` requests so staff can reopen a request that was closed in error. Existing `Payments` rows are preserved — only the parent status changes.
 
 32. Set **OnSelect:**
 
@@ -6097,13 +6103,38 @@ Switch(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Final Weight (grams): *"` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 270` |
 | Width | `250` |
 | Height | `33` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
+
+53A. Set **Text:**
+
+```powerfx
+If(
+    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+    !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
+    Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
+    "⚠️ Weight (" & Text(Round(Value(txtPaymentWeight.Text) / varSelectedItem.EstimatedWeight * 100, 0)) & "% of est.)",
+    "Final Weight"
+)
+```
+
+53B. Set **Color:**
+
+```powerfx
+If(
+    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+    !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
+    Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
+    varColorWarning,
+    varColorText
+)
+```
+
+> ⚠️ **Sanity check:** The label switches to a warning when entered weight deviates more than 50% from the estimated weight. This catches typos (e.g. 1500g vs 150g) without hard-blocking submission.
 
 ---
 
@@ -7059,7 +7090,7 @@ If(
                     FinalWeight: Sum(colPayments, Weight),
                     FinalCost: Sum(colPayments, Amount),
                     PaymentDate: If(CountRows(colPayments) > 0, Max(colPayments, PaymentDate), dpPaymentDate.SelectedDate),
-                    StudentOwnMaterial: chkOwnMaterial.Value,
+                    StudentOwnMaterial: CountRows(Filter(colPayments, StudentOwnMaterial)) > 0,
                     Status: wResultStatus,
                     PaymentNotes: If(
                         IsBlank(Trim(txtPaymentNotes.Text)),
@@ -7440,11 +7471,13 @@ If(
     Table({Value: "Ready to Print"}),
     varSelectedItem.Status.Value = "Completed",
     Table({Value: "Printing"}, {Value: "Ready to Print"}),
+    varSelectedItem.Status.Value = "Paid & Picked Up",
+    Table({Value: "Completed"}),
     Blank()
 )
 ```
 
-> 💡 **Dynamic Options:** The dropdown shows only valid revert targets based on the current status. "Printing" can only go back to "Ready to Print", while "Completed" can go back to either "Printing" or "Ready to Print".
+> 💡 **Dynamic Options:** The dropdown shows only valid revert targets based on the current status. "Printing" can only go back to "Ready to Print", "Completed" can go back to either "Printing" or "Ready to Print", and "Paid & Picked Up" can go back to "Completed" (reopening the request for further payment or correction while preserving existing `Payments` history).
 
 ---
 
@@ -7599,7 +7632,12 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
 );
 
 Notify(
-    "Status reverted to " & ddRevertTarget.Selected.Value, 
+    "Status reverted to " & ddRevertTarget.Selected.Value &
+    If(
+        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
+        ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
+        ""
+    ),
     NotificationType.Success
 );
 
@@ -7819,14 +7857,16 @@ Reset(ddBatchPaymentType)
 | Y | `recBatchPaymentModal.Y + 55` |
 | Width | `560` |
 | Height | `20` |
-| Size | `12` |
-| Color | `varColorTextMuted` |
+| Size | `11` |
+| Color | `varColorWarning` |
 
 18. Set **Text:**
 
 ```powerfx
 "Estimated Total: " & Text(Sum(colBatchItems, EstimatedWeight)) & "g → " & Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 ```
+
+> ⚠️ **Final-pickup clarity:** This warning replaces the previous neutral summary to make the batch consequence explicit. Staff must understand that batch = final pickup for every selected request.
 
 ---
 
@@ -8054,12 +8094,37 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 | Property | Value |
 |----------|-------|
-| Text | `"Combined Weight (grams): *"` |
 | X | `recBatchPaymentModal.X + 20` |
 | Y | `recBatchPaymentModal.Y + 245` |
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
+
+52A. Set **Text:**
+
+```powerfx
+If(
+    IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+    Sum(colBatchItems, EstimatedWeight) > 0 &&
+    Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
+    "⚠️ Weight (" & Text(Round(Value(txtBatchWeight.Text) / Sum(colBatchItems, EstimatedWeight) * 100, 0)) & "% of est.)",
+    "Combined Weight"
+)
+```
+
+52B. Set **Color:**
+
+```powerfx
+If(
+    IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+    Sum(colBatchItems, EstimatedWeight) > 0 &&
+    Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
+    varColorWarning,
+    varColorText
+)
+```
+
+> ⚠️ **Sanity check:** Same >50% deviation warning as the single-payment weight label, but compares against the summed estimated weight of all batch items.
 
 ---
 
@@ -8245,8 +8310,15 @@ With(
 62. Set **Text** for `lblBatchItemRow`:
 
 ```powerfx
-ThisItem.ReqKey & " - " & ThisItem.Student.DisplayName & " (" & Text(ThisItem.EstimatedWeight) & "g, " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00") & ")"
+With(
+    {wPlates: CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Status.Value = "Completed"))},
+    ThisItem.ReqKey & " - " & ThisItem.Student.DisplayName &
+    " (" & Text(ThisItem.EstimatedWeight) & "g, " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00") & ")" &
+    If(wPlates > 0, " — " & wPlates & " plate" & If(wPlates <> 1, "s", ""), "")
+)
 ```
+
+> 💡 **Plate count display:** Each batch row now shows how many completed plates will be picked up, reinforcing the final-pickup semantics.
 
 63. Inside `galBatchItems`, add a **Button** named `btnRemoveFromBatch`:
 
@@ -8415,6 +8487,25 @@ If(
     Set(varBatchTotalEstWeight, Sum(colBatchItems, EstimatedWeight));
     Set(varBatchCombinedWeight, Value(txtBatchWeight.Text));
     Set(varBatchItemCount, CountRows(colBatchItems));
+    Set(varBatchLastItemID, Max(colBatchItems, ID));
+    Set(
+        varBatchLastItemWeight,
+        If(
+            varBatchItemCount > 1,
+            varBatchCombinedWeight - Sum(
+                ForAll(
+                    Filter(colBatchItems, ID <> varBatchLastItemID) As remainderItem,
+                    If(
+                        varBatchTotalEstWeight > 0,
+                        Round((remainderItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                        Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                    )
+                ),
+                Value
+            ),
+            varBatchCombinedWeight
+        )
+    );
     Set(
         varBatchFinalCost,
         Sum(
@@ -8423,9 +8514,13 @@ If(
                 With(
                     {
                         wAllocatedWeight: If(
-                            varBatchTotalEstWeight > 0,
-                            Round((batchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                            Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                            batchItem.ID = varBatchLastItemID && varBatchItemCount > 1,
+                            varBatchLastItemWeight,
+                            If(
+                                varBatchTotalEstWeight > 0,
+                                Round((batchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                                Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                            )
                         )
                     },
                     With(
@@ -8459,9 +8554,13 @@ If(
                 wLatestBuildPlates: SortByColumns(Filter(BuildPlates, RequestID = BatchItem.ID), "ID", SortOrder.Ascending),
                 wPriorPayments: Filter(Payments, RequestID = BatchItem.ID),
                 wBatchWeight: If(
-                    varBatchTotalEstWeight > 0,
-                    Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                    Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                    BatchItem.ID = varBatchLastItemID && varBatchItemCount > 1,
+                    varBatchLastItemWeight,
+                    If(
+                        varBatchTotalEstWeight > 0,
+                        Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
+                        Round(varBatchCombinedWeight / varBatchItemCount, 2)
+                    )
                 ),
                 wRemainingCompletedPlates: Filter(BuildPlates, RequestID = BatchItem.ID, Status.Value = "Completed"),
                 wStaffShortName:
@@ -8567,9 +8666,7 @@ If(
                                 FinalWeight: Sum(wPriorPayments, Weight) + wBatchWeight,
                                 FinalCost: Sum(wPriorPayments, Amount) + wBatchCost,
                                 PaymentDate: If(CountRows(wPriorPayments) > 0, Max(Max(wPriorPayments, PaymentDate), dpBatchPaymentDate.SelectedDate), dpBatchPaymentDate.SelectedDate),
-                                TransactionNumber: txtBatchTransaction.Text,
-                                StudentOwnMaterial: chkBatchOwnMaterial.Value,
-                                PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
+                                StudentOwnMaterial: chkBatchOwnMaterial.Value || CountRows(Filter(wPriorPayments, StudentOwnMaterial)) > 0,
                                 StaffNotes: Concatenate(
                                     If(IsBlank(BatchItem.StaffNotes), "", BatchItem.StaffNotes & " | "),
                                     "PAID (BATCH) by " & wStaffShortName &

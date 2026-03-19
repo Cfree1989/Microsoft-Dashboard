@@ -727,3 +727,49 @@ These questions surfaced in 2+ reviews with no definitive answer:
 The system has a correct foundational architecture (`PlateKey`, single-payment flow, batch eligibility checks), but the **batch payment path has at least two hard data defects** (stale rollups, wrong pricing for resin) and **no error handling**. The combination of those three issues means any batch payment on a resin job will silently produce wrong financial data with no recovery path. The single-item flow is structurally safer but still lacks concurrency protection.
 
 **Fixing the six Tier 1 items should be the gate for shipping batch payments to production.**
+
+---
+
+## Resolution Log — March 19, 2026
+
+All Tier 1 and Tier 2 findings have been addressed in `PowerApps/StaffDashboard-App-Spec.md`. Tier 3 items that could be resolved via spec changes are also done.
+
+### Tier 1 — Fix Before Ship
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 1 | Batch parent rollups stale `colAllPayments` | **Fixed (prior pass).** Rollups now use `Sum(wPriorPayments, Weight) + wBatchWeight` from the refreshed datasource. |
+| 2 | Batch pricing ignores resin rate | **Fixed (prior pass).** Both preview and per-item cost branch on `Method.Value`. |
+| 3 | `btnAddMoreItems` allows duplicates | **Fixed (prior pass).** ID guard added. |
+| 4 | No per-item error handling in ForAll | **Fixed (prior pass).** `IfError` + `colBatchSucceededItems`/`colBatchFailedItems` with partial-failure reporting. |
+| 5 | Plate removal no payment history guard | **Accepted as design.** Spec documents this as intentional — `Payments` rows are the canonical record. |
+| 6 | Concurrency window on single payment | **Fixed (prior pass).** Single payment now refreshes + revalidates before save; batch does per-item refresh. |
+
+### Tier 2 — Fix Soon
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 7 | "Final pickup only" UI unclear | **Fixed.** `lblBatchSummary` now shows `"⚠️ All completed plates on each item will be marked picked up"` in warning color. `lblBatchItemRow` shows per-item plate counts. |
+| 8 | Rounding drift on batch splits | **Fixed.** `varBatchLastItemID`/`varBatchLastItemWeight` absorb the rounding remainder so per-item amounts sum exactly to the entered total. |
+| 9 | Batch writes no StaffNotes | **Fixed (prior pass).** Batch Patch now includes StaffNotes in the same format as single payment. |
+| 10 | Batch writes deprecated fields | **Fixed.** `TransactionNumber` and `PaymentType` removed from the batch `PrintRequests` Patch. |
+| 11 | `StudentOwnMaterial` last-write-wins | **Fixed.** Single: `CountRows(Filter(colPayments, StudentOwnMaterial)) > 0`. Batch: `chkBatchOwnMaterial.Value \|\| CountRows(Filter(wPriorPayments, StudentOwnMaterial)) > 0`. |
+| 12 | Recovery / correction workflows weak | **Fixed.** `btnRevert` now visible for `Paid & Picked Up`; `ddRevertTarget` offers `Completed` as a target. Revert Notify warns that plate statuses are unchanged. |
+
+### Tier 3 — Monitor / Document
+
+| Finding | Resolution |
+|---------|------------|
+| Double-click vulnerability | **Mitigated (prior pass).** `varIsLoading` overlay. |
+| No payment amount sanity check | **Fixed.** Both `lblPaymentWeightLabel` and `lblBatchWeightLabel` now show a `⚠️` warning when entered weight deviates >50% from estimate. |
+| Batch applies own-material uniformly | **Accepted.** Mixed batches must be processed individually; documented as policy. |
+| Revert doesn't touch plate statuses | **Fixed.** Revert Notify now includes plate-status warning. |
+| `LookUp` on datasource inside loops | **Accepted.** Fine at current volume. |
+
+### Open Questions — Dispositions
+
+1. **Do downstream reports trust `PrintRequests.FinalWeight`/`FinalCost`?** — Rollup defect is fixed; parent totals now match `Payments`. Residual risk is historical data from before the fix.
+2. **Should batch be blocked for requests with prior partial payments?** — Not blocked. The fixed rollup formula (`Sum(wPriorPayments) + wBatchWeight`) handles mixed history correctly.
+3. **Unique constraint on `Payments.TransactionNumber`?** — Still no enforcement. Double-click mitigation (`varIsLoading`) reduces risk; formal uniqueness remains a future enhancement.
+4. **"Recalculate Totals from Payments" admin action?** — Not yet built. The revert-to-Completed path reopens requests for correction; a full recalculation tool is a future enhancement.
+5. **Should plate removal be soft-delete?** — Accepted as hard-delete by design; `Payments` rows are canonical history.
