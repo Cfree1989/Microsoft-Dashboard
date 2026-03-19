@@ -459,6 +459,7 @@ Set(varPrevAttentionCount, CountRows(colNeedsAttention));
 // === BUILD PLATE TRACKING ===
 // Pre-load all plate records so job card progress pills don't trigger per-card delegation
 ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments);
 // Initialize working collections as typed empty tables so formulas still resolve when SharePoint lists are empty
 ClearCollect(colBuildPlates, FirstN(BuildPlates, 0));
 ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(BuildPlates, 0), PlateNum, Blank()));
@@ -640,11 +641,13 @@ Set(varLoadingMessage, "")
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
+| `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with added `PlateNum` column (1, 2, 3…) for labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
 | `colPrintersUsed` | Distinct printers used for current item | Table |
 | `colPayments` | Payment records for current modal context | Table |
+| `varPickedPlatesText` | Deduped, sorted comma-separated plate numbers for the current payment save | Text |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per gram for resin printing | Number |
@@ -2098,7 +2101,7 @@ These labels show additional info when the card is expanded. All have the same V
 
 #### Payment History Row (Y = 265) - Completed Items with Prior Payments
 
-> 💡 **Conditional Display:** This label appears on ANY status tab when PaymentNotes exist. This ensures staff can always see payment history even if a job is reverted back in the workflow (e.g., partial payment collected, then job sent back to "Printing").
+> 💡 **Conditional Display:** This label appears on ANY status tab when payment history exists for the request. It should use any existing on-record payment text first, then fall back to the newer `Payments` rows when that older text is blank.
 
 69. Click **+ Insert** → **Text label**.
 70. **Rename it:** `lblPaymentHistoryLabel`
@@ -2113,7 +2116,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `!IsBlank(ThisItem.PaymentNotes)` |
+| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
 
 72. Click **+ Insert** → **Text label**.
 73. **Rename it:** `lblPaymentHistoryValue`
@@ -2128,18 +2131,32 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `varColorText` |
-| Visible | `!IsBlank(ThisItem.PaymentNotes)` |
+| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
 
-Set **Text** (count payments and show total):
+Set **Text** (use existing on-record text first, then fall back to `Payments`):
 
 ```powerfx
 With(
-    {payments: Split(ThisItem.PaymentNotes, " | ")},
-    Text(CountRows(payments)) & " payment" & If(CountRows(payments) > 1, "s", "") & " recorded"
+    {
+        wLegacyNotes: Trim(Coalesce(ThisItem.PaymentNotes, "")),
+        wPaymentRows: Filter(colAllPayments, RequestID = ThisItem.ID)
+    },
+    If(
+        !IsBlank(wLegacyNotes),
+        With(
+            {payments: Split(wLegacyNotes, " | ")},
+            Text(CountRows(payments)) & " payment" & If(CountRows(payments) > 1, "s", "") & " recorded"
+        ),
+        If(
+            CountRows(wPaymentRows) > 0,
+            Text(CountRows(wPaymentRows)) & " payment" & If(CountRows(wPaymentRows) > 1, "s", "") & " recorded",
+            "Payment recorded"
+        )
+    )
 )
 ```
 
-> 💡 **Why this matters:** When staff opens the Payment Modal for a partial pickup, they can see at a glance that prior payments exist. The full payment history is shown in the Payment Modal itself.
+> 💡 **Why this matters:** This keeps older records reading the way staff already expect when payment text is already on the request, while still letting newer list-backed payment records drive the card when that older text is missing.
 
 ---
 
@@ -2149,8 +2166,8 @@ Your gallery template should now contain these controls (Z-order: top = front):
 
 ```
 ▼ galJobCards
-    lblPaymentHistoryValue         ← Any status with PaymentNotes
-    lblPaymentHistoryLabel         ← Any status with PaymentNotes
+    lblPaymentHistoryValue         ← Any status with payment history
+    lblPaymentHistoryLabel         ← Any status with payment history
     lblTransactionValue            ← Any status with TransactionNumber
     lblTransactionLabel            ← Any status with TransactionNumber
     lblCourse
@@ -3856,34 +3873,40 @@ Set(varCalculatedCost,
 Set(
     varApprovalSaved,
     IfError(
-        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-        Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
-        NeedsAttention: false,
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-        LastActionBy: {
-            Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
-            Discipline: "",
-            DisplayName: ddApprovalStaff.Selected.MemberName,
-            Email: ddApprovalStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now(),
-        EstimatedWeight: Value(txtEstimatedWeight.Text),
-        EstimatedTime: Value(txtEstimatedTime.Text),
-        EstimatedCost: varCalculatedCost,
-        SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
-        ApprovalComment: txtApprovalComments.Text,
-        StaffNotes: Concatenate(
-            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-            "APPROVED by " & 
-            With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-            ": " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
-            " on " & ddSlicedOnComputer.Selected.Name &
-            If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
-            " - " & Text(Now(), "m/d h:mmam/pm")
-        )
-    });
+        With(
+            {
+                wBuildPlateCount: Max(1, CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)))
+            },
+            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+                Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
+                NeedsAttention: false,
+                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+                LastActionBy: {
+                    Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
+                    Discipline: "",
+                    DisplayName: ddApprovalStaff.Selected.MemberName,
+                    Email: ddApprovalStaff.Selected.MemberEmail,
+                    JobTitle: "",
+                    Picture: ""
+                },
+                LastActionAt: Now(),
+                EstimatedWeight: Value(txtEstimatedWeight.Text),
+                EstimatedTime: Value(txtEstimatedTime.Text),
+                EstimatedCost: varCalculatedCost,
+                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
+                ApprovalComment: txtApprovalComments.Text,
+                StaffNotes: Concatenate(
+                    If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+                    "APPROVED by " &
+                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                    ": " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+                    " on " & ddSlicedOnComputer.Selected.Name &
+                    " - " & Text(wBuildPlateCount) & " build plate" & If(wBuildPlateCount = 1, "", "s") &
+                    If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
+                    " - " & Text(Now(), "m/d h:mmam/pm")
+                )
+            })
+        );
         true,
         Set(varIsLoading, false);
         Notify("Failed to save approval. Please try again.", NotificationType.Error);
@@ -6266,7 +6289,7 @@ If(
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
 
-> 💡 **Note:** `txtPaymentNotes` is now optional context for staff and audit logging. It is **not** the payment history source anymore.
+> 💡 **Note:** `txtPaymentNotes` is optional free-text context for staff and audit logging. It is **not** the payment history source anymore; payment history comes from the `Payments` list.
 
 ---
 
@@ -6553,7 +6576,10 @@ With(
 114. Set `chkPlate.OnCheck`:
 
 ```powerfx
-Collect(colPickedUpPlates, ThisItem)
+If(
+    !(ThisItem.ID in colPickedUpPlates.ID),
+    Collect(colPickedUpPlates, ThisItem)
+)
 ```
 
 115. Set `chkPlate.OnUncheck`:
@@ -6561,6 +6587,8 @@ Collect(colPickedUpPlates, ThisItem)
 ```powerfx
 Remove(colPickedUpPlates, ThisItem)
 ```
+
+> 💡 **Deduping rule:** Guard `OnCheck` with the `ID in colPickedUpPlates.ID` test so repeated checkbox refreshes or gallery re-renders do not collect the same plate twice. Step 12C also dedupes again during save and sorts by `PlateNum` before generating `PlatesPickedUp`.
 
 116. Set `lblPlateName` properties:
 
@@ -6807,6 +6835,21 @@ Set(varBaseCost,
     )
 );
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+Set(
+    varPickedPlatesText,
+    Concat(
+        SortByColumns(
+            ForAll(
+                Distinct(colPickedUpPlates, ID) As pickedPlateId,
+                LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
+            ),
+            "PlateNum",
+            SortOrder.Ascending
+        ),
+        Text(PlateNum),
+        ", "
+    )
+);
 
 // Create a new Payments record
 Set(
@@ -6828,8 +6871,8 @@ Set(
                     PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
                     PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
                     PlatesPickedUp: If(
-                        CountRows(colPickedUpPlates) > 0,
-                        Concat(colPickedUpPlates, Text(PlateNum), ", "),
+                        !IsBlank(varPickedPlatesText),
+                        varPickedPlatesText,
                         ""
                     ),
                     RecordedBy: {
@@ -6852,80 +6895,108 @@ Set(
 
 If(
     varPaymentSaved,
-    // Mark checked completed plates as picked up
-    If(
-        CountRows(colPickedUpPlates) > 0,
-        ForAll(
-            colPickedUpPlates As pickedPlate,
-            Patch(
-                BuildPlates,
-                LookUp(BuildPlates, ID = pickedPlate.ID),
-                {Status: {Value: "Picked Up"}}
-            )
-        )
-    );
-
-    // Refresh supporting collections
-    ClearCollect(colPayments,
-        Sort(Filter(Payments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
-    );
-    ClearCollect(colAllBuildPlates, BuildPlates);
-
-    // Update running totals and status on the parent request
     With(
         {
-            wResultStatus:
-                If(
-                    chkPartialPickup.Value ||
-                    varSelectedItem.Status.Value = "Printing" ||
-                    CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
-                    varSelectedItem.Status,
-                    {Value: "Paid & Picked Up"}
+            wPickedPlates: SortByColumns(
+                ForAll(
+                    Distinct(colPickedUpPlates, ID) As pickedPlateId,
+                    LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
+                ),
+                "PlateNum",
+                SortOrder.Ascending
+            ),
+            wStaffShortName:
+                With(
+                    {n: ddPaymentStaff.Selected.MemberName},
+                    Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."
                 )
         },
-        Patch(
-            PrintRequests,
-            LookUp(PrintRequests, ID = varSelectedItem.ID),
+        // Mark checked completed plates as picked up
+        If(
+            CountRows(wPickedPlates) > 0,
+            ForAll(
+                wPickedPlates As pickedPlate,
+                Patch(
+                    BuildPlates,
+                    LookUp(BuildPlates, ID = pickedPlate.ID),
+                    {Status: {Value: "Picked Up"}}
+                )
+            )
+        );
+
+        // Refresh supporting collections
+        ClearCollect(colAllPayments, Payments);
+        ClearCollect(colPayments,
+            Sort(Filter(colAllPayments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+        );
+        ClearCollect(colAllBuildPlates, BuildPlates);
+
+        // Update running totals, notes timeline, and status on the parent request
+        With(
             {
-                FinalWeight: Sum(colPayments, Weight),
-                FinalCost: Sum(colPayments, Amount),
-                PaymentDate: dpPaymentDate.SelectedDate,
-                StudentOwnMaterial: chkOwnMaterial.Value,
-                Status: wResultStatus,
-                PaymentNotes: If(
-                    IsBlank(Trim(txtPaymentNotes.Text)),
-                    varSelectedItem.PaymentNotes,
-                    Concatenate(
-                        If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
-                        "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
+                wResultStatus:
+                    If(
+                        chkPartialPickup.Value ||
+                        varSelectedItem.Status.Value = "Printing" ||
+                        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
+                        varSelectedItem.Status,
+                        {Value: "Paid & Picked Up"}
+                    )
+            },
+            Patch(
+                PrintRequests,
+                LookUp(PrintRequests, ID = varSelectedItem.ID),
+                {
+                    FinalWeight: Sum(colPayments, Weight),
+                    FinalCost: Sum(colPayments, Amount),
+                    PaymentDate: If(CountRows(colPayments) > 0, Max(colPayments, PaymentDate), dpPaymentDate.SelectedDate),
+                    StudentOwnMaterial: chkOwnMaterial.Value,
+                    Status: wResultStatus,
+                    PaymentNotes: If(
+                        IsBlank(Trim(txtPaymentNotes.Text)),
+                        varSelectedItem.PaymentNotes,
+                        Concatenate(
+                            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
+                            "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
+                        )
+                    ),
+                    StaffNotes: Concatenate(
+                        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+                        "PAID by " & wStaffShortName &
+                        ": " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                        " (" & Text(Value(txtPaymentWeight.Text)) & "g) #" & txtPaymentTransaction.Text &
+                        " " & ddPaymentType.Selected.Value &
+                        If(CountRows(wPickedPlates) > 0, " (Plates " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
+                        " - " & Text(Now(), "m/d h:mmam/pm")
+                    ),
+                    LastAction: {Value: "Picked Up"},
+                    LastActionBy: {
+                        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
+                        Department: "",
+                        DisplayName: ddPaymentStaff.Selected.MemberName,
+                        Email: ddPaymentStaff.Selected.MemberEmail,
+                        JobTitle: "",
+                        Picture: ""
+                    },
+                    LastActionAt: Now()
+                }
+            );
+            IfError(
+                Set(
+                    varPaymentAuditResult,
+                    'Flow-(C)-Action-LogAction'.Run(
+                        Text(varSelectedItem.ID),
+                        If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
+                        If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
+                        "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                        If(CountRows(wPickedPlates) > 0, " (Plates " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
+                        ddPaymentStaff.Selected.MemberEmail
                     )
                 ),
-                LastAction: {Value: "Picked Up"},
-                LastActionBy: {
-                    Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-                    Department: "",
-                    DisplayName: ddPaymentStaff.Selected.MemberName,
-                    Email: ddPaymentStaff.Selected.MemberEmail,
-                    JobTitle: "",
-                    Picture: ""
-                },
-                LastActionAt: Now()
-            }
-        );
-        IfError(
-            Set(
-                varPaymentAuditResult,
-                'Flow-(C)-Action-LogAction'.Run(
-                    Text(varSelectedItem.ID),
-                    If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
-                    If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
-                    "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                    If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", "") &
-                    If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
-                    ddPaymentStaff.Selected.MemberEmail
-                )
-            ),
-            Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+                Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+            )
         )
     );
 
@@ -6961,7 +7032,7 @@ Set(varLoadingMessage, "")
 | `Completed` | Some plates | Checked or implied by remaining plates | stays `Completed` |
 | `Completed` | All remaining plates | Unchecked | `Paid & Picked Up` |
 
-> 💡 **Merged result:** Payment history now comes from the `Payments` list, build-plate pickup is part of the modal itself, and `PrintRequests.FinalWeight` / `FinalCost` remain the running totals used elsewhere in the app.
+> 💡 **Merged result:** Payment history now comes from the `Payments` list, payment activity is also appended to `StaffNotes` for the Notes modal timeline, and `PrintRequests.FinalWeight` / `FinalCost` remain the running totals used elsewhere in the app.
 
 ---
 
@@ -7434,6 +7505,8 @@ Set(varLoadingMessage, "")
 **What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a combined weight and single transaction number.
 
 > 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
+>
+> ⚠️ **Consistency note:** If you implement this modal after adopting list-backed payment history, follow the same source-of-truth pattern as Step 12C: create one `Payments` row per batch item using the proportional weight/cost values, then update `PrintRequests.FinalWeight` / `FinalCost` from those rows. Do not rely on `PaymentNotes` alone for history.
 
 > ⚠️ **Reminder:** Use Classic controls as described in Step 10. Classic TextInput uses `.Text`, Classic Button uses `Fill`/`Color` properties.
 
@@ -8178,7 +8251,7 @@ If(
 
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
-> 💡 **PaymentNotes Format:** Each item's notes include `[BATCH N]` indicator, staff initials, proportional cost, weight breakdown, transaction number, payment type, and timestamp. Example: `[BATCH 3] John D.: $12.50 (45g from 180g combined, own material) #12345 TigerCASH - 3/2 10:30am`
+> 💡 **Batch history guidance:** Optional summary text may still be appended to `PaymentNotes`, but canonical payment history should come from the `Payments` rows created for each batch item. If you also append timeline entries to `StaffNotes`, use the same `PAID by ...` format documented in Step 12C so the Notes modal parser stays consistent.
 
 ---
 
@@ -8919,7 +8992,7 @@ Before moving on, verify:
 
 # STEP 13: Building the Notes Modal
 
-**What you're doing:** Creating a modal that displays both Student Notes (from submission) and Staff Notes (including system audit entries), and allows staff to add new notes.
+**What you're doing:** Creating a modal that displays both Student Notes (from submission) and Staff Notes (including manual notes, workflow audit entries, and payment activity), and allows staff to add new notes.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
@@ -9258,6 +9331,7 @@ If(
 > - Manual notes prefixed with `[NOTE]` have the prefix stripped before display
 > - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED" or "3/4 9:15am - NOTE")
 > - Line 2: Staff name, with details inline for APPROVED/PAID, or on separate lines for other actions
+> - Payment entries should be stored as `PAID by First L.: $45.00 (450g) #TXN123 TigerCASH (Plates 1,2) - 3/18 3:35pm` so they render cleanly without a `[NOTE]` prefix
 >
 > **Example approval display:**
 > ```
@@ -9268,7 +9342,7 @@ If(
 > **Example payment display:**
 > ```
 > 3/5 3:00pm - PAID
-> Colin F. - $25.00 (250g) #246
+> Colin F. - $25.00 (250g) #246 TigerCASH (Plates 1-3)
 > ```
 >
 > **Example rejection display:**
@@ -9492,7 +9566,7 @@ Reset(txtAddNote);
 Notify("Note added successfully!", NotificationType.Success)
 ```
 
-> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` to distinguish them from automated audit entries (APPROVED, REJECTED, etc.). The job card counter only counts manual `[NOTE]` entries, while the modal displays all entries. All notes are separated by ` | ` in storage and parsed for clean display.
+> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` to distinguish them from automated audit entries (APPROVED, REJECTED, PAID, etc.). The job card counter only counts manual `[NOTE]` entries, while the modal displays all entries. All notes are separated by ` | ` in storage and parsed for clean display.
 >
 > ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
 
@@ -9995,10 +10069,14 @@ Reset(chkNeedsAttention)
 25. Set **OnSelect:**
 
 ```powerfx
-Refresh(PrintRequests)
+Refresh(PrintRequests);
+Refresh(BuildPlates);
+Refresh(Payments);
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments)
 ```
 
-> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted via the student form, the tab counts and gallery won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts.
+> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted or payments/plates are updated elsewhere, the tab counts, job-card summaries, and payment indicators won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts.
 
 ---
 
@@ -10773,7 +10851,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Color | `varColorText` |
 | Visible | `true` |
 
-> 💡 **Note:** This counts only **manual staff notes** (tagged with `[NOTE]`), not automated audit entries like approvals or rejections. The formula splits on `[NOTE]` and subtracts 1 (since splitting "A[NOTE]B" returns 2 parts). Automated entries are still visible in the Notes modal but don't increment this counter.
+> 💡 **Note:** This counts only **manual staff notes** (tagged with `[NOTE]`), not automated audit entries like approvals, rejections, or payments. The formula splits on `[NOTE]` and subtracts 1 (since splitting "A[NOTE]B" returns 2 parts). Automated entries are still visible in the Notes modal but don't increment this counter.
 
 #### View Messages Button (btnViewMessages)
 
@@ -10841,7 +10919,7 @@ Set(varSelectedItem, ThisItem)
 
 With these controls, each job card shows:
 - **Messages (X)** header with total message count
-- **Notes (X)** header with staff notes count
+- **Notes (X)** header with manual note count
 - **View Messages** button to open the full conversation modal
 - **Red unread badge** with count of unread student replies
 
@@ -11877,6 +11955,12 @@ The Timer control automatically refreshes data and checks for new NeedsAttention
 ```powerfx
 // Refresh data from SharePoint
 Refresh(PrintRequests);
+Refresh(BuildPlates);
+Refresh(Payments);
+
+// Reload local collections used by job-card summaries
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments);
 
 // Reload NeedsAttention items into local collection (avoids delegation)
 ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
@@ -11902,11 +11986,12 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 | Step | What Happens |
 |------|--------------|
 | 1 | Timer fires every 30 seconds |
-| 2 | `Refresh(PrintRequests)` fetches latest data from SharePoint |
-| 3 | Count current NeedsAttention items |
-| 4 | Compare to previous count stored in `varPrevAttentionCount` |
-| 5 | If count increased, `Reset(audNotification); Set(varPlaySound, true)` triggers audio |
-| 6 | Update `varPrevAttentionCount` for next cycle |
+| 2 | `Refresh(PrintRequests)`, `Refresh(BuildPlates)`, and `Refresh(Payments)` fetch the latest SharePoint data |
+| 3 | `colAllBuildPlates` and `colAllPayments` are reloaded for job-card summaries |
+| 4 | Count current NeedsAttention items |
+| 5 | Compare to previous count stored in `varPrevAttentionCount` |
+| 6 | If count increased, `Reset(audNotification); Set(varPlaySound, true)` triggers audio |
+| 7 | Update `varPrevAttentionCount` for next cycle |
 
 > 💡 **Why 10 seconds?** This provides responsive notifications while staying well within SharePoint API limits. You can adjust `varRefreshInterval` in App.OnStart (in milliseconds) — 15000 for 15 seconds, 30000 for 30 seconds, 60000 for 1 minute.
 
@@ -12389,6 +12474,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 6. Click confirm
 7. **Verify:** 3 plates updated to "Picked Up"
 8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
+9. **Verify:** The new `Payments` row stores `PlatesPickedUp` once per plate in ascending order (no duplicate `1, 1` values)
 
 ### Scenario 9: Resin Job Printer Filter
 
@@ -12468,7 +12554,9 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 2. Staff records payment: 115g, $11.50, TXN-12345
 3. **Verify:** `Payments` has 1 record
 4. **Verify:** `PrintRequests.FinalWeight` = 115, `FinalCost` = $11.50
-5. **Verify:** Monthly export shows 1 row
+5. **Verify:** Job card shows `1 payment recorded` even if `txtPaymentNotes` was left blank
+6. **Verify:** Notes modal shows a `PAID` timeline entry in `StaffNotes`
+7. **Verify:** Monthly export shows 1 row
 
 ### Scenario 17: Two Partial Payments
 
@@ -12478,7 +12566,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 4. Day 2: 2 plates done, student picks up remaining, pays $6.20 (TXN-44890)
 5. **Verify:** `Payments` has 2 records
 6. **Verify:** `PrintRequests.FinalWeight` = 147, `FinalCost` = $14.70
-7. **Verify:** Monthly export shows 2 rows
+7. **Verify:** Notes modal shows two `PAID` entries in chronological order
+8. **Verify:** Monthly export shows 2 rows
 
 ### Scenario 18: Payment History Display
 
@@ -12487,6 +12576,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 3. **Verify:** Payment History section shows previous payment(s)
 4. **Verify:** "Paid so far" shows running total
 5. **Verify:** "Remaining estimate" calculates correctly
+6. **Verify:** Job card payment summary is driven by `Payments`, not by `PaymentNotes`
+7. **Verify:** Optional `PaymentNotes` text is still treated as free-text context, not payment history
 
 ### Scenario 19: Different Payers
 
@@ -12508,9 +12599,10 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. Existing job with payment recorded before this enhancement (data in `PrintRequests` fields only)
 2. Open Payment Modal
-3. **Verify:** Payment History is empty (no `Payments` records)
-4. **Verify:** System still shows `FinalWeight`/`FinalCost` from `PrintRequests`
-5. New payment creates first `Payments` record
+3. **Verify:** Payment History gallery is empty (no `Payments` records)
+4. **Verify:** `Paid so far` still shows `FinalWeight`/`FinalCost` from `PrintRequests`
+5. **Verify:** Job card shows a legacy fallback summary rather than a `Payments` count
+6. New payment creates first `Payments` record
 
 ---
 
