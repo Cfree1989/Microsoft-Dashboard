@@ -7010,7 +7010,7 @@ If(
                         ": " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
                         " (" & Text(Value(txtPaymentWeight.Text)) & "g) #" & txtPaymentTransaction.Text &
                         " " & ddPaymentType.Selected.Value &
-                        If(CountRows(wPickedPlates) > 0, " (Plates " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(CountRows(wPickedPlates) > 0, " (Plate " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
                         " - " & Text(Now(), "m/d h:mmam/pm")
                     ),
@@ -7034,7 +7034,7 @@ If(
                         If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
                         If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
                         "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        If(CountRows(wPickedPlates) > 0, " (Plates " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(CountRows(wPickedPlates) > 0, " (Plate " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
                         ddPaymentStaff.Selected.MemberEmail
                     )
@@ -9375,7 +9375,7 @@ If(
 > - Manual notes prefixed with `[NOTE]` have the prefix stripped before display
 > - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED" or "3/4 9:15am - NOTE")
 > - Line 2: Staff name, with details inline for APPROVED/PAID, or on separate lines for other actions
-> - Payment entries should be stored as `PAID by First L.: $45.00 (450g) #TXN123 TigerCASH (Plates 1,2) - 3/18 3:35pm` so they render cleanly without a `[NOTE]` prefix
+> - Payment entries should be stored as `PAID by First L.: $45.00 (450g) #TXN123 TigerCASH (Plate 1,2) - 3/18 3:35pm` so they render cleanly without a `[NOTE]` prefix
 >
 > **Example approval display:**
 > ```
@@ -9386,7 +9386,7 @@ If(
 > **Example payment display:**
 > ```
 > 3/5 3:00pm - PAID
-> Colin F. - $25.00 (250g) #246 TigerCASH (Plates 1-3)
+> Colin F. - $25.00 (250g) #246 TigerCASH (Plate 1,3)
 > ```
 >
 > **Example rejection display:**
