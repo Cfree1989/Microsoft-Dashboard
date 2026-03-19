@@ -67,8 +67,8 @@ PrintRequests (1 record)
 ├── FinalWeight: 147g              ← running total (sum of payments)
 ├── FinalCost: $14.70              ← running total (sum of payments)
 └── Payments (many records)
-    ├── Payment 1: 3/15, TXN-44821, 85g, $8.50, Plates 1-3
-    └── Payment 2: 3/16, TXN-44890, 62g, $6.20, Plates 4-5
+    ├── Payment 1: 3/15, TXN-44821, 85g, $8.50, Plates 1-3, PlateIDs=[...stable keys...]
+    └── Payment 2: 3/16, TXN-44890, 62g, $6.20, Plates 4-5, PlateIDs=[...stable keys...]
 ```
 
 ### Key Design Points
@@ -78,9 +78,11 @@ PrintRequests (1 record)
 | **One row per transaction** | Each swipe/check/code entry = one `Payments` record |
 | **Linked to job** | `RequestID` links to `PrintRequests.ID` |
 | **Running totals** | `PrintRequests.FinalWeight` and `FinalCost` updated after each payment |
-| **Plates linked** | Each payment records which plates were picked up |
+| **Plates linked** | Each payment records both display labels and stable plate IDs for the picked-up plates |
 | **Payer captured** | Integrates with Payer Tracking Enhancement |
 | **Export source** | Monthly Transaction Export queries `Payments` list |
+
+`PlatesPickedUp` remains a human-readable snapshot for UI display. Durable history must come from `PlateIDsPickedUp`, which stores the immutable `PlateKey` values from the `BuildPlates` list. This prevents old payment records from becoming ambiguous if visible plate numbering changes later.
 
 ### Data Flow
 
@@ -97,7 +99,8 @@ PrintRequests (1 record)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  1. CREATE Payments record                                       │
-│     RequestID: 42, Weight: 85, Amount: $8.50, Plates: "1,2,3"   │
+│     RequestID: 42, Weight: 85, Amount: $8.50,                   │
+│     PlatesPickedUp: "1,2,3", PlateIDsPickedUp: "..."            │
 │                                                                  │
 │  2. UPDATE PrintRequests running totals                          │
 │     FinalWeight += 85  →  85                                     │
@@ -127,7 +130,8 @@ Create a new SharePoint list at the site root. No item-level permissions require
 | `PaymentDate` | Date and time | Yes | — | When payment was recorded |
 | `PayerName` | Single line of text | No | — | Who paid (from Payer Tracking) |
 | `PayerTigerCard` | Single line of text | No | — | Payer's TigerCard number |
-| `PlatesPickedUp` | Single line of text | No | — | Plate numbers picked up (e.g., "1, 2, 3") |
+| `PlatesPickedUp` | Single line of text | No | — | Human-readable plate labels picked up (e.g., "1, 2, 3") |
+| `PlateIDsPickedUp` | Multiple lines of text | No | — | Stable `PlateKey` values picked up in this transaction |
 | `RecordedBy` | Person | Yes | — | Staff member who processed payment |
 | `StudentOwnMaterial` | Yes/No | No | No | 70% discount applied |
 
@@ -203,7 +207,13 @@ Create a new SharePoint list at the site root. No item-level permissions require
 ##### PlatesPickedUp
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `PlatesPickedUp`
-3. **Description:** `Plate numbers collected in this transaction (e.g., "1, 2, 3")`
+3. **Description:** `Display labels collected in this transaction (e.g., "1, 2, 3")`
+4. Click **Save**
+
+##### PlateIDsPickedUp
+1. Click **+ Add column** → **Multiple lines of text**
+2. **Name:** `PlateIDsPickedUp`
+3. **Description:** `Stable PlateKey values collected in this transaction`
 4. Click **Save**
 
 ##### RecordedBy
@@ -383,6 +393,8 @@ Clear(colPayments);
 | lblHistStaff | Text | `ThisItem.RecordedBy.DisplayName` |
 | lblHistStaff | Y | `22` (second row) |
 
+> ⚠️ The history row intentionally shows the human-readable `PlatesPickedUp` value. Durable cross-checking should use `PlateIDsPickedUp`, which is stored on the same `Payments` record but does not need to be shown in the default UI.
+
 ##### Summary Labels
 
 | Control | Property | Value |
@@ -476,6 +488,18 @@ Replace the single `Patch(PrintRequests, ...)` with a multi-step operation that:
 // Calculate final cost (same logic as current payment modal)
 Set(varBaseCost, Max(varMinimumCost, Value(txtPaymentWeight.Text) * If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)));
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+Set(
+    varPickedPlateIDsText,
+    If(
+        CountRows(colPickedUpPlates) > 0,
+        Concat(
+            SortByColumns(colPickedUpPlates, "PlateNum", SortOrder.Ascending),
+            PlateKey,
+            ", "
+        ),
+        ""
+    )
+);
 
 // 1. Create new Payment record
 Set(varNewPayment, 
@@ -505,6 +529,7 @@ Set(varNewPayment,
                 Concat(colPickedUpPlates, Text(PlateNum), ", "),
                 ""
             ),
+            PlateIDsPickedUp: varPickedPlateIDsText,
             RecordedBy: {
                 Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
                 Department: "",
@@ -573,7 +598,12 @@ IfError(
         If(chkPartialPickup.Value, "Partial Payment", "Status Change"),
         If(chkPartialPickup.Value, "Payment", "Status"),
         "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") & 
-        If(CountRows(colPickedUpPlates) > 0, " (Plates " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")", ""),
+        If(
+            CountRows(colPickedUpPlates) > 0,
+            " (Plate IDs " & Concat(colPickedUpPlates, PlateKey, ",") &
+            " | Display " & Concat(colPickedUpPlates, Text(PlateNum), ",") & ")",
+            ""
+        ),
         ddPaymentStaff.Selected.MemberEmail
     ),
     Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
@@ -719,7 +749,7 @@ This enhancement can be implemented **independently of Build Plate Tracking**:
 
 | With Build Plates | Without Build Plates |
 |-------------------|----------------------|
-| `PlatesPickedUp` field populated | `PlatesPickedUp` field left blank |
+| `PlatesPickedUp` + `PlateIDsPickedUp` populated | Plate fields left blank |
 | Plate checkboxes in Payment Modal | No plate checkboxes shown |
 | Full partial pickup workflow | Still tracks multiple payments per job |
 
@@ -765,7 +795,8 @@ This enhancement can be implemented **independently of Build Plate Tracking**:
 4. Day 2: 2 plates done, student picks up remaining, pays $6.20 (TXN-44890)
 5. **Verify:** `Payments` has 2 records
 6. **Verify:** `PrintRequests.FinalWeight` = 147, `FinalCost` = $14.70
-7. **Verify:** Monthly export shows 2 rows
+7. **Verify:** Each `Payments` row stores both `PlatesPickedUp` and `PlateIDsPickedUp`
+8. **Verify:** Monthly export shows 2 rows
 
 ### Scenario 3: Payment History Display
 
@@ -798,6 +829,21 @@ This enhancement can be implemented **independently of Build Plate Tracking**:
 3. **Verify:** Payment History is empty (no `Payments` records)
 4. **Verify:** System still shows `FinalWeight`/`FinalCost` from `PrintRequests`
 5. New payment creates first `Payments` record
+
+### Scenario 7: Final Batch Pickup After Earlier Partial Pickup
+
+1. Request A already has one earlier `Payments` row from a partial pickup
+2. The remaining completed pieces for Request A are collected later through batch payment
+3. **Verify:** Batch creates one additional `Payments` row for Request A rather than overwriting its earlier history
+4. **Verify:** The batch-created row stores `PlateIDsPickedUp` for the remaining plates
+5. **Verify:** `PrintRequests.FinalWeight` / `FinalCost` equal the sum of all `Payments` rows for Request A
+
+### Scenario 8: Plate Renumbering After Payment
+
+1. Record a payment tied to completed plates on a multi-plate request
+2. Later remove one older plate and add a replacement plate
+3. **Verify:** Current visible plate numbering may change
+4. **Verify:** Earlier `Payments.PlateIDsPickedUp` values still identify the originally picked-up plates unambiguously
 
 ---
 

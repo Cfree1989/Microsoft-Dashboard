@@ -57,12 +57,15 @@ PrintRequests (1 record)
 | Aspect | Design |
 |--------|--------|
 | **Default plate** | 1 plate auto-created on approval using student's requested `Printer` |
+| **Stable identity** | Each build plate gets an immutable `PlateKey`; `PlateNum` stays display-only |
 | **Multi-plate setup** | "Add Plates/Printers" button in Approval Modal; "Manage Plates" in Change Details Modal |
 | **Plate organization** | Grouped by printer in Build Plates Modal |
 | **Plate removal** | Any plate can be removed at any time (full flexibility for re-slicing/reprinting) |
 | **Completion gate** | Job cannot be marked "Complete" until all plates are Completed or Picked Up |
 | **ActualPrinter** | Multi-select, auto-populated from distinct `Machine` values across job's plates |
 | **Partial pickup** | Payment Modal shows completed plates as checkboxes; checked plates marked "Picked Up" |
+
+`PlateNum` remains useful for UI labels like `1/5` and `Plate 3`, but it is **not** a durable identifier. If staff removes a plate and re-slices the job, the visible numbering can change. Payment history and audit logs should therefore reference `PlateKey`, with `PlateNum` treated as a convenience snapshot only.
 
 ### Integration with Printer Verification (ActualPrinter)
 
@@ -93,8 +96,19 @@ Create a new SharePoint list at the site root. No item-level permissions require
 |--------|------|----------|---------|---------|
 | `RequestID` | Number | Yes | — | Links to `PrintRequests.ID` |
 | `ReqKey` | Single line of text | No | — | Request reference (REQ-00001) |
+| `PlateKey` | Single line of text | Yes | — | Immutable per-plate identifier saved once at creation time |
 | `Machine` | Choice | Yes | — | Printer type assigned to this plate |
 | `Status` | Choice | Yes | Queued | Queued → Printing → Completed → Picked Up |
+
+#### PlateKey Column Setup
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `PlateKey`
+3. **Description:** `Stable plate identifier used by payment history and audit records`
+4. **Require that this column contains information:** Yes
+5. Click **Save**
+
+> ⚠️ **Do not edit after creation:** `PlateKey` should be generated once in Power Apps (for example `Text(GUID())`) when the plate record is created. It must not be recomputed when rows are re-ordered or re-sliced.
 
 #### Machine Column Setup
 
@@ -183,7 +197,7 @@ Set(varCardGalleryHeight, 490);
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
-| `colBuildPlatesIndexed` | `colBuildPlates` with added `PlateNum` column (1, 2, 3…) for labels | Table |
+| `colBuildPlatesIndexed` | `colBuildPlates` with added display-only `PlateNum` column (1, 2, 3…) for labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in the Payment Modal | Table |
 
 ---
@@ -317,6 +331,8 @@ ClearCollect(colBuildPlatesIndexed,
 Set(varShowBuildPlatesModal, ThisItem.ID)
 ```
 
+> ⚠️ `PlateNum` is recalculated display order only. Use the stored `PlateKey` field for anything that must remain stable in payment history or audit text.
+ 
 > 📐 **Card height note:** `varCardGalleryHeight` is increased from 450 to 490. The primary action buttons use `Parent.TemplateHeight - varBtnHeight - 12` and shift automatically. The utility row (btnFiles, Message, Archive) stays at Y=360.
 
 ---
@@ -816,6 +832,7 @@ Patch(BuildPlates,
     {
         RequestID: varSelectedItem.ID,
         ReqKey: varSelectedItem.ReqKey,
+        PlateKey: Text(GUID()),
         Machine: { Value: ddBuildPlatesMachine.Selected.Value },
         Status: { Value: "Queued" }
     }
@@ -1010,6 +1027,7 @@ If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
     Patch(BuildPlates, Defaults(BuildPlates), {
         RequestID: varSelectedItem.ID,
         ReqKey: varSelectedItem.ReqKey,
+        PlateKey: Text(GUID()),
         Machine: varSelectedItem.Printer,
         Status: {Value: "Queued"}
     })
@@ -1153,6 +1171,7 @@ The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
 5. **Verify:** All plates removed, progress shows "0 of 0 Completed"
 6. Add new plates with different configuration
 7. **Verify:** New plates appear, job can continue fresh
+8. **Verify:** New replacement plates receive new `PlateKey` values rather than reusing history from removed plates
 
 ### Scenario 8: Partial Pickup via Payment Modal
 
@@ -1164,6 +1183,7 @@ The actual Patch sets `ActualPrinter` as a multi-select value from the plates.
 6. Click confirm
 7. **Verify:** 3 plates updated to "Picked Up"
 8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
+9. **Verify:** The related payment record stores both the display label snapshot (`PlatesPickedUp`) and the stable `PlateIDsPickedUp` values
 
 ### Scenario 9: Resin Job Printer Filter
 

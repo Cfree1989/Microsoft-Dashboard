@@ -10,7 +10,7 @@
 The Payments list stores individual transaction records for print jobs. Unlike the single-value payment fields on `PrintRequests`, this list supports multiple payments per job — essential for partial pickup workflows where students collect and pay for parts of their order over multiple visits.
 
 **Key Features:**
-- 12 columns capturing full transaction details
+- 13 columns capturing full transaction details
 - One-to-many relationship with PrintRequests (multiple payments per job)
 - Supports multi-payer scenarios (different people paying for same job)
 - Source data for Monthly Transaction Export
@@ -130,7 +130,16 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 > 💡 **Purpose:** Links this payment to specific build plates. When Build Plate Tracking is enabled, staff can check which plates are being picked up during payment, and those plate numbers are recorded here.
 
-### Column 11: RecordedBy (Person)
+### Column 11: PlateIDsPickedUp (Multiple lines of text)
+
+1. Click **+ Add column** → **Multiple lines of text**
+2. **Name:** `PlateIDsPickedUp`
+3. **Description:** `Stable PlateKey values collected in this transaction`
+4. Click **Save**
+
+> ⚠️ **Important:** This is the durable link to the actual build plates picked up. `PlatesPickedUp` is only a human-readable display snapshot and may drift if visible plate numbering changes later.
+
+### Column 12: RecordedBy (Person)
 
 1. Click **+ Add column** → **Person**
 2. **Name:** `RecordedBy`
@@ -139,7 +148,7 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 5. **Allow multiple selections:** No
 6. Click **Save**
 
-### Column 12: StudentOwnMaterial (Yes/No)
+### Column 13: StudentOwnMaterial (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentOwnMaterial`
@@ -181,7 +190,8 @@ The Payments list should be accessible **only to staff**, not students.
 | PaymentDate | Date | Yes | - | When payment was recorded |
 | PayerName | Single line | No | - | Who paid |
 | PayerTigerCard | Single line | No | - | Payer's TigerCard number |
-| PlatesPickedUp | Single line | No | - | Plate numbers collected (e.g., "1, 2, 3") |
+| PlatesPickedUp | Single line | No | - | Display plate labels collected (e.g., "1, 2, 3") |
+| PlateIDsPickedUp | Multiple lines | No | - | Stable PlateKey values for picked-up plates |
 | RecordedBy | Person | Yes | - | Staff who processed payment |
 | StudentOwnMaterial | Yes/No | No | No | 70% discount applied |
 
@@ -191,15 +201,15 @@ The Payments list should be accessible **only to staff**, not students.
 
 **Scenario:** Student submits request REQ-00042. Job has 5 plates. Student picks up in 2 visits.
 
-| ID | RequestID | ReqKey | TransactionNumber | Weight | Amount | PaymentDate | PlatesPickedUp | PayerName |
-|----|-----------|--------|-------------------|--------|--------|-------------|----------------|-----------|
-| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 1, 2, 3 | Jane Smith |
-| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 4, 5 | Jane Smith |
+| ID | RequestID | ReqKey | TransactionNumber | Weight | Amount | PaymentDate | PlatesPickedUp | PlateIDsPickedUp | PayerName |
+|----|-----------|--------|-------------------|--------|--------|-------------|----------------|------------------|-----------|
+| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 1, 2, 3 | BP-42-A1, BP-42-A2, BP-42-A3 | Jane Smith |
+| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 4, 5 | BP-42-B1, BP-42-B2 | Jane Smith |
 
 **What this shows:**
 - 2 separate transactions for same job
 - Both transaction numbers preserved (not overwritten)
-- Plates linked to each payment
+- Plates linked to each payment with both display labels and stable IDs
 - Finance report will show 2 rows
 
 ---
@@ -233,6 +243,7 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 - [ ] PayerName column: Single line of text
 - [ ] PayerTigerCard column: Single line of text
 - [ ] PlatesPickedUp column: Single line of text
+- [ ] PlateIDsPickedUp column: Multiple lines of text
 - [ ] RecordedBy column: Person type, required
 - [ ] StudentOwnMaterial column: Yes/No, default No
 - [ ] Permissions stopped inheriting from site

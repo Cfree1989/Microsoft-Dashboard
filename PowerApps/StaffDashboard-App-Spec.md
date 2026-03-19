@@ -643,7 +643,7 @@ Set(varLoadingMessage, "")
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
-| `colBuildPlatesIndexed` | `colBuildPlates` with added `PlateNum` column (1, 2, 3…) for labels | Table |
+| `colBuildPlatesIndexed` | `colBuildPlates` with added display-only `PlateNum` column (1, 2, 3…) for labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
 | `colPrintersUsed` | Distinct printers used for current item | Table |
 | `colPayments` | Payment records for current modal context | Table |
@@ -3799,7 +3799,7 @@ ClearCollect(colPrintersUsed,
 >
 > `varBuildPlatesOpenedFromApproval` tracks that this modal was opened from Approval, so closing Build Plates returns staff to the Approval modal instead of clearing the current request context.
 >
-> Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` stays consistent in the modal and pickup flows.
+> Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` stays consistent anywhere it is displayed. `PlateNum` is display-only and must never be used as the durable historical identifier; use `PlateKey` for that instead.
 >
 > **Expected result:** Once this button is clicked, staff should only see the Build Plates modal. The Approval modal title, body, and buttons should not remain visible in the background.
 
@@ -3978,6 +3978,7 @@ If(
         Patch(BuildPlates, Defaults(BuildPlates), {
             RequestID: varSelectedItem.ID,
             ReqKey: varSelectedItem.ReqKey,
+            PlateKey: Text(GUID()),
             Machine: varSelectedItem.Printer,
             Status: {Value: "Queued"}
         })
@@ -6475,6 +6476,8 @@ If(
 > 💡 **Visual target:** Each payment should render as one compact gray row with inline `·` separators, matching the generated mockup. Avoid multi-line stacked labels here unless you intentionally redesign the row.
 >
 > 💡 **Plate formatting rule:** Show `Plate 4` for one plate, `Plates 1-3` for consecutive ranges, and `Plates 1,3,5` for non-consecutive pickups.
+>
+> ⚠️ **Durability rule:** `PlatesPickedUp` is a human-readable display snapshot only. Store the stable per-plate keys in `Payments.PlateIDsPickedUp` and use those for audit/history logic. `PlateNum` can change after removals or re-slicing.
 
 ---
 
@@ -6632,7 +6635,7 @@ If(
 Remove(colPickedUpPlates, ThisItem)
 ```
 
-> 💡 **Deduping rule:** Guard `OnCheck` with the `ID in colPickedUpPlates.ID` test so repeated checkbox refreshes or gallery re-renders do not collect the same plate twice. Step 12C also dedupes again during save and sorts by `PlateNum` before generating `PlatesPickedUp`.
+> 💡 **Deduping rule:** Guard `OnCheck` with the `ID in colPickedUpPlates.ID` test so repeated checkbox refreshes or gallery re-renders do not collect the same plate twice. Step 12C also dedupes again during save and sorts by `PlateNum` before generating the display-only `PlatesPickedUp` text plus the stable `PlateIDsPickedUp` value.
 
 116. Set `lblPlateName` properties:
 
@@ -6757,6 +6760,8 @@ Clear(colPickedUpPlates);
 Clear(colPayments);
 Notify("Batch mode enabled. Select more Completed items, then click 'Process Batch Payment'.", NotificationType.Information)
 ```
+
+> ⚠️ **Batch contract:** Once staff switches into batch mode, they are building a **final pickup** across multiple completed requests. For any selected request that has build plates, batch processing will mark **all remaining eligible completed plates** as `Picked Up`. If staff needs to pick up only some of a request's completed plates, they must stay in the single-request Payment Modal instead of batch mode.
 
 ---
 
@@ -6894,6 +6899,21 @@ Set(
         ", "
     )
 );
+Set(
+    varPickedPlateIDsText,
+    Concat(
+        SortByColumns(
+            ForAll(
+                Distinct(colPickedUpPlates, ID) As pickedPlateId,
+                LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
+            ),
+            "PlateNum",
+            SortOrder.Ascending
+        ),
+        PlateKey,
+        ", "
+    )
+);
 
 // Create a new Payments record
 Set(
@@ -6917,6 +6937,11 @@ Set(
                     PlatesPickedUp: If(
                         !IsBlank(varPickedPlatesText),
                         varPickedPlatesText,
+                        ""
+                    ),
+                    PlateIDsPickedUp: If(
+                        !IsBlank(varPickedPlateIDsText),
+                        varPickedPlateIDsText,
                         ""
                     ),
                     RecordedBy: {
@@ -7010,7 +7035,12 @@ If(
                         ": " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
                         " (" & Text(Value(txtPaymentWeight.Text)) & "g) #" & txtPaymentTransaction.Text &
                         " " & ddPaymentType.Selected.Value &
-                        If(CountRows(wPickedPlates) > 0, " (Plate " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(
+                            CountRows(wPickedPlates) > 0,
+                            " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
+                            " | Display " & Concat(wPickedPlates, Text(PlateNum), ",") & ")",
+                            ""
+                        ) &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
                         " - " & Text(Now(), "m/d h:mmam/pm")
                     ),
@@ -7034,7 +7064,12 @@ If(
                         If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
                         If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
                         "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        If(CountRows(wPickedPlates) > 0, " (Plate " & Concat(wPickedPlates, Text(PlateNum), ",") & ")", "") &
+                        If(
+                            CountRows(wPickedPlates) > 0,
+                            " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
+                            " | Display " & Concat(wPickedPlates, Text(PlateNum), ",") & ")",
+                            ""
+                        ) &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
                         ddPaymentStaff.Selected.MemberEmail
                     )
@@ -7550,13 +7585,25 @@ Set(varLoadingMessage, "")
 
 > 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
 >
-> ⚠️ **Consistency note:** If you implement this modal after adopting list-backed payment history, follow the same source-of-truth pattern as Step 12C: create one `Payments` row per batch item using the proportional weight/cost values, then update `PrintRequests.FinalWeight` / `FinalCost` from those rows. Do not rely on `PaymentNotes` alone for history.
+> ⚠️ **Batch means final pickup.** This modal is only for requests where the student is taking **all remaining completed pieces for each selected request**. If a request still needs a partial pickup decision, process it through the single-item Payment Modal in Step 12C instead.
+>
+> ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: create one `Payments` row per batch item, mark the picked-up build plates, then recompute `PrintRequests.FinalWeight` / `FinalCost` from `Payments`. Do not rely on `PaymentNotes` alone for history.
+>
+> ⚠️ **Stable identity rule:** Any request with build plates must persist stable `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text. `PlateNum` is display-only and must not be treated as the durable identifier.
 
 > ⚠️ **Reminder:** Use Classic controls as described in Step 10. Classic TextInput uses `.Text`, Classic Button uses `Fill`/`Color` properties.
 
 ### Control Hierarchy (Container-Based)
 
 ```
+
+### Batch Eligibility Rules
+
+- Only requests currently in `Completed` status may enter batch mode.
+- If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
+- If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
+- Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
+- Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -7656,7 +7703,7 @@ scrDashboard
 14. Set **Text:**
 
 ```powerfx
-"Batch Payment - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
+"Final Batch Pickup - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
 ```
 
 ---
@@ -8075,6 +8122,8 @@ If(
 ```
 
 > 💡 **Remove Items:** Staff can remove individual items from the batch if needed. If all items are removed, the modal closes automatically.
+>
+> 💡 **Use this when one request no longer qualifies:** If refresh-time validation finds that an item already had its remaining plates picked up, or now has active `Queued` / `Printing` plates, remove it here and process the rest of the batch separately.
 
 ---
 
@@ -8167,15 +8216,34 @@ Set(varIsLoading, true);
 Set(varLoadingMessage, "Processing batch payment...");
 
 // === STEP 1: CONCURRENCY CHECK ===
-// Refresh data and verify all items are still in Completed status
+// Refresh data and verify all items are still eligible final pickups
 Refresh(PrintRequests);
+Refresh(BuildPlates);
+Refresh(Payments);
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments);
 If(
     CountRows(Filter(PrintRequests, ID in colBatchItems.ID && Status.Value <> "Completed")) > 0,
-    // One or more items changed - abort
+    // One or more parent requests changed - abort
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
     Notify("One or more items are no longer in 'Completed' status. Please cancel and try again.", NotificationType.Error),
-    
+
+    CountRows(
+        Filter(
+            colBatchItems As batchCandidate,
+            CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID)) > 0 &&
+            (
+                CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID, Status.Value in ["Queued", "Printing"])) > 0 ||
+                CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID, Status.Value = "Completed")) = 0
+            )
+        )
+    ) > 0,
+    // A build-plate-backed request is no longer a valid final pickup
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, "");
+    Notify("One or more selected requests are no longer valid final pickups. Remove those items from the batch and try again.", NotificationType.Error),
+
     // === STEP 2: CALCULATE VALUES AND PROCESS ===
     // Store calculated values in variables for use in ForAll
     Set(varBatchTotalEstWeight, Sum(colBatchItems, EstimatedWeight));
@@ -8189,92 +8257,149 @@ If(
         )
     );
     
-    // === STEP 3: PATCH EACH ITEM ===
+    // === STEP 3: PROCESS EACH ITEM ===
     ForAll(
         colBatchItems As BatchItem,
-        Patch(
-            PrintRequests,
-            LookUp(PrintRequests, ID = BatchItem.ID),
+        With(
             {
-                Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-                FinalWeight: If(
+                wBatchWeight: If(
                     varBatchTotalEstWeight > 0,
                     Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
                     Round(varBatchCombinedWeight / varBatchItemCount, 2)
                 ),
-                FinalCost: If(
+                wBatchCost: If(
                     varBatchTotalEstWeight > 0,
                     Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchFinalCost, 2),
                     Round(varBatchFinalCost / varBatchItemCount, 2)
                 ),
-                TransactionNumber: txtBatchTransaction.Text,
-                StudentOwnMaterial: chkBatchOwnMaterial.Value,
-                PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
-                PaymentNotes: Concatenate(
-                    BatchItem.PaymentNotes,
-                    If(IsBlank(BatchItem.PaymentNotes), "", " | "),
-                    "[BATCH " & varBatchItemCount & "] " &
-                    With({n: ddBatchStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                    ": " &
-                    Text(
-                        If(
-                            varBatchTotalEstWeight > 0,
-                            Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchFinalCost, 2),
-                            Round(varBatchFinalCost / varBatchItemCount, 2)
+                wRemainingCompletedPlates:
+                    SortByColumns(
+                        Filter(colAllBuildPlates, RequestID = BatchItem.ID, Status.Value = "Completed"),
+                        "ID",
+                        SortOrder.Ascending
+                    )
+            },
+            // Mark all remaining completed plates as picked up for build-plate-backed requests
+            If(
+                CountRows(wRemainingCompletedPlates) > 0,
+                ForAll(
+                    wRemainingCompletedPlates As pickedPlate,
+                    Patch(
+                        BuildPlates,
+                        LookUp(BuildPlates, ID = pickedPlate.ID),
+                        {Status: {Value: "Picked Up"}}
+                    )
+                )
+            );
+
+            // Create canonical payment history row
+            Patch(
+                Payments,
+                Defaults(Payments),
+                {
+                    RequestID: BatchItem.ID,
+                    ReqKey: BatchItem.ReqKey,
+                    TransactionNumber: txtBatchTransaction.Text,
+                    Weight: wBatchWeight,
+                    Amount: wBatchCost,
+                    PaymentType: {Value: ddBatchPaymentType.Selected.Value},
+                    PaymentDate: Today(),
+                    PayerName: BatchItem.Student.DisplayName,
+                    PayerTigerCard: BatchItem.TigerCardNumber,
+                    PlatesPickedUp: If(
+                        CountRows(wRemainingCompletedPlates) > 0,
+                        Concat(
+                            AddColumns(
+                                wRemainingCompletedPlates As plate,
+                                PlateNum,
+                                CountRows(Filter(colAllBuildPlates As priorPlate, priorPlate.RequestID = BatchItem.ID && priorPlate.ID <= plate.ID))
+                            ),
+                            Text(PlateNum),
+                            ", "
                         ),
-                        "[$-en-US]$#,##0.00"
-                    ) &
-                    " (" &
-                    Text(
-                        If(
-                            varBatchTotalEstWeight > 0,
-                            Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                            Round(varBatchCombinedWeight / varBatchItemCount, 2)
-                        )
-                    ) &
-                    "g from " & varBatchCombinedWeight & "g combined" &
-                    If(chkBatchOwnMaterial.Value, ", own material", "") &
-                    ") #" & txtBatchTransaction.Text &
-                    " " & ddBatchPaymentType.Selected.Value &
-                    " - " & Text(Now(), "m/d h:mmam/pm")
-                ),
-                LastActionBy: {
-                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                    Discipline: "",
-                    DisplayName: ddBatchStaff.Selected.MemberName,
-                    Email: ddBatchStaff.Selected.MemberEmail,
-                    JobTitle: "",
-                    Picture: ""
-                },
-                LastActionAt: Now(),
-                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
-            }
+                        ""
+                    ),
+                    PlateIDsPickedUp: If(
+                        CountRows(wRemainingCompletedPlates) > 0,
+                        Concat(wRemainingCompletedPlates, PlateKey, ", "),
+                        ""
+                    ),
+                    RecordedBy: {
+                        Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                        Department: "",
+                        DisplayName: ddBatchStaff.Selected.MemberName,
+                        Email: ddBatchStaff.Selected.MemberEmail,
+                        JobTitle: "",
+                        Picture: ""
+                    },
+                    StudentOwnMaterial: chkBatchOwnMaterial.Value
+                }
+            );
+
+            // Recompute parent totals from Payments and move request to final state
+            Patch(
+                PrintRequests,
+                LookUp(PrintRequests, ID = BatchItem.ID),
+                {
+                    Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
+                    FinalWeight: Sum(Filter(colAllPayments, RequestID = BatchItem.ID), Weight),
+                    FinalCost: Sum(Filter(colAllPayments, RequestID = BatchItem.ID), Amount),
+                    PaymentDate: Max(Filter(colAllPayments, RequestID = BatchItem.ID), PaymentDate),
+                    TransactionNumber: txtBatchTransaction.Text,
+                    StudentOwnMaterial: chkBatchOwnMaterial.Value,
+                    PaymentType: LookUp(Choices(PrintRequests.PaymentType), Value = ddBatchPaymentType.Selected.Value),
+                    LastActionBy: {
+                        Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                        Discipline: "",
+                        DisplayName: ddBatchStaff.Selected.MemberName,
+                        Email: ddBatchStaff.Selected.MemberEmail,
+                        JobTitle: "",
+                        Picture: ""
+                    },
+                    LastActionAt: Now(),
+                    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
+                }
+            )
         )
     );
-    
+
     // === STEP 4: LOG ACTIONS VIA FLOW ===
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllPayments, Payments);
     ForAll(
-        colBatchItems,
+        colBatchItems As BatchItem,
         IfError(
             'Flow-(C)-Action-LogAction'.Run(
-                Text(ID),
+                Text(BatchItem.ID),
                 "Status Change",
                 "Status",
-                "Paid & Picked Up (Batch)",
+                "Paid & Picked Up (Batch final pickup)" &
+                With(
+                    {
+                        wLoggedPlates: Filter(colAllBuildPlates, RequestID = BatchItem.ID, Status.Value = "Picked Up")
+                    },
+                    If(
+                        CountRows(wLoggedPlates) > 0,
+                        " - Plate IDs " & Concat(wLoggedPlates, PlateKey, ", "),
+                        ""
+                    )
+                ),
                 ddBatchStaff.Selected.MemberEmail
             ),
             Blank()
         )
     );
-    
-    // === STEP 5: CLEANUP AND NOTIFY ===
+
+    // === STEP 5: REFRESH, CLEANUP, AND NOTIFY ===
     // Store count before clearing for notification
     Set(varBatchProcessedCount, varBatchItemCount);
-    
+
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllPayments, Payments);
     Clear(colBatchItems);
     Set(varBatchSelectMode, false);
     Set(varShowBatchPaymentModal, 0);
-    
+
     // Reset form fields
     Reset(txtBatchTransaction);
     Reset(txtBatchWeight);
@@ -8295,7 +8420,9 @@ If(
 
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
-> 💡 **Batch history guidance:** Optional summary text may still be appended to `PaymentNotes`, but canonical payment history should come from the `Payments` rows created for each batch item. If you also append timeline entries to `StaffNotes`, use the same `PAID by ...` format documented in Step 12C so the Notes modal parser stays consistent.
+> 💡 **Batch history guidance:** Canonical payment history must come from the `Payments` rows created for each batch item. Do not treat appended `PaymentNotes` text as authoritative history.
+>
+> 💡 **Plate handling guidance:** For requests with build plates, batch payment is intentionally narrower than the single-item Payment Modal. Step 12E always picks up every remaining completed plate for the request. If the student is only taking some of the completed pieces, go back to Step 12C instead.
 
 ---
 
@@ -8956,6 +9083,7 @@ Patch(BuildPlates,
                 )
             )
         ),
+        PlateKey: Text(GUID()),
         Status: { Value: "Queued" }
     }
 );
@@ -12519,6 +12647,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 7. **Verify:** 3 plates updated to "Picked Up"
 8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
 9. **Verify:** The new `Payments` row stores `PlatesPickedUp` once per plate in ascending order (no duplicate `1, 1` values)
+10. **Verify:** The same `Payments` row also stores stable `PlateIDsPickedUp` values so history remains correct even if plate display order changes later
 
 ### Scenario 9: Resin Job Printer Filter
 
@@ -12648,11 +12777,45 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 5. **Verify:** Job card shows a legacy fallback summary rather than a `Payments` count
 6. New payment creates first `Payments` record
 
+### Scenario 22: Prior Partial Pickup, Then Final Batch Pickup
+
+1. Request A has 5 plates
+2. Day 1: 2 completed plates are picked up through the single-item Payment Modal
+3. **Verify:** Request A stays `Completed`, 2 plates = `Picked Up`, 3 plates remain `Completed`
+4. Select Request A plus another completed request in batch mode
+5. Process batch payment
+6. **Verify:** Request A moves to `Paid & Picked Up`
+7. **Verify:** All 3 remaining completed plates on Request A are patched to `Picked Up`
+8. **Verify:** A new `Payments` row is created for Request A with both `PlatesPickedUp` and `PlateIDsPickedUp`
+
+### Scenario 23: Batch Item Already Fully Picked Up
+
+1. Select two completed requests for batch mode
+2. Before confirming, another staff member finishes pickup for one of them through Step 12C
+3. Return to the open batch modal and click confirm
+4. **Verify:** Batch payment is blocked with a validation message
+5. **Verify:** Staff must remove the now-invalid request from the batch before retrying
+
+### Scenario 24: Batch Item Has Active Plates
+
+1. Select a request for batch mode while all of its plates are `Completed`
+2. Before confirming, another staff member changes one plate back to `Printing`
+3. Click confirm in the batch modal
+4. **Verify:** Batch payment is blocked because the request is no longer a valid final pickup
+
+### Scenario 25: Re-slice After Earlier Payment
+
+1. Record a payment for completed plates on a multi-plate request
+2. Open Build Plates and remove one of the old completed plates, then add a replacement plate
+3. **Verify:** The visible `PlateNum` labels may change
+4. **Verify:** Earlier `Payments.PlateIDsPickedUp` values still point to the original picked-up plates
+5. **Verify:** New replacement plates receive new `PlateKey` values instead of reusing old history
+
 ---
 
 ## Core Workflow Tests
 
-### Scenario 22: Complete Approval-to-Pickup Workflow
+### Scenario 26: Complete Approval-to-Pickup Workflow
 
 1. New job appears with Status = "Uploaded"
 2. Click "Approve" → Approval Modal opens
@@ -12666,7 +12829,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 10. Student pays → record payment with plate pickup
 11. **Verify:** Status = "Paid & Picked Up", all plates = "Picked Up"
 
-### Scenario 23: Rejection Workflow
+### Scenario 27: Rejection Workflow
 
 1. Job with Status = "Uploaded" or "Pending"
 2. Click "Reject" → Rejection Modal opens
@@ -12674,7 +12837,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 4. **Verify:** Status = "Rejected"
 5. **Verify:** Audit log shows rejection with reason
 
-### Scenario 24: Archive Workflow
+### Scenario 28: Archive Workflow
 
 1. Completed job (any terminal status)
 2. Click "Archive" button
@@ -12701,6 +12864,9 @@ Use this checklist to verify all features work correctly:
 - [ ] **Payments:** Payment history displays in modal
 - [ ] **Payments:** Different payers tracked per payment
 - [ ] **Payments:** Plate pickup checkboxes work
+- [ ] **Payments:** Batch payment only succeeds for valid final pickups
+- [ ] **Payments:** Batch payment writes one `Payments` row per request
+- [ ] **Payments:** Stable `PlateIDsPickedUp` survives plate renumbering/re-slicing
 - [ ] **Core:** Full workflow from submission to pickup
 - [ ] **Core:** Rejection workflow with reason
 - [ ] **Core:** Archive moves jobs out of active view

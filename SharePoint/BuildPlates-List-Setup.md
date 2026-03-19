@@ -10,7 +10,7 @@
 The BuildPlates list enables staff to track multiple build plates (gcode files) per print request. A single print job may require several plates across different printers, and this list maintains the status of each plate individually.
 
 **Key Features:**
-- 4 columns for linking plates to requests and tracking status
+- 5 columns for linking plates to requests, preserving stable identity, and tracking status
 - One-to-many relationship with PrintRequests (multiple plates per job)
 - Status progression: Queued → Printing → Completed → Picked Up
 - Machine assignment supporting multi-printer jobs
@@ -57,7 +57,17 @@ The BuildPlates list enables staff to track multiple build plates (gcode files) 
 
 > 💡 **Purpose:** Human-readable identifier copied from the parent request for quick reference in list views.
 
-### Column 3: Machine (Choice)
+### Column 3: PlateKey (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `PlateKey`
+3. **Description:** `Stable per-plate identifier used by payment history and audit records`
+4. **Require that this column contains information:** Yes
+5. Click **Save**
+
+> ⚠️ **Important:** `PlateKey` is the durable identifier for a plate. Generate it once when the record is created in Power Apps using `Text(GUID())`. Do not change it later, even if plate order or visible numbering changes.
+
+### Column 4: Machine (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Machine`
@@ -72,7 +82,7 @@ The BuildPlates list enables staff to track multiple build plates (gcode files) 
 
 > ⚠️ **Important:** Choice values must EXACTLY match the printer names in the `PrintRequests.Printer` column. This ensures consistent filtering in Power Apps.
 
-### Column 4: Status (Choice)
+### Column 5: Status (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `Status`
@@ -119,6 +129,7 @@ The BuildPlates list should be accessible **only to staff**, not students.
 | Title | Single line | Yes | - | Auto-created by SharePoint (can be hidden) |
 | RequestID | Number | Yes | - | Links to PrintRequests.ID |
 | ReqKey | Single line | No | - | Request reference (REQ-00042) |
+| PlateKey | Single line | Yes | - | Immutable per-plate identifier |
 | Machine | Choice | Yes | - | Printer assigned to this plate |
 | Status | Choice | Yes | Queued | Queued → Printing → Completed → Picked Up |
 
@@ -128,12 +139,12 @@ The BuildPlates list should be accessible **only to staff**, not students.
 
 **Scenario:** Student submits request REQ-00087. Staff slices the model into 4 gcode files that will print on different machines.
 
-| ID | RequestID | ReqKey | Machine | Status |
-|----|-----------|--------|---------|--------|
-| 1 | 87 | REQ-00087 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
-| 2 | 87 | REQ-00087 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
-| 3 | 87 | REQ-00087 | Prusa MK4S (9.8×8.3×8.7in) | Printing |
-| 4 | 87 | REQ-00087 | Prusa XL (14.2×14.2×14.2in) | Queued |
+| ID | RequestID | ReqKey | PlateKey | Machine | Status |
+|----|-----------|--------|----------|---------|--------|
+| 1 | 87 | REQ-00087 | BP-87-A1 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
+| 2 | 87 | REQ-00087 | BP-87-A2 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
+| 3 | 87 | REQ-00087 | BP-87-A3 | Prusa MK4S (9.8×8.3×8.7in) | Printing |
+| 4 | 87 | REQ-00087 | BP-87-B1 | Prusa XL (14.2×14.2×14.2in) | Queued |
 
 **What this shows:**
 - Job split across 2 printers (MK4S × 3, XL × 1)
@@ -147,6 +158,7 @@ The BuildPlates list should be accessible **only to staff**, not students.
 - [ ] List created with name "BuildPlates"
 - [ ] RequestID column: Number type, required
 - [ ] ReqKey column: Single line of text
+- [ ] PlateKey column: Single line of text, required
 - [ ] Machine column: Choice with all 4 printer options (exact names match PrintRequests.Printer)
 - [ ] Status column: Choice with 4 options, default "Queued"
 - [ ] Permissions stopped inheriting from site
@@ -164,6 +176,8 @@ In the Staff Dashboard, this list is accessed via:
 - **Primary collection:** `colAllBuildPlates` (pre-loaded at App.OnStart)
 - **Working collection:** `colBuildPlates` (plates for current selection)
 - **Indexed collection:** `colBuildPlatesIndexed` (with `PlateNum` for display)
+
+> 💡 `PlateNum` in Power Apps is display-only. Use the stored `PlateKey` column whenever payment history or audit logging needs a stable identifier that survives re-slicing or row removal.
 
 ### ActualPrinter Auto-Population
 
