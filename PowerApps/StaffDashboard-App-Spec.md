@@ -6927,7 +6927,14 @@ Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
 If(
     IsBlank(varSelectedItem) || !(varSelectedItem.Status.Value in ["Printing", "Completed"]),
-    Notify("This request is no longer eligible for payment. Close and reopen the modal before trying again.", NotificationType.Error),
+    Notify("This request is no longer eligible for payment. Close and reopen the modal before trying again.", NotificationType.Error);
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, ""),
+
+    CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtPaymentTransaction.Text))) > 0,
+    Notify("Transaction number '" & Trim(txtPaymentTransaction.Text) & "' already exists. Use a unique number.", NotificationType.Error);
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, ""),
 
     ClearCollect(
         colPayments,
@@ -8464,6 +8471,11 @@ Clear(colBatchSucceededItems);
 Clear(colBatchFailedItems);
 
 If(
+    CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtBatchTransaction.Text))) > 0,
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, "");
+    Notify("Transaction number '" & Trim(txtBatchTransaction.Text) & "' already exists. Use a unique number.", NotificationType.Error),
+
     CountRows(Filter(PrintRequests, ID in colBatchItems.ID && Status.Value <> "Completed")) > 0,
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
@@ -8890,7 +8902,7 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  Build Plates — Jane Smith · REQ-00042                               [✕] │
+│  Build Plates - REQ-00042                                            [✕] │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  Total Sliced:                                       3 of 5 Completed    │
@@ -8934,7 +8946,7 @@ scrDashboard
 └── conBuildPlatesModal              ← CONTAINER (Visible = varShowBuildPlatesModal > 0)
     ├── recBuildPlatesOverlay        ← Full-screen dark overlay
     ├── recBuildPlatesModal          ← White box (600×620)
-    ├── lblBuildPlatesTitle          ← "Build Plates — Jane Smith · REQ-00042"
+    ├── lblBuildPlatesTitle          ← "Build Plates - REQ-00042"
     ├── btnBuildPlatesClose          ← ✕ top-right
     ├── recBuildPlatesDivider1       ← Divider under title
     ├── lblTotalSlicedLabel          ← "Total Sliced:"
@@ -9013,7 +9025,7 @@ scrDashboard
 |----------|-------|
 | Control | Text label |
 | Name | `lblBuildPlatesTitle` |
-| Text | `"Build Plates — " & varSelectedItem.Title & " · " & varSelectedItem.ReqKey` |
+| Text | `"Build Plates - " & varSelectedItem.ReqKey` |
 | X | `recBuildPlatesModal.X + 20` |
 | Y | `recBuildPlatesModal.Y + 18` |
 | Width | `520` |

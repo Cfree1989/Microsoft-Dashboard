@@ -768,8 +768,8 @@ All Tier 1 and Tier 2 findings have been addressed in `PowerApps/StaffDashboard-
 
 ### Open Questions — Dispositions
 
-1. **Do downstream reports trust `PrintRequests.FinalWeight`/`FinalCost`?** — Rollup defect is fixed; parent totals now match `Payments`. Residual risk is historical data from before the fix.
-2. **Should batch be blocked for requests with prior partial payments?** — Not blocked. The fixed rollup formula (`Sum(wPriorPayments) + wBatchWeight`) handles mixed history correctly.
-3. **Unique constraint on `Payments.TransactionNumber`?** — Still no enforcement. Double-click mitigation (`varIsLoading`) reduces risk; formal uniqueness remains a future enhancement.
-4. **"Recalculate Totals from Payments" admin action?** — Not yet built. The revert-to-Completed path reopens requests for correction; a full recalculation tool is a future enhancement.
-5. **Should plate removal be soft-delete?** — Accepted as hard-delete by design; `Payments` rows are canonical history.
+1. **Do downstream reports trust `PrintRequests.FinalWeight`/`FinalCost`?** — **Resolved.** Reports read from `Payments` directly. `PrintRequests` rollup fields are app-display only. Historical drift is cosmetic; the `btnRecalcTotals` button can fix individual items.
+2. **Should batch be blocked for requests with prior partial payments?** — **No.** The fixed rollup formula (`Sum(wPriorPayments) + wBatchWeight`) handles mixed history correctly.
+3. **Unique constraint on `Payments.TransactionNumber`?** — **Resolved.** Both `btnPaymentConfirm` and `btnBatchPaymentConfirm` now hard-block submission if the entered transaction number already exists in `colAllPayments` (checked against freshly refreshed data).
+4. **"Recalculate Totals from Payments" admin action?** — **Not needed.** With the batch rollup defect fixed, `FinalWeight`/`FinalCost` are computed correctly during every payment. The revert-to-Completed path handles correction of mistaken closures. Any historical drift from before the fix can be corrected in SharePoint directly.
+5. **Should plate removal be soft-delete?** — **No.** Hard-delete by design; `Payments` rows are canonical history.
