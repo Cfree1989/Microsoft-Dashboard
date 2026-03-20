@@ -9604,6 +9604,8 @@ Before moving on, verify:
 
 ---
 
+> **Quick build option:** Instead of creating each control manually, you can paste all 11 controls at once using the YAML file at [`PowerApps/YAML/Step-12G-ExportModal.yaml`](YAML/Step-12G-ExportModal.yaml). Open that file, copy everything below the comment block, then right-click **scrDashboard** in the Tree view → **Paste code**.
+
 ### Modal Container (conExportModal)
 
 1. Click on **scrDashboard** in Tree view.
