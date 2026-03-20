@@ -20,7 +20,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 - **PrintRequests List:** `SharePoint/PrintRequests-List-Setup.md`
 - **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md`
 - **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
-- **Monthly Transaction Export Spec:** `PowerApps/Future Improvements/4-Monthly-Transaction-Export.md`
+- **Monthly Transaction Export (App UI):** `PowerApps/StaffDashboard-App-Spec.md` — Step 12G
+- **Monthly Transaction Export (Flow):** `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`
 
 ---
 
@@ -59,10 +60,10 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `TransactionNumber`
 3. **Description:** `TigerCASH receipt, check number, or grant/program code`
-4. **Require that this column contains information:** Yes
+4. **Require that this column contains information:** No
 5. Click **Save**
 
-> 💡 **Purpose:** The unique identifier for this payment transaction. Format depends on PaymentType (receipt for TigerCASH, check number for Check, code for grants).
+> 💡 **Purpose:** The identifier for this payment transaction. Format depends on PaymentType (receipt for TigerCASH, check number for Check, code for grants). This field is **not required** because grant/program codes are not always available at the time of payment — staff may need to record the payment first and add the code later.
 >
 > 💡 **Batch note:** If one checkout covers multiple requests, create one `Payments` row per request but reuse the same `TransactionNumber` across all rows created from that shared transaction.
 
@@ -189,7 +190,7 @@ The Payments list should be accessible **only to staff**, not students.
 | Title | Single line | Yes | - | Auto-created by SharePoint (can be hidden) |
 | RequestID | Number | Yes | - | Links to PrintRequests.ID |
 | ReqKey | Single line | No | - | Request reference (REQ-00042) |
-| TransactionNumber | Single line | Yes | - | Receipt/check/code reference |
+| TransactionNumber | Single line | No | - | Receipt/check/code reference (not always available for grants) |
 | Weight | Number | Yes | - | Grams picked up in this transaction |
 | Amount | Currency | Yes | - | Cost charged |
 | PaymentType | Choice | Yes | TigerCASH | TigerCASH / Check / Code |
@@ -243,7 +244,7 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 - [ ] List created with name "Payments"
 - [ ] RequestID column: Number type, required
 - [ ] ReqKey column: Single line of text
-- [ ] TransactionNumber column: Single line of text, required
+- [ ] TransactionNumber column: Single line of text, not required
 - [ ] Weight column: Number type, required, 0 decimal places
 - [ ] Amount column: Currency type, required, 2 decimal places
 - [ ] PaymentType column: Choice with 3 options, default "TigerCASH"
@@ -262,7 +263,7 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 
 ## Monthly Transaction Export
 
-This list is the source for the Monthly Transaction Export documented in `PowerApps/Future Improvements/4-Monthly-Transaction-Export.md`. The export queries:
+This list is the source for the Monthly Transaction Export (see `PowerApps/StaffDashboard-App-Spec.md` Step 12G and `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). The export queries:
 
 ```powerfx
 Filter(

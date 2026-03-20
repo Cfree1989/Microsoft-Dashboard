@@ -28,6 +28,7 @@
 16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
 17. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
 18. [Building the Build Plates Modal](#step-12f-building-the-build-plates-modal)
+18b. [Building the Export Modal](#step-12g-building-the-export-modal) ← **Monthly Transaction Export**
 19. [Building the Notes Modal](#step-13-building-the-notes-modal)
 19. [Building the Student Note Modal](#step-13b-building-the-student-note-modal)
 20. [Adding Search and Filters](#step-14-adding-search-and-filters)
@@ -417,6 +418,7 @@ Set(varShowStudentNoteModal, 0);
 Set(varShowRevertModal, 0);
 Set(varShowBatchPaymentModal, 0);
 Set(varShowBuildPlatesModal, 0);
+Set(varShowExportModal, false);
 
 // === BATCH PAYMENT MODE ===
 // Controls multi-select batch payment functionality
@@ -631,6 +633,7 @@ Set(varLoadingMessage, "")
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
 | `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
+| `varShowExportModal` | Controls export modal visibility | Boolean |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
 | `colBatchSucceededItems` | Batch items saved successfully in the current run | Table |
@@ -782,6 +785,18 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblLoadingMessage
         lblLoadingSpinner
         recLoadingBox
+    ▼ conExportModal                   ← Step 12G (Monthly Transaction Export)
+        btnExportDownload
+        lblExportNote
+        lblExportPreview
+        ddExportYear
+        lblExportYearLabel
+        ddExportMonth
+        lblExportMonthLabel
+        btnExportClose
+        lblExportTitle
+        recExportBox
+        recExportOverlay
         recLoadingOverlay
     ▼ conViewMessagesModal            ← Step 17D (Unified Messages Modal Container)
         btnViewMsgClose
@@ -1071,6 +1086,7 @@ Collapsed version (containers closed) for quick reference:
 ▼ App
 ▼ scrDashboard
     ▸ conLoadingOverlay               ← Step 17E (Loading — TOP for highest z-order)
+    ▸ conExportModal                  ← Step 12G (Monthly Transaction Export)
     ▸ conViewMessagesModal            ← Step 17D
     ▸ conFileModal                    ← Step 16
     ▸ conNotesModal                   ← Step 13
@@ -1215,7 +1231,7 @@ Set(varCurrentPage, "Dashboard")
 | Button | X | OnSelect |
 |--------|---|----------|
 | Admin | `430` | `Notify("Admin features coming soon!", NotificationType.Information)` |
-| Analytics | `560` | `Notify("Analytics features coming soon!", NotificationType.Information)` |
+| Analytics | `560` | `Set(varShowExportModal, true)` |
 
 ### Adding User Info Display (lblUserName)
 
@@ -6886,7 +6902,7 @@ Clear(colPayments)
 If(
     IsBlank(ddPaymentStaff.Selected) ||
     IsBlank(ddPaymentType.Selected.Value) ||
-    IsBlank(Trim(txtPaymentTransaction.Text)) ||
+    (ddPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
     !IsNumeric(txtPaymentWeight.Text) ||
     Value(txtPaymentWeight.Text) <= 0 ||
     (
@@ -6905,7 +6921,7 @@ If(
 )
 ```
 
-> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown.
+> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown. Transaction number is required for TigerCASH payments but optional for Check and Code (grant) payments, since grant codes are not always available at the time of payment.
 
 136. Set **OnSelect:**
 
@@ -6928,7 +6944,7 @@ If(
     Set(varIsLoading, false);
     Set(varLoadingMessage, ""),
 
-    CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtPaymentTransaction.Text))) > 0,
+    !IsBlank(Trim(txtPaymentTransaction.Text)) && CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtPaymentTransaction.Text))) > 0,
     Notify("Transaction number '" & Trim(txtPaymentTransaction.Text) & "' already exists. Use a unique number.", NotificationType.Error);
     Set(varIsLoading, false);
     Set(varLoadingMessage, ""),
@@ -9540,6 +9556,406 @@ Before moving on, verify:
 - [ ] Removing a plate deletes the BuildPlates record
 - [ ] Progress label updates when plate statuses change
 - [ ] Close and Done buttons both reset collections and close modal
+
+---
+
+# STEP 12G: Building the Export Modal
+
+**What you're doing:** Creating a modal that lets staff generate a monthly Excel export of TigerCASH transactions for departmental accounting. The modal is triggered from the **Analytics** button in the nav bar.
+
+> The lab has two spaces: **Atkinson Hall 145** (additive manufacturing — 3D printing, tracked in this dashboard) and **Art Building 123** (subtractive manufacturing — CNC, plasma, tracked separately). This export covers Atkinson Hall only. Art Building transactions are manually added to the downloaded file before sending to accounting.
+
+> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+
+### Control Hierarchy (Container-Based)
+
+```
+▼ conExportModal                    ← Container (visibility gate)
+    recExportOverlay                ← Dark overlay
+    recExportBox                    ← White modal box
+    lblExportTitle                  ← Title label
+    btnExportClose                  ← Close button (X)
+    lblExportMonthLabel             ← "Month:" label
+    ddExportMonth                   ← Month dropdown
+    lblExportYearLabel              ← "Year:" label
+    ddExportYear                    ← Year dropdown
+    lblExportPreview                ← Transaction count + total
+    btnExportDownload               ← Download button
+    lblExportNote                   ← Art Building note
+```
+
+### Wireframe
+
+```
++---------------------------------------------------+
+|  Monthly Transaction Export                  [ X ] |
+|---------------------------------------------------|
+|                                                   |
+|  Month: [ March       v ]  Year: [ 2026    v ]   |
+|                                                   |
+|  87 transactions  ·  $1,204.30 total              |
+|                                                   |
+|               [ Download Excel ]                  |
+|                                                   |
+|  Art Bldg 123 (CNC/Plasma) must be added          |
+|  manually after download.                         |
++---------------------------------------------------+
+```
+
+---
+
+### Modal Container (conExportModal)
+
+1. Click on **scrDashboard** in Tree view.
+2. Click **+ Insert** → **Layout** → **Container**.
+3. **Rename it:** `conExportModal`
+4. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowExportModal` |
+
+> 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
+
+---
+
+### Modal Overlay (recExportOverlay)
+
+5. With `conExportModal` selected, click **+ Insert** → **Rectangle**.
+6. **Rename it:** `recExportOverlay`
+7. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorOverlay` |
+| OnSelect | `Set(varShowExportModal, false)` |
+
+---
+
+### Modal Box (recExportBox)
+
+8. Click **+ Insert** → **Rectangle**.
+9. **Rename it:** `recExportBox`
+10. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `500` |
+| Height | `320` |
+| Fill | `White` |
+| BorderRadius | `varRadiusLarge` |
+
+---
+
+### Title (lblExportTitle)
+
+11. Click **+ Insert** → **Text label**.
+12. **Rename it:** `lblExportTitle`
+13. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Monthly Transaction Export"` |
+| X | `recExportBox.X + 20` |
+| Y | `recExportBox.Y + 15` |
+| Width | `400` |
+| Height | `30` |
+| Font | `varAppFont` |
+| Size | `16` |
+| FontWeight | `FontWeight.Bold` |
+| Color | `varColorText` |
+
+---
+
+### Close Button (btnExportClose)
+
+14. Click **+ Insert** → **Button** (**Classic**).
+15. **Rename it:** `btnExportClose`
+16. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"✕"` |
+| X | `recExportBox.X + recExportBox.Width - Self.Width - 10` |
+| Y | `recExportBox.Y + 10` |
+| Width | `36` |
+| Height | `36` |
+| Fill | `Transparent` |
+| Color | `varColorTextMuted` |
+| HoverFill | `RGBA(0, 0, 0, 0.05)` |
+| BorderThickness | `0` |
+| Size | `14` |
+| OnSelect | `Set(varShowExportModal, false)` |
+
+---
+
+### Month Label (lblExportMonthLabel)
+
+17. Click **+ Insert** → **Text label**.
+18. **Rename it:** `lblExportMonthLabel`
+19. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Month:"` |
+| X | `recExportBox.X + 20` |
+| Y | `recExportBox.Y + 65` |
+| Width | `60` |
+| Height | `20` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Month Dropdown (ddExportMonth)
+
+20. Click **+ Insert** → **Drop down** (**Classic**).
+21. **Rename it:** `ddExportMonth`
+22. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recExportBox.X + 20` |
+| Y | `lblExportMonthLabel.Y + lblExportMonthLabel.Height + 4` |
+| Width | `200` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `12` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| ChevronBackground | `Transparent` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+
+23. Set **Items:**
+
+```powerfx
+Table(
+    {Display: "January", Value: 1},
+    {Display: "February", Value: 2},
+    {Display: "March", Value: 3},
+    {Display: "April", Value: 4},
+    {Display: "May", Value: 5},
+    {Display: "June", Value: 6},
+    {Display: "July", Value: 7},
+    {Display: "August", Value: 8},
+    {Display: "September", Value: 9},
+    {Display: "October", Value: 10},
+    {Display: "November", Value: 11},
+    {Display: "December", Value: 12}
+)
+```
+
+24. Set **Default:**
+
+```powerfx
+LookUp(Self.Items, Value = Month(Today()))
+```
+
+---
+
+### Year Label (lblExportYearLabel)
+
+25. Click **+ Insert** → **Text label**.
+26. **Rename it:** `lblExportYearLabel`
+27. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Year:"` |
+| X | `ddExportMonth.X + ddExportMonth.Width + 30` |
+| Y | `lblExportMonthLabel.Y` |
+| Width | `50` |
+| Height | `20` |
+| Font | `varAppFont` |
+| Size | `12` |
+| Color | `varColorText` |
+
+---
+
+### Year Dropdown (ddExportYear)
+
+28. Click **+ Insert** → **Drop down** (**Classic**).
+29. **Rename it:** `ddExportYear`
+30. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `lblExportYearLabel.X` |
+| Y | `ddExportMonth.Y` |
+| Width | `120` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `12` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| ChevronBackground | `Transparent` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+| Items | `[Year(Today()) - 1, Year(Today()), Year(Today()) + 1]` |
+| Default | `Year(Today())` |
+
+---
+
+### Preview Label (lblExportPreview)
+
+31. Click **+ Insert** → **Text label**.
+32. **Rename it:** `lblExportPreview`
+33. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `recExportBox.X + 20` |
+| Y | `ddExportMonth.Y + ddExportMonth.Height + 20` |
+| Width | `460` |
+| Height | `24` |
+| Font | `varAppFont` |
+| Size | `13` |
+| Color | `varColorText` |
+
+34. Set **Text:**
+
+```powerfx
+With(
+    {
+        filtered: Filter(
+            colAllPayments,
+            PaymentType.Value = "TigerCASH" &&
+            Month(PaymentDate) = ddExportMonth.Selected.Value &&
+            Year(PaymentDate) = ddExportYear.Selected.Value
+        )
+    },
+    CountRows(filtered) & " transactions  ·  " &
+    Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
+)
+```
+
+> This queries the local `colAllPayments` collection (pre-loaded at startup) for preview purposes only. The actual export uses Power Automate with server-side filtering — no delegation limits. Only TigerCASH payments are included; Check and Code payments are excluded.
+
+---
+
+### Download Button (btnExportDownload)
+
+35. Click **+ Insert** → **Button** (**Classic**).
+36. **Rename it:** `btnExportDownload`
+37. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Download Excel"` |
+| X | `(recExportBox.X + recExportBox.Width - Self.Width) / 2 + recExportBox.X / 2` |
+| Y | `lblExportPreview.Y + lblExportPreview.Height + 20` |
+| Width | `160` |
+| Height | `varBtnHeight` |
+| Fill | `varColorSuccess` |
+| Color | `White` |
+| HoverFill | `varColorSuccessHover` |
+| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| BorderColor | `ColorFade(Self.Fill, -15%)` |
+| BorderThickness | `1` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
+| Size | `varBtnFontSize` |
+| Font | `varAppFont` |
+
+38. Set **DisplayMode:**
+
+```powerfx
+If(
+    CountRows(
+        Filter(
+            colAllPayments,
+            PaymentType.Value = "TigerCASH" &&
+            Month(PaymentDate) = ddExportMonth.Selected.Value &&
+            Year(PaymentDate) = ddExportYear.Selected.Value
+        )
+    ) > 0,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+39. Set **OnSelect:**
+
+```powerfx
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Generating export...");
+
+Set(
+    varExportResult,
+    GenerateMonthlyExport.Run(
+        ddExportMonth.Selected.Value,
+        ddExportYear.Selected.Value
+    )
+);
+
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
+
+If(
+    !IsBlank(varExportResult.FileUrl),
+    Download(varExportResult.FileUrl);
+    Notify("Export ready — check your downloads.", NotificationType.Success),
+    Notify("Export failed. Try again or contact admin.", NotificationType.Error)
+)
+```
+
+> 💡 **Power Automate:** The `GenerateMonthlyExport` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). It queries the `Payments` SharePoint list server-side, creates a 4-column Excel file (Transaction #, Payer, Amount, Date), and returns a download URL.
+
+---
+
+### Art Building Note (lblExportNote)
+
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblExportNote`
+42. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Art Building 123 (CNC/Plasma) transactions must be added manually after download."` |
+| X | `recExportBox.X + 20` |
+| Y | `recExportBox.Y + recExportBox.Height - 50` |
+| Width | `460` |
+| Height | `30` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Italic | `true` |
+
+---
+
+### ✅ Step 12G Checklist
+
+- [ ] `conExportModal` container created with `Visible: varShowExportModal`
+- [ ] Overlay closes modal on click
+- [ ] Close button (✕) closes modal
+- [ ] Month dropdown defaults to current month
+- [ ] Year dropdown defaults to current year
+- [ ] Preview label shows TigerCASH-only transaction count and total
+- [ ] Download button is disabled when count is zero
+- [ ] Download button triggers `GenerateMonthlyExport` Power Automate flow
+- [ ] Loading overlay displays while flow runs
+- [ ] `btnNavAnalytics` OnSelect opens this modal
+- [ ] Art Building note is visible at the bottom
 
 ---
 
