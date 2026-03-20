@@ -2,241 +2,196 @@
 
 **Status:** Future Enhancement  
 **Priority:** Medium  
-**Dependencies:** Multi-Payment Tracking Enhancement (#5, required), Payer Tracking Enhancement (#2, optional but recommended)
+**Dependencies:** Multi-Payment Tracking Enhancement (#5, required)
 
 ---
 
 ## Overview
 
-Create an in-app export feature that generates an Excel spreadsheet of all transactions for a selected month, matching the format of the current manual TigerCASH log used by finance.
+Add an in-app export that generates a simple Excel spreadsheet of all payment transactions for a selected month. Accounting only needs four columns: Transaction Number, Payer, Amount, and Date.
 
 ### Current Process (Manual)
 
-1. Staff manually maintains an Excel spreadsheet throughout the month
-2. Each payment is typed into the log by hand
-3. At month end, the spreadsheet is sent to finance
-4. Error-prone: typos, missed entries, inconsistent formatting
+1. Staff maintains a TigerCASH Excel log by hand throughout the month
+2. At month end, the spreadsheet is sent to departmental accounting
+3. Error-prone: typos, missed entries, inconsistent formatting
 
 ### Future Process (Automated)
 
-1. Staff clicks "Export Monthly Report" button in the dashboard
-2. Selects target month/year from dropdown
-3. App generates Excel file with all transactions
-4. Staff downloads and sends to finance (or reviews first)
+1. Staff clicks the **Analytics** button in the nav bar → export modal opens
+2. Selects month and year from dropdowns
+3. Clicks **Download Excel** → Power Automate generates the file
+4. Staff downloads the file, manually adds Art Building transactions (typically < 5), and emails to accounting
+
+> Art Building transactions are low-volume and entered by staff into the downloaded file before sending. Only Atkinson Hall 145 transactions flow through the dashboard.
 
 ---
 
-## Export Specifications
+## Export Output
 
 ### File Format
 
 - **Type:** Excel (.xlsx)
 - **Filename:** `TigerCASH-Log-{Month}-{Year}.xlsx` (e.g., `TigerCASH-Log-March-2026.xlsx`)
-- **Sheet Name:** `Atkinson Hall 145`
+- **Sheet Name:** `Transactions`
 
-### Column Mapping
+### Columns
 
-> ⚠️ **Data Source Change:** With Multi-Payment Tracking (#5), this export queries the `Payments` list instead of `PrintRequests`. Each row represents one actual transaction, enabling accurate tracking of partial pickups and multiple payments per job.
-
-| Excel Column | SharePoint Source | Notes |
-|--------------|-------------------|-------|
-| A: Machine | `LookUp(PrintRequests, ID = RequestID).Method.Value` | "Prusa" for Filament, "Resin" for Resin |
-| B: $/Unit | Rate based on Method | `varFilamentRate` or `varResinRate` |
-| C: Unit Amount | `Weight` | Actual weight in grams (from Payments) |
-| D: Cost | `Amount` | Amount charged (from Payments) |
-| E: Payer | `PayerName` | From Payments record (or falls back via lookup) |
-| F: Notes | `LookUp(PrintRequests, ID = RequestID).PaymentNotes` | Staff notes from parent request |
-| G: Course Number | `LookUp(PrintRequests, ID = RequestID).CourseNumber` | Student's course |
-| H: Date | `PaymentDate` | Payment date (from Payments) |
-| I: Transaction Number | `TransactionNumber` | TigerCASH/Check/Code reference (from Payments) |
-| J: Processed By | `RecordedBy.DisplayName` | Staff who processed this payment |
-| K: Request ID | `ReqKey` | e.g., "REQ-00042" (from Payments) |
-
-### Data Filter
-
-> 💡 **Why Power Automate:** The `Month()` and `Year()` functions are NOT delegable in Power Apps, meaning only the first 500-2,000 records would be processed. Power Automate handles the full dataset using OData filters.
-
-**Power Automate OData Filter (recommended):**
-```
-PaymentDate ge '@{formatDateTime(startOfMonth(variables('SelectedDate')), 'yyyy-MM-dd')}' and PaymentDate lt '@{formatDateTime(addDays(endOfMonth(variables('SelectedDate')), 1), 'yyyy-MM-dd')}'
-```
-
-**Power Apps Preview (for UI only, not for export):**
-```powerfx
-Filter(
-    Payments,
-    Month(PaymentDate) = varSelectedMonth &&
-    Year(PaymentDate) = varSelectedYear
-)
-```
+| Excel Column | SharePoint Source (`Payments` list) |
+|---|---|
+| A: Transaction # | `TransactionNumber` |
+| B: Payer | `PayerName` |
+| C: Amount | `Amount` |
+| D: Date | `PaymentDate` |
 
 ### Sort Order
 
-- Primary: `PaymentDate` (ascending)
-- Secondary: `TransactionNumber` (ascending)
+- Primary: `PaymentDate` ascending
+- Secondary: `TransactionNumber` ascending
+
+### Trailing Blank Rows
+
+Append **5 empty rows** below the last data row so staff can type in Art Building transactions without reformatting the table.
+
+### Sample Output
+
+| Transaction # | Payer | Amount | Date |
+|---|---|---|---|
+| 214 | Ryan Atkinson | $11.50 | 3/2/2026 |
+| 215 | Lily Bacas | $4.90 | 3/2/2026 |
+| 216 | Caitlin Mclin | $17.30 | 3/2/2026 |
+| 217 | Luca Passalacqua | $3.00 | 3/2/2026 |
+| ... | ... | ... | ... |
+| 298 | Ava Stout | $15.90 | 3/20/2026 |
+| | | | |
+| | | | |
+| | | | |
+| | | | |
+| | | | |
 
 ---
 
-## UI Design
+## UI: Export Modal
 
-### Location: Analytics Page
+The export lives in a modal triggered from the existing `btnNavAnalytics` button in the nav bar. No new screen is needed.
 
-This export feature will live on the future **Analytics page** (`scrAnalytics`), accessible via the top navigation bar. The Analytics page will house various reporting and data visualization features, with the Monthly Transaction Export as one section.
+### Wireframe
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  [ Dashboard ]  [ Analytics ]  [ Admin ]                    │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  MONTHLY TRANSACTION EXPORT                         │    │
-│  ├─────────────────────────────────────────────────────┤    │
-│  │                                                     │    │
-│  │  Select Month: *              Select Year: *        │    │
-│  │  ┌─────────────────┐          ┌─────────────────┐   │    │
-│  │  │ March        ▼  │          │ 2026         ▼  │   │    │
-│  │  └─────────────────┘          └─────────────────┘   │    │
-│  │                                                     │    │
-│  │  Preview: 16 transactions found                     │    │
-│  │  Total Amount: $187.50                              │    │
-│  │                                                     │    │
-│  │  ┌─────────────────────────────────────────────┐    │    │
-│  │  │ ReqKey    │ Payer           │ Cost   │ Date │    │    │
-│  │  ├───────────┼─────────────────┼────────┼──────┤    │    │
-│  │  │ REQ-00042 │ Ryan Atkinson   │ $11.50 │ 3/2  │    │    │
-│  │  │ REQ-00043 │ Lily Bacas      │ $4.90  │ 3/2  │    │    │
-│  │  │ REQ-00044 │ Caitlin Mclin   │ $17.30 │ 3/2  │    │    │
-│  │  │ ...       │ ...             │ ...    │ ...  │    │    │
-│  │  └─────────────────────────────────────────────┘    │    │
-│  │                                                     │    │
-│  │            [ Download Excel ]                       │    │
-│  │                                                     │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  (Additional analytics sections below)                      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
++---------------------------------------------------+
+|  Monthly Transaction Export                  [ X ] |
+|---------------------------------------------------|
+|                                                   |
+|  Month: [ March       v ]  Year: [ 2026    v ]   |
+|                                                   |
+|  87 transactions  ·  $1,204.30 total              |
+|                                                   |
+|               [ Download Excel ]                  |
+|                                                   |
+|  Art Building transactions must be added          |
+|  manually after download.                         |
++---------------------------------------------------+
 ```
 
-### Navigation Update
+### Control Tree
 
-The existing `btnNavAnalytics` button (currently hidden with `Visible: false`) will be enabled and wired to navigate to `scrAnalytics`:
+```
+▼ conExportModal                    ← Container (visibility gate)
+    recExportOverlay                ← Dark overlay
+    recExportBox                    ← White modal box
+    lblExportTitle                  ← Title label
+    btnExportClose                  ← Close button (X)
+    lblExportMonthLabel             ← "Month:" label
+    ddExportMonth                   ← Month dropdown
+    lblExportYearLabel              ← "Year:" label
+    ddExportYear                    ← Year dropdown
+    lblExportPreview                ← Transaction count + total
+    btnExportDownload               ← Download button
+    lblExportNote                   ← Art Building note
+```
+
+### Navigation Trigger
+
+Update `btnNavAnalytics` (currently shows a "coming soon" notification) to open the modal:
 
 ```powerfx
 // btnNavAnalytics.OnSelect
-Set(varCurrentPage, "Analytics");
-Navigate(scrAnalytics, varScreenTransition)
+Set(varShowExportModal, true)
 ```
 
-### Future Analytics Page Sections
+### New Variable
 
-The Analytics page can grow to include additional reporting features:
-
-- **Monthly Transaction Export** (this feature)
-- Print volume trends by week/month
-- Revenue summary and charts
-- Popular print methods breakdown
-- Staff activity and processing times
-- Student submission patterns
-
----
-
-## Technical Implementation
-
-### Approach: Power Automate Flow
-
-Power Apps cannot directly create Excel files. Use a Power Automate flow triggered from the app.
-
-#### Flow: GenerateMonthlyExport
-
-**Trigger:** PowerApps (V2)
-
-**Inputs:**
-- `Month` (number: 1-12)
-- `Year` (number: e.g., 2026)
-- `RequestorEmail` (string: who triggered it)
-
-**Steps:**
-
-1. **Initialize Variables**
-   - `SelectedDate` (string): Compose a date from Month/Year inputs → `@{concat(triggerBody()['text_1'], '-', triggerBody()['text'], '-01')}`
-
-2. **Get Payments** - Query SharePoint `Payments` list
-   - OData Filter: `PaymentDate ge '@{formatDateTime(startOfMonth(variables('SelectedDate')), 'yyyy-MM-dd')}' and PaymentDate lt '@{formatDateTime(addDays(endOfMonth(variables('SelectedDate')), 1), 'yyyy-MM-dd')}'`
-   - This returns ALL payments for the selected month (no delegation limits)
-
-3. **Get Parent Request Details** - For each payment, get the parent `PrintRequests` item
-   - Use `Get item` action with `RequestID` to fetch Method, CourseNumber, etc.
-   - Consider batching with "Get items" + Filter array for better performance
-
-4. **Create Excel Table** - Use "Create table" action in Excel Online
-   - Location: OneDrive or SharePoint document library
-   - Create new file: `TigerCASH-Log-{Month}-{Year}.xlsx`
-
-5. **Add Rows** - For each payment, add row to table
-   - Map columns per specification above
-   - Combine payment data with parent request data
-
-6. **Return File** - Return file content or download URL to PowerApps
-
-> 💡 **Performance Tip:** Instead of calling "Get item" for each payment, use "Get items" on PrintRequests with an `ID` filter for all unique RequestIDs, then use Filter array in the flow to match them up. This reduces API calls significantly.
-
-#### PowerApps Button OnSelect
+Add to `App.OnStart`:
 
 ```powerfx
-// Validate selection
-If(
-    IsBlank(ddExportMonth.Selected) || IsBlank(ddExportYear.Selected),
-    Notify("Please select a month and year", NotificationType.Warning),
-    
-    // Show loading
-    Set(varIsLoading, true);
-    Set(varLoadingMessage, "Generating export...");
-    
-    // Call flow
-    Set(
-        varExportResult,
-        GenerateMonthlyExport.Run(
-            ddExportMonth.Selected.Value,
-            ddExportYear.Selected.Value,
-            varMeEmail
-        )
-    );
-    
-    // Handle result
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "");
-    
-    If(
-        varExportResult.Success,
-        // Download file or show link
-        Download(varExportResult.FileUrl);
-        Notify("Export complete! Check your downloads.", NotificationType.Success),
-        Notify("Export failed: " & varExportResult.Error, NotificationType.Error)
-    )
-)
+Set(varShowExportModal, false);
 ```
 
-### Alternative: Office Scripts
-
-If Power Automate licensing is a constraint, use Office Scripts with Excel Online:
-
-1. Create an Office Script that formats the data
-2. Call the script from Power Automate (or directly if supported)
-3. More control over Excel formatting
+| Variable | Purpose | Type |
+|---|---|---|
+| `varShowExportModal` | Controls export modal visibility | Boolean |
 
 ---
 
-## Control Specifications
+### Control Specifications
 
-### Month Dropdown (ddExportMonth)
+#### Modal Container (conExportModal)
 
 | Property | Value |
-|----------|-------|
-| Items | `["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]` |
-| Default | `Text(Today(), "mmmm")` |
+|---|---|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `RGBA(0, 0, 0, 0)` |
+| **Visible** | `varShowExportModal` |
 
-Or use a table for month numbers:
+> Visibility is set ONLY on this container. All child controls inherit it automatically.
+
+#### Modal Overlay (recExportOverlay)
+
+| Property | Value |
+|---|---|
+| X | `0` |
+| Y | `0` |
+| Width | `Parent.Width` |
+| Height | `Parent.Height` |
+| Fill | `varColorOverlay` |
+| OnSelect | `Set(varShowExportModal, false)` |
+
+#### Modal Box (recExportBox)
+
+| Property | Value |
+|---|---|
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `500` |
+| Height | `320` |
+| Fill | `White` |
+| BorderRadius | `varRadiusLarge` |
+
+#### Title (lblExportTitle)
+
+| Property | Value |
+|---|---|
+| Text | `"Monthly Transaction Export"` |
+| Font | `varAppFont` |
+| Size | `16` |
+| FontWeight | `FontWeight.Bold` |
+
+#### Close Button (btnExportClose)
+
+| Property | Value |
+|---|---|
+| Text | `"X"` |
+| OnSelect | `Set(varShowExportModal, false)` |
+
+#### Month Dropdown (ddExportMonth)
+
+| Property | Value |
+|---|---|
+| Items | See formula below |
+| Default | Current month |
 
 ```powerfx
 Table(
@@ -255,63 +210,175 @@ Table(
 )
 ```
 
-### Year Dropdown (ddExportYear)
+Default to current month:
+
+```powerfx
+LookUp(Self.Items, Value = Month(Today()))
+```
+
+#### Year Dropdown (ddExportYear)
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Items | `[Year(Today()) - 1, Year(Today()), Year(Today()) + 1]` |
 | Default | `Year(Today())` |
 
-### Preview Count Label (lblExportPreview)
+#### Preview Label (lblExportPreview)
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Text | See formula below |
+| Font | `varAppFont` |
+| Size | `13` |
+| Color | `varColorText` |
 
 ```powerfx
 With(
     {
         filtered: Filter(
-            PrintRequests,
-            Status.Value = "Paid & Picked Up" &&
+            colAllPayments,
             Month(PaymentDate) = ddExportMonth.Selected.Value &&
             Year(PaymentDate) = ddExportYear.Selected.Value
         )
     },
-    "Found: " & CountRows(filtered) & " transactions" & Char(10) &
-    "Total: " & Text(Sum(filtered, FinalCost), "[$-en-US]$#,##0.00")
+    CountRows(filtered) & " transactions  ·  " &
+    Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
 )
 ```
 
-### Download Button (btnExportDownload)
+> This queries the local `colAllPayments` collection (pre-loaded at startup) for preview purposes only. The actual export uses Power Automate with server-side filtering — no delegation limits.
+
+#### Download Button (btnExportDownload)
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Text | `"Download Excel"` |
-| DisplayMode | `If(CountRows(filtered) > 0, DisplayMode.Edit, DisplayMode.Disabled)` |
 | Fill | `varColorSuccess` |
+| Color | `White` |
+| BorderRadius | `varRadiusSmall` |
+| DisplayMode | See formula below |
+| OnSelect | See formula below |
+
+Disable when no transactions exist:
+
+```powerfx
+If(
+    CountRows(
+        Filter(
+            colAllPayments,
+            Month(PaymentDate) = ddExportMonth.Selected.Value &&
+            Year(PaymentDate) = ddExportYear.Selected.Value
+        )
+    ) > 0,
+    DisplayMode.Edit,
+    DisplayMode.Disabled
+)
+```
+
+OnSelect — trigger the Power Automate flow:
+
+```powerfx
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Generating export...");
+
+Set(
+    varExportResult,
+    GenerateMonthlyExport.Run(
+        ddExportMonth.Selected.Value,
+        ddExportYear.Selected.Value
+    )
+);
+
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
+
+If(
+    !IsBlank(varExportResult.FileUrl),
+    Download(varExportResult.FileUrl);
+    Notify("Export ready — check your downloads.", NotificationType.Success),
+    Notify("Export failed. Try again or contact admin.", NotificationType.Error)
+)
+```
+
+#### Art Building Note (lblExportNote)
+
+| Property | Value |
+|---|---|
+| Text | `"Art Building transactions must be added manually after download."` |
+| Size | `11` |
+| Color | `RGBA(120, 120, 120, 1)` |
+| Italic | `true` |
 
 ---
 
-## Preview Gallery (Optional)
+## Power Automate Flow: GenerateMonthlyExport
 
-Show a preview of what will be exported before download.
+Power Apps cannot create Excel files directly. This flow handles the server-side work: query SharePoint, build the spreadsheet, and return a download URL.
 
-### Gallery: galExportPreview
+### Trigger
 
-| Property | Value |
-|----------|-------|
-| Items | See filter formula above |
-| Height | `300` |
-| TemplateSize | `40` |
+**PowerApps (V2)**
 
-### Gallery Template
+Inputs:
+- `Month` (number, 1–12)
+- `Year` (number, e.g. 2026)
+
+### Steps
+
+**1. Compose start/end dates**
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ REQ-00042  │  Ryan Atkinson  │  $11.50  │  3/2/2026       │
-└────────────────────────────────────────────────────────────┘
+StartDate: @{concat(triggerBody()['text_1'], '-', formatNumber(triggerBody()['text'], '00'), '-01')}
+EndDate:   @{addDays(endOfMonth(variables('StartDate')), 1)}
 ```
+
+**2. Get Payments from SharePoint**
+
+Action: **Get items** on the `Payments` list.
+
+OData filter:
+
+```
+PaymentDate ge '@{formatDateTime(variables('StartDate'), 'yyyy-MM-dd')}' and PaymentDate lt '@{formatDateTime(variables('EndDate'), 'yyyy-MM-dd')}'
+```
+
+Order by: `PaymentDate asc, TransactionNumber asc`
+
+Top count: `5000` (well above any realistic monthly volume)
+
+> No delegation limits here — Power Automate queries SharePoint server-side via OData, so even 500+ records are handled without issue.
+
+**3. Create Excel file in SharePoint**
+
+Action: **Create file** in a designated document library folder (e.g., `Shared Documents/Exports`).
+
+Filename: `TigerCASH-Log-@{variables('MonthName')}-@{triggerBody()['text_1']}.xlsx`
+
+Use the **Create table** action (Excel Online Business connector) to insert a table named `Transactions` with columns: `Transaction #`, `Payer`, `Amount`, `Date`.
+
+**4. Add rows to table**
+
+Action: **Apply to each** over the Get items output.
+
+For each payment, **Add a row into a table**:
+
+| Table Column | Value |
+|---|---|
+| Transaction # | `items('Apply_to_each')?['TransactionNumber']` |
+| Payer | `items('Apply_to_each')?['PayerName']` |
+| Amount | `items('Apply_to_each')?['Amount']` |
+| Date | `formatDateTime(items('Apply_to_each')?['PaymentDate'], 'M/d/yyyy')` |
+
+After the data rows, add **5 blank rows** (empty strings for all columns) so staff can manually append Art Building entries.
+
+**5. Return download URL**
+
+Action: **Respond to a PowerApp or flow** with:
+
+| Output | Value |
+|---|---|
+| `FileUrl` | File link from the Create file step |
+| `Success` | `true` |
 
 ---
 
@@ -319,81 +386,21 @@ Show a preview of what will be exported before download.
 
 ### No Transactions Found
 
-```powerfx
-If(
-    CountRows(filtered) = 0,
-    Notify(
-        "No transactions found for " & ddExportMonth.Selected.Display & " " & Text(ddExportYear.Selected.Value),
-        NotificationType.Information
-    )
-)
-```
+The **Download Excel** button is disabled when the preview count is zero. The label shows `0 transactions · $0.00 total`, making it clear there is nothing to export.
 
 ### Flow Failure
 
-- Display error message from flow
-- Log error for troubleshooting
-- Suggest manual export as fallback
+If `varExportResult.FileUrl` is blank or the flow errors, the app displays:
 
-### Timeout
-
-- Large months (100+ transactions) may take time
-- Show progress indicator
-- Consider pagination for very large datasets
-
----
-
-## Security Considerations
-
-### Who Can Export?
-
-| Option | Implementation |
-|--------|----------------|
-| All Staff | Default - anyone in `colStaff` can export |
-| Managers Only | Add `Role` check: `Filter(colStaff, MemberEmail = varMeEmail && Role = "Manager")` |
-| Specific Users | Create `ExportUsers` list in SharePoint |
-
-### Audit Trail
-
-Log each export for accountability:
-
-```powerfx
-Patch(
-    ExportLog,  // New SharePoint list
-    Defaults(ExportLog),
-    {
-        ExportedBy: varActor,
-        ExportMonth: ddExportMonth.Selected.Value,
-        ExportYear: ddExportYear.Selected.Value,
-        TransactionCount: CountRows(filtered),
-        TotalAmount: Sum(filtered, FinalCost),
-        ExportedAt: Now()
-    }
-)
+```
+"Export failed. Try again or contact admin."
 ```
 
----
+The existing loading overlay (`varIsLoading`) shows "Generating export..." while the flow runs and clears automatically on completion or failure.
 
-## Implementation Priority
+### Large Months
 
-### Phase 1: Basic Export
-
-1. Create Power Automate flow `GenerateMonthlyExport`
-2. Add Export button to dashboard (or modal)
-3. Add month/year dropdowns
-4. Basic Excel generation with core columns
-
-### Phase 2: Enhanced UI
-
-1. Add preview gallery
-2. Add transaction count and total
-3. Add loading indicator during generation
-
-### Phase 3: Polish
-
-1. Add export audit logging
-2. Refine Excel formatting (headers, column widths)
-3. Add "Email to Finance" option (if requested later)
+Even months with 100+ transactions complete in seconds. Power Automate's SharePoint connector handles bulk reads natively, and Excel row insertion is fast for this volume.
 
 ---
 
@@ -401,66 +408,46 @@ Patch(
 
 ### Required
 
-- Power Automate license (included with most Microsoft 365 plans)
-- SharePoint site for file storage (or OneDrive)
-- **Multi-Payment Tracking Enhancement (#5)** - Creates the `Payments` list that this export queries
-  - Without it: Export queries `PrintRequests` directly (original behavior, loses multi-payment data)
-  - With it: Export queries `Payments` list (one row per actual transaction)
+- **Multi-Payment Tracking Enhancement (#5)** — Creates the `Payments` SharePoint list this export queries
+- **Power Automate** — Included with most Microsoft 365 plans; needed to generate the Excel file
+- **SharePoint document library** — Storage location for generated exports (e.g., `Shared Documents/Exports`)
 
-### Recommended
+### Without Multi-Payment Tracking
 
-- **Payer Tracking Enhancement (#2)** - For accurate "Payer" column
-  - Without it: Falls back to `Student.DisplayName` via lookup
-  - With it: Uses `PayerName` from Payments record (correct even for third-party payments)
+If the `Payments` list does not yet exist, this feature cannot be built. Legacy payment data stored directly on `PrintRequests` (single `FinalCost` / `TransactionNumber` fields) does not support per-transaction export rows.
 
 ---
 
-## Testing Scenarios
+## Testing
 
-### Scenario 1: Normal Month Export
+### Scenario 1: Normal Month
 
-1. Select "March" and "2026"
-2. Preview shows 16 transactions, $187.50 total
-3. Click "Download Excel"
-4. Verify file downloads with correct data
+1. Open export modal, select "March" / "2026"
+2. Preview shows transaction count and total
+3. Click **Download Excel**
+4. Verify file downloads with 4 columns, correct data, sorted by date then transaction number
+5. Verify 5 blank rows at the bottom for manual entries
 
 ### Scenario 2: Empty Month
 
-1. Select a month with no transactions
-2. Preview shows "0 transactions, $0.00"
+1. Select a month with no payment records
+2. Preview shows "0 transactions · $0.00 total"
 3. Download button is disabled
-4. Notification explains no data found
 
-### Scenario 3: Large Dataset
+### Scenario 3: Large Month (100+ transactions)
 
-1. Select a busy month (50+ transactions)
-2. Loading indicator shows during generation
-3. File generates successfully within reasonable time
-4. All transactions included, correctly formatted
-
----
-
-## Sample Output
-
-Expected Excel output matching current TigerCASH log format. Note how REQ-00042 appears twice — this is a partial pickup scenario where the student paid for two separate portions on different days:
-
-| Machine | $/Unit | Unit Amount | Cost | Payer | Notes | Course Number | Date | Transaction Number | Processed By | Request ID |
-|---------|--------|-------------|------|-------|-------|---------------|------|--------------------|--------------|------------|
-| Prusa | 0.10 | 85 | $8.50 | Jane Smith | Partial - plates 1-3 | ID1712 | 3/15/2026 | TXN-44821 | Colin | REQ-00042 |
-| Prusa | 0.10 | 62 | $6.20 | Jane Smith | Remaining plates | ID1712 | 3/16/2026 | TXN-44890 | Colin | REQ-00042 |
-| Prusa | 0.10 | 49 | $4.90 | Lily Bacas | | ID1712 | 3/16/2026 | TXN-44891 | Colin | REQ-00043 |
-| Resin | 0.25 | 173 | $43.25 | Caitlin Mclin | | ID1712 | 3/17/2026 | TXN-44900 | Madison | REQ-00044 |
-
-> 💡 **Key Difference:** With Multi-Payment Tracking, each row represents one actual transaction from the `Payments` list. Finance gets exactly what they need: one row per swipe/check/code entry, even when multiple payments apply to the same job.
+1. Select a busy month
+2. Loading overlay appears during generation
+3. File generates successfully, all rows present
 
 ---
 
 ## Related Documents
 
-- **Payer Tracking Enhancement:** `Future Improvements/Payer-Tracking-Enhancement.md`
-- **Payment Modal Spec:** `StaffDashboard-App-Spec.md` Step 12C
-- **Current TigerCASH Log:** Manual Excel spreadsheet (reference for format)
+- **Payments List Setup:** `SharePoint/Payments-List-Setup.md`
+- **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
+- **Current TigerCASH Log:** `TigerCASH Log 25-26.xlsx` (reference for what accounting currently receives)
 
 ---
 
-*Last Updated: March 17, 2026*
+*Last Updated: March 20, 2026*

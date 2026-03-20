@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FabLab Estimate Form</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.6in 0.7in;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      padding: 0.6in 0.7in;
+      max-width: 8.5in;
+    }
+
+    h1 {
+      font-size: 18pt;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .notes {
+      border: 1.5px solid #999;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 9pt;
+      line-height: 1.45;
+      background: #fafafa;
+    }
+
+    .notes strong { font-size: 9.5pt; }
+
+    .notes ul {
+      margin: 4px 0 0 18px;
+      list-style: disc;
+    }
+
+    .notes li { margin-bottom: 2px; }
+
+    /* Header fields */
+    .field-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: baseline;
+    }
+
+    .field-row label {
+      font-weight: 600;
+      white-space: nowrap;
+      font-size: 10.5pt;
+    }
+
+    .field-line {
+      flex: 1;
+      border-bottom: 1px solid #333;
+      min-height: 16px;
+    }
+
+    .field-short .field-line { max-width: 180px; }
+
+    .field-row.split { flex-wrap: wrap; }
+
+    .split-group {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    /* Job description */
+    .job-desc {
+      margin: 12px 0 14px 0;
+    }
+
+    .job-desc label {
+      font-weight: 600;
+      font-size: 10.5pt;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .job-desc-box {
+      border: 1px solid #555;
+      height: 60px;
+      width: 100%;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+      font-size: 10pt;
+    }
+
+    table th {
+      background: #c5d0e0;
+      color: #1a1a1a;
+      font-weight: 700;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 10pt;
+      border: 1px solid #888;
+    }
+
+    table th:first-child {
+      min-width: 200px;
+      text-align: center;
+    }
+
+    table th .subtitle {
+      display: block;
+      font-weight: 400;
+      font-size: 8pt;
+    }
+
+    table td {
+      border: 1px solid #888;
+      padding: 5px 8px;
+      height: 24px;
+    }
+
+    table td:first-child {
+      background: #ffffcc;
+    }
+
+    table td:not(:first-child) {
+      text-align: center;
+      width: 100px;
+    }
+
+    .subtotal-row td {
+      border: none;
+      background: none !important;
+      padding: 6px 0 0 0;
+    }
+
+    .subtotal-label {
+      background: #c5b9d8 !important;
+      font-weight: 700;
+      text-align: right !important;
+      padding: 5px 10px !important;
+      border: 1px solid #888 !important;
+      font-size: 10pt;
+    }
+
+    .subtotal-value {
+      border: 1px solid #888 !important;
+      width: 100px;
+    }
+
+    /* Total */
+    .total-row-spacing td {
+      padding-top: 10px !important;
+    }
+
+    .total-label {
+      background: #c5b9d8 !important;
+      font-weight: 700;
+      text-align: center !important;
+      padding: 5px 20px !important;
+      border: 1px solid #888 !important;
+      font-size: 11pt;
+    }
+
+    .total-value {
+      border: 1px solid #888 !important;
+      width: 100px;
+      padding: 5px 8px !important;
+    }
+
+    /* Payment method */
+    .payment-section {
+      margin: 16px 0 14px 0;
+      text-align: center;
+      font-size: 10.5pt;
+    }
+
+    .payment-section strong { font-size: 11pt; }
+
+    .payment-options {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 6px;
+    }
+
+    .payment-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5pt;
+    }
+
+    .circle {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid #333;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Staff section */
+    .staff-section {
+      border: 1.5px solid #555;
+      margin-top: 22px;
+      padding: 10px 16px 14px 16px;
+      width: 340px;
+    }
+
+    .staff-section .staff-label {
+      font-size: 8.5pt;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .staff-fields {
+      display: flex;
+      gap: 24px;
+      font-size: 13pt;
+    }
+
+    .staff-fields .field-row { margin-bottom: 0; }
+    .staff-fields label { font-size: 13pt; }
+
+    @media print {
+      body { padding: 0; }
+      .notes { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table th { background: #c5d0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table td:first-child { background: #ffffcc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .subtotal-label { background: #c5b9d8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .total-label { background: #c5b9d8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .subtotal-row td:first-child { background: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Digital Fabrication Lab Estimate Form</h1>
+
+  <div class="notes">
+    <strong>Note:</strong>
+    <ul>
+      <li>There are many variables in fabrication and prototyping which make estimating a job very difficult. The Digital Fabrication Lab can only provide rough estimates.</li>
+      <li>Changes to orders can have significant impacts to the time a job takes to complete.</li>
+      <li>After the job is complete, a work order will be processed for the actual time, materials, and consumables used.</li>
+      <li>Materials and specialty supplies are usually purchased directly by the customer, but please verify choices with staff before ordering.</li>
+    </ul>
+  </div>
+
+  <div class="field-row">
+    <label>Date:</label>
+    <div class="field-line" style="max-width:180px;"></div>
+  </div>
+
+  <div class="field-row">
+    <label>Requisitioner:</label>
+    <div class="field-line"></div>
+  </div>
+
+  <div class="field-row">
+    <label>PI / Approver:</label>
+    <div class="field-line"></div>
+  </div>
+
+  <div class="field-row split">
+    <div class="split-group">
+      <label>Dept:</label>
+      <div class="field-line" style="width:180px;"></div>
+    </div>
+    <div class="split-group" style="margin-left:20px;">
+      <label>Purpose:</label>
+      <div class="field-line" style="width:280px;"></div>
+    </div>
+  </div>
+
+  <div class="job-desc">
+    <label>Job Description:</label>
+    <div class="job-desc-box"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Service Type<span class="subtitle">(including services by weight or volume)</span></th>
+        <th>Rate</th>
+        <th>Per</th>
+        <th>Estimated Qty</th>
+        <th>Charge</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr class="subtotal-row">
+        <td colspan="3"></td>
+        <td class="subtotal-label">Service Subtotal</td>
+        <td class="subtotal-value"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top: 14px;">
+    <thead>
+      <tr>
+        <th>Supplies Type</th>
+        <th>Rate</th>
+        <th>Per</th>
+        <th>Estimated Qty</th>
+        <th>Charge</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr class="subtotal-row">
+        <td colspan="3"></td>
+        <td class="subtotal-label">Supplies Subtotal</td>
+        <td class="subtotal-value"></td>
+      </tr>
+      <tr class="subtotal-row total-row-spacing">
+        <td colspan="3"></td>
+        <td class="total-label">Total</td>
+        <td class="total-value"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="payment-section">
+    <strong>Payment Method</strong>
+    <div class="payment-options">
+      <div class="payment-option"><span class="circle"></span> TigerCASH</div>
+      <div class="payment-option"><span class="circle"></span> Department Account</div>
+      <div class="payment-option"><span class="circle"></span> Grant / Fund</div>
+      <div class="payment-option"><span class="circle"></span> Other</div>
+    </div>
+  </div>
+
+  <div class="staff-section">
+    <div class="staff-label">Digital Fabrication Lab Staff Use Only</div>
+    <div class="staff-fields">
+      <div class="field-row">
+        <label>Initials:</label>
+        <div class="field-line" style="width:70px;"></div>
+      </div>
+      <div class="field-row">
+        <label>Date:</label>
+        <div class="field-line" style="width:100px;"></div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+</html>
