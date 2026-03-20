@@ -374,16 +374,8 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
-// === STAFF DATA ===
-// Load active staff members into a collection for dropdowns
-// Note: ForAll flattens the Person column so dropdowns can display names
-ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active}));
-
-// Check if current user is a staff member
-Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
-
 // === SLICING COMPUTERS ===
-// Collection for slicing computer dropdown in approval modal
+// Collection for slicing computer dropdown in approval modal (local only — no SharePoint call)
 ClearCollect(colSlicingComputers, 
     {Name: "Computer 1"},
     {Name: "Computer 2"}
@@ -456,25 +448,30 @@ Set(varIsLoading, false);
 // Boolean trigger for Audio control (use Reset(audNotification) then Set(varPlaySound, true) to play)
 Set(varPlaySound, false);
 
-// Load NeedsAttention items into a local collection (avoids delegation)
-ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+// === DATA LOADING ===
+// Load all SharePoint data in parallel to reduce startup time and avoid 429 throttling.
+// Concurrent() fires these as a single batched request instead of sequential calls.
+Concurrent(
+    ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+    ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
+    ClearCollect(colAllBuildPlates, BuildPlates),
+    ClearCollect(colAllPayments, Payments)
+);
+
+// Check if current user is a staff member (uses colStaff loaded above)
+Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
 
 // Track count for change detection (CountRows on local collection is safe)
 Set(varPrevAttentionCount, CountRows(colNeedsAttention));
 
-// === BUILD PLATE TRACKING ===
-// Pre-load all plate records so job card progress pills don't trigger per-card delegation
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colAllPayments, Payments);
-// Initialize working collections as typed empty tables so formulas still resolve when SharePoint lists are empty
-ClearCollect(colBuildPlates, FirstN(BuildPlates, 0));
-ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(BuildPlates, 0), PlateNum, Blank()));
-ClearCollect(colPickedUpPlates, AddColumns(FirstN(BuildPlates, 0), PlateNum, Blank()));
+// === WORKING COLLECTIONS ===
+// Initialize typed empty tables from already-loaded collections (no additional SharePoint calls)
+ClearCollect(colBuildPlates, FirstN(colAllBuildPlates, 0));
+ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank()));
+ClearCollect(colPickedUpPlates, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank()));
 Clear(colPickedUpPlates);
-ClearCollect(colPrintersUsed, FirstN(Distinct(BuildPlates, Machine.Value), 0));
-
-// === PAYMENT TRACKING ===
-ClearCollect(colPayments, FirstN(Payments, 0));
+ClearCollect(colPrintersUsed, FirstN(Distinct(colAllBuildPlates, Machine.Value), 0));
+ClearCollect(colPayments, FirstN(colAllPayments, 0));
 
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
@@ -591,7 +588,7 @@ Set(varScreenTransition, ScreenTransition.Fade);
 
 // === TIMER CONFIGURATION ===
 // Auto-refresh interval for dashboard data (milliseconds)
-Set(varRefreshInterval, 10000);                    // 10 seconds
+Set(varRefreshInterval, 30000);                    // 30 seconds
 
 Set(varLoadingMessage, "")
 ```
@@ -12549,7 +12546,7 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 | 6 | If count increased, `Reset(audNotification); Set(varPlaySound, true)` triggers audio |
 | 7 | Update `varPrevAttentionCount` for next cycle |
 
-> 💡 **Why 10 seconds?** This provides responsive notifications while staying well within SharePoint API limits. You can adjust `varRefreshInterval` in App.OnStart (in milliseconds) — 15000 for 15 seconds, 30000 for 30 seconds, 60000 for 1 minute.
+> 💡 **Why 30 seconds?** This provides responsive notifications while staying within SharePoint API limits. You can adjust `varRefreshInterval` in App.OnStart (in milliseconds) — 30000 for 30 seconds, 60000 for 1 minute, 120000 for 2 minutes. Shorter intervals (e.g. 10 seconds) risk 429 throttling errors from SharePoint.
 
 ---
 
