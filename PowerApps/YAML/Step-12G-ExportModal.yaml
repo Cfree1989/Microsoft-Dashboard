@@ -39,19 +39,34 @@
             FontWeight: =FontWeight.Bold
             Color: =varColorText
       - btnExportClose:
-          Control: Classic/Button
+          Control: Classic/Button@2.2.0
           Properties:
-            Text: ="✕"
-            X: =recExportBox.X + recExportBox.Width - Self.Width - 10
-            Y: =recExportBox.Y + 10
-            Width: =36
-            Height: =36
-            Fill: =RGBA(0, 0, 0, 0)
-            Color: =varColorTextMuted
-            HoverFill: =RGBA(0, 0, 0, 0.05)
+            BorderColor: =RGBA(0, 0, 0, 0)
             BorderThickness: =0
-            Size: =14
+            Color: =varColorTextMuted
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =varAppFont
+            Height: =30
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =RGBA(255, 46, 46, 1)
             OnSelect: =Set(varShowExportModal, false)
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =RGBA(245, 245, 245, 1)
+            PressedFill: =RGBA(220, 32, 32, 1)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =14
+            Text: ="✕"
+            Width: =30
+            X: =recExportBox.X + recExportBox.Width - 40
+            Y: =recExportBox.Y + 10
       - lblExportMonthLabel:
           Control: Label
           Properties:
@@ -75,7 +90,16 @@
             Size: =12
             BorderColor: =varInputBorderColor
             BorderThickness: =varInputBorderThickness
-            ChevronBackground: =RGBA(0, 0, 0, 0)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            ChevronBackground: =varChevronBackground
+            ChevronFill: =varChevronFill
+            ChevronHoverBackground: =varChevronHoverBackground
+            ChevronHoverFill: =varChevronHoverFill
+            HoverFill: =varDropdownHoverFill
+            PressedFill: =varDropdownPressedFill
+            PressedColor: =varDropdownPressedColor
+            SelectionFill: =varDropdownSelectionFill
+            SelectionColor: =varDropdownSelectionColor
             Items: |
               =Table(
                   {Display: "January", Value: 1},
@@ -115,7 +139,16 @@
             Size: =12
             BorderColor: =varInputBorderColor
             BorderThickness: =varInputBorderThickness
-            ChevronBackground: =RGBA(0, 0, 0, 0)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            ChevronBackground: =varChevronBackground
+            ChevronFill: =varChevronFill
+            ChevronHoverBackground: =varChevronHoverBackground
+            ChevronHoverFill: =varChevronHoverFill
+            HoverFill: =varDropdownHoverFill
+            PressedFill: =varDropdownPressedFill
+            PressedColor: =varDropdownPressedColor
+            SelectionFill: =varDropdownSelectionFill
+            SelectionColor: =varDropdownSelectionColor
             Items: =[Year(Today()) - 1, Year(Today()), Year(Today()) + 1]
             Default: =Year(Today())
       - lblExportPreview:
@@ -142,26 +175,31 @@
                   Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
               )
       - btnExportDownload:
-          Control: Classic/Button
+          Control: Classic/Button@2.2.0
           Properties:
-            Text: ="Download Excel"
-            X: =(recExportBox.X + recExportBox.Width - Self.Width) / 2 + recExportBox.X / 2
-            Y: =lblExportPreview.Y + lblExportPreview.Height + 20
-            Width: =160
-            Height: =varBtnHeight
-            Fill: =varColorSuccess
-            Color: =RGBA(255, 255, 255, 1)
-            HoverFill: =varColorSuccessHover
-            PressedFill: =ColorFade(varColorSuccess, -25%)
             BorderColor: =ColorFade(Self.Fill, -15%)
-            BorderThickness: =1
+            BorderThickness: =varInputBorderThickness
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =varColorPrimary
             FocusedBorderThickness: =varFocusedBorderThickness
-            RadiusTopLeft: =varBtnBorderRadius
-            RadiusTopRight: =varBtnBorderRadius
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(varColorPrimary, -15%)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorPrimary, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
             Size: =varBtnFontSize
-            Font: =varAppFont
+            Text: ="Download Excel"
+            Width: =160
+            X: =(recExportBox.X + recExportBox.Width - Self.Width) / 2 + recExportBox.X / 2
+            Y: =lblExportPreview.Y + lblExportPreview.Height + 20
             DisplayMode: |
               =If(
                   CountRows(
