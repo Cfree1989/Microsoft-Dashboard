@@ -9904,7 +9904,7 @@ Set(varLoadingMessage, "Generating export...");
 
 Set(
     varExportResult,
-    GenerateMonthlyExport.Run(
+    'Flow-(G)-Export-MonthlyTransactions'.Run(
         ddExportMonth.Selected.Value,
         ddExportYear.Selected.Value
     )
@@ -9914,14 +9914,14 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "");
 
 If(
-    !IsBlank(varExportResult.FileUrl),
-    Download(varExportResult.FileUrl);
+    !IsBlank(varExportResult.fileurl),
+    Download(varExportResult.fileurl);
     Notify("Export ready — check your downloads.", NotificationType.Success),
     Notify("Export failed. Try again or contact admin.", NotificationType.Error)
 )
 ```
 
-> 💡 **Power Automate:** The `GenerateMonthlyExport` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). It queries the `Payments` SharePoint list server-side, creates a 4-column Excel file (Transaction #, Payer, Amount, Date), and returns a download URL.
+> 💡 **Power Automate:** The `Flow-(G)-Export-MonthlyTransactions` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). The name has special characters, so Power Apps requires single quotes: `'Flow-(G)-Export-MonthlyTransactions'.Run(...)`. It queries the `Payments` SharePoint list server-side, creates a 4-column Excel file (Transaction #, Payer, Amount, Date), and returns a download URL.
 
 ---
 
@@ -9954,7 +9954,7 @@ If(
 - [ ] Year dropdown defaults to current year
 - [ ] Preview label shows TigerCASH-only transaction count and total
 - [ ] Download button is disabled when count is zero
-- [ ] Download button triggers `GenerateMonthlyExport` Power Automate flow
+- [ ] Download button triggers `Flow-(G)-Export-MonthlyTransactions` Power Automate flow
 - [ ] Loading overlay displays while flow runs
 - [ ] `btnNavAnalytics` OnSelect opens this modal
 - [ ] Art Building note is visible at the bottom
