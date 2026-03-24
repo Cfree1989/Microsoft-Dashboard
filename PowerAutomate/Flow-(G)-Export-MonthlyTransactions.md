@@ -362,14 +362,24 @@ createArray(1, 2, 3, 4, 5)
 
 **UI steps:**
 1. Click **+ Add an action** below the `Add Blank Rows` loop
-2. Search for and select **Respond to a PowerApp or flow**
+2. Search for and select **Respond to a Power App or flow**
 3. Rename the action to: `Return Export Result`
 4. Click **+ Add an output** → **Text**
 5. **Title:** `FileUrl`
-6. **Enter a value to respond:** **Create Export File Link to item**
+6. In **Enter a value to respond**, click the **Expression** tab (fx) and paste:
+
+```
+concat(
+  'https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab',
+  replace(outputs('Create_Export_File')?['body/Path'], ' ', '%20')
+)
+```
+
 7. Click **+ Add an output** → **Text**
 8. **Title:** `Success`
 9. **Enter a value to respond:** `true`
+
+> **Important:** Use the file created by `Create Export File`, not `Link to item` from `Get TigerCASH Payments`. The SharePoint list link points to a payment record, not the exported Excel workbook.
 
 > **Important:** In Power Apps, the returned property is `fileurl` in lowercase.
 
