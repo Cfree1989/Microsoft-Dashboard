@@ -274,12 +274,42 @@ formatDateTime(outputs('StartDate'), 'MMMM')
 
 ---
 
+## Optional Diagnostic: Verify Workbook Tables
+
+Use this temporary step while troubleshooting `Add Payment Row` failures. It confirms whether Excel Online can see the `Transactions` table in the newly created workbook before the flow starts inserting rows.
+
+#### Action 1: Get Tables
+
+**UI steps:**
+1. Click **+ Add an action** below `Delay for Excel Sync`
+2. Search for and select **Get tables** (Excel Online (Business))
+3. Rename the action to: `Get Tables`
+4. Fill in:
+   - **Location:** `Group - Digital Fabrication Lab`
+   - **Document Library:** `Documents`
+   - **File:** **Create Export File Id**
+
+**How to use this test:**
+1. Save the flow and run it once
+2. Open the run history
+3. Click the `Get Tables` action
+4. Open **Outputs** → **Show raw outputs**
+5. Confirm the output includes a table named `Transactions`
+
+**What the result means:**
+- If `Get Tables` succeeds and returns `Transactions`, Excel can see the copied workbook and table
+- If `Get Tables` fails, or succeeds without showing `Transactions`, the issue is likely workbook readiness, file binding, or missing table metadata in `_Template.xlsx`
+
+> **Important:** This is a diagnostic step, not part of the final production flow. Remove it after troubleshooting is complete.
+
+---
+
 ## Step 4: Add Data Rows
 
 #### Action 1: Add Payment Rows
 
 **UI steps:**
-1. Click **+ Add an action** below `Delay for Excel Sync`
+1. Click **+ Add an action** below `Get Tables`, or below `Delay for Excel Sync` if you are not using the diagnostic step
 2. Search for and select **Apply to each**
 3. Rename the action to: `Add Payment Rows`
 4. In **Select an output from previous steps**, choose **value** from `Get TigerCASH Payments`
@@ -297,13 +327,28 @@ formatDateTime(outputs('StartDate'), 'MMMM')
    - **Table:** Type `Transactions` → click **Use "Transactions" as a custom value**
 
 5. Build the **Row** field in this order, in the same field:
-   - Type `{"Transaction #": "` then insert **TransactionNumber**
-   - Type `", "Payer": "` then insert **PayerName**
-   - Type `", "Amount": "` then insert **Amount**
+   - Type `{"Transaction #": "` then insert this expression:
+
+```
+item()?['TransactionNumber']
+```
+
+   - Type `", "Payer": "` then insert this expression:
+
+```
+item()?['PayerName']
+```
+
+   - Type `", "Amount": "` then insert this expression:
+
+```
+item()?['Amount']
+```
+
    - Type `", "Date": "` then insert this expression:
 
 ```
-formatDateTime(items('Add_Payment_Rows')?['PaymentDate'], 'M/d/yyyy')
+formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')
 ```
 
    - Type `"}`
@@ -314,7 +359,7 @@ The finished Row field should look like:
 {"Transaction #": "[TransactionNumber]", "Payer": "[PayerName]", "Amount": "[Amount]", "Date": "[fx]"}
 ```
 
-> **Important:** The loop name in the expression must match the action name exactly: `Add_Payment_Rows`.
+> **Important:** Use `item()` inside the `Add Payment Rows` loop. This avoids failures caused by loop-name mismatches such as `items('Add_Payment_Rows')`.
 
 ---
 
