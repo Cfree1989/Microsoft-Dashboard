@@ -47,7 +47,7 @@ Create the template workbook before building the flow. The copied export file wi
    - Cell `D1`: `Date`
 4. Make sure the header text, spacing, and punctuation match exactly.
 
-> **Important:** The flow writes JSON keys that match these column names. If a header is spelled differently, the `Add a row into a table` action may fail or place values in the wrong columns.
+> **Important:** The Office Script writes values into the `Transactions` table in this exact column order. If a header is spelled differently, the script may write to the wrong columns or fail to find the expected table layout.
 
 ### Convert the range into a table
 
@@ -70,7 +70,7 @@ Transactions
 
 9. Press **Enter** to save the table name.
 
-> **Important:** The table name must be exactly `Transactions` with a capital `T`. The flow uses `Transactions` as a custom table value when inserting rows.
+> **Important:** The table name must be exactly `Transactions` with a capital `T`. The script below looks up this table by name.
 
 ### Clean up the template
 
@@ -109,7 +109,69 @@ Before using the flow, reopen `_Template.xlsx` and confirm all of the following:
 - the column order is exactly the same as listed above
 - the workbook opens without errors in SharePoint/Excel
 
-> **Important:** If the flow creates the output file successfully but `Add Payment Row` fails, the most common cause is a missing table, a wrong table name, or mismatched column headers in `_Template.xlsx`.
+> **Important:** If the flow creates the output file successfully but row insertion still fails, do not assume the template is the primary issue. In testing, `Get Tables` could see the copied workbook and table, but `Add a row into a table` still failed. This document now uses an Office Script instead of `AddRowV2`.
+
+---
+
+## Office Script Prerequisite
+
+This flow now uses an Excel Office Script to write all payment rows into the copied workbook.
+
+### Create the script
+
+1. Open `_Template.xlsx` in Excel for the web.
+2. Go to the **Automate** tab.
+3. Click **New Script**.
+4. Replace the starter code with:
+
+```typescript
+function main(
+  workbook: ExcelScript.Workbook,
+  rowsJson: string,
+  blankRowCount: number
+) {
+  const table = workbook.getTable("Transactions");
+
+  const rows = JSON.parse(rowsJson) as Array<{
+    transactionNumber: string;
+    payer: string;
+    amount: string | number;
+    date: string;
+  }>;
+
+  const values = rows.map((row) => [
+    row.transactionNumber ?? "",
+    row.payer ?? "",
+    row.amount ?? "",
+    row.date ?? "",
+  ]);
+
+  if (values.length > 0) {
+    table.addRows(-1, values);
+  }
+
+  const blanksToAdd = Number(blankRowCount ?? 0);
+  if (blanksToAdd > 0) {
+    const blankRows: (string | number)[][] = [];
+    for (let i = 0; i < blanksToAdd; i++) {
+      blankRows.push([" ", " ", " ", " "]);
+    }
+    table.addRows(-1, blankRows);
+  }
+}
+```
+
+5. Rename the script to: `AppendMonthlyTransactions`
+6. Save the script.
+
+### What the script does
+
+- reads the payment rows passed in from Power Automate
+- finds the `Transactions` table in the workbook
+- appends all payment rows in one operation
+- adds the 5 blank rows at the bottom
+
+> **Important:** Save the script in a workbook location that your Excel Online (Business) connection can access. The flow will call this script against the copied export workbook.
 
 ---
 
@@ -276,7 +338,7 @@ formatDateTime(outputs('StartDate'), 'MMMM')
 
 ## Optional Diagnostic: Verify Workbook Tables
 
-Use this temporary step while troubleshooting `Add Payment Row` failures. It confirms whether Excel Online can see the `Transactions` table in the newly created workbook before the flow starts inserting rows.
+Use this temporary step while troubleshooting workbook-write failures. It confirms whether Excel Online can see the `Transactions` table in the newly created workbook before the script runs.
 
 #### Action 1: Get Tables
 
@@ -304,100 +366,55 @@ Use this temporary step while troubleshooting `Add Payment Row` failures. It con
 
 ---
 
-## Step 4: Add Data Rows
+## Step 4: Build Rows JSON
 
-#### Action 1: Add Payment Rows
+Before calling the script, convert the SharePoint items into a JSON string that contains only the fields the script needs.
+
+#### Action 1: Build Payment Rows JSON
 
 **UI steps:**
 1. Click **+ Add an action** below `Get Tables`, or below `Delay for Excel Sync` if you are not using the diagnostic step
-2. Search for and select **Apply to each**
-3. Rename the action to: `Add Payment Rows`
-4. In **Select an output from previous steps**, choose **value** from `Get TigerCASH Payments`
+2. Search for and select **Select** (Data Operation)
+3. Rename the action to: `Build Payment Rows JSON`
+4. In **From**, choose **value** from `Get TigerCASH Payments`
+5. In the mapping editor, create these properties.
+6. For each value field, click the field, open the **Expression** tab, paste the expression, and click **Update**. Do not type the expressions as plain text.
+7. Use these exact mappings:
+   - `transactionNumber` = `item()?['TransactionNumber']`
+   - `payer` = `item()?['PayerName']`
+   - `amount` = `item()?['Amount']`
+   - `date` = `formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')`
 
-#### Action 2: Add Payment Row
+> **Important:** This action creates a clean array of plain values for the script. It replaces the old `Apply to each` + `Add a row into a table` pattern.
 
-**UI steps:**
-1. Inside `Add Payment Rows`, click **Add an action**
-2. Search for and select **Add a row into a table** (Excel Online (Business))
-3. Rename the action to: `Add Payment Row`
-4. Fill in:
-   - **Location:** `Group - Digital Fabrication Lab`
-   - **Document Library:** `Documents`
-   - **File:** **Create Export File Id**
-   - **Table:** Type `Transactions` → click **Use "Transactions" as a custom value**
-
-5. Build the **Row** field in this order, in the same field:
-   - Type `{"Transaction #": "` then insert this expression:
-
-```
-item()?['TransactionNumber']
-```
-
-   - Type `", "Payer": "` then insert this expression:
-
-```
-item()?['PayerName']
-```
-
-   - Type `", "Amount": "` then insert this expression:
-
-```
-item()?['Amount']
-```
-
-   - Type `", "Date": "` then insert this expression:
-
-```
-formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')
-```
-
-   - Type `"}`
-
-The finished Row field should look like:
-
-```
-{"Transaction #": "[TransactionNumber]", "Payer": "[PayerName]", "Amount": "[Amount]", "Date": "[fx]"}
-```
-
-> **Important:** Use `item()` inside the `Add Payment Rows` loop. This avoids failures caused by loop-name mismatches such as `items('Add_Payment_Rows')`.
+> **Important:** If you type `item()?['TransactionNumber']` directly into the field without using the **Expression** tab, Power Automate will treat it as literal text and the script will write that text into Excel.
 
 ---
 
-## Step 5: Add Blank Rows
+## Step 5: Run Office Script
 
-#### Action 1: Add Blank Rows
-
-**UI steps:**
-1. Click **+ Add an action** below the `Add Payment Rows` loop
-2. Search for and select **Apply to each**
-3. Rename the action to: `Add Blank Rows`
-4. In **Select an output from previous steps**, click **Expression** tab (fx)
-5. Paste:
-
-```
-createArray(1, 2, 3, 4, 5)
-```
-
-6. Click **Update**
-
-#### Action 2: Add Blank Row
+#### Action 1: Run Script
 
 **UI steps:**
-1. Inside `Add Blank Rows`, click **Add an action**
-2. Search for and select **Add a row into a table** (Excel Online (Business))
-3. Rename the action to: `Add Blank Row`
+1. Click **+ Add an action** below `Build Payment Rows JSON`
+2. Search for and select **Run script** (Excel Online (Business))
+3. Rename the action to: `Write Transactions to Workbook`
 4. Fill in:
    - **Location:** `Group - Digital Fabrication Lab`
    - **Document Library:** `Documents`
    - **File:** **Create Export File Id**
-   - **Table:** Type `Transactions` → click **Use "Transactions" as a custom value**
-   - **Row:**
+   - **Script:** `AppendMonthlyTransactions`
+   - **rowsJson:** Use the **Expression** tab and paste:
 
 ```
-{"Transaction #": " ", "Payer": " ", "Amount": " ", "Date": " "}
+string(body('Build_Payment_Rows_JSON'))
 ```
 
-> **Important:** Use single spaces, not empty strings. Excel Online may reject blank values.
+   - **blankRowCount:** `5`
+
+> **Important:** `rowsJson` must be the JSON string version of the `Select` output, not the raw SharePoint items array.
+
+> **Important:** This script replaces both the old `Add Payment Row` loop and the old `Add Blank Rows` loop.
 
 ---
 
@@ -406,7 +423,7 @@ createArray(1, 2, 3, 4, 5)
 #### Action 1: Return Export Result
 
 **UI steps:**
-1. Click **+ Add an action** below the `Add Blank Rows` loop
+1. Click **+ Add an action** below `Write Transactions to Workbook`
 2. Search for and select **Respond to a Power App or flow**
 3. Rename the action to: `Return Export Result`
 4. Click **+ Add an output** → **Text**
@@ -437,7 +454,7 @@ The export file should:
 - contain the `Transactions` table
 - include only TigerCASH rows for the selected month
 - be sorted by `PaymentDate asc, TransactionNumber asc`
-- include 5 blank rows at the bottom
+- include 5 blank rows at the bottom added by the script
 
 ---
 
@@ -456,8 +473,12 @@ The export file should:
 
 ### Test 3: Excel Timing
 
-1. If `Add Payment Row` fails, increase `Delay for Excel Sync` from `20` to `30` seconds
-2. Test again
+1. Run the flow with `Get Tables` still enabled
+2. Confirm `Get Tables` succeeds and can see `Transactions`
+3. Open `Build Payment Rows JSON` in the run history and confirm it contains real values such as transaction numbers, names, amounts, and dates, not literal text like `item()?['TransactionNumber']`
+4. Confirm `Write Transactions to Workbook` succeeds
+5. If the script step fails immediately after file creation, increase `Delay for Excel Sync` from `20` to `30` seconds and test again
+6. After the flow works reliably, remove the temporary `Get Tables` step if you do not want to keep it for diagnostics
 
 ---
 
