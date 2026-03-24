@@ -363,8 +363,23 @@ formatDateTime(outputs('StartDate'), 'MMMM')
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **Folder Path:** `/Shared Documents/TigerCASH Logs`
-   - **File Name:** `TigerCASH-Log-` + **MonthName Outputs** + `-` + **Year** + `.xlsx`
+   - **File Name:** use the **Expression** tab and paste:
+
+```
+concat(
+  'TigerCASH-Log-',
+  outputs('MonthName'),
+  '-',
+  triggerBody()['number_1'],
+  '-',
+  formatDateTime(utcNow(), 'yyyyMMdd-HHmmss'),
+  '.xlsx'
+)
+```
+
    - **File Content:** **Get Template File Content**
+
+> **Important:** The timestamp suffix avoids "file already exists" failures when staff export the same month more than once. Each run creates a unique file name instead of colliding with the previous export.
 
 **Configure retry policy:**
 1. Click **three dots (…)** → **Settings**

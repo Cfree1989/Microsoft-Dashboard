@@ -9912,26 +9912,35 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Generating export...");
 
-Set(
-    varExportResult,
-    'Flow-(G)-Export-MonthlyTransactions'.Run(
-        ddExportMonth.Selected.Value,
-        ddExportYear.Selected.Value
+IfError(
+    Set(
+        varExportResult,
+        'Flow-(G)-Export-MonthlyTransactions'.Run(
+            ddExportMonth.Selected.Value,
+            ddExportYear.Selected.Value
+        )
+    );
+
+    If(
+        !IsBlank(varExportResult.fileurl),
+        Download(varExportResult.fileurl);
+        Notify("Export ready — check your downloads.", NotificationType.Success),
+        Notify("Export finished, but no download link was returned.", NotificationType.Warning)
+    ),
+
+    Notify(
+        "Couldn't generate the export right now. Please try again in a moment.",
+        NotificationType.Error
     )
 );
 
 Set(varIsLoading, false);
 Set(varLoadingMessage, "");
-
-If(
-    !IsBlank(varExportResult.fileurl),
-    Download(varExportResult.fileurl);
-    Notify("Export ready — check your downloads.", NotificationType.Success),
-    Notify("Export failed. Try again or contact admin.", NotificationType.Error)
-)
 ```
 
 > 💡 **Power Automate:** The `Flow-(G)-Export-MonthlyTransactions` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). The name has special characters, so Power Apps requires single quotes: `'Flow-(G)-Export-MonthlyTransactions'.Run(...)`. It queries the `Payments` SharePoint list server-side, creates a 4-column Excel file (Transaction #, Payer, Amount, Date), and returns a download URL.
+
+> 💡 **Friendly error handling:** `IfError(...)` prevents raw Power Automate/connector errors from surfacing directly to staff. The flow should already generate unique file names, but this still gives users a clean message if anything goes wrong.
 
 ---
 
