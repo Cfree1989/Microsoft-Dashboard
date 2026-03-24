@@ -4836,7 +4836,7 @@ Set(varLoadingMessage, "")
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
-> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). Changing Method automatically resets the Printer dropdown to show compatible printers only.
+> 💡 **Why this matters:** Provides flexibility to fix mistakes or adjust job parameters at any point in the workflow (except Pending status). The choice controls should preload the current values so staff can clearly see what is already saved before making a change.
 
 > ⚠️ **Availability:** This modal is accessible from ALL status tabs EXCEPT Pending. The Edit button (✏️ Edit) appears near the "Additional Details" header on each job card.
 
@@ -5033,12 +5033,14 @@ Reset(txtDetailsTransaction)
 17. Set **Text:**
 
 ```powerfx
-varSelectedItem.Method.Value & " | " & 
-Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & " | " &
+varSelectedItem.Method.Value & " | " &
+varSelectedItem.Printer.Value & " | " &
 varSelectedItem.Color.Value & " | " &
 If(IsBlank(varSelectedItem.EstimatedWeight), "No weight", Text(varSelectedItem.EstimatedWeight) & "g") & " | " &
 If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00"))
 ```
+
+> 💡 **Show full printer value:** Display the full stored printer choice here instead of trimming dimensions. That avoids the confusing case where the summary says `Prusa XL` but the actual saved value is `Prusa XL (14.2×14.2×14.2in)`.
 
 ---
 
@@ -5126,7 +5128,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Height | `36` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
-| DefaultSelectedItems | `Blank()` |
+| DefaultSelectedItems | `If(IsBlank(varSelectedItem.Method), Blank(), [varSelectedItem.Method])` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5144,7 +5146,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
 
-> 💡 **Leaving empty:** `DefaultSelectedItems: Blank()` means no pre-selection. Staff can leave it empty to keep the current method.
+> 💡 **Preloaded current value:** Preloading the current Method makes the modal easier to understand and keeps the combo box aligned with the record that is being edited.
 
 > ⚠️ **Important:** Changing Method resets the Printer dropdown to show only compatible printers.
 
@@ -5180,7 +5182,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `340` |
 | Height | `36` |
 | DisplayFields | `["Value"]` |
-| DefaultSelectedItems | `Blank()` |
+| DefaultSelectedItems | `If(IsBlank(varSelectedItem.Printer), Blank(), [varSelectedItem.Printer])` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5201,13 +5203,17 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 36. Set **Items** (filtered by Method — uses new method if selected, otherwise current):
 
 ```powerfx
-Filter(
-    Choices([@PrintRequests].Printer),
-    With(
-        {selectedMethod: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
+With(
+    {selectedMethod: Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
+    Filter(
+        Choices([@PrintRequests].Printer),
+        (
+            selectedMethod = varSelectedItem.Method.Value &&
+            Value = varSelectedItem.Printer.Value
+        ) ||
         If(
             selectedMethod = "Filament",
-            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise3D") Or StartsWith(Value, "Raised3D"),
+            StartsWith(Value, "Prusa MK4S") || StartsWith(Value, "Prusa XL") || StartsWith(Value, "Raise3D") || StartsWith(Value, "Raised3D"),
             selectedMethod = "Resin",
             Value = "Form 3 (5.7×5.7×7.3in)",
             true
@@ -5216,7 +5222,9 @@ Filter(
 )
 ```
 
-> 💡 **Dynamic filtering:** If staff selects a new Method, the Printer dropdown immediately updates to show only compatible printers.
+> 💡 **Dynamic filtering:** When the modal first opens, the current printer is guaranteed to remain in the list so the preloaded selection renders correctly. If staff changes Method, the dropdown switches to the compatible printer list for that new method.
+
+> ⚠️ **Important:** This avoids a common UX bug where the combo appears blank even though a printer is already saved, and it ensures printer-only changes are easier to detect.
 
 ---
 
@@ -5251,7 +5259,7 @@ Filter(
 | Width | `200` |
 | Height | `36` |
 | DisplayFields | `["Value"]` |
-| DefaultSelectedItems | `Blank()` |
+| DefaultSelectedItems | `If(IsBlank(varSelectedItem.Color), Blank(), [varSelectedItem.Color])` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5537,12 +5545,12 @@ Reset(txtDetailsTransaction)
 
 ```powerfx
 If(
-    !IsBlank(ddDetailsStaff.Selected) && 
+    !IsBlank(ddDetailsStaff.Selected) &&
     (
         // At least one field must be changed
-        (!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value) ||
-        (!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value) ||
-        (!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value) ||
+        Coalesce(ddDetailsMethod.Selected.Value, "") <> Coalesce(varSelectedItem.Method.Value, "") ||
+        Coalesce(ddDetailsPrinter.Selected.Value, "") <> Coalesce(varSelectedItem.Printer.Value, "") ||
+        Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, "") ||
         (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0)) ||
         (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0)) ||
         (!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""))
@@ -5553,6 +5561,8 @@ If(
 ```
 
 > 💡 Button is enabled only when staff is selected AND at least one field is being changed (including transaction number for paid items).
+
+> 💡 **Choice-field comparison:** Use `Coalesce(..., "")` for Method, Printer, and Color comparisons so the Save button still works reliably when a combo box is preloaded or when a field is blank.
 
 76. Set **OnSelect:**
 
@@ -5568,14 +5578,14 @@ Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(var
 
 // Build change description for audit
 Set(varChangeDesc, "");
-If(!IsBlank(ddDetailsMethod.Selected) && ddDetailsMethod.Selected.Value <> varSelectedItem.Method.Value,
+If(Coalesce(ddDetailsMethod.Selected.Value, "") <> Coalesce(varSelectedItem.Method.Value, ""),
     Set(varChangeDesc, "Method: " & varSelectedItem.Method.Value & " → " & ddDetailsMethod.Selected.Value));
-If(!IsBlank(ddDetailsPrinter.Selected) && ddDetailsPrinter.Selected.Value <> varSelectedItem.Printer.Value,
+If(Coalesce(ddDetailsPrinter.Selected.Value, "") <> Coalesce(varSelectedItem.Printer.Value, ""),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Printer: " & 
         Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & 
         " → " & 
         Trim(If(Find("(", ddDetailsPrinter.Selected.Value) > 0, Left(ddDetailsPrinter.Selected.Value, Find("(", ddDetailsPrinter.Selected.Value) - 1), ddDetailsPrinter.Selected.Value))));
-If(!IsBlank(ddDetailsColor.Selected) && ddDetailsColor.Selected.Value <> varSelectedItem.Color.Value,
+If(Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, ""),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
 If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
