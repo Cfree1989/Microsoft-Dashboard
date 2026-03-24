@@ -132,6 +132,18 @@ function main(
 ) {
   const table = workbook.getTable("Transactions");
 
+  // Remove any placeholder blank rows that were left in the template table.
+  const existingRange = table.getRangeBetweenHeaderAndTotal();
+  const existingValues = existingRange.getValues();
+  for (let i = existingValues.length - 1; i >= 0; i--) {
+    const isBlankRow = existingValues[i].every((cell) =>
+      String(cell ?? "").trim() === ""
+    );
+    if (isBlankRow) {
+      table.deleteRowsAt(i, 1);
+    }
+  }
+
   const rows = JSON.parse(rowsJson) as Array<{
     transactionNumber: string;
     payer: string;
@@ -150,6 +162,8 @@ function main(
     table.addRows(-1, values);
   }
 
+  // Optional manual-entry rows inside the table. These appear after the exported
+  // payment rows and before the total row so staff can add items by hand later.
   const blanksToAdd = Number(blankRowCount ?? 0);
   if (blanksToAdd > 0) {
     const blankRows: (string | number)[][] = [];
@@ -158,6 +172,42 @@ function main(
     }
     table.addRows(-1, blankRows);
   }
+
+  // Apply simple layout cleanup after rows are written.
+  table.getRange().getFormat().autofitColumns();
+  table.getRange().getFormat().autofitRows();
+
+  table.getHeaderRowRange().getFormat().setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.center
+  );
+
+  table.getColumnByName("Transaction #").getRange().getFormat().setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.center
+  );
+  table.getColumnByName("Amount").getRange().getFormat().setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.right
+  );
+  table.getColumnByName("Date").getRange().getFormat().setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.center
+  );
+
+  // Show a total row at the bottom of the table, but only keep a value in Amount.
+  table.setShowTotals(true);
+  table.getColumnByName("Transaction #").getTotalRowRange().clear(
+    ExcelScript.ClearApplyTo.contents
+  );
+  table.getColumnByName("Payer").getTotalRowRange().clear(
+    ExcelScript.ClearApplyTo.contents
+  );
+  table.getColumnByName("Amount").getTotalRowRange().setFormula(
+    "=SUBTOTAL(109,[Amount])"
+  );
+  table.getColumnByName("Amount").getTotalRowRange().setNumberFormat(
+    "$#,##0.00"
+  );
+  table.getColumnByName("Date").getTotalRowRange().clear(
+    ExcelScript.ClearApplyTo.contents
+  );
 }
 ```
 
@@ -168,8 +218,12 @@ function main(
 
 - reads the payment rows passed in from Power Automate
 - finds the `Transactions` table in the workbook
+- removes placeholder blank rows left in the template
 - appends all payment rows in one operation
-- adds the 5 blank rows at the bottom
+- adds blank manual-entry rows after the exported payments
+- auto-fits the table columns
+- applies basic alignment for headers, amounts, dates, and transaction numbers
+- shows a total row at the bottom of the table with only the `Amount` total populated
 
 > **Important:** Save the script in a workbook location that your Excel Online (Business) connection can access. The flow will call this script against the copied export workbook.
 
@@ -414,7 +468,7 @@ string(body('Build_Payment_Rows_JSON'))
 
 > **Important:** `rowsJson` must be the JSON string version of the `Select` output, not the raw SharePoint items array.
 
-> **Important:** This script replaces both the old `Add Payment Row` loop and the old `Add Blank Rows` loop.
+> **Important:** This script replaces both the old `Add Payment Row` loop and the old `Add Blank Rows` loop. Set `blankRowCount` to the number of manual-entry rows you want after the exported payments. With `blankRowCount = 5`, the table will show payment rows first, then 5 blank rows, then the total row at the bottom.
 
 ---
 
@@ -454,7 +508,9 @@ The export file should:
 - contain the `Transactions` table
 - include only TigerCASH rows for the selected month
 - be sorted by `PaymentDate asc, TransactionNumber asc`
-- include 5 blank rows at the bottom added by the script
+- auto-fit the columns to the inserted values
+- include 5 blank rows after the exported payments for manual additions
+- include a total row at the bottom of the table with only the `Amount` cell populated
 
 ---
 
@@ -464,12 +520,12 @@ The export file should:
 
 1. Run the flow for a month with TigerCASH payments
 2. Confirm the file is created in `TigerCASH Logs`
-3. Open the file and confirm the four columns, sorted data, and 5 blank rows
+3. Open the file and confirm the four columns, sorted data, no starter blank row, 5 blank manual-entry rows after the exported payments, and a total row where only `Amount` is populated
 
 ### Test 2: Empty Month
 
 1. Run the flow for a month with no TigerCASH payments
-2. Confirm the file still opens and contains headers plus 5 blank rows
+2. Confirm the file still opens and contains headers, 5 blank manual-entry rows, and the total row with only `Amount` populated
 
 ### Test 3: Excel Timing
 
