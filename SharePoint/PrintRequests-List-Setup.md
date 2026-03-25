@@ -428,7 +428,18 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 > 💡 **Purpose:** This field lets the Staff Dashboard preserve original build plate labels after real finished work exists. Once set to `Yes`, the app should stop renumbering existing labels even if staff reverts the request or adds more build plates later.
 
-### Column 27: LastAction (Choice)
+### Column 27: BuildPlateOriginalTotal (Number)
+
+1. Click **+ Add column** → **Number**
+2. **Name:** `BuildPlateOriginalTotal`
+3. **Description:** `Frozen original build plate count once labels lock`
+4. **Number of decimal places:** 0
+5. **Default value:** 0
+6. Click **Save**
+
+> 💡 **Purpose:** This stores the original denominator for display after labels lock. If a 4-plate job later gets 2 reprints, staff should still see the original set as `1/4`, `2/4`, `3/4`, `4/4` while reprints are counted separately.
+
+### Column 28: LastAction (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `LastAction`
@@ -460,7 +471,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 > 💡 **Result:** Each action type will display as a colored pill/badge matching the status colors for easy visual identification in the list view.
 
-### Column 28: LastActionBy (Single line of text)
+### Column 29: LastActionBy (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `LastActionBy`
@@ -469,7 +480,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 **Note:** This is Single line text (not Person) to allow "System" value for infinite loop prevention.
 
-### Column 29: LastActionAt (Date and time)
+### Column 30: LastActionAt (Date and time)
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `LastActionAt`
@@ -477,7 +488,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 4. **Include time:** Yes
 5. Click **Save**
 
-### Column 30: SlicedOnComputer (Choice)
+### Column 31: SlicedOnComputer (Choice)
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** `SlicedOnComputer`
@@ -707,6 +718,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 | NeedsAttention | Yes/No | No | No | Flags for staff review |
 | Expanded | Yes/No | No | No | Power Apps UI state |
 | BuildPlateLabelsLocked | Yes/No | No | No | Freezes original build plate labels after the first completed plate |
+| BuildPlateOriginalTotal | Number | No | 0 | Frozen original denominator for build plate progress after lock |
 | LastAction | Choice | No | - | Most recent action type |
 | LastActionBy | Single line | No | - | Action attribution |
 | LastActionAt | DateTime | No | - | Audit timestamp |
@@ -728,7 +740,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 
 > 💡 **Source-of-truth note:** These fields are parent-level convenience values. When `Payments` rows exist, treat those rows as the canonical transaction history and treat `FinalWeight`, `FinalCost`, and `PaymentDate` here as request rollups.
 
-> 💡 **Build plate label lock:** `BuildPlateLabelsLocked` is an operational workflow flag for the Staff Dashboard. It should remain `No` while staff is still freely re-slicing the job. When the first build plate reaches `Completed`, Power Apps should set it to `Yes` so original plate labels stay stable even if the parent request is later reverted or additional reprint plates are added.
+> 💡 **Build plate label lock:** `BuildPlateLabelsLocked` is an operational workflow flag for the Staff Dashboard. It should remain `No` while staff is still freely re-slicing the job. When the first build plate reaches `Completed`, Power Apps should set it to `Yes` and store the original count in `BuildPlateOriginalTotal` so original plate labels stay stable even if the parent request is later reverted or additional reprint plates are added.
 
 ---
 
@@ -739,7 +751,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - [ ] Item-level permissions configured (students see only their own)
 - [ ] Version history enabled
 - [ ] All 13 student-facing columns added (including TigerCardNumber)
-- [ ] All 18 staff processing columns added (including RejectionComment, ApprovalComment, SlicedOnComputer, and BuildPlateLabelsLocked)
+- [ ] All 19 staff processing columns added (including RejectionComment, ApprovalComment, SlicedOnComputer, BuildPlateLabelsLocked, and BuildPlateOriginalTotal)
 - [ ] All 9 payment recording columns added (including PayerName and PayerTigerCard)
 - [ ] ActualPrinter added as a multi-select Choice column
 - [ ] Status has all 9 choices with default "Uploaded"

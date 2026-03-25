@@ -1843,7 +1843,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 │  ⚖ 176.15g · ⏱ ~6h · 💲 17.61                                   │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │ 🖨 3/5 done · Using: MK4S, XL         [Build Plates]    │ ◄── BUILD PLATES ROW
+│  │ 🖨 3/5 done · R 0/1 · Using: MK4S, XL [Build Plates]    │ ◄── BUILD PLATES ROW
 │  └─────────────────────────────────────────────────────────┘    │
 │                                                                 │
 │  Details                                                        │
@@ -1878,7 +1878,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 
 | Property | Value |
 |----------|-------|
-| Text | `"🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done"` |
+| Text | `If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))) > 0, " · R " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint")))), ""), "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done")` |
 | X | `8` |
 | Y | `0` |
 | Width | `100` |
@@ -1888,7 +1888,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 | Color | `varColorTextMuted` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-> 💡 **Formula:** Counts plates with "Completed" or "Picked Up" status vs total plates. Example: "🖨 3/5 done"
+> 💡 **Formula:** Before labels lock, counts completed/picked-up plates against the live total, such as `🖨 3/5 done`. After labels lock, it preserves the original denominator and shows reprints separately, such as `🖨 3/5 done · R 0/1`.
 >
 > For single-plate jobs, this should read `🖨 0/1 done` while queued/printing and `🖨 1/1 done` once the plate is completed or picked up. This is preferred over hiding the summary for one-plate jobs.
 
@@ -9000,7 +9000,7 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 │  Build Plates - REQ-00042                                            [✕] │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  Total Sliced:                                       3 of 5 Completed    │
+│  Total Sliced:                   3 of 5 Original Completed · Reprints: 0/1 │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
@@ -9009,7 +9009,7 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 │  │  2/5           [Prusa MK4S ▼]    ● Completed              [✕]  │  │
 │  │  3/5           [Prusa MK4S ▼]    ● Printing    [✓ Done]   [✕]  │  │
 │  │  4/5           [Prusa XL   ▼]    ● Queued      [▶ Printing][✕]  │  │
-│  │  Reprint       [Prusa XL   ▼]    ● Queued      [▶ Printing][✕]  │  │
+│  │  Reprint 1     [Prusa XL   ▼]    ● Queued      [▶ Printing][✕]  │  │
 │  └────────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
@@ -9045,11 +9045,11 @@ scrDashboard
     ├── btnBuildPlatesClose          ← ✕ top-right
     ├── recBuildPlatesDivider1       ← Divider under title
     ├── lblTotalSlicedLabel          ← "Total Sliced:"
-    ├── lblBuildPlatesProgressModal  ← "3 of 5 Completed"
+    ├── lblBuildPlatesProgressModal  ← "3 of 5 Original Completed · Reprints: 0/1"
     ├── recBuildPlatesDivider2       ← Divider above plates gallery
     ├── galBuildPlates               ← Gallery of plates
     │   ├── recPlateRowBg            ← Alternating row background
-    │   ├── lblPlateLabel            ← "1/5", "Reprint"
+    │   ├── lblPlateLabel            ← "1/5", "Reprint 1"
     │   ├── drpPlateMachine          ← Printer dropdown
     │   ├── lblPlateStatus           ← Colored status badge
     │   ├── btnMarkPrinting          ← Queued → Printing
@@ -9206,7 +9206,7 @@ Set(varBuildPlatesOpenedFromApproval, false)
 |----------|-------|
 | Control | Text label |
 | Name | `lblBuildPlatesProgressModal` |
-| Text | `Text(CountRows(Filter(colBuildPlatesIndexed, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & " of " & Text(CountRows(colBuildPlatesIndexed)) & " Completed"` |
+| Text | `If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), With({ wOriginalTotal: Coalesce(varSelectedItem.BuildPlateOriginalTotal, CountRows(Filter(colBuildPlatesIndexed, !StartsWith(ResolvedPlateLabel, "Reprint")))), wOriginalDone: CountRows(Filter(colBuildPlatesIndexed, !StartsWith(ResolvedPlateLabel, "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), wReprintTotal: CountRows(Filter(colBuildPlatesIndexed, StartsWith(ResolvedPlateLabel, "Reprint"))), wReprintDone: CountRows(Filter(colBuildPlatesIndexed, StartsWith(ResolvedPlateLabel, "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))) }, Text(wOriginalDone) & " of " & Text(wOriginalTotal) & " Original Completed" & If(wReprintTotal > 0, " · Reprints: " & Text(wReprintDone) & "/" & Text(wReprintTotal), "")), Text(CountRows(Filter(colBuildPlatesIndexed, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & " of " & Text(CountRows(colBuildPlatesIndexed)) & " Completed")` |
 | X | `recBuildPlatesModal.X + 124` |
 | Y | `recBuildPlatesModal.Y + 66` |
 | Width | `456` |
@@ -9487,7 +9487,10 @@ If(
         Patch(
             PrintRequests,
             LookUp(PrintRequests, ID = varSelectedItem.ID),
-            { BuildPlateLabelsLocked: true }
+            {
+                BuildPlateLabelsLocked: true,
+                BuildPlateOriginalTotal: CountRows(colBuildPlates)
+            }
         )
     )
 );
@@ -9516,7 +9519,9 @@ ClearCollect(colBuildPlatesIndexed,
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
 
-> 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates and set `PrintRequests.BuildPlateLabelsLocked` to `true`. Do not clear that flag later if the request is reverted.
+> 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
+>
+> **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` must remain a simple `Queued → Printing` status transition with no parent-request patch.
 
 ---
 
@@ -9540,37 +9545,41 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Size | `12` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| **Visible** | `true` |
+| **Visible** | `If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), StartsWith(ThisItem.ResolvedPlateLabel, "Reprint"), true)` |
 
-> 💡 **Flexible plate history:** Any plate can be removed regardless of status. This supports scrapping, re-slicing, and partial-failure recovery where the plate layout changes over time. Historical `Payments` rows remain the canonical transaction record; any stored plate IDs are the pickup-time snapshot only.
+> 💡 **Flexible plate history:** Before labels lock, any plate can be removed. After labels lock, only reprint rows should remain removable. Original numbered plates become the frozen baseline set and must stay intact so `1/4`, `2/4`, etc. keep their meaning. Historical `Payments` rows remain the canonical transaction record; any stored plate IDs are the pickup-time snapshot only.
 
 **OnSelect:**
 
 ```powerfx
-Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
-ClearCollect(colBuildPlates,
-    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-);
-ClearCollect(colBuildPlatesIndexed,
-    AddColumns(
-        colBuildPlates As plate,
-        PlateNum,
-        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-        ResolvedPlateLabel,
-        With(
-            {
-                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-            },
-            If(
-                !IsBlank(wStoredLabel),
-                wStoredLabel,
-                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+If(
+    Coalesce(varSelectedItem.BuildPlateLabelsLocked, false) && !StartsWith(ThisItem.ResolvedPlateLabel, "Reprint"),
+    Notify("Original locked plates cannot be deleted. Add a reprint instead.", NotificationType.Warning),
+    Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
+    ClearCollect(colBuildPlates,
+        Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+    );
+    ClearCollect(colBuildPlatesIndexed,
+        AddColumns(
+            colBuildPlates As plate,
+            PlateNum,
+            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+            ResolvedPlateLabel,
+            With(
+                {
+                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                },
+                If(
+                    !IsBlank(wStoredLabel),
+                    wStoredLabel,
+                    Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+                )
             )
         )
-    )
-);
-ClearCollect(colAllBuildPlates, BuildPlates)
+    );
+    ClearCollect(colAllBuildPlates, BuildPlates)
+)
 ```
 
 ---
@@ -9633,53 +9642,71 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | DisplayMode | `DisplayMode.Edit` |
 
-> 💡 **Simplified UX:** Before labels lock, `+ Add Plate` creates a new plate immediately. After labels lock, the same button becomes `+ Add Reprint` and creates a clearly labeled reprint row without forcing staff to select a source plate first.
+> 💡 **Simplified UX:** Before labels lock, `+ Add Plate` creates a new plate immediately. After labels lock, the same button becomes `+ Add Reprint` and creates clearly labeled rows such as `Reprint 1`, `Reprint 2` without forcing staff to select a source plate first.
+>
+> **Numbering rule:** Do not use a simple `CountRows(...)+1` approach for reprint labels, because it can reuse numbers after deletions. Instead, calculate the next suffix from the highest existing `Reprint N` label and add 1.
 >
 > **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3.
 
 **OnSelect:**
 
 ```powerfx
-Patch(BuildPlates,
-    Defaults(BuildPlates),
+With(
     {
-        RequestID: varSelectedItem.ID,
-        ReqKey: varSelectedItem.ReqKey,
-        Machine: Coalesce(
-            LookUp(
-                Filter(
-                    Choices([@BuildPlates].Machine),
-                    If(
-                        varSelectedItem.Method.Value = "Filament",
-                        StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                        varSelectedItem.Method.Value = "Resin",
-                        Value = "Form 3 (5.7×5.7×7.3in)",
-                        true
-                    )
+        wNextReprintNum:
+            Coalesce(
+                Max(
+                    AddColumns(
+                        Filter(colBuildPlates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint ")),
+                        ReprintNum,
+                        Value(Substitute(Trim(Coalesce(DisplayLabel, "")), "Reprint ", ""))
+                    ),
+                    ReprintNum
                 ),
-                Value = varSelectedItem.Printer.Value
-            ),
-            First(
-                Filter(
-                    Choices([@BuildPlates].Machine),
-                    If(
-                        varSelectedItem.Method.Value = "Filament",
-                        StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                        varSelectedItem.Method.Value = "Resin",
-                        Value = "Form 3 (5.7×5.7×7.3in)",
-                        true
+                0
+            ) + 1
+    },
+    Patch(BuildPlates,
+        Defaults(BuildPlates),
+        {
+            RequestID: varSelectedItem.ID,
+            ReqKey: varSelectedItem.ReqKey,
+            Machine: Coalesce(
+                LookUp(
+                    Filter(
+                        Choices([@BuildPlates].Machine),
+                        If(
+                            varSelectedItem.Method.Value = "Filament",
+                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                            varSelectedItem.Method.Value = "Resin",
+                            Value = "Form 3 (5.7×5.7×7.3in)",
+                            true
+                        )
+                    ),
+                    Value = varSelectedItem.Printer.Value
+                ),
+                First(
+                    Filter(
+                        Choices([@BuildPlates].Machine),
+                        If(
+                            varSelectedItem.Method.Value = "Filament",
+                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                            varSelectedItem.Method.Value = "Resin",
+                            Value = "Form 3 (5.7×5.7×7.3in)",
+                            true
+                        )
                     )
                 )
+            ),
+            PlateKey: Text(GUID()),
+            Status: { Value: "Queued" },
+            DisplayLabel: If(
+                Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+                "Reprint " & Text(wNextReprintNum),
+                Blank()
             )
-        ),
-        PlateKey: Text(GUID()),
-        Status: { Value: "Queued" },
-        DisplayLabel: If(
-            Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
-            "Reprint",
-            Blank()
-        )
-    }
+        }
+    )
 );
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
@@ -9755,19 +9782,21 @@ Before moving on, verify:
 
 - [ ] `conBuildPlatesModal` container visible when `varShowBuildPlatesModal > 0`
 - [ ] Title shows student name and ReqKey from `varSelectedItem`
-- [ ] Gallery displays `ResolvedPlateLabel` values (dynamic `1/5`, `2/5`, etc. before lock; frozen originals plus `Reprint` labels after lock)
+- [ ] Gallery displays `ResolvedPlateLabel` values (dynamic `1/5`, `2/5`, etc. before lock; frozen originals plus `Reprint 1`, `Reprint 2`, etc. after lock)
 - [ ] Status badges show correct colors (gray=Queued, yellow=Printing, green=Completed, blue=Picked Up)
 - [ ] "▶ Printing" button appears only for Queued plates
 - [ ] "✓ Done" button appears only for Printing plates
-- [ ] Remove [✕] button appears on ALL plates
+- [ ] Before labels lock, Remove [✕] appears on all plates
+- [ ] After labels lock, Remove [✕] appears only on reprint rows; original numbered plates stay intact
 - [ ] Machine dropdown is editable for Queued/Printing plates, disabled for Completed/Picked Up
 - [ ] `▶ Printing` only appears after the parent request has been moved to `Printing`
 - [ ] Before labels lock, `+ Add Plate` creates a new queued plate immediately
-- [ ] After labels lock, `+ Add Reprint` creates a queued reprint row with the frozen label `Reprint`
+- [ ] After labels lock, `+ Add Reprint` creates queued reprint rows with numbered labels such as `Reprint 1`
+- [ ] Reprint numbering continues upward from the highest existing reprint number instead of reusing deleted numbers
 - [ ] New plates default to the request's current printer when valid, otherwise fall back to the first valid machine for that method
 - [ ] Method filter works on the row dropdown: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raise3D-family printers
 - [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
-- [ ] Removing a plate deletes the BuildPlates record
+- [ ] Removing a plate deletes the BuildPlates record only when that row is eligible for deletion
 - [ ] Progress label updates when plate statuses change
 - [ ] Close and Done buttons both reset collections and close modal
 
@@ -13619,12 +13648,12 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 6. **Verify:** Status badges change to "Printing" (yellow)
 7. Click "✓ Done" on Plate 1
 8. **Verify:** Status badge changes to "Completed" (green)
-9. **Verify:** Progress shows "1 of 5 Completed"
+9. **Verify:** Progress shows "1 of 5 Original Completed"
 10. **Verify:** The original visible labels remain `1/5` through `5/5` after the first completion locks them
 11. Click `+ Add Reprint`
-12. **Verify:** The new row label is `Reprint`
+12. **Verify:** The new row label is `Reprint 1`
 13. **Verify:** The original five rows still display `1/5` through `5/5` instead of renumbering
-14. **Verify:** Job card shows `1/6 done` because progress still counts the total physical rows on the job
+14. **Verify:** Job card shows `1/5 done · R 0/1` because the original denominator stays frozen and reprints are counted separately
 
 ### Scenario 4: Completion Gate — Plates Not Done
 
@@ -13671,7 +13700,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 5. Check all 3 boxes, enter weight and transaction number
 6. Click confirm
 7. **Verify:** 3 plates updated to "Picked Up"
-8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
+8. **Verify:** Job card shows "3/5 done" (Picked Up original plates count as done; any reprints would appear in the separate `R x/y` segment)
 9. **Verify:** The new `Payments` row stores `PlatesPickedUp` once per plate in ascending order using the visible labels shown to staff (for example `1/5, 2/5, 3/5`, with no duplicates)
 10. **Verify:** The same `Payments` row also stores stable `PlateIDsPickedUp` values so history remains correct even if rows are later re-sliced, relabeled, or replaced
 
@@ -13834,7 +13863,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 1. Record a payment for completed plates on a multi-plate request
 2. Open Build Plates and remove one of the old completed plates, then add a replacement plate
 3. **Verify:** The original locked labels on surviving rows do **not** renumber
-4. **Verify:** The replacement row is labeled as a reprint (for example `Reprint`)
+4. **Verify:** The replacement row is labeled as a numbered reprint (for example `Reprint 1`)
 5. **Verify:** Earlier `Payments.PlateIDsPickedUp` values still point to the original picked-up plates
 6. **Verify:** New replacement plates receive new `PlateKey` values instead of reusing old history
 

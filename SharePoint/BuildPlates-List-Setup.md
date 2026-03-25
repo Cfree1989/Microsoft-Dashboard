@@ -106,10 +106,10 @@ The BuildPlates list enables staff to track multiple build plates (gcode files) 
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `DisplayLabel`
-3. **Description:** `Frozen staff-facing label once numbering locks (e.g., "1/4", "Reprint")`
+3. **Description:** `Frozen staff-facing label once numbering locks (e.g., "1/4", "Reprint 1")`
 4. Click **Save**
 
-> 💡 **Purpose:** This stores the exact label staff should continue seeing after the first plate is completed. Leave it blank while a job is still being actively re-sliced. Once labels lock, existing rows receive their frozen labels and later additions can simply use `Reprint`.
+> 💡 **Purpose:** This stores the exact label staff should continue seeing after the first plate is completed. Leave it blank while a job is still being actively re-sliced. Once labels lock, existing rows receive their frozen labels and later additions can use numbered labels such as `Reprint 1`, `Reprint 2`.
 
 ---
 
@@ -147,7 +147,7 @@ The BuildPlates list should be accessible **only to staff**, not students.
 
 ## Data Flow Example
 
-**Scenario:** Student submits request REQ-00087. Staff slices the model into 4 gcode files that will print on different machines. Later, plate `3/4` fails and is reprinted.
+**Scenario:** Student submits request REQ-00087. Staff slices the model into 4 gcode files that will print on different machines. Later, 2 reprints are added after the original labels lock.
 
 | ID | RequestID | ReqKey | PlateKey | Machine | Status | DisplayLabel |
 |----|-----------|--------|----------|---------|--------|--------------|
@@ -155,11 +155,12 @@ The BuildPlates list should be accessible **only to staff**, not students.
 | 2 | 87 | REQ-00087 | BP-87-A2 | Prusa MK4S (9.8×8.3×8.7in) | Completed | 2/4 |
 | 3 | 87 | REQ-00087 | BP-87-A3 | Prusa MK4S (9.8×8.3×8.7in) | Completed | 3/4 |
 | 4 | 87 | REQ-00087 | BP-87-B1 | Prusa XL (14.2×14.2×14.2in) | Queued | 4/4 |
-| 5 | 87 | REQ-00087 | BP-87-R1 | Prusa MK4S (9.8×8.3×8.7in) | Queued | Reprint |
+| 5 | 87 | REQ-00087 | BP-87-R1 | Prusa MK4S (9.8×8.3×8.7in) | Queued | Reprint 1 |
+| 6 | 87 | REQ-00087 | BP-87-R2 | Prusa XL (14.2×14.2×14.2in) | Queued | Reprint 2 |
 
 **What this shows:**
 - Original plates keep their frozen labels once the first plate is completed
-- The replacement row is still part of the same job, but is explicitly labeled as a reprint
+- Reprints are still part of the same job, but they are explicitly labeled outside the original `x/4` set
 - Stable `PlateKey` values still provide the durable audit trail even when display labels stop being position-based
 
 ---
@@ -191,7 +192,9 @@ In the Staff Dashboard, this list is accessed via:
 
 > 💡 `PlateNum` in Power Apps remains display-only and is still useful while a job is being actively re-sliced. Once the parent request locks labels, the app should render `DisplayLabel` instead of recalculating the visible text from `PlateNum`. Use the stored `PlateKey` column for the durable pickup-time and audit snapshot.
 
-> 💡 **Locking rule:** The parent request controls when labels lock. The recommended companion field is `PrintRequests.BuildPlateLabelsLocked` (Yes/No, default `No`). When the first build plate reaches `Completed`, Power Apps should patch frozen `DisplayLabel` values onto all current rows and set the parent request flag to `Yes`. Later additions can be treated as reprints and given a simple explicit `DisplayLabel` such as `Reprint`.
+> 💡 **Locking rule:** The parent request controls when labels lock. The recommended companion fields are `PrintRequests.BuildPlateLabelsLocked` (Yes/No, default `No`) and `PrintRequests.BuildPlateOriginalTotal` (Number). When the first build plate reaches `Completed`, Power Apps should patch frozen `DisplayLabel` values onto all current rows, set the parent request flag to `Yes`, and store the original denominator. Later additions can be treated as reprints and given explicit `DisplayLabel` values such as `Reprint 1`, `Reprint 2`.
+>
+> **Protected original set:** Once labels lock, the original numbered plates become the frozen baseline set and should no longer be deletable in Power Apps. Only reprint rows should remain removable. This prevents staff from accidentally deleting `1/4`, `2/4`, etc. and breaking the original sequence.
 
 ### ActualPrinter Auto-Population
 
