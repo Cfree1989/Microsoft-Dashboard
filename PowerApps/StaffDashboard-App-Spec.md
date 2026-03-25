@@ -1404,6 +1404,8 @@ With(
         SortByColumns(filteredJobs, "Created", SortOrder.Descending),
         "Color A-Z",
         Sort(filteredJobs, Color.Value, SortOrder.Ascending),
+        "Computer A-Z",
+        Sort(filteredJobs, SlicedOnComputer.Value, SortOrder.Ascending),
         "Printer A-Z",
         Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
         SortByColumns(
@@ -1417,7 +1419,7 @@ With(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. `Queue Order` preserves the operational default: attention items first, then oldest requests (longest in queue).
 >
-> 💡 **Sort modes:** Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, and `Printer A-Z` from the filter bar.
+> 💡 **Sort modes:** Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, and `Printer A-Z` from the filter bar.
 >
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
@@ -6076,7 +6078,7 @@ Switch(
     ddPaymentType.Selected.Value,
     "TigerCASH", "Transaction Number: *",
     "Check", "Check Number: *",
-    "Code", "Grant/Program Code: *",
+    "Code", "Grant/Program Code (optional):",
     "Reference Number: *"
 )
 ```
@@ -6114,12 +6116,14 @@ Switch(
     ddPaymentType.Selected.Value,
     "TigerCASH", "TigerCASH receipt number",
     "Check", "Check number",
-    "Code", "e.g. GRANT-12345",
+    "Code", "Leave blank if code is pending",
     "Reference number"
 )
 ```
 
 > 💡 **Important:** This field is `TextFormat.Text`, not number-only. Checks and grant/program codes may contain letters.
+>
+> 💡 **Pending-code workflow:** For `Code` payments, staff should be able to save the transaction even if the grant/program code is not known yet. Store the payment row with a blank `TransactionNumber` and fill it in later when accounting provides the code.
 
 ---
 
@@ -6533,7 +6537,11 @@ If(
 
 ```powerfx
 Text(ThisItem.PaymentDate, "[$-en-US]mm/dd/yyyy") &
-" · #" & ThisItem.TransactionNumber &
+If(
+    IsBlank(Trim(Coalesce(ThisItem.TransactionNumber, ""))),
+    "",
+    " · #" & Trim(ThisItem.TransactionNumber)
+) &
 " · " & Text(ThisItem.Weight) & "g" &
 " · " & Text(ThisItem.Amount, "[$-en-US]$#,##0.00") &
 With(
@@ -6977,6 +6985,8 @@ If(
 ```
 
 > 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown. Transaction number is required for TigerCASH payments but optional for Check and Code (grant) payments, since grant codes are not always available at the time of payment.
+>
+> 💡 **Code payments:** Treat a blank `TransactionNumber` as "code pending", not as a validation failure.
 
 136. Set **OnSelect:**
 
@@ -7085,7 +7095,11 @@ Set(
                 {
                     RequestID: varSelectedItem.ID,
                     ReqKey: varSelectedItem.ReqKey,
-                    TransactionNumber: txtPaymentTransaction.Text,
+                    TransactionNumber: If(
+                        IsBlank(Trim(txtPaymentTransaction.Text)),
+                        Blank(),
+                        Trim(txtPaymentTransaction.Text)
+                    ),
                     Weight: Value(txtPaymentWeight.Text),
                     Amount: varFinalCost,
                     PaymentType: {Value: ddPaymentType.Selected.Value},
@@ -7191,7 +7205,12 @@ If(
                         If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
                         "PAID by " & wStaffShortName &
                         ": " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        " (" & Text(Value(txtPaymentWeight.Text)) & "g) #" & txtPaymentTransaction.Text &
+                        " (" & Text(Value(txtPaymentWeight.Text)) & "g)" &
+                        If(
+                            IsBlank(Trim(txtPaymentTransaction.Text)),
+                            "",
+                            " #" & Trim(txtPaymentTransaction.Text)
+                        ) &
                         " " & ddPaymentType.Selected.Value &
                         If(
                             CountRows(wPickedPlates) > 0,
@@ -11189,7 +11208,7 @@ Set(varSearchText, Self.Text)
 
 | Property | Value |
 |----------|-------|
-| Items | `["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Printer A-Z"]` |
+| Items | `["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Computer A-Z", "Printer A-Z"]` |
 | Default | `varSortOrder` |
 | X | `620` |
 | Y | `117` |
@@ -14095,6 +14114,8 @@ With(
         SortByColumns(filteredJobs, "Created", SortOrder.Descending),
         "Color A-Z",
         Sort(filteredJobs, Color.Value, SortOrder.Ascending),
+        "Computer A-Z",
+        Sort(filteredJobs, SlicedOnComputer.Value, SortOrder.Ascending),
         "Printer A-Z",
         Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
         SortByColumns(
