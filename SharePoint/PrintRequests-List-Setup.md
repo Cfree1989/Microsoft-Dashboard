@@ -636,46 +636,46 @@ This column captures which printer(s) the job was actually printed on, separate 
 
 ---
 
-## Step 6: Create Views
+## Step 6: Create the Staff View View
 
-### View 1: My Requests (Student View)
+> 💡 **Recommendation:** The SharePoint list should act as a simple staff maintenance grid. Students should use the Power Apps portal rather than list views directly, so no student-facing list views are required here.
+
+### View 1: Staff View (Manual Edit View)
 
 1. Click **Settings** (gear icon) → **List settings**
 2. Scroll down to **Views** section → Click **Create view**
 3. Select **Standard View**
-4. **View Name:** `My Requests`
-5. **Columns:** Check these columns:
-   - Title
+4. **View Name:** `Staff View`
+5. **Make this the default view:** Yes
+6. **Columns:** Check these columns:
    - ReqKey
+   - Student
    - Status
    - Method
    - Printer
    - Color
+   - EstHours
+   - EstWeight
    - EstimatedCost
    - StudentConfirmed
+   - SlicedOnComputer
+   - TransactionNumber
+   - FinalCost
+   - NeedsAttention
+   - LastAction
+   - LastActionBy
+   - LastActionAt
    - Created
-6. **Sort:** Created (Descending)
-7. **Filter:** Show items only when the following is true:
-   - Student **is equal to** [Me]
-8. Click **OK**
+   - Modified
+7. **Sort:** Modified (Descending)
+8. **Filter:** Show items only when the following is true:
+   - Status **is not equal to** Archived
+   - And Status **is not equal to** Paid & Picked Up
+9. Click **OK**
 
-### View 2: All Requests (Staff View)
+> 💡 **Use case:** This view is intentionally flat and practical so staff can switch to **Edit in grid view** for quick bulk corrections, status changes, or payment cleanup when needed.
 
-1. Click **Create view** again
-2. Select **Standard View**
-3. **View Name:** `All Requests`
-4. **Columns:** Check all relevant columns
-5. **Sort:** Modified (Descending)
-6. Click **OK**
-
-### View 3: Active Queue
-
-1. Click **Create view** again
-2. Select **Standard View**
-3. **View Name:** `Active Queue`
-4. **Filter:** Status **is not equal to** Archived AND Status **is not equal to** Paid & Picked Up
-5. **Sort:** Created (Ascending)
-6. Click **OK**
+> 🧹 **Cleanup:** If you already created `My Requests`, `All Requests`, or `Active Queue`, those legacy views can be deleted once `Staff Queue` is in place.
 
 ---
 
@@ -762,7 +762,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - [ ] Status column formatting applied
 - [ ] Color column formatting applied (actual filament colors)
 - [ ] LastAction column formatting applied
-- [ ] Views created: My Requests, All Requests, Active Queue
+- [ ] Default `Staff Queue` view created for manual staff edits
 
 ---
 
