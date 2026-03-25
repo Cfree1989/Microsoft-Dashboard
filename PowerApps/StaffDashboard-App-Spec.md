@@ -469,8 +469,8 @@ Set(varPrevAttentionCount, CountRows(colNeedsAttention));
 // === WORKING COLLECTIONS ===
 // Initialize typed empty tables from already-loaded collections (no additional SharePoint calls)
 ClearCollect(colBuildPlates, FirstN(colAllBuildPlates, 0));
-ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank()));
-ClearCollect(colPickedUpPlates, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank()));
+ClearCollect(colBuildPlatesIndexed, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank(), ResolvedPlateLabel, Blank()));
+ClearCollect(colPickedUpPlates, AddColumns(FirstN(colAllBuildPlates, 0), PlateNum, Blank(), ResolvedPlateLabel, Blank()));
 Clear(colPickedUpPlates);
 ClearCollect(colPrintersUsed, FirstN(Distinct(colAllBuildPlates, Machine.Value), 0));
 ClearCollect(colPayments, FirstN(colAllPayments, 0));
@@ -653,7 +653,7 @@ Set(varLoadingMessage, "")
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
-| `colBuildPlatesIndexed` | `colBuildPlates` with added display-only `PlateNum` column (1, 2, 3…) for labels | Table |
+| `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
 | `colPrintersUsed` | Distinct printers used for current item | Table |
 | `colPayments` | Payment records for current modal context | Table |
@@ -1931,12 +1931,24 @@ Set(varBuildPlatesOpenedFromApproval, false);
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
 );
-// Add sequential PlateNum (1, 2, 3…) for use in plate labels
+// Add sequential PlateNum plus resolved staff-facing labels
 ClearCollect(colBuildPlatesIndexed,
     AddColumns(
         colBuildPlates As plate,
         PlateNum,
-        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
     )
 );
 // Collect distinct printers used
@@ -2638,7 +2650,23 @@ ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colPickedUpPlates, Blank());
 Clear(colPickedUpPlates);
@@ -3813,7 +3841,23 @@ ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colPrintersUsed,
     Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID), Machine.Value)
@@ -3824,7 +3868,7 @@ ClearCollect(colPrintersUsed,
 >
 > `varBuildPlatesOpenedFromApproval` tracks that this modal was opened from Approval, so closing Build Plates returns staff to the Approval modal instead of clearing the current request context.
 >
-> Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` stays consistent anywhere it is displayed. `PlateNum` is display-only and must never be used as the durable historical identifier; use `PlateKey` for that instead.
+> Keep the `colBuildPlatesIndexed` rebuild formula identical across all build-plate entry points so `PlateNum` and `ResolvedPlateLabel` stay consistent anywhere they are displayed. `PlateNum` is display-only and must never be used as the durable historical identifier; use `PlateKey` for that instead.
 >
 > **Expected result:** Once this button is clicked, staff should only see the Build Plates modal. The Approval modal title, body, and buttons should not remain visible in the background.
 
@@ -4005,7 +4049,8 @@ If(
             ReqKey: varSelectedItem.ReqKey,
             PlateKey: Text(GUID()),
             Machine: varSelectedItem.Printer,
-            Status: {Value: "Queued"}
+            Status: {Value: "Queued"},
+            DisplayLabel: Blank()
         })
     );
     // Refresh plate collections for job cards
@@ -6537,7 +6582,7 @@ If(
 >
 > 💡 **Plate formatting rule:** Show `Plate 4` for one plate, `Plates 1-3` for consecutive ranges, and `Plates 1,3,5` for non-consecutive pickups.
 >
-> ⚠️ **Durability rule:** `PlatesPickedUp` is a human-readable display snapshot only. Store the best available pickup-time keys in `Payments.PlateIDsPickedUp`, but treat the `Payments` row itself as the canonical financial record if plates are later re-sliced, replaced, or renumbered. `PlateNum` can change after removals or re-slicing.
+> ⚠️ **Durability rule:** `PlatesPickedUp` is a human-readable display snapshot only. Store the best available pickup-time keys in `Payments.PlateIDsPickedUp`, but treat the `Payments` row itself as the canonical financial record if plates are later re-sliced, replaced, relabeled, or renumbered.
 
 ---
 
@@ -6695,7 +6740,7 @@ If(
 Remove(colPickedUpPlates, ThisItem)
 ```
 
-> 💡 **Deduping rule:** Guard `OnCheck` with the `ID in colPickedUpPlates.ID` test so repeated checkbox refreshes or gallery re-renders do not collect the same plate twice. Step 12C also dedupes again during save and sorts by `PlateNum` before generating the display-only `PlatesPickedUp` text plus the stable `PlateIDsPickedUp` value.
+> 💡 **Deduping rule:** Guard `OnCheck` with the `ID in colPickedUpPlates.ID` test so repeated checkbox refreshes or gallery re-renders do not collect the same plate twice. Step 12C also dedupes again during save and sorts by `ID` before generating the display-only `PlatesPickedUp` text plus the stable `PlateIDsPickedUp` value.
 
 116. Set `lblPlateName` properties:
 
@@ -6711,7 +6756,7 @@ Remove(colPickedUpPlates, ThisItem)
 117. Set `lblPlateName.Text`:
 
 ```powerfx
-"Plate " & Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed)) &
+ThisItem.ResolvedPlateLabel &
 " · " &
 Trim(
     If(
@@ -6972,7 +7017,19 @@ If(
         AddColumns(
             colBuildPlates As plate,
             PlateNum,
-            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
+            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+            ResolvedPlateLabel,
+            With(
+                {
+                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                },
+                If(
+                    !IsBlank(wStoredLabel),
+                    wStoredLabel,
+                    Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+                )
+            )
         )
     );
 
@@ -6993,10 +7050,10 @@ Set(
                 Distinct(colPickedUpPlates, ID) As pickedPlateId,
                 LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
             ),
-            "PlateNum",
+            "ID",
             SortOrder.Ascending
         ),
-        Text(PlateNum),
+        ResolvedPlateLabel,
         ", "
     )
 );
@@ -7008,7 +7065,7 @@ Set(
                 Distinct(colPickedUpPlates, ID) As pickedPlateId,
                 LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
             ),
-            "PlateNum",
+            "ID",
             SortOrder.Ascending
         ),
         PlateKey,
@@ -7072,7 +7129,7 @@ If(
                     Distinct(colPickedUpPlates, ID) As pickedPlateId,
                     LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
                 ),
-                "PlateNum",
+                "ID",
                 SortOrder.Ascending
             ),
             wStaffShortName:
@@ -7139,7 +7196,7 @@ If(
                         If(
                             CountRows(wPickedPlates) > 0,
                             " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
-                            " | Display " & Concat(wPickedPlates, Text(PlateNum), ",") & ")",
+                            " | Display " & Concat(wPickedPlates, ResolvedPlateLabel, ",") & ")",
                             ""
                         ) &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
@@ -7168,7 +7225,7 @@ If(
                         If(
                             CountRows(wPickedPlates) > 0,
                             " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
-                            " | Display " & Concat(wPickedPlates, Text(PlateNum), ",") & ")",
+                            " | Display " & Concat(wPickedPlates, ResolvedPlateLabel, ",") & ")",
                             ""
                         ) &
                         If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
@@ -8669,9 +8726,21 @@ If(
                                         AddColumns(
                                             wRemainingCompletedPlates As plate,
                                             PlateNum,
-                                            CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID))
+                                            CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                                            ResolvedPlateLabel,
+                                            With(
+                                                {
+                                                    wDynamicNum: CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                                                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                                                },
+                                                If(
+                                                    !IsBlank(wStoredLabel),
+                                                    wStoredLabel,
+                                                    Text(wDynamicNum) & "/" & Text(CountRows(wLatestBuildPlates))
+                                                )
+                                            )
                                         ),
-                                        Text(PlateNum),
+                                        ResolvedPlateLabel,
                                         ", "
                                     ),
                                     ""
@@ -8919,6 +8988,9 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 - Add new plates with a default printer, then adjust the row's printer if needed
 - Change a plate's assigned printer (while Queued or Printing)
 - Advance plate status (Queued → Printing → Completed)
+- Keep labels fully dynamic while the job is still being re-sliced
+- Freeze original labels after the first completed plate so finished work does not get renumbered
+- Add later plates as explicit reprints without forcing staff to choose a source plate
 - Remove any plate (for re-slicing scenarios)
 
 ### Visual Layout
@@ -8933,15 +9005,15 @@ The Build Plates Modal organizes plates as a scrollable list. Staff can:
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │  1/5    [Prusa MK4S ▼]    ● Completed                        [✕]  │  │
-│  │  2/5    [Prusa MK4S ▼]    ● Completed                        [✕]  │  │
-│  │  3/5    [Prusa MK4S ▼]    ● Printing      [✓ Done]           [✕]  │  │
-│  │  4/5    [Prusa XL   ▼]    ● Queued        [▶ Printing]       [✕]  │  │
-│  │  5/5    [Prusa XL   ▼]    ● Queued        [▶ Printing]       [✕]  │  │
+│  │  1/5           [Prusa MK4S ▼]    ● Completed              [✕]  │  │
+│  │  2/5           [Prusa MK4S ▼]    ● Completed              [✕]  │  │
+│  │  3/5           [Prusa MK4S ▼]    ● Printing    [✓ Done]   [✕]  │  │
+│  │  4/5           [Prusa XL   ▼]    ● Queued      [▶ Printing][✕]  │  │
+│  │  Reprint       [Prusa XL   ▼]    ● Queued      [▶ Printing][✕]  │  │
 │  └────────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  Add plate:                                               [+ Add Plate] │
+│  Add plate / reprint:                              [+ Add Plate]         │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                  [Done]  │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -8977,15 +9049,15 @@ scrDashboard
     ├── recBuildPlatesDivider2       ← Divider above plates gallery
     ├── galBuildPlates               ← Gallery of plates
     │   ├── recPlateRowBg            ← Alternating row background
-    │   ├── lblPlateLabel            ← "1/5", "2/5"
+    │   ├── lblPlateLabel            ← "1/5", "Reprint"
     │   ├── drpPlateMachine          ← Printer dropdown
     │   ├── lblPlateStatus           ← Colored status badge
     │   ├── btnMarkPrinting          ← Queued → Printing
     │   ├── btnMarkDone              ← Printing → Completed
     │   └── btnRemovePlate           ← [✕] (always visible)
     ├── recBuildPlatesDivider3       ← Divider above Add Plate section
-    ├── lblAddPlateHeader            ← "Add plate:"
-    ├── btnBuildPlatesAdd            ← [+ Add Plate] (uses default printer)
+    ├── lblAddPlateHeader            ← "Add plate:" or "Add reprint:"
+    ├── btnBuildPlatesAdd            ← [+ Add Plate] or [+ Add Reprint]
     └── btnBuildPlatesDone           ← "Done"
 ```
 
@@ -9203,10 +9275,10 @@ Set(varBuildPlatesOpenedFromApproval, false)
 |----------|-------|
 | Control | Text label |
 | Name | `lblPlateLabel` |
-| Text | `Text(ThisItem.PlateNum) & "/" & Text(CountRows(colBuildPlatesIndexed))` |
+| Text | `ThisItem.ResolvedPlateLabel` |
 | X | `8` |
 | Y | `0` |
-| Width | `40` |
+| Width | `104` |
 | Height | `Parent.TemplateHeight` |
 | Size | `11` |
 | FontWeight | `FontWeight.Semibold` |
@@ -9227,7 +9299,7 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 | Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
 | Value | `"DisplayValue"` |
 | Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
-| X | `52` |
+| X | `116` |
 | Y | `8` |
 | Width | `160` |
 | Height | `36` |
@@ -9246,7 +9318,26 @@ Patch(BuildPlates,
 );
 // Refresh collections
 ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
-ClearCollect(colBuildPlatesIndexed, AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))));
+ClearCollect(
+    colBuildPlatesIndexed,
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
+);
 ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 ```
@@ -9266,7 +9357,7 @@ ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 | Control | Text label |
 | Name | `lblPlateStatus` |
 | Text | `ThisItem.Status.Value` |
-| X | `216` |
+| X | `280` |
 | Y | `10` |
 | Width | `84` |
 | Height | `32` |
@@ -9287,7 +9378,7 @@ ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 | Control | Button |
 | Name | `btnMarkPrinting` |
 | Text | `"▶ Printing"` |
-| X | `308` |
+| X | `372` |
 | Y | `10` |
 | Width | `90` |
 | Height | `32` |
@@ -9317,7 +9408,23 @@ ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
@@ -9335,7 +9442,7 @@ Same properties as `btnMarkPrinting` with:
 | Control | Button |
 | Name | `btnMarkDone` |
 | Text | `"✓ Done"` |
-| X | `308` |
+| X | `372` |
 | Y | `10` |
 | Width | `90` |
 | Height | `32` |
@@ -9361,14 +9468,55 @@ Patch(BuildPlates,
     LookUp(BuildPlates, ID = ThisItem.ID),
     { Status: { Value: "Completed" } }
 );
+If(
+    !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+    ForAll(
+        AddColumns(
+            colBuildPlates As plate,
+            FrozenLabel,
+            Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
+        ) As plateToLock,
+        Patch(
+            BuildPlates,
+            LookUp(BuildPlates, ID = plateToLock.ID),
+            { DisplayLabel: plateToLock.FrozenLabel }
+        )
+    );
+    Set(
+        varSelectedItem,
+        Patch(
+            PrintRequests,
+            LookUp(PrintRequests, ID = varSelectedItem.ID),
+            { BuildPlateLabelsLocked: true }
+        )
+    )
+);
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
+
+> 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates and set `PrintRequests.BuildPlateLabelsLocked` to `true`. Do not clear that flag later if the request is reverted.
 
 ---
 
@@ -9404,7 +9552,23 @@ ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
@@ -9425,13 +9589,31 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 
 ---
 
+### Add Plate Header (lblAddPlateHeader)
+
+| Property | Value |
+|----------|-------|
+| Control | Text label |
+| Name | `lblAddPlateHeader` |
+| Text | `If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Add reprint:", "Add plate:")` |
+| X | `recBuildPlatesModal.X + 20` |
+| Y | `recBuildPlatesModal.Y + 456` |
+| Width | `110` |
+| Height | `24` |
+| Font | `varAppFont` |
+| Size | `11` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `varColorText` |
+
+---
+
 ### Add Plate Button (btnBuildPlatesAdd)
 
 | Property | Value |
 |----------|-------|
 | Control | Button |
 | Name | `btnBuildPlatesAdd` |
-| Text | `"+ Add Plate"` |
+| Text | `If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "+ Add Reprint", "+ Add Plate")` |
 | X | `recBuildPlatesModal.X + 460` |
 | Y | `recBuildPlatesModal.Y + 452` |
 | Width | `100` |
@@ -9451,7 +9633,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | DisplayMode | `DisplayMode.Edit` |
 
-> 💡 **Simplified UX:** `+ Add Plate` now creates a new plate immediately. Staff can change the machine afterward using the row dropdown, so a second printer picker at the bottom is no longer needed.
+> 💡 **Simplified UX:** Before labels lock, `+ Add Plate` creates a new plate immediately. After labels lock, the same button becomes `+ Add Reprint` and creates a clearly labeled reprint row without forcing staff to select a source plate first.
 >
 > **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3.
 
@@ -9491,14 +9673,35 @@ Patch(BuildPlates,
             )
         ),
         PlateKey: Text(GUID()),
-        Status: { Value: "Queued" }
+        Status: { Value: "Queued" },
+        DisplayLabel: If(
+            Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+            "Reprint",
+            Blank()
+        )
     }
 );
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
 ClearCollect(colBuildPlatesIndexed,
-    AddColumns(colBuildPlates As plate, PlateNum, CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)))
+    AddColumns(
+        colBuildPlates As plate,
+        PlateNum,
+        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+        ResolvedPlateLabel,
+        With(
+            {
+                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+            },
+            If(
+                !IsBlank(wStoredLabel),
+                wStoredLabel,
+                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+            )
+        )
+    )
 );
 ClearCollect(colAllBuildPlates, BuildPlates)
 ```
@@ -9552,14 +9755,15 @@ Before moving on, verify:
 
 - [ ] `conBuildPlatesModal` container visible when `varShowBuildPlatesModal > 0`
 - [ ] Title shows student name and ReqKey from `varSelectedItem`
-- [ ] Gallery displays plates with sequential numbering (1/5, 2/5, etc.)
+- [ ] Gallery displays `ResolvedPlateLabel` values (dynamic `1/5`, `2/5`, etc. before lock; frozen originals plus `Reprint` labels after lock)
 - [ ] Status badges show correct colors (gray=Queued, yellow=Printing, green=Completed, blue=Picked Up)
 - [ ] "▶ Printing" button appears only for Queued plates
 - [ ] "✓ Done" button appears only for Printing plates
 - [ ] Remove [✕] button appears on ALL plates
 - [ ] Machine dropdown is editable for Queued/Printing plates, disabled for Completed/Picked Up
 - [ ] `▶ Printing` only appears after the parent request has been moved to `Printing`
-- [ ] `+ Add Plate` creates a new queued plate immediately without a second dropdown at the bottom
+- [ ] Before labels lock, `+ Add Plate` creates a new queued plate immediately
+- [ ] After labels lock, `+ Add Reprint` creates a queued reprint row with the frozen label `Reprint`
 - [ ] New plates default to the request's current printer when valid, otherwise fall back to the first valid machine for that method
 - [ ] Method filter works on the row dropdown: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raise3D-family printers
 - [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
@@ -13416,7 +13620,11 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 7. Click "✓ Done" on Plate 1
 8. **Verify:** Status badge changes to "Completed" (green)
 9. **Verify:** Progress shows "1 of 5 Completed"
-10. **Verify:** Job card shows "1/5 done"
+10. **Verify:** The original visible labels remain `1/5` through `5/5` after the first completion locks them
+11. Click `+ Add Reprint`
+12. **Verify:** The new row label is `Reprint`
+13. **Verify:** The original five rows still display `1/5` through `5/5` instead of renumbering
+14. **Verify:** Job card shows `1/6 done` because progress still counts the total physical rows on the job
 
 ### Scenario 4: Completion Gate — Plates Not Done
 
@@ -13464,8 +13672,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 6. Click confirm
 7. **Verify:** 3 plates updated to "Picked Up"
 8. **Verify:** Job card shows "3/5 done" (Picked Up plates count as done)
-9. **Verify:** The new `Payments` row stores `PlatesPickedUp` once per plate in ascending order (no duplicate `1, 1` values)
-10. **Verify:** The same `Payments` row also stores stable `PlateIDsPickedUp` values so history remains correct even if plate display order changes later
+9. **Verify:** The new `Payments` row stores `PlatesPickedUp` once per plate in ascending order using the visible labels shown to staff (for example `1/5, 2/5, 3/5`, with no duplicates)
+10. **Verify:** The same `Payments` row also stores stable `PlateIDsPickedUp` values so history remains correct even if rows are later re-sliced, relabeled, or replaced
 
 ### Scenario 9: Resin Job Printer Filter
 
@@ -13625,9 +13833,10 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. Record a payment for completed plates on a multi-plate request
 2. Open Build Plates and remove one of the old completed plates, then add a replacement plate
-3. **Verify:** The visible `PlateNum` labels may change
-4. **Verify:** Earlier `Payments.PlateIDsPickedUp` values still point to the original picked-up plates
-5. **Verify:** New replacement plates receive new `PlateKey` values instead of reusing old history
+3. **Verify:** The original locked labels on surviving rows do **not** renumber
+4. **Verify:** The replacement row is labeled as a reprint (for example `Reprint`)
+5. **Verify:** Earlier `Payments.PlateIDsPickedUp` values still point to the original picked-up plates
+6. **Verify:** New replacement plates receive new `PlateKey` values instead of reusing old history
 
 ---
 

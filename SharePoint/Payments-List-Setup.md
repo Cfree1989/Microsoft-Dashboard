@@ -132,10 +132,10 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `PlatesPickedUp`
-3. **Description:** `Plate numbers collected in this transaction (e.g., "1, 2, 3")`
+3. **Description:** `Plate display labels collected in this transaction (e.g., "1/4, 2/4", "Reprint")`
 4. Click **Save**
 
-> 💡 **Purpose:** Links this payment to specific build plates. When Build Plate Tracking is enabled, staff can check which plates are being picked up during payment, and those plate numbers are recorded here.
+> 💡 **Purpose:** Links this payment to specific build plates. When Build Plate Tracking is enabled, staff can check which plates are being picked up during payment, and the exact staff-facing plate labels are recorded here.
 
 ### Column 11: PlateIDsPickedUp (Multiple lines of text)
 
@@ -144,7 +144,7 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 3. **Description:** `PlateKey snapshot captured at pickup time for this transaction`
 4. Click **Save**
 
-> ⚠️ **Important:** This stores the best available plate snapshot at pickup time. `PlatesPickedUp` is only a human-readable display snapshot, and even `PlateIDsPickedUp` can become historical context rather than a live 1:1 map if staff later re-slice, replace, or renumber plates. The canonical transaction record is still the `Payments` row itself.
+> ⚠️ **Important:** This stores the best available plate snapshot at pickup time. `PlatesPickedUp` is only a human-readable display snapshot, and even `PlateIDsPickedUp` can become historical context rather than a live 1:1 map if staff later re-slice, replace, relabel, or renumber plates. The canonical transaction record is still the `Payments` row itself.
 
 ### Column 12: RecordedBy (Person)
 
@@ -197,7 +197,7 @@ The Payments list should be accessible **only to staff**, not students.
 | PaymentDate | Date | Yes | - | When payment was recorded |
 | PayerName | Single line | No | - | Who paid |
 | PayerTigerCard | Single line | No | - | Payer's TigerCard number |
-| PlatesPickedUp | Single line | No | - | Display plate labels collected (e.g., "1, 2, 3") |
+| PlatesPickedUp | Single line | No | - | Display plate labels collected (e.g., "1/4, 2/4", "Reprint") |
 | PlateIDsPickedUp | Multiple lines | No | - | Stable PlateKey values for picked-up plates |
 | RecordedBy | Person | Yes | - | Staff who processed payment |
 | StudentOwnMaterial | Yes/No | No | No | 70% discount applied |
@@ -210,8 +210,8 @@ The Payments list should be accessible **only to staff**, not students.
 
 | ID | RequestID | ReqKey | TransactionNumber | Weight | Amount | PaymentDate | PlatesPickedUp | PlateIDsPickedUp | PayerName |
 |----|-----------|--------|-------------------|--------|--------|-------------|----------------|------------------|-----------|
-| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 1, 2, 3 | BP-42-A1, BP-42-A2, BP-42-A3 | Jane Smith |
-| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 4, 5 | BP-42-B1, BP-42-B2 | Jane Smith |
+| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 1/5, 2/5, 3/5 | BP-42-A1, BP-42-A2, BP-42-A3 | Jane Smith |
+| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 4/5, Reprint | BP-42-B1, BP-42-R3 | Jane Smith |
 
 **What this shows:**
 - 2 separate transactions for same job

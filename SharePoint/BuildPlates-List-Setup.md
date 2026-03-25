@@ -10,7 +10,7 @@
 The BuildPlates list enables staff to track multiple build plates (gcode files) per print request. A single print job may require several plates across different printers, and this list maintains the status of each plate individually.
 
 **Key Features:**
-- 5 columns for linking plates to requests, preserving stable identity, and tracking status
+- 6 columns for linking plates to requests, preserving stable identity, freezing staff-facing labels, and tracking reprints
 - One-to-many relationship with PrintRequests (multiple plates per job)
 - Status progression: Queued → Printing → Completed → Picked Up
 - Machine assignment supporting multi-printer jobs
@@ -102,6 +102,15 @@ The BuildPlates list enables staff to track multiple build plates (gcode files) 
 > - **Completed** - Print finished, ready for pickup
 > - **Picked Up** - Student has collected this plate (marked during payment)
 
+### Column 6: DisplayLabel (Single line of text)
+
+1. Click **+ Add column** → **Single line of text**
+2. **Name:** `DisplayLabel`
+3. **Description:** `Frozen staff-facing label once numbering locks (e.g., "1/4", "Reprint")`
+4. Click **Save**
+
+> 💡 **Purpose:** This stores the exact label staff should continue seeing after the first plate is completed. Leave it blank while a job is still being actively re-sliced. Once labels lock, existing rows receive their frozen labels and later additions can simply use `Reprint`.
+
 ---
 
 ## Step 3: Set Permissions
@@ -132,24 +141,26 @@ The BuildPlates list should be accessible **only to staff**, not students.
 | PlateKey | Single line | Yes | - | Immutable per-plate identifier |
 | Machine | Choice | Yes | - | Printer assigned to this plate |
 | Status | Choice | Yes | Queued | Queued → Printing → Completed → Picked Up |
+| DisplayLabel | Single line | No | - | Frozen staff-facing label once numbering locks |
 
 ---
 
 ## Data Flow Example
 
-**Scenario:** Student submits request REQ-00087. Staff slices the model into 4 gcode files that will print on different machines.
+**Scenario:** Student submits request REQ-00087. Staff slices the model into 4 gcode files that will print on different machines. Later, plate `3/4` fails and is reprinted.
 
-| ID | RequestID | ReqKey | PlateKey | Machine | Status |
-|----|-----------|--------|----------|---------|--------|
-| 1 | 87 | REQ-00087 | BP-87-A1 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
-| 2 | 87 | REQ-00087 | BP-87-A2 | Prusa MK4S (9.8×8.3×8.7in) | Completed |
-| 3 | 87 | REQ-00087 | BP-87-A3 | Prusa MK4S (9.8×8.3×8.7in) | Printing |
-| 4 | 87 | REQ-00087 | BP-87-B1 | Prusa XL (14.2×14.2×14.2in) | Queued |
+| ID | RequestID | ReqKey | PlateKey | Machine | Status | DisplayLabel |
+|----|-----------|--------|----------|---------|--------|--------------|
+| 1 | 87 | REQ-00087 | BP-87-A1 | Prusa MK4S (9.8×8.3×8.7in) | Completed | 1/4 |
+| 2 | 87 | REQ-00087 | BP-87-A2 | Prusa MK4S (9.8×8.3×8.7in) | Completed | 2/4 |
+| 3 | 87 | REQ-00087 | BP-87-A3 | Prusa MK4S (9.8×8.3×8.7in) | Completed | 3/4 |
+| 4 | 87 | REQ-00087 | BP-87-B1 | Prusa XL (14.2×14.2×14.2in) | Queued | 4/4 |
+| 5 | 87 | REQ-00087 | BP-87-R1 | Prusa MK4S (9.8×8.3×8.7in) | Queued | Reprint |
 
 **What this shows:**
-- Job split across 2 printers (MK4S × 3, XL × 1)
-- 2 plates done, 1 printing, 1 waiting
-- Progress: "2/4 done" displayed on job card
+- Original plates keep their frozen labels once the first plate is completed
+- The replacement row is still part of the same job, but is explicitly labeled as a reprint
+- Stable `PlateKey` values still provide the durable audit trail even when display labels stop being position-based
 
 ---
 
@@ -161,6 +172,7 @@ The BuildPlates list should be accessible **only to staff**, not students.
 - [ ] PlateKey column: Single line of text, required
 - [ ] Machine column: Choice with all 4 printer options (exact names match PrintRequests.Printer)
 - [ ] Status column: Choice with 4 options, default "Queued"
+- [ ] DisplayLabel column: Single line of text
 - [ ] Permissions stopped inheriting from site
 - [ ] Student groups removed from permissions
 - [ ] Staff groups have Edit or Contribute access
@@ -175,9 +187,11 @@ In the Staff Dashboard, this list is accessed via:
 - **Data connection:** `BuildPlates`
 - **Primary collection:** `colAllBuildPlates` (pre-loaded at App.OnStart)
 - **Working collection:** `colBuildPlates` (plates for current selection)
-- **Indexed collection:** `colBuildPlatesIndexed` (with `PlateNum` for display)
+- **Indexed collection:** `colBuildPlatesIndexed` (with dynamic `PlateNum` plus a resolved staff-facing label)
 
-> 💡 `PlateNum` in Power Apps is display-only. Use the stored `PlateKey` column for the best available pickup-time and audit snapshot, but remember that build plates are operational artifacts: staff may re-slice, replace, or remove plates later while the canonical financial history remains in `Payments`.
+> 💡 `PlateNum` in Power Apps remains display-only and is still useful while a job is being actively re-sliced. Once the parent request locks labels, the app should render `DisplayLabel` instead of recalculating the visible text from `PlateNum`. Use the stored `PlateKey` column for the durable pickup-time and audit snapshot.
+
+> 💡 **Locking rule:** The parent request controls when labels lock. The recommended companion field is `PrintRequests.BuildPlateLabelsLocked` (Yes/No, default `No`). When the first build plate reaches `Completed`, Power Apps should patch frozen `DisplayLabel` values onto all current rows and set the parent request flag to `Yes`. Later additions can be treated as reprints and given a simple explicit `DisplayLabel` such as `Reprint`.
 
 ### ActualPrinter Auto-Population
 
