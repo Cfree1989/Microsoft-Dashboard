@@ -1317,7 +1317,7 @@ Table(
 | Height | `40` |
 | Size | `11` |
 | BorderRadius | `20` |
-| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey), If(varNeedsAttention, NeedsAttention = true, true))))` |
+| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value), If(varNeedsAttention, NeedsAttention = true, true))))` |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
@@ -1387,7 +1387,7 @@ With(
             If(
                 IsBlank(varSearchText), 
                 true, 
-                varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey
+                varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value
             ),
             If(varNeedsAttention, NeedsAttention = true, true)
         )
@@ -7165,12 +7165,17 @@ If(
             )
         );
 
-        // Refresh supporting collections
+        // Refresh supporting collections after save so status checks use the latest data
+        Refresh(Payments);
+        Refresh(BuildPlates);
         ClearCollect(colAllPayments, Payments);
         ClearCollect(colPayments,
             Sort(Filter(colAllPayments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
         );
         ClearCollect(colAllBuildPlates, BuildPlates);
+        ClearCollect(colBuildPlates,
+            Sort(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+        );
 
         // Update running totals, notes timeline, and status on the parent request
         With(
@@ -7179,7 +7184,7 @@ If(
                     If(
                         chkPartialPickup.Value ||
                         varSelectedItem.Status.Value = "Printing" ||
-                        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value <> "Picked Up")) > 0,
+                        CountRows(Filter(colBuildPlates, Status.Value <> "Picked Up")) > 0,
                         varSelectedItem.Status,
                         {Value: "Paid & Picked Up"}
                     )
@@ -7582,6 +7587,8 @@ If(
     Blank()
 )
 ```
+
+> 💡 **Why the extra refresh?** After saving the payment and patching selected plates to `Picked Up`, refresh `Payments` and `BuildPlates` before recalculating totals and final status. This avoids the edge case where the payment row saves successfully but the app evaluates the request against stale plate data and leaves the parent request in `Completed` instead of moving it to `Paid & Picked Up`.
 
 > 💡 **Dynamic Options:** The dropdown shows only valid revert targets based on the current status. "Printing" can only go back to "Ready to Print", "Completed" can go back to either "Printing" or "Ready to Print", and "Paid & Picked Up" can go back to "Completed" (reopening the request for further payment or correction while preserving existing `Payments` history).
 
@@ -11153,7 +11160,7 @@ scrDashboard
 | Y | `117` |
 | Width | `350` |
 | Height | `36` |
-| HintText | `"🔍 Search by name, email, or ReqKey..."` |
+| HintText | `"Job Search"` |
 | Font | `varAppFont` |
 | Size | `varInputFontSize` |
 | BorderColor | `varInputBorderColor` |
@@ -13423,7 +13430,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 - [ ] App loads without errors
 - [ ] Status tabs show correct counts
 - [ ] Clicking a tab filters the gallery
-- [ ] Search filters by name/email/ReqKey
+- [ ] Search filters by name/email/ReqKey/computer
 - [ ] "Needs Attention" checkbox filters correctly
 - [ ] Refresh button reloads data and updates tab counts
 
@@ -13826,6 +13833,14 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 6. **Verify:** Job card payment summary is driven by `Payments`, not by `PaymentNotes`
 7. **Verify:** Optional `PaymentNotes` text is still treated as free-text context, not payment history
 
+### Scenario 18B: Final Pickup Status Refresh
+
+1. Job is in `Completed` with all remaining finished plates shown in the pickup checklist
+2. Staff checks all remaining completed plates and records payment
+3. **Verify:** selected `BuildPlates` rows become `Picked Up`
+4. **Verify:** the new `Payments` row appears in history immediately
+5. **Verify:** parent `PrintRequests.Status` changes to `Paid & Picked Up` on the same save, without needing to reopen the modal or record a second payment
+
 ### Scenario 19: Different Payers
 
 1. Day 1: Student pays for first pickup
@@ -14077,7 +14092,8 @@ ThisItem.Status & " " & Text(
             If(IsBlank(varSearchText), true,
                 varSearchText in Student.DisplayName ||
                 varSearchText in StudentEmail ||
-                varSearchText in ReqKey
+                varSearchText in ReqKey ||
+                varSearchText in SlicedOnComputer.Value
             ),
             If(varNeedsAttention, NeedsAttention = true, true)
         )
@@ -14097,7 +14113,8 @@ With(
             If(IsBlank(varSearchText), true, 
                 varSearchText in Student.DisplayName || 
                 varSearchText in StudentEmail || 
-                varSearchText in ReqKey
+                varSearchText in ReqKey ||
+                varSearchText in SlicedOnComputer.Value
             ),
             If(varNeedsAttention, NeedsAttention = true, true)
         )
