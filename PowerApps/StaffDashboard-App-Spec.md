@@ -834,8 +834,6 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblNotesStaffLabel
         txtStaffNotesContent
         lblStaffNotesHeader
-        txtStudentNotesContent
-        lblStudentNotesHeader
         lblNotesTitle
         recNotesModal
         recNotesOverlay
@@ -2494,7 +2492,14 @@ Patch(PrintRequests, varCurrentItem, {
         Email: User().Email,
         JobTitle: "",
         Picture: ""
-    }
+    },
+    StaffNotes: Concatenate(
+        If(IsBlank(varCurrentItem.StaffNotes), "", varCurrentItem.StaffNotes & " | "),
+        "STATUS by " &
+        With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+        ": [Summary] Ready to Print -> Printing [Changes] [Reason] [Context] [Comment] - " &
+        Text(Now(), "m/d h:mmam/pm")
+    )
 });
 
 'Flow-(C)-Action-LogAction'.Run(
@@ -3241,11 +3246,38 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     RejectionReason: varRejectionReasonsTable,
     RejectionComment: txtRejectComments.Text,
     StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
         "REJECTED by " &
         With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & Concat(varRejectionReasonsTable, Value, "; ") &
-        If(!IsBlank(txtRejectComments.Text), " - " & txtRejectComments.Text, "") &
+        ": [Summary] " & Concat(varRejectionReasonsTable, Value, "; ") & " [Changes] [Reason] [Context] " &
+        " [Comment] " &
+        Trim(
+            Substitute(
+                Substitute(
+                    Substitute(
+                        Substitute(
+                            Substitute(
+                                Substitute(
+                                    Substitute(txtRejectComments.Text, " | ", "; "),
+                                    " ~~ ",
+                                    "; "
+                                ),
+                                "[Summary]",
+                                "(Summary)"
+                            ),
+                            "[Changes]",
+                            "(Changes)"
+                        ),
+                        "[Reason]",
+                        "(Reason)"
+                    ),
+                    "[Context]",
+                    "(Context)"
+                ),
+                "[Comment]",
+                "(Comment)"
+            )
+        ) &
         " - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
@@ -4011,13 +4043,39 @@ Set(
                 SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
                 ApprovalComment: txtApprovalComments.Text,
                 StaffNotes: Concatenate(
-                    If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                     "APPROVED by " &
                     With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                    ": " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
-                    " on " & ddSlicedOnComputer.Selected.Name &
-                    " - " & Text(wBuildPlateCount) & " build plate" & If(wBuildPlateCount = 1, "", "s") &
-                    If(!IsBlank(txtApprovalComments.Text), " - " & txtApprovalComments.Text, "") &
+                    ": [Summary] " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+                    " [Changes] [Reason] [Context] " &
+                    " [Comment] " &
+                    Trim(
+                        Substitute(
+                            Substitute(
+                                Substitute(
+                                    Substitute(
+                                        Substitute(
+                                            Substitute(
+                                                Substitute(txtApprovalComments.Text, " | ", "; "),
+                                                " ~~ ",
+                                                "; "
+                                            ),
+                                            "[Summary]",
+                                            "(Summary)"
+                                        ),
+                                        "[Changes]",
+                                        "(Changes)"
+                                    ),
+                                    "[Reason]",
+                                    "(Reason)"
+                                ),
+                                "[Context]",
+                                "(Context)"
+                            ),
+                            "[Comment]",
+                            "(Comment)"
+                        )
+                    ) &
                     " - " & Text(Now(), "m/d h:mmam/pm")
                 )
             })
@@ -4428,11 +4486,39 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     },
     LastActionAt: Now(),
     StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
         "ARCHIVED by " & 
         With({n: ddArchiveStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        If(!IsBlank(txtArchiveReason.Text), ": " & txtArchiveReason.Text, "") &
-        " - " & Text(Now(), "m/d h:mmam/pm")
+        ": [Summary] " &
+        Trim(
+            Substitute(
+                Substitute(
+                    Substitute(
+                        Substitute(
+                            Substitute(
+                                Substitute(
+                                    Substitute(txtArchiveReason.Text, " | ", "; "),
+                                    " ~~ ",
+                                    "; "
+                                ),
+                                "[Summary]",
+                                "(Summary)"
+                            ),
+                            "[Changes]",
+                            "(Changes)"
+                        ),
+                        "[Reason]",
+                        "(Reason)"
+                    ),
+                    "[Context]",
+                    "(Context)"
+                ),
+                "[Comment]",
+                "(Comment)"
+            )
+        ) &
+        " [Changes] [Reason] [Context] " &
+        " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -4821,7 +4907,14 @@ Set(
                 JobTitle: "",
                 Picture: ""
             },
-            LastActionAt: Now()
+            LastActionAt: Now(),
+            StaffNotes: Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "STATUS by " &
+                With({n: ddCompleteStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": [Summary] Printing -> Completed [Changes] [Reason] [Context] " &
+                " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+            )
         });
         true,
         Notify("Failed to mark print complete.", NotificationType.Error);
@@ -5665,10 +5758,10 @@ Patch(
         },
         LastActionAt: Now(),
         StaffNotes: Concatenate(
-            If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+            If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
             "UPDATED by " & 
             With({n: ddDetailsStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-            ": " & varChangeDesc & " - " & Text(Now(), "m/d h:mmam/pm")
+            ": [Summary] " & varChangeDesc & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
         )
     }
 );
@@ -7207,23 +7300,38 @@ If(
                         )
                     ),
                     StaffNotes: Concatenate(
-                        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                         "PAID by " & wStaffShortName &
-                        ": " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        " (" & Text(Value(txtPaymentWeight.Text)) & "g)" &
-                        If(
-                            IsBlank(Trim(txtPaymentTransaction.Text)),
-                            "",
-                            " #" & Trim(txtPaymentTransaction.Text)
+                        ": [Summary] " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                        " for " & Text(Value(txtPaymentWeight.Text)) & "g [Changes] [Reason] [Context] " &
+                        " [Comment] " &
+                        Trim(
+                            Substitute(
+                                Substitute(
+                                    Substitute(
+                                        Substitute(
+                                            Substitute(
+                                                Substitute(
+                                                    Substitute(txtPaymentNotes.Text, " | ", "; "),
+                                                    " ~~ ",
+                                                    "; "
+                                                ),
+                                                "[Summary]",
+                                                "(Summary)"
+                                            ),
+                                            "[Changes]",
+                                            "(Changes)"
+                                        ),
+                                        "[Reason]",
+                                        "(Reason)"
+                                    ),
+                                    "[Context]",
+                                    "(Context)"
+                                ),
+                                "[Comment]",
+                                "(Comment)"
+                            )
                         ) &
-                        " " & ddPaymentType.Selected.Value &
-                        If(
-                            CountRows(wPickedPlates) > 0,
-                            " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
-                            " | Display " & Concat(wPickedPlates, ResolvedPlateLabel, ",") & ")",
-                            ""
-                        ) &
-                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, "") &
                         " - " & Text(Now(), "m/d h:mmam/pm")
                     ),
                     LastAction: {Value: "Picked Up"},
@@ -7727,11 +7835,41 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         Picture: ""
     },
     StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
         "REVERTED by " &
         With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & varSelectedItem.Status.Value & " → " & ddRevertTarget.Selected.Value & 
-        " - " & txtRevertReason.Text & " - " & Text(Now(), "m/d h:mmam/pm")
+        ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
+        " [Changes] " &
+        " [Reason] " &
+        Trim(
+            Substitute(
+                Substitute(
+                    Substitute(
+                        Substitute(
+                            Substitute(
+                                Substitute(
+                                    Substitute(txtRevertReason.Text, " | ", "; "),
+                                    " ~~ ",
+                                    "; "
+                                ),
+                                "[Summary]",
+                                "(Summary)"
+                            ),
+                            "[Changes]",
+                            "(Changes)"
+                        ),
+                        "[Reason]",
+                        "(Reason)"
+                    ),
+                    "[Context]",
+                    "(Context)"
+                ),
+                "[Comment]",
+                "(Comment)"
+            )
+        ) &
+        " [Context] " &
+        " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
     )
 });
 
@@ -8798,16 +8936,11 @@ If(
                                 PaymentDate: If(CountRows(wPriorPayments) > 0, Max(Max(wPriorPayments, PaymentDate), dpBatchPaymentDate.SelectedDate), dpBatchPaymentDate.SelectedDate),
                                 StudentOwnMaterial: chkBatchOwnMaterial.Value || CountRows(Filter(wPriorPayments, StudentOwnMaterial)) > 0,
                                 StaffNotes: Concatenate(
-                                    If(IsBlank(BatchItem.StaffNotes), "", BatchItem.StaffNotes & " | "),
+                                    If(IsBlank(wLatestRequest.StaffNotes), "", wLatestRequest.StaffNotes & " | "),
                                     "PAID (BATCH) by " & wStaffShortName &
-                                    ": " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
-                                    " (" & Text(wBatchWeight) & "g) #" & txtBatchTransaction.Text &
-                                    " " & ddBatchPaymentType.Selected.Value &
-                                    If(
-                                        CountRows(wRemainingCompletedPlates) > 0,
-                                        " (Plate IDs " & Concat(wRemainingCompletedPlates, PlateKey, ",") & ")",
-                                        ""
-                                    ) &
+                                    ": [Summary] " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
+                                    " for " & Text(wBatchWeight) & "g [Changes] [Reason] [Context] " &
+                                    " [Comment] " &
                                     " - " & Text(Now(), "m/d h:mmam/pm")
                                 ),
                                 LastActionBy: {
@@ -9338,9 +9471,29 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 **OnChange:**
 
 ```powerfx
-Patch(BuildPlates,
-    LookUp(BuildPlates, ID = ThisItem.ID),
-    { Machine: { Value: drpPlateMachine.Selected.Value } }
+With(
+    {
+        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
+        wOldMachine: Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)),
+        wNewMachine: drpPlateMachine.Selected.Value
+    },
+    Patch(BuildPlates,
+        LookUp(BuildPlates, ID = ThisItem.ID),
+        { Machine: { Value: drpPlateMachine.Selected.Value } }
+    );
+    Patch(
+        PrintRequests,
+        wFreshRequest,
+        {
+            StaffNotes: Concatenate(
+                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                "BUILD PLATE by " & wBuildPlateActor &
+                ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " & wOldMachine & " -> " & wNewMachine &
+                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+            )
+        }
+    )
 );
 // Refresh collections
 ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
@@ -9426,9 +9579,28 @@ ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 **Replace the existing `OnSelect` formula with:**
 
 ```powerfx
-Patch(BuildPlates,
-    LookUp(BuildPlates, ID = ThisItem.ID),
-    { Status: { Value: "Printing" } }
+With(
+    {
+        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
+    },
+    Patch(BuildPlates,
+        LookUp(BuildPlates, ID = ThisItem.ID),
+        { Status: { Value: "Printing" } }
+    );
+    Patch(
+        PrintRequests,
+        wFreshRequest,
+        {
+            StaffNotes: Concatenate(
+                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                "BUILD PLATE by " & wBuildPlateActor &
+                ": [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
+                Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
+                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+            )
+        }
+    )
 );
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
@@ -9490,34 +9662,51 @@ Same properties as `btnMarkPrinting` with:
 **Replace the existing `OnSelect` formula with:**
 
 ```powerfx
-Patch(BuildPlates,
-    LookUp(BuildPlates, ID = ThisItem.ID),
-    { Status: { Value: "Completed" } }
-);
-If(
-    !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
-    ForAll(
-        AddColumns(
-            colBuildPlates As plate,
-            FrozenLabel,
-            Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
-        ) As plateToLock,
-        Patch(
-            BuildPlates,
-            LookUp(BuildPlates, ID = plateToLock.ID),
-            { DisplayLabel: plateToLock.FrozenLabel }
+With(
+    {
+        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
+        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false)
+    },
+    Patch(BuildPlates,
+        LookUp(BuildPlates, ID = ThisItem.ID),
+        { Status: { Value: "Completed" } }
+    );
+    If(
+        wShouldLockLabels,
+        ForAll(
+            AddColumns(
+                colBuildPlates As plate,
+                FrozenLabel,
+                Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
+            ) As plateToLock,
+            Patch(
+                BuildPlates,
+                LookUp(BuildPlates, ID = plateToLock.ID),
+                { DisplayLabel: plateToLock.FrozenLabel }
+            )
+        );
+        Set(
+            varSelectedItem,
+            Patch(
+                PrintRequests,
+                LookUp(PrintRequests, ID = varSelectedItem.ID),
+                {
+                    BuildPlateLabelsLocked: true,
+                    BuildPlateOriginalTotal: CountRows(colBuildPlates)
+                }
+            )
         )
     );
-    Set(
-        varSelectedItem,
-        Patch(
-            PrintRequests,
-            LookUp(PrintRequests, ID = varSelectedItem.ID),
-            {
-                BuildPlateLabelsLocked: true,
-                BuildPlateOriginalTotal: CountRows(colBuildPlates)
-            }
-        )
+    Patch(
+        PrintRequests,
+        LookUp(PrintRequests, ID = varSelectedItem.ID),
+        {
+            StaffNotes: Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "BUILD PLATE by " & wBuildPlateActor &
+                ": [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+            )
+        }
     )
 );
 ClearCollect(colBuildPlates,
@@ -9547,7 +9736,7 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 
 > 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
 >
-> **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` must remain a simple `Queued → Printing` status transition with no parent-request patch.
+> **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` may append a `StaffNotes` entry, but it must not change label-lock state or parent request status.
 
 ---
 
@@ -9581,7 +9770,25 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 If(
     Coalesce(varSelectedItem.BuildPlateLabelsLocked, false) && !StartsWith(ThisItem.ResolvedPlateLabel, "Reprint"),
     Notify("Original locked plates cannot be deleted. Add a reprint instead.", NotificationType.Warning),
-    Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
+    With(
+        {
+            wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+            wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
+        },
+        Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
+        Patch(
+            PrintRequests,
+            wFreshRequest,
+            {
+                StaffNotes: Concatenate(
+                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                    "BUILD PLATE by " & wBuildPlateActor &
+                    ": [Summary] Removed " & ThisItem.ResolvedPlateLabel &
+                    " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                )
+            }
+        )
+    );
     ClearCollect(colBuildPlates,
         Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
     );
@@ -9690,48 +9897,73 @@ With(
                     ReprintNum
                 ),
                 0
-            ) + 1
+            ) + 1,
+        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
     },
-    Patch(BuildPlates,
-        Defaults(BuildPlates),
+    With(
         {
-            RequestID: varSelectedItem.ID,
-            ReqKey: varSelectedItem.ReqKey,
-            Machine: Coalesce(
-                LookUp(
-                    Filter(
-                        Choices([@BuildPlates].Machine),
-                        If(
-                            varSelectedItem.Method.Value = "Filament",
-                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                            varSelectedItem.Method.Value = "Resin",
-                            Value = "Form 3 (5.7×5.7×7.3in)",
-                            true
-                        )
-                    ),
-                    Value = varSelectedItem.Printer.Value
-                ),
-                First(
-                    Filter(
-                        Choices([@BuildPlates].Machine),
-                        If(
-                            varSelectedItem.Method.Value = "Filament",
-                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                            varSelectedItem.Method.Value = "Resin",
-                            Value = "Form 3 (5.7×5.7×7.3in)",
-                            true
-                        )
+            wNewDisplayLabel: If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Reprint " & Text(wNextReprintNum), Text(CountRows(colBuildPlates) + 1) & "/" & Text(CountRows(colBuildPlates) + 1))
+        },
+        With(
+            {
+                wCreatedPlate:
+                    Patch(BuildPlates,
+                        Defaults(BuildPlates),
+                        {
+                            RequestID: varSelectedItem.ID,
+                            ReqKey: varSelectedItem.ReqKey,
+                            Machine: Coalesce(
+                                LookUp(
+                                    Filter(
+                                        Choices([@BuildPlates].Machine),
+                                        If(
+                                            varSelectedItem.Method.Value = "Filament",
+                                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                                            varSelectedItem.Method.Value = "Resin",
+                                            Value = "Form 3 (5.7×5.7×7.3in)",
+                                            true
+                                        )
+                                    ),
+                                    Value = varSelectedItem.Printer.Value
+                                ),
+                                First(
+                                    Filter(
+                                        Choices([@BuildPlates].Machine),
+                                        If(
+                                            varSelectedItem.Method.Value = "Filament",
+                                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                                            varSelectedItem.Method.Value = "Resin",
+                                            Value = "Form 3 (5.7×5.7×7.3in)",
+                                            true
+                                        )
+                                    )
+                                )
+                            ),
+                            PlateKey: Text(GUID()),
+                            Status: { Value: "Queued" },
+                            DisplayLabel: If(
+                                Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+                                "Reprint " & Text(wNextReprintNum),
+                                Blank()
+                            )
+                        }
                     )
-                )
-            ),
-            PlateKey: Text(GUID()),
-            Status: { Value: "Queued" },
-            DisplayLabel: If(
-                Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
-                "Reprint " & Text(wNextReprintNum),
-                Blank()
+            },
+            Patch(
+                PrintRequests,
+                wFreshRequest,
+                {
+                    StaffNotes: Concatenate(
+                        If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                        "BUILD PLATE by " & wBuildPlateActor &
+                        ": [Summary] Added " & wNewDisplayLabel & " on " &
+                        Trim(If(Find("(", wCreatedPlate.Machine.Value) > 0, Left(wCreatedPlate.Machine.Value, Find("(", wCreatedPlate.Machine.Value) - 2), wCreatedPlate.Machine.Value)) &
+                        " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                    )
+                }
             )
-        }
+        )
     )
 );
 ClearCollect(colBuildPlates,
@@ -10241,11 +10473,11 @@ Set(varLoadingMessage, "");
 
 # STEP 13: Building the Notes Modal
 
-**What you're doing:** Creating a modal that displays both Student Notes (from submission) and Staff Notes (including manual notes, workflow audit entries, and payment activity), and allows staff to add new notes.
+**What you're doing:** Creating a modal that displays Staff Notes & Activity (including manual notes, workflow audit entries, build plate history, status changes, and payment activity), and allows staff to add new notes. Student-submitted notes are shown in the dedicated Student Note modal in Step 13B.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
-> 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
+> 📘 **Format reference:** The finalized compact note format and examples live in `PowerApps/Notes-Format-Options.md`. This step keeps tokenized storage if helpful internally, but the Notes modal should render compact notes with the action first, then the timestamp.
 
 ### Control Hierarchy (Container-Based)
 
@@ -10261,8 +10493,6 @@ scrDashboard
     ├── lblAddNoteLabel              ← "Add a note:"
     ├── txtStaffNotesContent         ← Staff notes display (scrollable)
     ├── lblStaffNotesHeader          ← "Staff Notes & Activity"
-    ├── txtStudentNotesContent       ← Student notes display (scrollable)
-    ├── lblStudentNotesHeader        ← "Student Notes"
     ├── lblNotesTitle                ← "Notes - REQ-00042"
     ├── recNotesModal                ← White modal box
     └── recNotesOverlay              ← Dark semi-transparent background
@@ -10314,10 +10544,10 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - 520) / 2` |
-| Width | `550` |
-| Height | `520` |
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `(Parent.Height - Self.Height) / 2` |
+| Width | `Min(1180, Parent.Width - 40)` |
+| Height | `Min(720, Parent.Height - 40)` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -10337,7 +10567,7 @@ scrDashboard
 | Text | `"Notes - " & varSelectedItem.ReqKey` |
 | X | `recNotesModal.X + 20` |
 | Y | `recNotesModal.Y + 20` |
-| Width | `480` |
+| Width | `recNotesModal.Width - 80` |
 | Height | `30` |
 | Font | `Font.'Open Sans'` |
 | FontWeight | `FontWeight.Semibold` |
@@ -10391,66 +10621,22 @@ Reset(ddNotesStaff)
 
 ---
 
-### Student Notes Header (lblStudentNotesHeader)
-
-18. Click **+ Insert** → **Text label**.
-19. **Rename it:** `lblStudentNotesHeader`
-20. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Student Notes"` |
-| X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 60` |
-| Width | `510` |
-| Height | `20` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
-| Color | `RGBA(80, 80, 80, 1)` |
-
----
-
-### Student Notes Content (txtStudentNotesContent)
-
-21. Click **+ Insert** → **Text input**.
-22. **Rename it:** `txtStudentNotesContent`
-23. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `If(IsBlank(varSelectedItem.Notes), "None", varSelectedItem.Notes)` |
-| X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 82` |
-| Width | `510` |
-| Height | `60` |
-| Mode | `TextMode.MultiLine` |
-| DisplayMode | `DisplayMode.View` |
-| Size | `11` |
-| Font | `varAppFont` |
-| Color | `If(IsBlank(varSelectedItem.Notes), varColorTextLight, varColorText)` |
-| FontItalic | `IsBlank(varSelectedItem.Notes)` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `varInputBorderColor` |
-| DisabledBorderColor | `varInputBorderColor` |
-
-> 💡 **Note:** Using a Text Input with `DisplayMode.View` provides automatic scrollbars when content overflows. This displays the student's notes from submission (the `Notes` field). Read-only.
+> 💡 **Student note handling:** Keep `conNotesModal` focused on staff-authored and system-generated activity. Student-submitted notes are intentionally shown in the dedicated `conStudentNoteModal` built in Step 13B.
 
 ---
 
 ### Staff Notes Header (lblStaffNotesHeader)
 
-24. Click **+ Insert** → **Text label**.
-25. **Rename it:** `lblStaffNotesHeader`
-26. Set properties:
+18. Click **+ Insert** → **Text label**.
+19. **Rename it:** `lblStaffNotesHeader`
+20. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Staff Notes & Activity"` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 150` |
-| Width | `510` |
+| Y | `recNotesModal.Y + 60` |
+| Width | `recNotesModal.Width - 40` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `12` |
@@ -10460,17 +10646,17 @@ Reset(ddNotesStaff)
 
 ### Staff Notes Content (txtStaffNotesContent)
 
-27. Click **+ Insert** → **Text input**.
-28. **Rename it:** `txtStaffNotesContent`
-29. Set properties:
+21. Click **+ Insert** → **Text input**.
+22. **Rename it:** `txtStaffNotesContent`
+23. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Default | See formula below |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 172` |
-| Width | `510` |
-| Height | `120` |
+| Y | `lblStaffNotesHeader.Y + 22` |
+| Width | `recNotesModal.Width - 40` |
+| Height | `recNotesModal.Height - 320` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.View` |
 | Size | `11` |
@@ -10483,7 +10669,7 @@ Reset(ddNotesStaff)
 | HoverBorderColor | `varInputBorderColor` |
 | DisabledBorderColor | `varInputBorderColor` |
 
-30. Set **Default** (the display parsing formula):
+24. Set **Default** (the display parsing formula):
 
 ```powerfx
 If(
@@ -10494,76 +10680,102 @@ If(
             Split(varSelectedItem.StaffNotes, " | ") As entry,
             With(
                 {
-                    // Strip [NOTE] prefix if present for manual notes
                     text: If(StartsWith(entry.Value, "[NOTE] "), Mid(entry.Value, 8, Len(entry.Value) - 7), entry.Value),
                     isManualNote: StartsWith(entry.Value, "[NOTE] ")
                 },
                 With(
                     {
-                        dashParts: Split(text, " - ")
+                        datetime: Last(Split(text, " - ")).Value,
+                        beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(Split(text, " - ")).Value) - 3)),
+                        byPos: Find(" by ", text),
+                        colonPos: Find(":", text)
                     },
                     With(
                         {
-                            datetime: Last(dashParts).Value,
-                            beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(dashParts).Value) - 3)),
-                            byPos: Find(" by ", text),
-                            colonPos: Find(":", text)
+                            action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), "NOTE")),
+                            rawName: If(
+                                !isManualNote && byPos > 0 && colonPos > byPos + 4,
+                                Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
+                                If(colonPos > 1, Trim(Left(text, colonPos - 1)), "")
+                            ),
+                            details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
                         },
                         With(
                             {
-                                // Force "NOTE" action if [NOTE] prefix was present, otherwise detect from " by " pattern
-                                action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), "NOTE")),
-                                rawName: If(
-                                    !isManualNote && byPos > 0 && colonPos > byPos + 4,
-                                    Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
-                                    If(colonPos > 1, Trim(Left(text, colonPos - 1)), "")
-                                ),
-                                details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
-                            },
-                        With(
-                            {
-                                // Convert any name to "First L." format
                                 shortName: If(
                                     Find(" ", rawName) > 0,
                                     Left(rawName, Find(" ", rawName) - 1) & " " & Left(Last(Split(rawName, " ")).Value, 1) & ".",
                                     rawName
-                                )
-                            },
-                            datetime & " - " & action & Char(10) &
-                            shortName &
-                            If(
-                                Len(details) > 0,
-                                If(
-                                    action = "NOTE",
-                                    // Manual note - quote on next line
-                                    Char(10) & """" & details & """",
-                                    If(
-                                        action in ["APPROVED", "PAID"],
-                                        // APPROVED/PAID: Inline format - details on same line as name
-                                        " - " & details,
-                                        // REJECTED/REVERTED/etc: Format reasons as bullets with header
-                                        Char(10) &
-                                        With(
-                                            {
-                                                hasComment: Find(" - ", details) > 0,
-                                                reasonsPart: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
-                                                commentPart: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
-                                            },
-                                            // Format reasons with header and spacing
-                                            Char(10) & "Reasons:" & Char(10) &
-                                            If(
-                                                Find("; ", reasonsPart) > 0,
-                                                Concat(ForAll(Split(reasonsPart, "; ") As reason, {line: "  - " & reason.Value}), line, Char(10)),
-                                                "  - " & reasonsPart
-                                            ) &
-                                            // Add quoted comment if present (with blank line before)
-                                            If(hasComment, Char(10) & Char(10) & """" & commentPart & """", "")
-                                        )
-                                    )
                                 ),
-                                ""
-                            ) &
-                            Char(10)
+                                usesV2Blocks:
+                                    Find("[Summary]", details) > 0 &&
+                                    Find("[Changes]", details) > 0 &&
+                                    Find("[Reason]", details) > 0 &&
+                                    Find("[Context]", details) > 0 &&
+                                    Find("[Comment]", details) > 0
+                            },
+                            If(
+                                usesV2Blocks,
+                                With(
+                                    {
+                                        summaryText: Trim(First(Split(Last(Split(details, "[Summary]")).Value, "[Changes]")).Value),
+                                        changesText: Trim(First(Split(Last(Split(details, "[Changes]")).Value, "[Reason]")).Value),
+                                        reasonText: Trim(First(Split(Last(Split(details, "[Reason]")).Value, "[Context]")).Value),
+                                        commentText: Trim(Last(Split(details, "[Comment]")).Value),
+                                        mainText: Trim(First(Filter(Table({t: Trim(First(Split(Last(Split(details, "[Summary]")).Value, "[Changes]")).Value)}, {t: Trim(First(Split(Last(Split(details, "[Changes]")).Value, "[Reason]")).Value)}), !IsBlank(t))).t)
+                                    },
+                                    action & " - " & datetime & Char(10) &
+                                    shortName &
+                                    If(!IsBlank(mainText), " - " & mainText, "") &
+                                    If(
+                                        action = "NOTE" && !IsBlank(commentText) && IsBlank(mainText),
+                                        " - " & """" & commentText & """",
+                                        ""
+                                    ) &
+                                    If(
+                                        !IsBlank(commentText) && !(action = "NOTE" && IsBlank(mainText)),
+                                        Char(10) & """" & commentText & """",
+                                        If(
+                                            !IsBlank(reasonText),
+                                            Char(10) & """" & reasonText & """",
+                                            ""
+                                        )
+                                    ) &
+                                    Char(10)
+                                ),
+                                With(
+                                    {
+                                        legacyReasonSplit: Find(" - ", details) > 0,
+                                        legacyMainText: If(Find(" - ", details) > 0, Left(details, Max(0, Find(" - ", details) - 1)), details),
+                                        legacyCommentText: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
+                                    },
+                                    action & " - " & datetime & Char(10) &
+                                    shortName &
+                                    If(
+                                        Len(details) > 0,
+                                        If(
+                                            action = "NOTE",
+                                            " - " & """" & details & """",
+                                            If(
+                                                action = "UPDATED",
+                                                " - " & details,
+                                                If(
+                                                    action = "REVERTED",
+                                                    " - " & legacyMainText &
+                                                    If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", ""),
+                                                    If(
+                                                        action in ["APPROVED", "PAID", "PAID (BATCH)", "STATUS", "BUILD PLATE"],
+                                                        " - " & details,
+                                                        " - " & legacyMainText &
+                                                        If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", "")
+                                                    )
+                                                )
+                                            )
+                                        ),
+                                        ""
+                                    ) &
+                                    Char(10)
+                                )
                             )
                         )
                     )
@@ -10576,62 +10788,46 @@ If(
 )
 ```
 
-> 💡 **Note:** This formula parses each entry and restructures it for cleaner display:
-> - Manual notes prefixed with `[NOTE]` have the prefix stripped before display
-> - Line 1: Date/time and action type (e.g., "1/30 2:45pm - APPROVED" or "3/4 9:15am - NOTE")
-> - Line 2: Staff name, with details inline for APPROVED/PAID, or on separate lines for other actions
-> - Payment entries should be stored as `PAID by First L.: $45.00 (450g) #TXN123 TigerCASH (Plate 1,2) - 3/18 3:35pm` so they render cleanly without a `[NOTE]` prefix
+> 💡 **Note:** This formula still supports both tokenized entries and older legacy prose, but the rendered output now follows the finalized compact format from `PowerApps/Notes-Format-Options.md`.
 >
-> **Example approval display:**
+> **Example compact update display:**
 > ```
-> 3/6 9:14am - APPROVED
-> Susan X. - 239.97g, $24.00 on Computer 1
+> UPDATED - 3/25 9:45am
+> Conrad F. - Weight 42g -> 103.5g; Hours 3 -> 6
 > ```
 >
-> **Example payment display:**
+> **Example compact payment display:**
 > ```
-> 3/5 3:00pm - PAID
-> Colin F. - $25.00 (250g) #246 TigerCASH (Plate 1,3)
-> ```
->
-> **Example rejection display:**
-> ```
-> 2/28 2:14pm - REJECTED
-> Sarah B.
->
-> Reasons:
->   - The geometry is problematic
->   - The model is messy
->
-> "It looks awful..."
+> PAID - 3/25 10:10am
+> Sarah B. - $10.10 for 101g
+> "Paid at front desk"
 > ```
 >
-> **Example manual note display:**
+> **Example compact manual note display:**
 > ```
-> 3/4 10:15am - NOTE
-> Madison L.
-> "Student requested multicolor print"
+> NOTE - 3/26 9:44am
+> Sarah B. - "Print too small"
 > ```
 >
-> The formula uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
+> The formula still uses `Last(Split(text, " - "))` to reliably extract the timestamp from the end of each entry.
 >
-> ⚠️ **Safety guards:** The formula uses `Max(0, ...)` around all `Mid` and `Left` length calculations to prevent "argument must be greater than or equal to 0" errors when parsing malformed or unexpected note formats. This ensures the app doesn't crash if a note entry doesn't match the expected pattern.
+> ⚠️ **Token order:** If you keep tokenized storage for new entries, emit blocks in this order: `[Summary]`, `[Changes]`, `[Reason]`, `[Context]`, `[Comment]`.
 >
-> ⚠️ **Critical — use `Last(Split())` for timestamp extraction.** Do NOT try to manually calculate the position of the last ` - ` using `Mid`/`Find`/`Len` arithmetic (e.g., `Len(text) - Find(" - ", Mid(text, Len(text) - 20, 20)) - 18`). This approach is error-prone because the offset math must account for the `Mid` start position, the 1-based indexing of `Find`, and the 3-character length of ` - `. Getting any of these wrong causes `datetime` to absorb part of the note content and `details` to be truncated — producing garbled output where the tail of the details text appears on the datetime line. The `Last(Split(text, " - "))` approach avoids all of this by letting Power Apps find the last segment automatically.
+> ⚠️ **Safety guards:** The formula uses `Max(0, ...)` around all `Mid` and `Left` length calculations to prevent negative-length parsing errors on malformed historical notes.
 
 ---
 
 ### Staff Name Label (lblNotesStaffLabel)
 
-30. Click **+ Insert** → **Text label**.
-31. **Rename it:** `lblNotesStaffLabel`
-32. Set properties:
+24. Click **+ Insert** → **Text label**.
+25. **Rename it:** `lblNotesStaffLabel`
+26. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Add note as: *"` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 300` |
+| Y | `txtStaffNotesContent.Y + txtStaffNotesContent.Height + 16` |
 | Width | `200` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -10642,16 +10838,16 @@ If(
 
 ### Staff Dropdown (ddNotesStaff)
 
-33. Click **+ Insert** → **Combo box**.
-34. **Rename it:** `ddNotesStaff`
-35. Set properties:
+27. Click **+ Insert** → **Combo box**.
+28. **Rename it:** `ddNotesStaff`
+29. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `colStaff` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 325` |
-| Width | `300` |
+| Y | `lblNotesStaffLabel.Y + 22` |
+| Width | `360` |
 | Height | `36` |
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
@@ -10677,15 +10873,15 @@ If(
 
 ### Add Note Label (lblAddNoteLabel)
 
-36. Click **+ Insert** → **Text label**.
-37. **Rename it:** `lblAddNoteLabel`
-38. Set properties:
+30. Click **+ Insert** → **Text label**.
+31. **Rename it:** `lblAddNoteLabel`
+32. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Add a note:"` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 370` |
+| Y | `ddNotesStaff.Y + ddNotesStaff.Height + 12` |
 | Width | `150` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -10696,17 +10892,17 @@ If(
 
 ### Add Note Text Input (txtAddNote)
 
-39. Click **+ Insert** → **Text input**.
-40. **Rename it:** `txtAddNote`
-41. Set properties:
+33. Click **+ Insert** → **Text input**.
+34. **Rename it:** `txtAddNote`
+35. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Mode | `TextMode.MultiLine` |
 | X | `recNotesModal.X + 20` |
-| Y | `recNotesModal.Y + 395` |
-| Width | `510` |
-| Height | `80` |
+| Y | `lblAddNoteLabel.Y + 22` |
+| Width | `recNotesModal.Width - 40` |
+| Height | `88` |
 | HintText | `"Type your note here..."` |
 | Font | `varAppFont` |
 | Size | `varInputFontSize` |
@@ -10721,15 +10917,15 @@ If(
 
 ### Cancel Button (btnNotesCancel)
 
-42. Click **+ Insert** → **Button**.
-43. **Rename it:** `btnNotesCancel`
-44. Set properties:
+36. Click **+ Insert** → **Button**.
+37. **Rename it:** `btnNotesCancel`
+38. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recNotesModal.X + 300` |
-| Y | `recNotesModal.Y + 480` |
+| X | `recNotesModal.X + recNotesModal.Width - 230` |
+| Y | `recNotesModal.Y + recNotesModal.Height - 52` |
 | Width | `100` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -10746,7 +10942,7 @@ If(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-45. Set **OnSelect:**
+39. Set **OnSelect:**
 
 ```powerfx
 Set(varShowNotesModal, 0);
@@ -10759,15 +10955,15 @@ Reset(ddNotesStaff)
 
 ### Add Note Button (btnAddNote)
 
-46. Click **+ Insert** → **Button**.
-47. **Rename it:** `btnAddNote`
-48. Set properties:
+40. Click **+ Insert** → **Button**.
+41. **Rename it:** `btnAddNote`
+42. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"+ Add Note"` |
-| X | `recNotesModal.X + 410` |
-| Y | `recNotesModal.Y + 480` |
+| X | `recNotesModal.X + recNotesModal.Width - 120` |
+| Y | `recNotesModal.Y + recNotesModal.Height - 52` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorSuccess` |
@@ -10784,26 +10980,61 @@ Reset(ddNotesStaff)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-49. Set **DisplayMode:**
+43. Set **DisplayMode:**
 
 ```powerfx
 If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
 ```
 
-50. Set **OnSelect:**
+44. Set **OnSelect:**
 
 ```powerfx
-// Append the new note to StaffNotes with [NOTE] prefix for manual notes
-// Using LookUp to get fresh record avoids concurrency conflicts
-Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID),
-{
-    StaffNotes: Concatenate(
-        If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
-        "[NOTE] " &
-        With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": " & txtAddNote.Text & " - " & Text(Now(), "m/d h:mmam/pm")
+With(
+    {
+        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+        wNoteShortName: With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
+        wSafeNoteText:
+            Trim(
+                Substitute(
+                    Substitute(
+                        Substitute(
+                            Substitute(
+                                Substitute(
+                                    Substitute(
+                                        Substitute(txtAddNote.Text, " | ", "; "),
+                                        " ~~ ",
+                                        "; "
+                                    ),
+                                    "[Summary]",
+                                    "(Summary)"
+                                ),
+                                "[Changes]",
+                                "(Changes)"
+                            ),
+                            "[Reason]",
+                            "(Reason)"
+                        ),
+                        "[Context]",
+                        "(Context)"
+                    ),
+                    "[Comment]",
+                    "(Comment)"
+                )
+            )
+    },
+    Patch(
+        PrintRequests,
+        wFreshRequest,
+        {
+            StaffNotes: Concatenate(
+                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                "[NOTE] " & wNoteShortName &
+                ": [Summary] [Changes] [Reason] [Context] [Comment] " & wSafeNoteText &
+                " - " & Text(Now(), "m/d h:mmam/pm")
+            )
+        }
     )
-});
+);
 
 // Refresh the selected item to show updated notes
 Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
@@ -10815,9 +11046,9 @@ Reset(txtAddNote);
 Notify("Note added successfully!", NotificationType.Success)
 ```
 
-> 💡 **Note Format:** Manual notes are prefixed with `[NOTE]` to distinguish them from automated audit entries (APPROVED, REJECTED, PAID, etc.). The job card counter only counts manual `[NOTE]` entries, while the modal displays all entries. All notes are separated by ` | ` in storage and parsed for clean display.
+> 💡 **Note Format:** Manual notes are still prefixed with `[NOTE]` so the job card counter continues to count only human-authored notes. Inside the entry, manual notes now use the same token blocks as automated entries.
 >
-> ⚠️ **Reserved Separator:** The ` | ` character sequence is used as the delimiter between note entries. Free-text inputs (approval comments in `txtApprovalComments`, rejection comments in `txtRejectComments`, and manual notes in `txtAddNote`) must **not** contain ` | ` or the note will be split into garbled fragments on display. If users may type pipe characters, sanitize the input by replacing `" | "` with `"; "` before saving.
+> ⚠️ **Reserved Tokens:** The ` | ` character sequence still separates entries, and the renderer also depends on `[Summary]`, `[Changes]`, `[Reason]`, `[Context]`, `[Comment]`, and ` ~~ `. Sanitize free text before saving so users cannot accidentally break the parser.
 
 ---
 
@@ -10836,8 +11067,6 @@ Your Notes Modal should now contain these controls:
     lblNotesStaffLabel
     txtStaffNotesContent
     lblStaffNotesHeader
-    txtStudentNotesContent
-    lblStudentNotesHeader
     lblNotesTitle
     recNotesModal
     recNotesOverlay
@@ -10845,12 +11074,11 @@ Your Notes Modal should now contain these controls:
 
 **Testing the Notes Modal:**
 1. Click "View Notes" on any job card
-2. Verify Student Notes section shows the student's submission notes (or "None")
-3. Verify Staff Notes section shows audit entries and manual notes (or "None")
-4. Select a staff member in the "Add note as" dropdown
-5. Type a note and click "+ Add Note"
-6. Verify the note appears in the Staff Notes section with the staff first name prefix
-7. Click Cancel or X to close the modal
+2. Verify Staff Notes & Activity shows audit entries and manual notes (or "None")
+3. Select a staff member in the "Add note as" dropdown
+4. Type a note and click "+ Add Note"
+5. Verify the note appears in the Staff Notes section with the staff first name prefix
+6. Click Cancel or X to close the modal
 
 ---
 
@@ -10858,7 +11086,7 @@ Your Notes Modal should now contain these controls:
 
 **What you're doing:** Creating a simple modal that displays the student's submission note when they click the "📝 Note" button on a job card. This ensures staff don't miss important instructions from students.
 
-> 💡 **Why a separate modal?** The Notes Modal (Step 13) shows both staff notes and student notes together. This dedicated Student Note modal is a quick, focused view triggered by the attention-grabbing gold button, ensuring student instructions are noticed.
+> 💡 **Why a separate modal?** The main Notes Modal (Step 13) is reserved for staff-authored and system-generated activity. This dedicated Student Note modal keeps student-submitted instructions separate, prominent, and easy to review from the job card.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
