@@ -10546,13 +10546,15 @@ scrDashboard
 |----------|-------|
 | X | `(Parent.Width - Self.Width) / 2` |
 | Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `Min(1180, Parent.Width - 40)` |
+| Width | `700` |
 | Height | `Min(720, Parent.Height - 40)` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
+
+> 💡 **Layout note:** The final notes modal uses a fixed `700` pixel content width with a dynamic height cap. This keeps the staff notes view in a readable single-column layout while still centering and shrinking vertically on smaller screens.
 
 ---
 
@@ -10654,9 +10656,9 @@ Reset(ddNotesStaff)
 |----------|-------|
 | Default | See formula below |
 | X | `recNotesModal.X + 20` |
-| Y | `lblStaffNotesHeader.Y + 22` |
+| Y | `lblStaffNotesHeader.Y + 28` |
 | Width | `recNotesModal.Width - 40` |
-| Height | `recNotesModal.Height - 320` |
+| Height | `recNotesModal.Height - 360` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.View` |
 | Size | `11` |
@@ -10924,10 +10926,10 @@ If(
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recNotesModal.X + recNotesModal.Width - 230` |
+| X | `recNotesModal.X + recNotesModal.Width - 255` |
 | Y | `recNotesModal.Y + recNotesModal.Height - 52` |
 | Width | `100` |
-| Height | `varBtnHeight` |
+| Height | `36` |
 | Fill | `varColorNeutral` |
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
@@ -10962,10 +10964,10 @@ Reset(ddNotesStaff)
 | Property | Value |
 |----------|-------|
 | Text | `"+ Add Note"` |
-| X | `recNotesModal.X + recNotesModal.Width - 120` |
+| X | `recNotesModal.X + recNotesModal.Width - 140` |
 | Y | `recNotesModal.Y + recNotesModal.Height - 52` |
 | Width | `120` |
-| Height | `varBtnHeight` |
+| Height | `36` |
 | Fill | `varColorSuccess` |
 | Color | `Color.White` |
 | HoverFill | `varColorSuccessHover` |
@@ -11137,7 +11139,7 @@ scrDashboard
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
-| Fill | `RGBA(0, 0, 0, 0.7)` |
+| Fill | `varColorOverlay` |
 
 8. Set **OnSelect:**
 
