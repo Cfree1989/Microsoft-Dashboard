@@ -812,6 +812,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblViewMsgStaffLabel
         recViewMsgSeparator
         galViewMessages
+        lblViewMsgSubtitle
         lblViewMsgTitle
         recViewMsgModal
         recViewMsgOverlay
@@ -12484,7 +12485,7 @@ scrDashboard
     ├── ddViewMsgStaff              ← Staff dropdown
     ├── lblViewMsgStaffLabel        ← "Performing Action As: *"
     ├── recViewMsgSeparator         ← Line separating history from compose
-    ├── galViewMessages             ← Scrollable message gallery
+    ├── galViewMessages             ← Flexible-height message gallery
     │   ├── recVMsgBg               ← Background (direction-based colors)
     │   ├── icoVMsgDirection        ← Direction icon (send/mail)
     │   ├── lblVMsgAuthor           ← Author name + timestamp
@@ -12639,7 +12640,7 @@ Reset(ddViewMsgStaff)
 
 ### Messages Gallery (galViewMessages)
 
-21. Click **+ Insert** → **Blank vertical gallery**.
+21. Click **+ Insert** → **Blank flexible height gallery**.
 22. **Rename it:** `galViewMessages`
 23. Set properties:
 
@@ -12647,14 +12648,14 @@ Reset(ddViewMsgStaff)
 |----------|-------|
 | Items | `Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 65` |
+| Y | `recViewMsgModal.Y + 75` |
 | Width | `560` |
-| Height | `250` |
-| TemplateSize | `lblVMsgContent.Y + lblVMsgContent.Height + 16` |
+| Height | `335` |
+| TemplateSize | `80` |
 | TemplatePadding | `8` |
 | ShowScrollbar | `true` |
 
-> **Flexible Height:** The `TemplateSize` formula calculates each row's height based on the auto-height label plus padding, allowing messages to expand naturally.
+> **Use a Blank Flexible Height Gallery:** This is the correct gallery type for a message thread where each item can have a different height. It starts empty, which is what you want here because you are building a custom message bubble layout from scratch. Keep scrolling at the gallery level only, not inside individual message controls.
 
 ---
 
@@ -12665,12 +12666,14 @@ Reset(ddViewMsgStaff)
    - **X:** `If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)`
    - **Y:** `0`
    - **Width:** `Parent.TemplateWidth * varMessageBubbleWidth`
-   - **Height:** `lblVMsgContent.Y + lblVMsgContent.Height + 6`
+   - **Height:** `Max(56, lblVMsgContent.Y + lblVMsgContent.Height + 10)`
    - **Fill:** `If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))`
    - **RadiusTopLeft:** `6`
    - **RadiusTopRight:** `6`
    - **RadiusBottomLeft:** `6`
    - **RadiusBottomRight:** `6`
+
+> **Why this works:** The background rectangle grows to the bottom of the message text, so the gallery can size each row to the actual bubble height instead of reserving empty space for every item.
 
 ---
 
@@ -12703,14 +12706,15 @@ Reset(ddViewMsgStaff)
 | Text | `If(IsBlank(ThisItem.Author0.DisplayName), "Unknown", With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value)) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")` |
 | X | `recVMsgBg.X + 32` |
 | Y | `6` |
-| Width | `300` |
-| Height | `18` |
+| Width | `recVMsgBg.Width - 95` |
+| AutoHeight | `true` |
+| Height | `Remove any fixed value` |
 | Size | `10` |
 | Color | `If(ThisItem.Direction.Value = "Outbound", varColorPrimary, RGBA(180, 130, 40, 1))` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 
-> **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). Using `Author` would always show the logged-in user who created the record, not the staff member selected in the dropdown.
+> **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). Using `Author` would always show the logged-in user who created the record, not the staff member selected in the dropdown. Using `AutoHeight` here also prevents long names and timestamps from overlapping the message body.
 
 ---
 
@@ -12744,14 +12748,28 @@ Reset(ddViewMsgStaff)
 |----------|-------|
 | Text | `ThisItem.Message` |
 | X | `recVMsgBg.X + 10` |
-| Y | `26` |
+| Y | `lblVMsgAuthor.Y + lblVMsgAuthor.Height + 8` |
 | Width | `recVMsgBg.Width - 20` |
 | AutoHeight | `true` |
+| Height | `Remove any fixed value` |
+| Overflow | `Overflow.Hidden` |
 | Size | `11` |
 | Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Top` |
 
-> **Note:** Using `AutoHeight` allows each message to expand to fit its content. The gallery scrolls to show all messages rather than each message having its own scrollbar.
+> **Note:** Using `AutoHeight` with `Overflow.Hidden` allows each message to expand to fit its content without showing a scrollbar on the label itself. Do not set a fixed `Height` or `Overflow.Scroll` on this label. The gallery scrolls to show all messages rather than each message having its own scrollbar.
+
+> **How the layout works:** In a flexible height gallery, items stack correctly when the controls inside each item are allowed to size naturally. The message body sits below `lblVMsgAuthor`, and the background grows to the bottom of `lblVMsgContent`; then Power Apps places the next message underneath the fully rendered bubble automatically.
+
+### Common Fixes If Messages Still Overlap
+
+If the thread still overlaps after these updates, check these exact issues:
+
+- `galViewMessages` was inserted as **Vertical** instead of **Blank flexible height gallery**
+- `lblVMsgAuthor` still has a fixed `Height` like `18`
+- `lblVMsgContent` still has a fixed `Height` like `146`
+- `lblVMsgContent` still uses `Overflow.Scroll`
+- one or more controls inside the gallery were given fixed heights instead of sizing from the content
 
 ---
 
@@ -13154,6 +13172,9 @@ Notify("Messages marked as read", NotificationType.Success)
 - [ ] Clicking opens modal with correct title (Messages - REQ-XXXXX) and subtitle (Student name + email)
 - [ ] Messages display with correct direction styling (blue=outbound, yellow=inbound)
 - [ ] Full message content visible (no truncation)
+- [ ] No individual message shows its own scrollbar
+- [ ] Long author names wrap without overlapping the message body
+- [ ] Short and long messages stack without overlapping each other
 - [ ] Messages scroll when there are many
 - [ ] Close button (X) closes modal and resets compose fields
 - [ ] "Mark All Read" button appears when there are unread messages
