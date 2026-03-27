@@ -193,7 +193,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | ProjectType | Choice | Class Project; Research; Personal; Other |
 | Color | Choice | Any; Black; Matte Black; White; Matte White; Gray; Light Gray; Matte Light Gray; Red; Matte Red; Orange; Matte Orange; Yellow; Matte Yellow; Gold; Green; Matte Green; Forest Green; Blue; Matte Blue; Cobalt Blue; Purple; Matte Purple; Brown; Light Brown; Chocolate Brown; Matte Chocolate; Copper; Bronze; Silver; Clear |
 | Method | Choice | Filament; Resin |
-| Printer | Choice | Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in) |
+| Printer | Choice | Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3+ (5.7×5.7×7.3in) |
 | DueDate | Date | Optional |
 | Notes | Multiple lines of text | Plain text |
 
@@ -204,8 +204,8 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | Priority | Choice | Low; Normal; High; Rush |
 | AssignedTo | Person | Optional manual assignment |
 | EstimatedTime | Number | Staff estimation (print time in hours) |
-| EstimatedWeight | Number | Staff estimation (weight in grams) |
-| EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.20/gram, $3.00 minimum) |
+| EstimatedWeight | Number | Staff estimation (grams for filament, mL for resin) |
+| EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.30/mL, $3.00 minimum) |
 | StaffNotes | Multiple lines of text | Staff-only |
 | LastAction | Choice | Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; Canceled by Student; System; Approved; Printing; Completed; Picked Up; Student Confirmed |
 | LastActionBy | Person | Who did it |
@@ -216,9 +216,9 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 
 > **💰 Pricing Structure for EstimatedCost Calculation:**
 > - **Filament prints:** $0.10 per gram
-> - **Resin prints:** $0.20 per gram  
+> - **Resin prints:** $0.30 per mL  
 > - **Minimum charge:** $3.00 per print (applied automatically)
-> - **Formula:** `Cost = Max($3.00, Weight × Method Rate)`
+> - **Formula:** `Cost = Max($3.00, MaterialUsage × Method Rate)`
 > - **EstimatedTime:** Optional for operational tracking (not used in pricing)
 
 #### 2b. Create helpful **Views**
@@ -687,7 +687,7 @@ Notify("Request rejected due to file policy violation. Student will be notified.
 
 1. As a **student** account: Submit a new request with an attachment.
    - Fill out student fields: Title, Course Number, Discipline, ProjectType, Color, Method, Printer, DueDate, Notes
-   - Test **Printer Selection filtering**: Select "Resin" method → only "Form 3" should appear in printer choices
+   - Test **Printer Selection filtering**: Select "Resin" method → only "Form 3+" should appear in printer choices, and it should auto-populate
    - Open the **My Requests** view link to confirm the new item appears for the student:
      `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab/Lists/PrintRequests/My%20Requests.aspx`
    - Expect: **ReqKey** is set (e.g., `REQ-00001`), a **Created** entry in `AuditLog`, and a confirmation **email**.

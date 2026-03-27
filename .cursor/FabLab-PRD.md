@@ -174,7 +174,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Acceptance Criteria:**
   - Method selection (Filament/Resin) drives printer filtering
   - Build plate dimensions clearly displayed (inches format)
-  - Form 3 shown only for resin method selection
+  - Form 3+ shown only for resin method selection and auto-selected by default
   - All FDM printers available for filament method
 
 #### File Validation Framework (P0 - Critical)
@@ -474,7 +474,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **ProjectType** (Choice) - Class Project; Research; Personal; Other
 - **Color** (Choice) - Any; Black; Matte Black; White; Matte White; Gray; Light Gray; Matte Light Gray; Red; Matte Red; Orange; Matte Orange; Yellow; Matte Yellow; Gold; Green; Matte Green; Forest Green; Blue; Matte Blue; Cobalt Blue; Purple; Matte Purple; Brown; Light Brown; Chocolate Brown; Matte Chocolate; Copper; Bronze; Silver; Clear
 - **Method** (Choice) - Filament; Resin
-- **Printer** (Choice) - Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3 (5.7×5.7×7.3in)
+- **Printer** (Choice) - Prusa MK4S (9.8×8.3×8.7in); Prusa XL (14.2×14.2×14.2in); Raised3D Pro 2 Plus (12.0×12.0×23in); Form 3+ (5.7×5.7×7.3in)
 - **DueDate** (Date) - Timeline planning
 - **Notes** (Multiple lines text) - Additional instructions
 
@@ -483,7 +483,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **Priority** (Choice) - Low; Normal; High; Rush
 - **AssignedTo** (Person) - Optional field for manual assignment if needed (not used in automated workflows)
 - **EstimatedTime** (Number, Display: EstHours) - Time estimation in hours
-- **EstimatedWeight** (Number, Display: EstWeight) - Estimated material weight in grams
+- **EstimatedWeight** (Number, Display: EstWeight) - Estimated material usage (grams for filament, mL for resin)
 - **EstimatedCost** (Currency) - Calculated estimated cost (see Appendix D for formula)
 - **StaffNotes** (Multiple lines text) - Internal communication
 - **RejectionReason** (Choice with fill-in) - File format not supported; Design not printable; Excessive material usage; Incomplete request information; Size limitations; Material not available; Quality concerns; Other
@@ -496,14 +496,14 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 **Payment Recording Fields - Actuals at Pickup (5):**
 - **TransactionNumber** (Single line text) - TigerCASH transaction/receipt number
-- **FinalWeight** (Number) - Actual weight of finished print in grams
+- **FinalWeight** (Number) - Actual material usage recorded for pricing (grams for filament, mL for resin)
 - **FinalCost** (Currency) - Actual cost charged (calculated from FinalWeight)
 - **PaymentDate** (Date) - Date payment was recorded
 - **PaymentNotes** (Multiple lines text) - Payment discrepancies or special circumstances
 
 **Note on Field Types:**
 - **EstimatedTime** internal name is `EstHours` in SharePoint
-- **EstimatedWeight** internal name is `EstWeight` in SharePoint
+- **EstimatedWeight** internal name is `EstWeight` in SharePoint; the numeric field stores grams for filament and mL for resin
 - **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
 - **FinalWeight** captures actual material used; enables estimate accuracy tracking
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
@@ -813,10 +813,10 @@ The Fabrication Lab uses a weight-based pricing model to recover material costs 
 
 **Pricing Rates:**
 
-| Material | Rate per Gram | Typical Small Print (50g) | Typical Large Print (200g) |
-|----------|---------------|---------------------------|----------------------------|
-| Filament (PLA/PETG/ABS) | $0.10/g | $5.00 | $20.00 |
-| Resin (Standard) | $0.30/g | $15.00 | $60.00 |
+| Material | Rate | Typical Small Print | Typical Large Print |
+|----------|------|---------------------|---------------------|
+| Filament (PLA/PETG/ABS) | $0.10/g | 50g -> $5.00 | 200g -> $20.00 |
+| Resin (Standard) | $0.30/mL | 50mL -> $15.00 | 200mL -> $60.00 |
 
 #### Minimum Charge
 
@@ -841,9 +841,9 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 ```
 
 **Where:**
-- **EstimatedWeight:** Predicted grams of material (from slicer software)
-- **FinalWeight:** Actual grams of finished print (weighed at pickup)
-- **Material_Rate:** $0.10/g (Filament) or $0.30/g (Resin)
+- **EstimatedWeight:** Predicted material usage from slicer software (grams for filament, mL for resin)
+- **FinalWeight:** Recorded material usage used for final pricing (grams for filament, mL for resin)
+- **Material_Rate:** $0.10/g (Filament) or $0.30/mL (Resin)
 - **$3.00:** Minimum charge applied if calculated cost is lower
 
 #### Calculation Examples
@@ -861,23 +861,23 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 - **Final Cost: $7.50**
 
 **Example 3: Small Resin Miniature**
-- Weight: 20 grams
+- Volume: 20 mL
 - Method: Resin
-- Calculated: 20g × $0.30/g = $6.00
+- Calculated: 20mL × $0.30/mL = $6.00
 - **Final Cost: $6.00**
 
 **Example 4: Large Resin Model**
-- Weight: 100 grams
+- Volume: 100 mL
 - Method: Resin
-- Calculated: 100g × $0.30/g = $30.00
+- Calculated: 100mL × $0.30/mL = $30.00
 - **Final Cost: $30.00**
 
 #### Estimation Process
 
 1. **Staff Review:** Staff examines 3D model file
 2. **Slicer Analysis:** Staff imports file into PrusaSlicer or PreForm
-3. **Weight Calculation:** Slicer calculates material usage (grams)
-4. **Staff Input:** Staff enters EstimatedWeight in PrintRequests
+3. **Usage Calculation:** Slicer calculates material usage (grams for filament, mL in PreForm for resin)
+4. **Staff Input:** Staff enters `EstimatedWeight` in PrintRequests using grams for filament and mL for resin
 5. **Auto-Calculation:** System applies formula to calculate EstimatedCost
 6. **Student Notification:** Estimate email sent with cost (Status: Pending)
 7. **Student Confirmation:** Student reviews and confirms via StudentConfirmed field
@@ -893,11 +893,11 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 **Payment Recording Workflow:**
 1. Student receives pickup notification email
 2. Student visits Fabrication Lab with ID and TigerCASH
-3. Staff weighs the finished print on scale
+3. Staff records final material usage in the unit appropriate for the method
 4. Staff clicks "Picked Up" button → Payment Modal opens
 5. Staff enters:
    - **Transaction Number:** TigerCASH receipt/transaction ID
-   - **Final Weight:** Actual weight in grams (auto-calculates FinalCost)
+   - **Final Weight:** Actual material used (grams for filament, mL for resin; auto-calculates FinalCost)
    - **Payment Date:** Defaults to today (adjustable)
    - **Notes:** Any discrepancies or special circumstances
 6. Student pays with TigerCASH card
@@ -908,7 +908,7 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 | Field | Purpose | Example |
 |-------|---------|---------|
 | TransactionNumber | TigerCASH receipt ID | "TC-2024-12345" |
-| FinalWeight | Actual print weight (grams) | 82 |
+| FinalWeight | Actual material used (grams for filament, mL for resin) | 82 |
 | FinalCost | Auto-calculated from FinalWeight | $8.20 |
 | PaymentDate | Date recorded | 12/17/2024 |
 | PaymentNotes | Special circumstances | "Student paid cash, manager approved" |

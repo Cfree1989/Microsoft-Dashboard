@@ -2056,6 +2056,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | Items | `Choices([@PrintRequests].Method)` |
 | DefaultSelectedItems | `Parent.Default` |
+| OnChange | `Reset(DataCardValue10)` |
 | SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
@@ -2143,7 +2144,7 @@ Resin:
 | Property | Value |
 |----------|-------|
 | Items | *(see cascading formula below)* |
-| DefaultSelectedItems | `Parent.Default` |
+| DefaultSelectedItems | `If(DataCardValue8.Selected.Value = "Resin", Table(LookUp(Choices([@PrintRequests].Printer), Value = "Form 3+ (5.7×5.7×7.3in)")), Table(Parent.Default))` |
 | SelectMultiple | `false` |
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
@@ -2177,13 +2178,15 @@ Filter(
         DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
         DataCardValue8.Selected.Value = "Resin",
-        Value = "Form 3 (5.7×5.7×7.3in)",
+        Value = "Form 3+ (5.7×5.7×7.3in)",
         true
     )
 )
 ```
 
-> 💡 **Cascading Logic:** When Method (`DataCardValue8`) = "Filament" → shows FDM printers. When Method = "Resin" → shows only Form 3. When Method is blank → shows all printers.
+> 💡 **Cascading Logic:** When Method (`DataCardValue8`) = "Filament" → shows FDM printers. When Method = "Resin" → shows only Form 3+. When Method is blank → shows all printers.
+>
+> **Auto-populate:** Because the Method combo resets the Printer combo on change and resin has only one valid printer, selecting `Resin` auto-populates `Form 3+`.
 
 > ⚠️ **Dropdown Empty Fix:** If the ComboBox appears empty even though `Choices()` returns data (test with a label: `CountRows(Choices(PrintRequests.Printer))`), the control may be corrupted. **Fix:** Delete `DataCardValue10`, insert a new ComboBox inside the DataCard, rename it to `DataCardValue10`, and reapply the properties above.
 
@@ -2885,7 +2888,7 @@ Filter(
         DataCardValue8.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
         DataCardValue8.Selected.Value = "Resin",
-        Value = "Form 3 (5.7×5.7×7.3in)",
+        Value = "Form 3+ (5.7×5.7×7.3in)",
         true
     )
 )
@@ -2893,7 +2896,7 @@ Filter(
 
 **Result:**
 - Filament → Shows Prusa MK4S, Prusa XL, Raised3D
-- Resin → Shows Form 3 only
+- Resin → Shows Form 3+ only
 
 #### Color Filter Logic
 
@@ -4432,7 +4435,7 @@ Filter(
 ```powerfx
 Filter(
     Choices(PrintRequests.Printer),
-    If(ddMethod.Selected.Value = "Filament", Value in [...], ddMethod.Selected.Value = "Resin", Value = "Form 3...", true)
+    If(ddMethod.Selected.Value = "Filament", Value in [...], ddMethod.Selected.Value = "Resin", Value = "Form 3+...", true)
 )
 ```
 
@@ -4731,7 +4734,7 @@ Filter(
         ddMethod.Selected.Value = "Filament",
         Value in ["Prusa MK4S (9.8×8.3×8.7in)", "Prusa XL (14.2×14.2×14.2in)", "Raised3D Pro 2 Plus (12.0×12.0×23in)"],
         ddMethod.Selected.Value = "Resin",
-        Value = "Form 3 (5.7×5.7×7.3in)",
+        Value = "Form 3+ (5.7×5.7×7.3in)",
         true
     )
 )

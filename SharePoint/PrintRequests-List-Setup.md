@@ -242,7 +242,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - Prusa MK4S (9.8×8.3×8.7in)
    - Prusa XL (14.2×14.2×14.2in)
    - Raised3D Pro 2 Plus (12.0×12.0×23in)
-   - Form 3 (5.7×5.7×7.3in)
+   - Form 3+ (5.7×5.7×7.3in)
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
@@ -319,7 +319,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `EstWeight`
-3. **Description:** `Material weight in grams (Display name: EstimatedWeight)`
+3. **Description:** `Estimated material usage: grams for filament, mL for resin (Display name: EstimatedWeight)`
 4. **Number of decimal places:** 0
 5. Click **Save**
 
@@ -518,7 +518,7 @@ These columns capture actual payment details when a print is picked up.
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `FinalWeight`
-3. **Description:** `Actual weight of finished print in grams`
+3. **Description:** `Actual material usage recorded for pricing: grams for filament, mL for resin`
 4. **Number of decimal places:** 0
 5. Click **Save**
 
@@ -608,7 +608,7 @@ This column captures which printer(s) the job was actually printed on, separate 
    - Prusa MK4S
    - Prusa XL
    - Raised3D Pro 2 Plus
-   - Form 3
+   - Form 3+
 5. **Allow multiple selections:** Yes ← **Important!**
 6. **Require that this column contains information:** No (column is blank until completion)
 7. Click **Save**
@@ -708,7 +708,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 | Priority | Choice | No | Normal | Processing priority |
 | AssignedTo | Person | No | - | Manual assignment (optional) |
 | EstHours | Number | No | - | Estimated time in hours |
-| EstWeight | Number | No | - | Estimated material weight in grams |
+| EstWeight | Number | No | - | Estimated material usage (grams for filament, mL for resin) |
 | EstimatedCost | Currency | No | - | Calculated estimated cost |
 | StaffNotes | Multi-line (Plain) | No | - | Internal staff activity log and notes |
 | RejectionReason | Choice (fill-in) | No | - | Rejection reason(s) - multiple selection |
@@ -729,7 +729,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 | Column | Type | Required | Default | Purpose |
 |--------|------|----------|---------|---------|
 | TransactionNumber | Single line | No | - | Reference number (receipt, check, or grant/program code) |
-| FinalWeight | Number | No | - | Actual weight of finished print (grams) |
+| FinalWeight | Number | No | - | Actual material usage (grams for filament, mL for resin) |
 | FinalCost | Currency | No | - | Running total charged for this request (from Payments) |
 | PaymentDate | Date | No | - | Date payment was recorded |
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
@@ -769,9 +769,9 @@ This column captures which printer(s) the job was actually printed on, separate 
 ## Notes on Field Types
 
 - **EstHours** internal name is `EstHours` in SharePoint (Display: EstimatedTime)
-- **EstWeight** internal name is `EstWeight` in SharePoint (Display: EstimatedWeight)
+- **EstWeight** internal name is `EstWeight` in SharePoint (Display: EstimatedWeight); the numeric field stores grams for filament and mL for resin
 - **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
-- **FinalWeight** captures actual material used; enables estimate accuracy tracking
+- **FinalWeight** captures actual material used in the method-appropriate unit; enables estimate accuracy tracking
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
 - For detailed audit attribution with person fields, see AuditLog.Actor
 

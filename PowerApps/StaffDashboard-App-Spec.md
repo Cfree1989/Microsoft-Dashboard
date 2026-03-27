@@ -478,7 +478,7 @@ ClearCollect(colPayments, FirstN(colAllPayments, 0));
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
-Set(varResinRate, 0.30);       // $ per gram for resin printing  
+Set(varResinRate, 0.30);       // $ per mL for resin printing  
 Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
 // === STYLING / THEMING ===
@@ -660,7 +660,7 @@ Set(varLoadingMessage, "")
 | `varPickedPlatesText` | Deduped, sorted comma-separated plate numbers for the current payment save | Text |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
-| `varResinRate` | Cost per gram for resin printing | Number |
+| `varResinRate` | Cost per mL for resin printing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
 | `varColorPrimary` | Blue - primary actions | Color |
@@ -1750,11 +1750,14 @@ Switch(
 If(
     ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.FinalCost),
     // After payment: show final weight and cost only
-    "⚖ " & Text(ThisItem.FinalWeight) & "g · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
+    "⚖ " & Text(ThisItem.FinalWeight) &
+    If(ThisItem.Method.Value = "Resin", "mL", "g") &
+    " · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
     // Before payment: show estimates
     If(
         !IsBlank(ThisItem.EstimatedWeight),
-        "⚖ " & Text(ThisItem.EstimatedWeight) & "g" &
+        "⚖ " & Text(ThisItem.EstimatedWeight) &
+        If(ThisItem.Method.Value = "Resin", "mL", "g") &
         If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
         If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
         ""
@@ -3342,8 +3345,8 @@ scrDashboard
     ├── lblApprovalCostLabel     ← "Estimated Cost:"
     ├── txtEstimatedTime         ← Time input field
     ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours):"
-    ├── txtEstimatedWeight       ← Weight input field
-    ├── lblApprovalWeightLabel   ← "Estimated Weight (grams):"
+    ├── txtEstimatedWeight       ← Material usage input field
+    ├── lblApprovalWeightLabel   ← "Estimated Weight/Volume:"
     ├── ddApprovalStaff          ← Staff dropdown
     ├── lblApprovalStaffLabel    ← "Performing Action As:"
     ├── lblApprovalStudent       ← Student name and email
@@ -3617,7 +3620,7 @@ Reset(ddSlicedOnComputer)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Estimated Weight (grams):"` |
+| Text | `If(varSelectedItem.Method.Value = "Resin", "Estimated Volume (mL):", "Estimated Weight (grams):")` |
 | X | `recApprovalModal.X + 20` |
 | Y | `recApprovalModal.Y + 165` |
 | Width | `250` |
@@ -3640,7 +3643,7 @@ Reset(ddSlicedOnComputer)
 | Y | `recApprovalModal.Y + 190` |
 | Width | `236` |
 | Height | `36` |
-| HintText | `"Enter weight in grams (e.g., 25)"` |
+| HintText | `If(varSelectedItem.Method.Value = "Resin", "Enter resin volume in mL (e.g., 318)", "Enter weight in grams (e.g., 25)")` |
 | Font | `varAppFont` |
 | Size | `11` |
 | BorderColor | `varInputBorderColor` |
@@ -3754,7 +3757,7 @@ If(
 )
 ```
 
-> 💰 **Pricing:** Uses `varFilamentRate`, `varResinRate`, and `varMinimumCost` from App.OnStart
+> 💰 **Pricing:** Uses `varFilamentRate` ($/g), `varResinRate` ($/mL), and `varMinimumCost` from App.OnStart
 
 ---
 
@@ -3994,7 +3997,7 @@ If(
 )
 ```
 
-> ⚠️ **Required Fields:** Staff, sliced on computer, weight, AND time are all required for the confirm button to be enabled.
+> ⚠️ **Required Fields:** Staff, sliced on computer, material usage, AND time are all required for the confirm button to be enabled.
 
 70. Set **OnSelect:**
 
@@ -4047,7 +4050,9 @@ Set(
                     If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                     "APPROVED by " &
                     With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                    ": [Summary] " & txtEstimatedWeight.Text & "g, $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+                    ": [Summary] " & txtEstimatedWeight.Text &
+                    If(varSelectedItem.Method.Value = "Resin", "mL", "g") &
+                    ", $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
                     " [Changes] [Reason] [Context] " &
                     " [Comment] " &
                     Trim(
@@ -4109,7 +4114,11 @@ If(
             RequestID: varSelectedItem.ID,
             ReqKey: varSelectedItem.ReqKey,
             PlateKey: Text(GUID()),
-            Machine: varSelectedItem.Printer,
+            Machine: If(
+                varSelectedItem.Method.Value = "Resin",
+                LookUp(Choices([@BuildPlates].Machine), Value = "Form 3+ (5.7×5.7×7.3in)"),
+                varSelectedItem.Printer
+            ),
             Status: {Value: "Queued"},
             DisplayLabel: Blank()
         })
@@ -4995,7 +5004,7 @@ scrDashboard
     ├── txtDetailsHours        ← Hours number input
     ├── lblDetailsHoursLabel   ← "Est. Hours:"
     ├── txtDetailsWeight       ← Weight number input
-    ├── lblDetailsWeightLabel  ← "Est. Weight (grams):"
+    ├── lblDetailsWeightLabel  ← "Est. Weight/Volume:"
     ├── ddDetailsColor         ← Color dropdown
     ├── lblDetailsColorLabel   ← "Color:"
     ├── ddDetailsPrinter       ← Printer dropdown (filtered by method)
@@ -5177,7 +5186,11 @@ Reset(txtDetailsTransaction)
 varSelectedItem.Method.Value & " | " &
 varSelectedItem.Printer.Value & " | " &
 varSelectedItem.Color.Value & " | " &
-If(IsBlank(varSelectedItem.EstimatedWeight), "No weight", Text(varSelectedItem.EstimatedWeight) & "g") & " | " &
+If(
+    IsBlank(varSelectedItem.EstimatedWeight),
+    "No estimate",
+    Text(varSelectedItem.EstimatedWeight) & If(varSelectedItem.Method.Value = "Resin", "mL", "g")
+) & " | " &
 If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00"))
 ```
 
@@ -5270,6 +5283,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | DefaultSelectedItems | `If(IsBlank(varSelectedItem.Method), Blank(), [varSelectedItem.Method])` |
+| OnChange | `Reset(ddDetailsPrinter)` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5323,7 +5337,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `340` |
 | Height | `36` |
 | DisplayFields | `["Value"]` |
-| DefaultSelectedItems | `If(IsBlank(varSelectedItem.Printer), Blank(), [varSelectedItem.Printer])` |
+| DefaultSelectedItems | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", [LookUp(Choices([@PrintRequests].Printer), Value = "Form 3+ (5.7×5.7×7.3in)")], If(IsBlank(varSelectedItem.Printer), Blank(), [varSelectedItem.Printer]))` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5356,7 +5370,7 @@ With(
             selectedMethod = "Filament",
             StartsWith(Value, "Prusa MK4S") || StartsWith(Value, "Prusa XL") || StartsWith(Value, "Raise3D") || StartsWith(Value, "Raised3D"),
             selectedMethod = "Resin",
-            Value = "Form 3 (5.7×5.7×7.3in)",
+            Value = "Form 3+ (5.7×5.7×7.3in)",
             true
         )
     )
@@ -5366,6 +5380,8 @@ With(
 > 💡 **Dynamic filtering:** When the modal first opens, the current printer is guaranteed to remain in the list so the preloaded selection renders correctly. If staff changes Method, the dropdown switches to the compatible printer list for that new method.
 
 > ⚠️ **Important:** This avoids a common UX bug where the combo appears blank even though a printer is already saved, and it ensures printer-only changes are easier to detect.
+>
+> **Resin default:** When staff switches Method to `Resin`, reset `ddDetailsPrinter` so the printer auto-populates to `Form 3+`.
 
 ---
 
@@ -5428,7 +5444,7 @@ With(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Est. Weight (g):"` |
+| Text | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", "Est. Volume (mL):", "Est. Weight (g):")` |
 | X | `recDetailsModal.X + 20` |
 | Y | `recDetailsModal.Y + 325` |
 | Width | `130` |
@@ -5450,7 +5466,7 @@ With(
 | Width | `120` |
 | Height | `36` |
 | Format | `TextFormat.Number` |
-| HintText | `"e.g., 25"` |
+| HintText | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", "e.g., 318", "e.g., 25")` |
 | Default | `If(IsBlank(varSelectedItem.EstimatedWeight), "", Text(varSelectedItem.EstimatedWeight))` |
 | Font | `varAppFont` |
 | Size | `varInputFontSize` |
@@ -5712,8 +5728,16 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Saving changes...");
 
-// Calculate new cost based on weight and method
+// Calculate new cost based on material usage and method
 Set(varNewMethod, If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value));
+Set(
+    varNewPrinter,
+    If(
+        varNewMethod = "Resin",
+        LookUp(Choices([@PrintRequests].Printer), Value = "Form 3+ (5.7×5.7×7.3in)"),
+        If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer)
+    )
+);
 Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
 Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate))));
 
@@ -5721,15 +5745,23 @@ Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(var
 Set(varChangeDesc, "");
 If(Coalesce(ddDetailsMethod.Selected.Value, "") <> Coalesce(varSelectedItem.Method.Value, ""),
     Set(varChangeDesc, "Method: " & varSelectedItem.Method.Value & " → " & ddDetailsMethod.Selected.Value));
-If(Coalesce(ddDetailsPrinter.Selected.Value, "") <> Coalesce(varSelectedItem.Printer.Value, ""),
+If(Coalesce(varNewPrinter.Value, "") <> Coalesce(varSelectedItem.Printer.Value, ""),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Printer: " & 
         Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 1), varSelectedItem.Printer.Value)) & 
         " → " & 
-        Trim(If(Find("(", ddDetailsPrinter.Selected.Value) > 0, Left(ddDetailsPrinter.Selected.Value, Find("(", ddDetailsPrinter.Selected.Value) - 1), ddDetailsPrinter.Selected.Value))));
+        Trim(If(Find("(", varNewPrinter.Value) > 0, Left(varNewPrinter.Value, Find("(", varNewPrinter.Value) - 1), varNewPrinter.Value))));
 If(Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, ""),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
 If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
-    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Weight: " & Coalesce(varSelectedItem.EstimatedWeight, 0) & "g → " & txtDetailsWeight.Text & "g"));
+    Set(
+        varChangeDesc,
+        If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") &
+        If(varNewMethod = "Resin", "Volume: ", "Weight: ") &
+        Text(Coalesce(varSelectedItem.EstimatedWeight, 0)) &
+        If(varNewMethod = "Resin", "mL", "g") &
+        " → " & txtDetailsWeight.Text &
+        If(varNewMethod = "Resin", "mL", "g")
+    ));
 If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Hours: " & Coalesce(varSelectedItem.EstimatedTime, 0) & " → " & txtDetailsHours.Text));
 If(!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""),
@@ -5742,7 +5774,7 @@ Patch(
     LookUp(PrintRequests, ID = varSelectedItem.ID),
     {
         Method: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected, varSelectedItem.Method),
-        Printer: If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer),
+        Printer: varNewPrinter,
         Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
         EstimatedWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight),
         EstimatedTime: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstimatedTime),
@@ -5797,7 +5829,7 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> 💡 **Cost recalculation:** When weight or method changes, cost is automatically recalculated using: `Max(varMinimumCost, weight × rate)` where rate is `varFilamentRate` for Filament and `varResinRate` for Resin (configured in App.OnStart)
+> 💡 **Cost recalculation:** When material usage or method changes, cost is automatically recalculated using: `Max(varMinimumCost, usage × rate)` where rate is `varFilamentRate` for Filament ($/g) and `varResinRate` for Resin ($/mL).
 
 > 💡 **Transaction number editing:** The transaction number field only appears for items that have already been paid (have a TransactionNumber value). This allows staff to correct typos without undoing the entire payment.
 
@@ -6018,7 +6050,9 @@ Clear(colPayments)
 
 ```powerfx
 "Student: " & varSelectedItem.Student.DisplayName & Char(10) &
-"Estimated: " & Text(varSelectedItem.EstimatedWeight) & "g → $" &
+"Estimated: " & Text(varSelectedItem.EstimatedWeight) &
+If(varSelectedItem.Method.Value = "Resin", "mL", "g") &
+" → $" &
 Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 ```
 
@@ -6280,11 +6314,15 @@ Switch(
 
 ```powerfx
 If(
-    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
-    !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
-    Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
-    "⚠️ Weight (" & Text(Round(Value(txtPaymentWeight.Text) / varSelectedItem.EstimatedWeight * 100, 0)) & "% of est.)",
-    "Final Weight"
+    varSelectedItem.Method.Value = "Resin",
+    "Final Resin Used (mL)",
+    If(
+        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+        !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
+        Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
+        "⚠️ Weight (" & Text(Round(Value(txtPaymentWeight.Text) / varSelectedItem.EstimatedWeight * 100, 0)) & "% of est.)",
+        "Final Weight"
+    )
 )
 ```
 
@@ -6292,15 +6330,19 @@ If(
 
 ```powerfx
 If(
-    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
-    !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
-    Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
-    varColorWarning,
-    varColorText
+    varSelectedItem.Method.Value = "Resin",
+    varColorText,
+    If(
+        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+        !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
+        Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
+        varColorWarning,
+        varColorText
+    )
 )
 ```
 
-> ⚠️ **Sanity check:** The label switches to a warning when entered weight deviates more than 50% from the estimated weight. This catches typos (e.g. 1500g vs 150g) without hard-blocking submission.
+> ⚠️ **Sanity check:** Filament entries switch to a warning when entered weight deviates more than 50% from the estimate. Resin uses `mL`, so the label stays unit-specific instead of comparing against a grams-based final measurement.
 
 ---
 
@@ -6317,7 +6359,7 @@ If(
 | Width | `150` |
 | Height | `36` |
 | Format | `TextFormat.Number` |
-| HintText | `"Weight in grams"` |
+| HintText | `If(varSelectedItem.Method.Value = "Resin", "Resin used in mL", "Weight in grams")` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -6743,19 +6785,23 @@ With(
     {
         wPaidWeight: If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
     },
-    "Remaining: ~" & Text(Max(0, varSelectedItem.EstimatedWeight - wPaidWeight)) & "g · ~" &
-    Text(
-        Max(
-            0,
-            (varSelectedItem.EstimatedWeight - wPaidWeight) *
-            If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)
-        ),
-        "[$-en-US]$#,##0.00"
+    If(
+        varSelectedItem.Method.Value = "Resin",
+        "Estimated: " & Text(varSelectedItem.EstimatedWeight) & "mL → " &
+        Text(varSelectedItem.EstimatedCost, "[$-en-US]$#,##0.00"),
+        "Remaining: ~" & Text(Max(0, varSelectedItem.EstimatedWeight - wPaidWeight)) & "g · " &
+        Text(
+            Max(
+                0,
+                (varSelectedItem.EstimatedWeight - wPaidWeight) * varFilamentRate
+            ),
+            "[$-en-US]$#,##0.00"
+        )
     )
 )
 ```
 
-> Use `EstimatedWeight` here to match the `PrintRequests` schema documented throughout this spec.
+> Use `EstimatedWeight` here to match the `PrintRequests` schema documented throughout this spec. For resin, that numeric field stores slicer volume in `mL`.
 
 ---
 
@@ -7304,7 +7350,9 @@ If(
                         If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                         "PAID by " & wStaffShortName &
                         ": [Summary] " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        " for " & Text(Value(txtPaymentWeight.Text)) & "g [Changes] [Reason] [Context] " &
+                        " for " & Text(Value(txtPaymentWeight.Text)) &
+                        If(varSelectedItem.Method.Value = "Resin", "mL", "g") &
+                        " [Changes] [Reason] [Context] " &
                         " [Comment] " &
                         Trim(
                             Substitute(
@@ -7913,7 +7961,7 @@ Set(varLoadingMessage, "")
 
 # STEP 12E: Building the Batch Payment Modal
 
-**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a shared transaction header: one transaction number, one payer, one payment date, and one combined weight.
+**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a shared transaction header: one transaction number, one payer, one payment date, and one combined material-usage total.
 
 > 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
 >
@@ -7934,6 +7982,7 @@ Set(varLoadingMessage, "")
 ### Batch Eligibility Rules
 
 - Only requests currently in `Completed` status may enter batch mode.
+- Batch selections must all use the same `Method` so combined resin `mL` is never mixed with filament grams.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
@@ -7953,7 +8002,7 @@ scrDashboard
     ├── txtBatchPayerName         ← Shared payer name input
     ├── lblBatchPayerNameLabel    ← "Payer Name: *"
     ├── txtBatchWeight            ← Combined weight input
-    ├── lblBatchWeightLabel       ← "Combined Weight (grams): *"
+    ├── lblBatchWeightLabel       ← "Combined Material Used: *"
     ├── txtBatchTransaction       ← Transaction number input
     ├── lblBatchTransLabel        ← "Transaction Number: *"
     ├── ddBatchPaymentType        ← Payment type dropdown
@@ -8115,7 +8164,11 @@ Reset(ddBatchPaymentType)
 18. Set **Text:**
 
 ```powerfx
-"Estimated Total: " & Text(Sum(colBatchItems, EstimatedWeight)) & "g → " & Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
+"Estimated Total: " &
+Text(Sum(colBatchItems, EstimatedWeight)) &
+If(CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems), "mL", "g") &
+" → " &
+Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 ```
 
 > ⚠️ **Final-pickup clarity:** This warning replaces the previous neutral summary to make the batch consequence explicit. Staff must understand that batch = final pickup for every selected request.
@@ -8356,11 +8409,15 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 ```powerfx
 If(
-    IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
-    Sum(colBatchItems, EstimatedWeight) > 0 &&
-    Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
-    "⚠️ Weight (" & Text(Round(Value(txtBatchWeight.Text) / Sum(colBatchItems, EstimatedWeight) * 100, 0)) & "% of est.)",
-    "Combined Weight"
+    CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
+    "Combined Resin Used (mL)",
+    If(
+        IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+        Sum(colBatchItems, EstimatedWeight) > 0 &&
+        Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
+        "⚠️ Weight (" & Text(Round(Value(txtBatchWeight.Text) / Sum(colBatchItems, EstimatedWeight) * 100, 0)) & "% of est.)",
+        "Combined Weight"
+    )
 )
 ```
 
@@ -8565,7 +8622,9 @@ With(
 With(
     {wPlates: CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Status.Value = "Completed"))},
     ThisItem.ReqKey & " - " & ThisItem.Student.DisplayName &
-    " (" & Text(ThisItem.EstimatedWeight) & "g, " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00") & ")" &
+    " (" & Text(ThisItem.EstimatedWeight) &
+    If(ThisItem.Method.Value = "Resin", "mL", "g") &
+    ", " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00") & ")" &
     If(wPlates > 0, " — " & wPlates & " plate" & If(wPlates <> 1, "s", ""), "")
 )
 ```
@@ -8940,7 +8999,9 @@ If(
                                     If(IsBlank(wLatestRequest.StaffNotes), "", wLatestRequest.StaffNotes & " | "),
                                     "PAID (BATCH) by " & wStaffShortName &
                                     ": [Summary] " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
-                                    " for " & Text(wBatchWeight) & "g [Changes] [Reason] [Context] " &
+                                    " for " & Text(wBatchWeight) &
+                                    If(BatchItem.Method.Value = "Resin", "mL", "g") &
+                                    " [Changes] [Reason] [Context] " &
                                     " [Comment] " &
                                     " - " & Text(Now(), "m/d h:mmam/pm")
                                 ),
@@ -9456,7 +9517,7 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 |----------|-------|
 | Control | Dropdown |
 | Name | `drpPlateMachine` |
-| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3 (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
+| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
 | Value | `"DisplayValue"` |
 | Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `116` |
@@ -9522,7 +9583,7 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 ```
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and any printer choice that starts with `Raise` (covers `Raise3D`, `Raised3D`, and spaced variants like `Raise 3D`). Resin jobs show only Form 3.
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and any printer choice that starts with `Raise` (covers `Raise3D`, `Raised3D`, and spaced variants like `Raise 3D`). Resin jobs show only Form 3+.
 >
 > **Modal-only display cleanup:** In this modal, the dropdown shows shortened labels like `Prusa MK4S` and `Raise3D Pro 2 Plus`, but the app still patches the original full SharePoint choice value behind the scenes.
 >
@@ -9880,7 +9941,7 @@ If(
 >
 > **Numbering rule:** Do not use a simple `CountRows(...)+1` approach for reprint labels, because it can reuse numbers after deletions. Instead, calculate the next suffix from the highest existing `Reprint N` label and add 1.
 >
-> **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3.
+> **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3+.
 
 **OnSelect:**
 
@@ -9922,7 +9983,7 @@ With(
                                             varSelectedItem.Method.Value = "Filament",
                                             StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
                                             varSelectedItem.Method.Value = "Resin",
-                                            Value = "Form 3 (5.7×5.7×7.3in)",
+                                            Value = "Form 3+ (5.7×5.7×7.3in)",
                                             true
                                         )
                                     ),
@@ -9935,7 +9996,7 @@ With(
                                             varSelectedItem.Method.Value = "Filament",
                                             StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
                                             varSelectedItem.Method.Value = "Resin",
-                                            Value = "Form 3 (5.7×5.7×7.3in)",
+                                            Value = "Form 3+ (5.7×5.7×7.3in)",
                                             true
                                         )
                                     )
@@ -10053,7 +10114,7 @@ Before moving on, verify:
 - [ ] After labels lock, `+ Add Reprint` creates queued reprint rows with numbered labels such as `Reprint 1`
 - [ ] Reprint numbering continues upward from the highest existing reprint number instead of reusing deleted numbers
 - [ ] New plates default to the request's current printer when valid, otherwise fall back to the first valid machine for that method
-- [ ] Method filter works on the row dropdown: Resin jobs only show Form 3, Filament jobs show MK4S/XL/Raise3D-family printers
+- [ ] Method filter works on the row dropdown: Resin jobs only show Form 3+, Filament jobs show MK4S/XL/Raise3D-family printers
 - [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
 - [ ] Removing a plate deletes the BuildPlates record only when that row is eligible for deletion
 - [ ] Progress label updates when plate statuses change
@@ -13984,9 +14045,9 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 ### Scenario 9: Resin Job Printer Filter
 
 1. Open Build Plates modal for a Resin request
-2. **Verify:** "Add Printer" dropdown shows only "Form 3"
-3. Add Form 3 → add plates
-4. **Verify:** All plates have Machine = "Form 3"
+2. **Verify:** "Add Printer" dropdown shows only "Form 3+"
+3. Add Form 3+ → add plates
+4. **Verify:** All plates have Machine = "Form 3+"
 
 ### Scenario 10: Machine Edit on Queued/Printing Plate
 
@@ -14028,10 +14089,10 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 ### Scenario 13: Resin Job Printer Filter
 
 1. Open Complete Confirmation Modal for a Resin Printing item
-2. `ddCompletePrinter` should only show "Form 3 (5.7×5.7×7.3in)" as an option (filtered by Method)
+2. `ddCompletePrinter` should only show "Form 3+ (5.7×5.7×7.3in)" as an option (filtered by Method)
 3. Confirm it is the only available choice
 4. Staff confirms and clicks "Confirm Complete"
-5. **Verify:** `ActualPrinter` = "Form 3 (5.7×5.7×7.3in)"
+5. **Verify:** `ActualPrinter` = "Form 3+ (5.7×5.7×7.3in)"
 
 ### Scenario 14: Confirm Button Blocked Until Printer Selected
 
@@ -14199,7 +14260,7 @@ Use this checklist to verify all features work correctly:
 - [ ] **Printer Verification:** Correct printer pre-selected
 - [ ] **Printer Verification:** Wrong printer can be corrected
 - [ ] **Printer Verification:** Audit log notes correction
-- [ ] **Printer Verification:** Resin jobs filter to Form 3 only
+- [ ] **Printer Verification:** Resin jobs filter to Form 3+ only
 - [ ] **Payments:** Single payment records correctly
 - [ ] **Payments:** Multiple partial payments accumulate
 - [ ] **Payments:** Payment history displays in modal
@@ -14224,7 +14285,7 @@ Use this checklist to verify all features work correctly:
 | `varIsStaff` | App.OnStart | Staff member check |
 | `colStaff` | App.OnStart | Active staff collection |
 | `varFilamentRate` | App.OnStart | Filament price per gram ($0.10) |
-| `varResinRate` | App.OnStart | Resin price per gram ($0.30) |
+| `varResinRate` | App.OnStart | Resin price per mL ($0.30) |
 | `varMinimumCost` | App.OnStart | Minimum charge ($3.00) |
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
@@ -14271,7 +14332,7 @@ LastActionBy: {
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `varFilamentRate` | `0.10` | $ per gram for filament |
-| `varResinRate` | `0.30` | $ per gram for resin |
+| `varResinRate` | `0.30` | $ per mL for resin |
 | `varMinimumCost` | `3.00` | Minimum charge |
 
 **For Estimates (Approval Modal):**
@@ -14282,13 +14343,13 @@ Max(varMinimumCost, EstimatedWeight * If(Method = "Resin", varResinRate, varFila
 
 **For Finals (Payment Modal):**
 ```powerfx
-// FinalCost from FinalWeight (actual measured weight)
+// FinalCost from FinalWeight (grams for filament, mL for resin)
 // With own material discount: multiply by varOwnMaterialDiscount when chkOwnMaterial.Value is true
 Set(varBaseCost, Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilamentRate)));
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost))
 ```
 
-> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (slicer prediction). FinalWeight/FinalCost are recorded at payment pickup (physical measurement).
+> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (grams for filament, slicer mL for resin). FinalWeight/FinalCost are recorded at payment pickup using the same unit pattern.
 >
 > 💡 **Own Material Discount:** When student provides their own filament/resin, check `chkOwnMaterial` for a 70% discount (student pays 30% of normal cost). This is saved to the `StudentOwnMaterial` field.
 
