@@ -438,6 +438,8 @@ Set(varBatchLastItemID, 0);
 Set(varBatchLastItemWeight, 0);
 Set(varBatchFinalCost, 0);
 Set(varBatchProcessedCount, 0);
+Set(varBatchRecordedAt, Blank());
+Set(varPaymentRecordedAt, Blank());
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -645,7 +647,9 @@ Set(varLoadingMessage, "")
 | `varBatchLastItemWeight` | Weight for last batch item after remainder adjustment | Number |
 | `varBatchFinalCost` | Sum of the per-item charges for the current batch run | Number |
 | `varBatchProcessedCount` | Count of items processed (for notification) | Number |
+| `varBatchRecordedAt` | Shared timestamp used for all rows created by one batch checkout | DateTime |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
+| `varPaymentRecordedAt` | Timestamp used for the current single-item payment row | DateTime |
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
@@ -2654,8 +2658,19 @@ CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in
 
 ```powerfx
 Set(varSelectedItem, ThisItem);
-ClearCollect(colPayments,
-    Sort(Filter(Payments, RequestID = ThisItem.ID), PaymentDate, SortOrder.Ascending)
+ClearCollect(
+    colPayments,
+    SortByColumns(
+        AddColumns(
+            Filter(Payments, RequestID = ThisItem.ID),
+            PaymentSortAt,
+            Coalesce(RecordedAt, PaymentDate)
+        ),
+        "PaymentSortAt",
+        SortOrder.Ascending,
+        "ID",
+        SortOrder.Ascending
+    )
 );
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = ThisItem.ID), ID, SortOrder.Ascending)
@@ -6637,7 +6652,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Items | `Sort(colPayments, PaymentDate, SortOrder.Ascending)` |
+| Items | `colPayments` |
 | X | `recPaymentModal.X + 590` |
 | Y | `lblPaymentHistoryHeader.Y + lblPaymentHistoryHeader.Height + 4` |
 | Width | `460` |
@@ -6672,7 +6687,11 @@ If(
 96. Set `lblHistSummary.Text`:
 
 ```powerfx
-Text(ThisItem.PaymentDate, "[$-en-US]mm/dd/yyyy") &
+If(
+    !IsBlank(ThisItem.RecordedAt),
+    Text(ThisItem.RecordedAt, "[$-en-US]mm/dd/yyyy h:mm AM/PM"),
+    Text(ThisItem.PaymentDate, "[$-en-US]mm/dd/yyyy")
+) &
 If(
     IsBlank(Trim(Coalesce(ThisItem.TransactionNumber, ""))),
     "",
@@ -6719,6 +6738,8 @@ If(
 ```
 
 > 💡 **Source of truth:** This gallery reads from the `Payments` list. Do not parse payment history out of `PrintRequests.PaymentNotes`.
+>
+> 💡 **Ordering rule:** Sort by `RecordedAt` when available so same-day transactions stay in the exact order they were entered. Fall back to `PaymentDate` for legacy rows that predate the timestamp field.
 >
 > 💡 **Layout rule:** Everything in the right column below this gallery should be positioned from the control above it, not from a fixed `Y` value. That keeps the modal layout stable whether history is shown or hidden.
 >
@@ -7142,6 +7163,7 @@ Refresh(Payments);
 ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colAllPayments, Payments);
 Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
+Set(varPaymentRecordedAt, Now());
 
 If(
     IsBlank(varSelectedItem) || !(varSelectedItem.Status.Value in ["Printing", "Completed"]),
@@ -7156,7 +7178,17 @@ If(
 
     ClearCollect(
         colPayments,
-        Sort(Filter(colAllPayments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+        SortByColumns(
+            AddColumns(
+                Filter(colAllPayments, RequestID = varSelectedItem.ID),
+                PaymentSortAt,
+                Coalesce(RecordedAt, PaymentDate)
+            ),
+            "PaymentSortAt",
+            SortOrder.Ascending,
+            "ID",
+            SortOrder.Ascending
+        )
     );
     ClearCollect(
         colBuildPlates,
@@ -7244,6 +7276,7 @@ Set(
                     Amount: varFinalCost,
                     PaymentType: {Value: ddPaymentType.Selected.Value},
                     PaymentDate: dpPaymentDate.SelectedDate,
+                    RecordedAt: varPaymentRecordedAt,
                     PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
                     PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
                     PlatesPickedUp: If(
@@ -7310,7 +7343,17 @@ If(
         Refresh(BuildPlates);
         ClearCollect(colAllPayments, Payments);
         ClearCollect(colPayments,
-            Sort(Filter(colAllPayments, RequestID = varSelectedItem.ID), PaymentDate, SortOrder.Ascending)
+            SortByColumns(
+                AddColumns(
+                    Filter(colAllPayments, RequestID = varSelectedItem.ID),
+                    PaymentSortAt,
+                    Coalesce(RecordedAt, PaymentDate)
+                ),
+                "PaymentSortAt",
+                SortOrder.Ascending,
+                "ID",
+                SortOrder.Ascending
+            )
         );
         ClearCollect(colAllBuildPlates, BuildPlates);
         ClearCollect(colBuildPlates,
@@ -7987,7 +8030,7 @@ Set(varLoadingMessage, "")
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
 - Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
-- All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, and `PaymentDate`, because accounting treats the batch as one real-world transaction.
+- All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one real-world transaction.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -8137,6 +8180,7 @@ Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
+Reset(txtBatchPayerTigerCard);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
@@ -8272,7 +8316,13 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 34. Set **Text:**
 
 ```powerfx
-If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: *")
+Switch(
+    ddBatchPaymentType.Selected.Value,
+    "TigerCASH", "Receipt #: *",
+    "Check", "Check #: *",
+    "Code", "Promo Code:",
+    "Reference #: *"
+)
 ```
 
 ---
@@ -8302,6 +8352,9 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 | RadiusTopRight | `varInputBorderRadius` |
 | RadiusBottomLeft | `varInputBorderRadius` |
 | RadiusBottomRight | `varInputBorderRadius` |
+| HintText | `Switch(ddBatchPaymentType.Selected.Value, "TigerCASH", "TigerCASH receipt #", "Check", "Check number", "Code", "Grant/program code", "Reference #")` |
+
+> 💡 **Guardrail:** For TigerCASH, this field should hold the receipt identifier, not the payer's 16-digit TigerCard number.
 
 ---
 
@@ -8350,11 +8403,57 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 ---
 
-### Payment Date Label (lblBatchPaymentDateLabel)
+### Payer Tiger Card Label (lblBatchPayerTigerCardLabel)
 
 44. Click **+ Insert** → **Text label**.
-45. **Rename it:** `lblBatchPaymentDateLabel`
+45. **Rename it:** `lblBatchPayerTigerCardLabel`
 46. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Payer Tiger Card"` |
+| X | `recBatchPaymentModal.X + 460` |
+| Y | `recBatchPaymentModal.Y + 160` |
+| Width | `120` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+### Payer Tiger Card Input (txtBatchPayerTigerCard)
+
+47. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
+48. **Rename it:** `txtBatchPayerTigerCard`
+49. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Default | `""` |
+| X | `recBatchPaymentModal.X + 460` |
+| Y | `recBatchPaymentModal.Y + 185` |
+| Width | `120` |
+| Height | `36` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `varInputBorderColor` |
+| HoverFill | `varInputHoverFill` |
+| DisabledBorderColor | `varInputBorderColor` |
+| RadiusTopLeft | `varInputBorderRadius` |
+| RadiusTopRight | `varInputBorderRadius` |
+| RadiusBottomLeft | `varInputBorderRadius` |
+| RadiusBottomRight | `varInputBorderRadius` |
+| HintText | `"Remote/manual only"` |
+
+> 💡 **When to use this field:** Fill this in when a batch TigerCASH payment is processed remotely or manually from a TigerCard. Do **not** put the TigerCard number in `txtBatchTransaction`; the transaction field should hold the receipt / approval number.
+
+---
+
+### Payment Date Label (lblBatchPaymentDateLabel)
+
+50. Click **+ Insert** → **Text label**.
+51. **Rename it:** `lblBatchPaymentDateLabel`
+52. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8369,9 +8468,9 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 
 ### Payment Date Picker (dpBatchPaymentDate)
 
-47. Click **+ Insert** → **Date picker** (**Classic**).
-48. **Rename it:** `dpBatchPaymentDate`
-49. Set properties:
+53. Click **+ Insert** → **Date picker** (**Classic**).
+54. **Rename it:** `dpBatchPaymentDate`
+55. Set properties:
 
 | Property | Value |
 |----------|-------|
@@ -8387,7 +8486,7 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Transaction #: 
 | IconBackground | `varChevronBackground` |
 | IconFill | `RGBA(255, 255, 255, 1)` |
 
-> ⚠️ **Build-order reminder:** Create both `txtBatchPayerName` and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
+> ⚠️ **Build-order reminder:** Create `txtBatchPayerName`, `txtBatchPayerTigerCard`, and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
 
 ---
 
@@ -8706,6 +8805,7 @@ Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
+Reset(txtBatchPayerTigerCard);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
@@ -8773,8 +8873,16 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colAllPayments, Payments);
 Clear(colBatchSucceededItems);
 Clear(colBatchFailedItems);
+Set(varBatchRecordedAt, Now());
 
 If(
+    ddBatchPaymentType.Selected.Value = "TigerCASH" &&
+    Len(Trim(txtBatchTransaction.Text)) = 16 &&
+    IsNumeric(Trim(txtBatchTransaction.Text)),
+    Set(varIsLoading, false);
+    Set(varLoadingMessage, "");
+    Notify("Transaction # looks like a 16-digit TigerCard number. Enter the TigerCard in Payer Tiger Card and use the receipt or approval number in Transaction #.", NotificationType.Error),
+
     CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtBatchTransaction.Text))) > 0,
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
@@ -8942,8 +9050,9 @@ If(
                                 Amount: wBatchCost,
                                 PaymentType: {Value: ddBatchPaymentType.Selected.Value},
                                 PaymentDate: dpBatchPaymentDate.SelectedDate,
+                                RecordedAt: varBatchRecordedAt,
                                 PayerName: Trim(txtBatchPayerName.Text),
-                                PayerTigerCard: "",
+                                PayerTigerCard: Trim(txtBatchPayerTigerCard.Text),
                                 PlatesPickedUp: If(
                                     CountRows(wRemainingCompletedPlates) > 0,
                                     Concat(
@@ -9065,6 +9174,7 @@ If(
         Set(varShowBatchPaymentModal, 0);
         Reset(txtBatchTransaction);
         Reset(txtBatchPayerName);
+        Reset(txtBatchPayerTigerCard);
         Reset(dpBatchPaymentDate);
         Reset(txtBatchWeight);
         Reset(ddBatchStaff);
@@ -9092,6 +9202,8 @@ If(
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
 > 💡 **Batch history guidance:** Canonical payment history must come from the `Payments` rows created for each batch item. Do not treat appended `PaymentNotes` text as authoritative history.
+>
+> 💡 **Remote TigerCASH guidance:** `PayerTigerCard` is the place for manual / remote TigerCard numbers. `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
 >
 > 💡 **Mixed-method pricing guidance:** The cost preview and each saved `Payments.Amount` value now branch on each request's `Method.Value`, so resin rows are not accidentally charged at the filament rate.
 >
@@ -10491,7 +10603,7 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "");
 ```
 
-> 💡 **Power Automate:** The `Flow-(G)-Export-MonthlyTransactions` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). The name has special characters, so Power Apps requires single quotes: `'Flow-(G)-Export-MonthlyTransactions'.Run(...)`. It queries the `Payments` SharePoint list server-side, creates a 4-column Excel file (Transaction #, Payer, Amount, Date), and returns a download URL.
+> 💡 **Power Automate:** The `Flow-(G)-Export-MonthlyTransactions` flow must be added as a data connection (see `PowerAutomate/Flow-(G)-Export-MonthlyTransactions.md`). The name has special characters, so Power Apps requires single quotes: `'Flow-(G)-Export-MonthlyTransactions'.Run(...)`. It queries the `Payments` SharePoint list server-side, creates a 5-column Excel file (`Transaction #`, `Payer`, `Amount`, `Date`, `Recorded At`), and returns a download URL.
 
 > 💡 **Friendly error handling:** `IfError(...)` prevents raw Power Automate/connector errors from surfacing directly to staff. The flow should already generate unique file names, but this still gives users a clean message if anything goes wrong.
 

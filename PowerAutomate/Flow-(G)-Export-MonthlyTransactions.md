@@ -17,6 +17,7 @@
   - `Payer`
   - `Amount`
   - `Date`
+  - `Recorded At`
 
 > **Important:** This flow assumes the table already exists in `_Template.xlsx`. Do not create the table at runtime.
 
@@ -45,6 +46,7 @@ Create the template workbook before building the flow. The copied export file wi
    - Cell `B1`: `Payer`
    - Cell `C1`: `Amount`
    - Cell `D1`: `Date`
+   - Cell `E1`: `Recorded At`
 4. Make sure the header text, spacing, and punctuation match exactly.
 
 > **Important:** The Office Script writes values into the `Transactions` table in this exact column order. If a header is spelled differently, the script may write to the wrong columns or fail to find the expected table layout.
@@ -56,7 +58,8 @@ Create the template workbook before building the flow. The copied export file wi
    - `B2`: `TEMP`
    - `C2`: `0`
    - `D2`: `1/1/2000`
-2. Select cells `A1:D2`.
+   - `E2`: `1/1/2000 12:00 PM`
+2. Select cells `A1:E2`.
 3. Click **Insert** -> **Table**.
 4. Confirm **My table has headers** is checked.
 5. Click **OK**.
@@ -81,6 +84,7 @@ Transactions
    - `Payer`
    - `Amount`
    - `Date`
+   - `Recorded At`
 4. Save the workbook.
 5. Close the workbook.
 
@@ -92,8 +96,9 @@ These settings are optional, but they make the exported file easier to read:
 
 1. Format the `Amount` column as **Number** or **Currency**.
 2. Format the `Date` column as **Short Date**.
-3. Bold the header row.
-4. Auto-fit columns `A:D`.
+3. Format the `Recorded At` column as **Date + Time**.
+4. Bold the header row.
+5. Auto-fit columns `A:E`.
 
 > **Note:** Formatting does not affect the flow logic. Only the table name and column headers are required for the flow to work.
 
@@ -105,7 +110,7 @@ Before using the flow, reopen `_Template.xlsx` and confirm all of the following:
 - the file name is `_Template.xlsx`
 - the workbook contains an Excel table, not just a header row
 - the table name is `Transactions`
-- the columns are exactly `Transaction #`, `Payer`, `Amount`, `Date`
+- the columns are exactly `Transaction #`, `Payer`, `Amount`, `Date`, `Recorded At`
 - the column order is exactly the same as listed above
 - the workbook opens without errors in SharePoint/Excel
 
@@ -149,6 +154,7 @@ function main(
     payer: string;
     amount: string | number;
     date: string;
+    recordedAt: string;
   }>;
 
   const values = rows.map((row) => [
@@ -156,6 +162,7 @@ function main(
     row.payer ?? "",
     row.amount ?? "",
     row.date ?? "",
+    row.recordedAt ?? "",
   ]);
 
   if (values.length > 0) {
@@ -168,7 +175,7 @@ function main(
   if (blanksToAdd > 0) {
     const blankRows: (string | number)[][] = [];
     for (let i = 0; i < blanksToAdd; i++) {
-      blankRows.push([" ", " ", " ", " "]);
+      blankRows.push([" ", " ", " ", " ", " "]);
     }
     table.addRows(-1, blankRows);
   }
@@ -190,6 +197,9 @@ function main(
   table.getColumnByName("Date").getRange().getFormat().setHorizontalAlignment(
     ExcelScript.HorizontalAlignment.center
   );
+  table.getColumnByName("Recorded At").getRange().getFormat().setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.center
+  );
 
   // Show a total row at the bottom of the table, but only keep a value in Amount.
   table.setShowTotals(true);
@@ -208,6 +218,9 @@ function main(
   table.getColumnByName("Date").getTotalRowRange().clear(
     ExcelScript.ClearApplyTo.contents
   );
+  table.getColumnByName("Recorded At").getTotalRowRange().clear(
+    ExcelScript.ClearApplyTo.contents
+  );
 }
 ```
 
@@ -222,7 +235,7 @@ function main(
 - appends all payment rows in one operation
 - adds blank manual-entry rows after the exported payments
 - auto-fits the table columns
-- applies basic alignment for headers, amounts, dates, and transaction numbers
+- applies basic alignment for headers, amounts, dates, timestamps, and transaction numbers
 - shows a total row at the bottom of the table with only the `Amount` total populated
 
 > **Important:** Save the script in a workbook location that your Excel Online (Business) connection can access. The flow will call this script against the copied export workbook.
@@ -327,7 +340,7 @@ formatDateTime(outputs('StartDate'), 'MMMM')
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `Payments`
    - **Filter Query:** `PaymentDate ge '` + **StartDate Outputs** + `' and PaymentDate lt '` + **EndDate Outputs** + `' and PaymentType eq 'TigerCASH'`
-   - **Order By:** `PaymentDate asc, TransactionNumber asc`
+  - **Order By:** `RecordedAt asc, TransactionNumber asc`
    - **Top Count:** `5000`
 
 **Configure retry policy:**
@@ -422,9 +435,12 @@ Before calling the script, convert the SharePoint items into a JSON string that 
    - `transactionNumber` = `item()?['TransactionNumber']`
    - `payer` = `item()?['PayerName']`
    - `amount` = `item()?['Amount']`
-   - `date` = `formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')`
+  - `date` = `formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')`
+  - `recordedAt` = `if(empty(item()?['RecordedAt']), '', formatDateTime(item()?['RecordedAt'], 'M/d/yyyy h:mm tt'))`
 
 > **Important:** This action creates a clean array of plain values for the script. It replaces the old `Apply to each` + `Add a row into a table` pattern.
+>
+> 💡 **Why both date fields matter:** `PaymentDate` is the business date used for monthly filtering. `RecordedAt` preserves the exact order the transaction was entered, which is critical when several TigerCASH rows share the same day.
 
 > **Important:** If you type `item()?['TransactionNumber']` directly into the field without using the **Expression** tab, Power Automate will treat it as literal text and the script will write that text into Excel.
 
@@ -492,7 +508,7 @@ The export file should:
 
 - contain the `Transactions` table
 - include only TigerCASH rows for the selected month
-- be sorted by `PaymentDate asc, TransactionNumber asc`
+- be sorted by `RecordedAt asc, TransactionNumber asc`
 - auto-fit the columns to the inserted values
 - include 5 blank rows after the exported payments for manual additions
 - include a total row at the bottom of the table with only the `Amount` cell populated
@@ -505,7 +521,7 @@ The export file should:
 
 1. Run the flow for a month with TigerCASH payments
 2. Confirm the file is created in `TigerCASH Logs`
-3. Open the file and confirm the four columns, sorted data, no starter blank row, 5 blank manual-entry rows after the exported payments, and a total row where only `Amount` is populated
+3. Open the file and confirm the five columns, sorted data, no starter blank row, 5 blank manual-entry rows after the exported payments, and a total row where only `Amount` is populated
 
 ### Test 2: Empty Month
 

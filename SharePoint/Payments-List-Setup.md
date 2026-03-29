@@ -10,7 +10,7 @@
 The Payments list stores individual transaction records for print jobs. Unlike the single-value payment fields on `PrintRequests`, this list supports multiple payments per job — essential for partial pickup workflows where students collect and pay for parts of their order over multiple visits.
 
 **Key Features:**
-- 13 columns capturing full transaction details
+- 14 columns capturing full transaction details
 - One-to-many relationship with PrintRequests (multiple payments per job)
 - Supports multi-payer scenarios (different people paying for same job)
 - Source data for Monthly Transaction Export
@@ -66,6 +66,8 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 > 💡 **Purpose:** The identifier for this payment transaction. Format depends on PaymentType (receipt for TigerCASH, check number for Check, code for grants). This field is **not required** because grant/program codes are not always available at the time of payment — staff may need to record the payment first and add the code later.
 >
 > 💡 **Batch note:** If one checkout covers multiple requests, create one `Payments` row per request but reuse the same `TransactionNumber` across all rows created from that shared transaction.
+>
+> ⚠️ **Do not use a TigerCard number as the transaction number.** The TigerCard belongs in `PayerTigerCard`; `TransactionNumber` should hold the TigerCASH receipt / approval / reference number.
 
 ### Column 4: Weight (Number)
 
@@ -103,14 +105,29 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 1. Click **+ Add column** → **Date and time**
 2. **Name:** `PaymentDate`
-3. **Description:** `When payment was recorded`
+3. **Description:** `Business date of the payment transaction`
 4. **Include time:** No
 5. **Require that this column contains information:** Yes
 6. Click **Save**
 
+> 💡 **Purpose:** This is the staff-selected accounting date for the payment.
+>
 > 💡 **Batch note:** For batched checkouts, reuse the same payment date on every `Payments` row created from that transaction.
 
-### Column 8: PayerName (Single line of text)
+### Column 8: RecordedAt (Date and time)
+
+1. Click **+ Add column** → **Date and time**
+2. **Name:** `RecordedAt`
+3. **Description:** `Exact timestamp when the payment row was saved`
+4. **Include time:** Yes
+5. **Require that this column contains information:** Yes
+6. Click **Save**
+
+> 💡 **Purpose:** Use this field for transaction ordering, audit reconstruction, and export timestamps. Unlike `PaymentDate`, this should capture the real save time to the minute.
+>
+> 💡 **Batch note:** When one real-world checkout creates multiple `Payments` rows, stamp the same `RecordedAt` value on every row created by that batch action.
+
+### Column 9: PayerName (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `PayerName`
@@ -121,14 +138,14 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 >
 > 💡 **Batch note:** For batched checkouts, stamp the same payer name on every `Payments` row generated from that single real-world transaction.
 
-### Column 9: PayerTigerCard (Single line of text)
+### Column 10: PayerTigerCard (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `PayerTigerCard`
 3. **Description:** `TigerCard number of payer (for remote charging)`
 4. Click **Save**
 
-### Column 10: PlatesPickedUp (Single line of text)
+### Column 11: PlatesPickedUp (Single line of text)
 
 1. Click **+ Add column** → **Single line of text**
 2. **Name:** `PlatesPickedUp`
@@ -137,7 +154,7 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 > 💡 **Purpose:** Links this payment to specific build plates. When Build Plate Tracking is enabled, staff can check which plates are being picked up during payment, and the exact staff-facing plate labels are recorded here.
 
-### Column 11: PlateIDsPickedUp (Multiple lines of text)
+### Column 12: PlateIDsPickedUp (Multiple lines of text)
 
 1. Click **+ Add column** → **Multiple lines of text**
 2. **Name:** `PlateIDsPickedUp`
@@ -146,7 +163,7 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 
 > ⚠️ **Important:** This stores the best available plate snapshot at pickup time. `PlatesPickedUp` is only a human-readable display snapshot, and even `PlateIDsPickedUp` can become historical context rather than a live 1:1 map if staff later re-slice, replace, relabel, or renumber plates. The canonical transaction record is still the `Payments` row itself.
 
-### Column 12: RecordedBy (Person)
+### Column 13: RecordedBy (Person)
 
 1. Click **+ Add column** → **Person**
 2. **Name:** `RecordedBy`
@@ -155,7 +172,7 @@ The Payments list stores individual transaction records for print jobs. Unlike t
 5. **Allow multiple selections:** No
 6. Click **Save**
 
-### Column 13: StudentOwnMaterial (Yes/No)
+### Column 14: StudentOwnMaterial (Yes/No)
 
 1. Click **+ Add column** → **Yes/No**
 2. **Name:** `StudentOwnMaterial`
@@ -194,7 +211,8 @@ The Payments list should be accessible **only to staff**, not students.
 | Weight | Number | Yes | - | Grams picked up in this transaction |
 | Amount | Currency | Yes | - | Cost charged |
 | PaymentType | Choice | Yes | TigerCASH | TigerCASH / Check / Code |
-| PaymentDate | Date | Yes | - | When payment was recorded |
+| PaymentDate | Date | Yes | - | Business date of the payment |
+| RecordedAt | DateTime | Yes | - | Exact timestamp the payment row was saved |
 | PayerName | Single line | No | - | Who paid |
 | PayerTigerCard | Single line | No | - | Payer's TigerCard number |
 | PlatesPickedUp | Single line | No | - | Display plate labels collected (e.g., "1/4, 2/4", "Reprint 1") |
@@ -208,10 +226,10 @@ The Payments list should be accessible **only to staff**, not students.
 
 **Scenario:** Student submits request REQ-00042. Job has 5 plates. Student picks up in 2 visits.
 
-| ID | RequestID | ReqKey | TransactionNumber | Weight | Amount | PaymentDate | PlatesPickedUp | PlateIDsPickedUp | PayerName |
-|----|-----------|--------|-------------------|--------|--------|-------------|----------------|------------------|-----------|
-| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 1/5, 2/5, 3/5 | BP-42-A1, BP-42-A2, BP-42-A3 | Jane Smith |
-| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 4/5, Reprint 1 | BP-42-B1, BP-42-R3 | Jane Smith |
+| ID | RequestID | ReqKey | TransactionNumber | Weight | Amount | PaymentDate | RecordedAt | PlatesPickedUp | PlateIDsPickedUp | PayerName |
+|----|-----------|--------|-------------------|--------|--------|-------------|------------|----------------|------------------|-----------|
+| 1 | 42 | REQ-00042 | TXN-44821 | 85 | $8.50 | 3/15/2026 | 3/15/2026 2:14 PM | 1/5, 2/5, 3/5 | BP-42-A1, BP-42-A2, BP-42-A3 | Jane Smith |
+| 2 | 42 | REQ-00042 | TXN-44890 | 62 | $6.20 | 3/16/2026 | 3/16/2026 11:08 AM | 4/5, Reprint 1 | BP-42-B1, BP-42-R3 | Jane Smith |
 
 **What this shows:**
 - 2 separate transactions for same job
@@ -249,6 +267,7 @@ The `PrintRequests` list has payment fields that become **running totals** when 
 - [ ] Amount column: Currency type, required, 2 decimal places
 - [ ] PaymentType column: Choice with 3 options, default "TigerCASH"
 - [ ] PaymentDate column: Date only, required
+- [ ] RecordedAt column: Date and time, required
 - [ ] PayerName column: Single line of text
 - [ ] PayerTigerCard column: Single line of text
 - [ ] PlatesPickedUp column: Single line of text
@@ -278,6 +297,7 @@ Filter(
 | Excel Column | Source Field |
 |--------------|--------------|
 | Date | `PaymentDate` |
+| Recorded At | `RecordedAt` |
 | Transaction # | `TransactionNumber` |
 | Payer | `PayerName` |
 | Amount | `Amount` |
@@ -286,6 +306,8 @@ Filter(
 | Processed By | `RecordedBy.DisplayName` |
 | Machine | `LookUp(PrintRequests, ID = RequestID).Method.Value` |
 | Course | `LookUp(PrintRequests, ID = RequestID).CourseNumber` |
+
+> 💡 **Export sorting rule:** Filter by `PaymentDate` for the selected month, but sort the output by `RecordedAt` so same-day transactions appear in the exact order they were recorded.
 
 ---
 
