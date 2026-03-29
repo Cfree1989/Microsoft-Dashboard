@@ -8031,6 +8031,7 @@ Set(varLoadingMessage, "")
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
 - Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
 - All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one real-world transaction.
+- If the batch used a remote/manual TigerCASH charge, record the card used in `PayerTigerCard` and keep the receipt / approval number in `TransactionNumber`.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -8042,6 +8043,8 @@ scrDashboard
     ├── lblBatchCostLabel         ← "Total Cost:"
     ├── dpBatchPaymentDate        ← Shared payment date picker
     ├── lblBatchPaymentDateLabel  ← "Payment Date: *"
+    ├── txtBatchPayerTigerCard    ← Shared payer TigerCard input (remote/manual TigerCASH only)
+    ├── lblBatchPayerTigerCardLabel ← "Payer Tiger Card"
     ├── txtBatchPayerName         ← Shared payer name input
     ├── lblBatchPayerNameLabel    ← "Payer Name: *"
     ├── txtBatchWeight            ← Combined weight input
@@ -8316,13 +8319,7 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 34. Set **Text:**
 
 ```powerfx
-Switch(
-    ddBatchPaymentType.Selected.Value,
-    "TigerCASH", "Receipt #: *",
-    "Check", "Check #: *",
-    "Code", "Promo Code:",
-    "Reference #: *"
-)
+If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Receipt / Approval #: *")
 ```
 
 ---
@@ -8352,9 +8349,9 @@ Switch(
 | RadiusTopRight | `varInputBorderRadius` |
 | RadiusBottomLeft | `varInputBorderRadius` |
 | RadiusBottomRight | `varInputBorderRadius` |
-| HintText | `Switch(ddBatchPaymentType.Selected.Value, "TigerCASH", "TigerCASH receipt #", "Check", "Check number", "Code", "Grant/program code", "Reference #")` |
+| HintText | `If(ddBatchPaymentType.Selected.Value = "TigerCASH", "Receipt or approval #", If(ddBatchPaymentType.Selected.Value = "Check", "Check number", "Code / reference"))` |
 
-> 💡 **Guardrail:** For TigerCASH, this field should hold the receipt identifier, not the payer's 16-digit TigerCard number.
+> 💡 **Guardrail:** For TigerCASH, this field should hold the receipt / approval identifier, not the payer's 16-digit TigerCard number.
 
 ---
 
