@@ -8031,7 +8031,6 @@ Set(varLoadingMessage, "")
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
 - Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
 - All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one real-world transaction.
-- If the batch used a remote/manual TigerCASH charge, record the card used in `PayerTigerCard` and keep the receipt / approval number in `TransactionNumber`.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -8043,8 +8042,6 @@ scrDashboard
     ├── lblBatchCostLabel         ← "Total Cost:"
     ├── dpBatchPaymentDate        ← Shared payment date picker
     ├── lblBatchPaymentDateLabel  ← "Payment Date: *"
-    ├── txtBatchPayerTigerCard    ← Shared payer TigerCard input (remote/manual TigerCASH only)
-    ├── lblBatchPayerTigerCardLabel ← "Payer Tiger Card"
     ├── txtBatchPayerName         ← Shared payer name input
     ├── lblBatchPayerNameLabel    ← "Payer Name: *"
     ├── txtBatchWeight            ← Combined weight input
@@ -8183,7 +8180,6 @@ Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
-Reset(txtBatchPayerTigerCard);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
@@ -8319,7 +8315,13 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 34. Set **Text:**
 
 ```powerfx
-If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Receipt / Approval #: *")
+Switch(
+    ddBatchPaymentType.Selected.Value,
+    "TigerCASH", "Transaction #: *",
+    "Check", "Check #: *",
+    "Code", "Grant/Program Code:",
+    "Receipt #: *"
+)
 ```
 
 ---
@@ -8349,9 +8351,17 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Receipt / Appro
 | RadiusTopRight | `varInputBorderRadius` |
 | RadiusBottomLeft | `varInputBorderRadius` |
 | RadiusBottomRight | `varInputBorderRadius` |
-| HintText | `If(ddBatchPaymentType.Selected.Value = "TigerCASH", "Receipt or approval #", If(ddBatchPaymentType.Selected.Value = "Check", "Check number", "Code / reference"))` |
+38. Set **HintText:**
 
-> 💡 **Guardrail:** For TigerCASH, this field should hold the receipt / approval identifier, not the payer's 16-digit TigerCard number.
+```powerfx
+Switch(
+    ddBatchPaymentType.Selected.Value,
+    "TigerCASH", "TigerCASH receipt #",
+    "Check", "Check number",
+    "Code", "Leave blank if pending",
+    "Reference number"
+)
+```
 
 ---
 
@@ -8400,52 +8410,6 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Receipt / Appro
 
 ---
 
-### Payer Tiger Card Label (lblBatchPayerTigerCardLabel)
-
-44. Click **+ Insert** → **Text label**.
-45. **Rename it:** `lblBatchPayerTigerCardLabel`
-46. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Text | `"Payer Tiger Card"` |
-| X | `recBatchPaymentModal.X + 460` |
-| Y | `recBatchPaymentModal.Y + 160` |
-| Width | `120` |
-| Height | `20` |
-| FontWeight | `FontWeight.Semibold` |
-
-### Payer Tiger Card Input (txtBatchPayerTigerCard)
-
-47. Click **+ Insert** → **Input** → **Text input** (Classic version, NOT "Text input (modern)").
-48. **Rename it:** `txtBatchPayerTigerCard`
-49. Set properties:
-
-| Property | Value |
-|----------|-------|
-| Default | `""` |
-| X | `recBatchPaymentModal.X + 460` |
-| Y | `recBatchPaymentModal.Y + 185` |
-| Width | `120` |
-| Height | `36` |
-| Font | `varAppFont` |
-| Size | `varInputFontSize` |
-| BorderColor | `varInputBorderColor` |
-| BorderThickness | `varInputBorderThickness` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `varInputBorderColor` |
-| HoverFill | `varInputHoverFill` |
-| DisabledBorderColor | `varInputBorderColor` |
-| RadiusTopLeft | `varInputBorderRadius` |
-| RadiusTopRight | `varInputBorderRadius` |
-| RadiusBottomLeft | `varInputBorderRadius` |
-| RadiusBottomRight | `varInputBorderRadius` |
-| HintText | `"Remote/manual only"` |
-
-> 💡 **When to use this field:** Fill this in when a batch TigerCASH payment is processed remotely or manually from a TigerCard. Do **not** put the TigerCard number in `txtBatchTransaction`; the transaction field should hold the receipt / approval number.
-
----
-
 ### Payment Date Label (lblBatchPaymentDateLabel)
 
 50. Click **+ Insert** → **Text label**.
@@ -8483,7 +8447,7 @@ If(ddBatchPaymentType.Selected.Value = "Code", "Promo Code: *", "Receipt / Appro
 | IconBackground | `varChevronBackground` |
 | IconFill | `RGBA(255, 255, 255, 1)` |
 
-> ⚠️ **Build-order reminder:** Create `txtBatchPayerName`, `txtBatchPayerTigerCard`, and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
+> ⚠️ **Build-order reminder:** Create `txtBatchPayerName` and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
 
 ---
 
@@ -8802,7 +8766,6 @@ Set(varShowBatchPaymentModal, 0);
 // Don't clear colBatchItems - let user continue selecting
 Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
-Reset(txtBatchPayerTigerCard);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
 Reset(ddBatchStaff);
@@ -8878,7 +8841,7 @@ If(
     IsNumeric(Trim(txtBatchTransaction.Text)),
     Set(varIsLoading, false);
     Set(varLoadingMessage, "");
-    Notify("Transaction # looks like a 16-digit TigerCard number. Enter the TigerCard in Payer Tiger Card and use the receipt or approval number in Transaction #.", NotificationType.Error),
+    Notify("That looks like a TigerCard number. Please enter the receipt or approval number instead.", NotificationType.Error),
 
     CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtBatchTransaction.Text))) > 0,
     Set(varIsLoading, false);
@@ -9049,7 +9012,6 @@ If(
                                 PaymentDate: dpBatchPaymentDate.SelectedDate,
                                 RecordedAt: varBatchRecordedAt,
                                 PayerName: Trim(txtBatchPayerName.Text),
-                                PayerTigerCard: Trim(txtBatchPayerTigerCard.Text),
                                 PlatesPickedUp: If(
                                     CountRows(wRemainingCompletedPlates) > 0,
                                     Concat(
@@ -9171,7 +9133,6 @@ If(
         Set(varShowBatchPaymentModal, 0);
         Reset(txtBatchTransaction);
         Reset(txtBatchPayerName);
-        Reset(txtBatchPayerTigerCard);
         Reset(dpBatchPaymentDate);
         Reset(txtBatchWeight);
         Reset(ddBatchStaff);
@@ -9200,7 +9161,7 @@ If(
 
 > 💡 **Batch history guidance:** Canonical payment history must come from the `Payments` rows created for each batch item. Do not treat appended `PaymentNotes` text as authoritative history.
 >
-> 💡 **Remote TigerCASH guidance:** `PayerTigerCard` is the place for manual / remote TigerCard numbers. `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
+> 💡 **Transaction number guidance:** For batch payments, `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
 >
 > 💡 **Mixed-method pricing guidance:** The cost preview and each saved `Payments.Amount` value now branch on each request's `Method.Value`, so resin rows are not accidentally charged at the filament rate.
 >
