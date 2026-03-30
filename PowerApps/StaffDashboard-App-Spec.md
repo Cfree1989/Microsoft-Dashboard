@@ -2206,7 +2206,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `RGBA(120, 120, 120, 1)` |
-| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
+| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
 
 72. Click **+ Insert** → **Text label**.
 73. **Rename it:** `lblPaymentHistoryValue`
@@ -2221,7 +2221,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Height | `20` |
 | Size | `10` |
 | Color | `varColorText` |
-| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
+| Visible | `CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)` |
 
 Set **Text** (use existing on-record text first, then fall back to `Payments`):
 
@@ -2229,7 +2229,7 @@ Set **Text** (use existing on-record text first, then fall back to `Payments`):
 With(
     {
         wLegacyNotes: Trim(Coalesce(ThisItem.PaymentNotes, "")),
-        wPaymentRows: Filter(colAllPayments, RequestID = ThisItem.ID)
+        wPaymentRows: Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)
     },
     If(
         !IsBlank(wLegacyNotes),
@@ -2665,9 +2665,75 @@ ClearCollect(
     colPayments,
     SortByColumns(
         AddColumns(
-            Filter(Payments, RequestID = ThisItem.ID),
+            Filter(
+                Payments,
+                RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value
+            ),
             PaymentSortAt,
-            Coalesce(RecordedAt, PaymentDate)
+            Coalesce(RecordedAt, PaymentDate),
+            DisplayWeight,
+            If(
+                !IsBlank(RequestID),
+                Weight,
+                With(
+                    {
+                        wBatchEntry: First(
+                            Filter(
+                                Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                StartsWith(Value, ThisItem.ReqKey & ": ")
+                            )
+                        ).Value
+                    },
+                    If(
+                        IsBlank(wBatchEntry),
+                        Blank(),
+                        Value(First(Split(Last(Split(wBatchEntry, " for ")).Value, "g")).Value)
+                    )
+                )
+            ),
+            DisplayAmount,
+            If(
+                !IsBlank(RequestID),
+                Amount,
+                With(
+                    {
+                        wBatchEntry: First(
+                            Filter(
+                                Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                StartsWith(Value, ThisItem.ReqKey & ": ")
+                            )
+                        ).Value
+                    },
+                    If(
+                        IsBlank(wBatchEntry),
+                        Blank(),
+                        Value(
+                            Substitute(
+                                Trim(First(Split(Last(Split(wBatchEntry, ": ")).Value, " for ")).Value),
+                                "$",
+                                ""
+                            )
+                        )
+                    )
+                )
+            ),
+            DisplayPlatesPickedUp,
+            If(
+                !IsBlank(RequestID),
+                PlatesPickedUp,
+                Trim(
+                    Substitute(
+                        First(
+                            Filter(
+                                Split(Coalesce(PlatesPickedUp, ""), " | "),
+                                StartsWith(Value, ThisItem.ReqKey & ": ")
+                            )
+                        ).Value,
+                        ThisItem.ReqKey & ": ",
+                        ""
+                    )
+                )
+            )
         ),
         "PaymentSortAt",
         SortOrder.Ascending,
@@ -6772,11 +6838,11 @@ If(
     "",
     " · #" & Trim(ThisItem.TransactionNumber)
 ) &
-" · " & Text(ThisItem.Weight) & "g" &
-" · " & Text(ThisItem.Amount, "[$-en-US]$#,##0.00") &
+" · " & Text(Coalesce(ThisItem.DisplayWeight, ThisItem.Weight)) & "g" &
+" · " & Text(Coalesce(ThisItem.DisplayAmount, ThisItem.Amount), "[$-en-US]$#,##0.00") &
 With(
     {
-        wPlateText: Trim(Coalesce(ThisItem.PlatesPickedUp, ""))
+        wPlateText: Trim(Coalesce(ThisItem.DisplayPlatesPickedUp, ThisItem.PlatesPickedUp, ""))
     },
     If(
         IsBlank(wPlateText),
@@ -6848,10 +6914,10 @@ If(
 ```powerfx
 "Paid so far: " &
 Text(
-    If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
+    If(CountRows(colPayments) > 0, Sum(colPayments, DisplayWeight), Coalesce(varSelectedItem.FinalWeight, 0))
 ) & "g · " &
 Text(
-    If(CountRows(colPayments) > 0, Sum(colPayments, Amount), Coalesce(varSelectedItem.FinalCost, 0)),
+    If(CountRows(colPayments) > 0, Sum(colPayments, DisplayAmount), Coalesce(varSelectedItem.FinalCost, 0)),
     "[$-en-US]$#,##0.00"
 )
 ```
@@ -6879,7 +6945,7 @@ Text(
 ```powerfx
 With(
     {
-        wPaidWeight: If(CountRows(colPayments) > 0, Sum(colPayments, Weight), Coalesce(varSelectedItem.FinalWeight, 0))
+        wPaidWeight: If(CountRows(colPayments) > 0, Sum(colPayments, DisplayWeight), Coalesce(varSelectedItem.FinalWeight, 0))
     },
     If(
         varSelectedItem.Method.Value = "Resin",
@@ -7256,9 +7322,75 @@ If(
         colPayments,
         SortByColumns(
             AddColumns(
-                Filter(colAllPayments, RequestID = varSelectedItem.ID),
+                Filter(
+                    colAllPayments,
+                    RequestID = varSelectedItem.ID Or Text(varSelectedItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value
+                ),
                 PaymentSortAt,
-                Coalesce(RecordedAt, PaymentDate)
+                Coalesce(RecordedAt, PaymentDate),
+                DisplayWeight,
+                If(
+                    !IsBlank(RequestID),
+                    Weight,
+                    With(
+                        {
+                            wBatchEntry: First(
+                                Filter(
+                                    Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                )
+                            ).Value
+                        },
+                        If(
+                            IsBlank(wBatchEntry),
+                            Blank(),
+                            Value(First(Split(Last(Split(wBatchEntry, " for ")).Value, "g")).Value)
+                        )
+                    )
+                ),
+                DisplayAmount,
+                If(
+                    !IsBlank(RequestID),
+                    Amount,
+                    With(
+                        {
+                            wBatchEntry: First(
+                                Filter(
+                                    Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                )
+                            ).Value
+                        },
+                        If(
+                            IsBlank(wBatchEntry),
+                            Blank(),
+                            Value(
+                                Substitute(
+                                    Trim(First(Split(Last(Split(wBatchEntry, ": ")).Value, " for ")).Value),
+                                    "$",
+                                    ""
+                                )
+                            )
+                        )
+                    )
+                ),
+                DisplayPlatesPickedUp,
+                If(
+                    !IsBlank(RequestID),
+                    PlatesPickedUp,
+                    Trim(
+                        Substitute(
+                            First(
+                                Filter(
+                                    Split(Coalesce(PlatesPickedUp, ""), " | "),
+                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                )
+                            ).Value,
+                            varSelectedItem.ReqKey & ": ",
+                            ""
+                        )
+                    )
+                )
             ),
             "PaymentSortAt",
             SortOrder.Ascending,
@@ -7421,9 +7553,75 @@ If(
         ClearCollect(colPayments,
             SortByColumns(
                 AddColumns(
-                    Filter(colAllPayments, RequestID = varSelectedItem.ID),
+                    Filter(
+                        colAllPayments,
+                        RequestID = varSelectedItem.ID Or Text(varSelectedItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value
+                    ),
                     PaymentSortAt,
-                    Coalesce(RecordedAt, PaymentDate)
+                    Coalesce(RecordedAt, PaymentDate),
+                    DisplayWeight,
+                    If(
+                        !IsBlank(RequestID),
+                        Weight,
+                        With(
+                            {
+                                wBatchEntry: First(
+                                    Filter(
+                                        Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                    )
+                                ).Value
+                            },
+                            If(
+                                IsBlank(wBatchEntry),
+                                Blank(),
+                                Value(First(Split(Last(Split(wBatchEntry, " for ")).Value, "g")).Value)
+                            )
+                        )
+                    ),
+                    DisplayAmount,
+                    If(
+                        !IsBlank(RequestID),
+                        Amount,
+                        With(
+                            {
+                                wBatchEntry: First(
+                                    Filter(
+                                        Split(Coalesce(BatchAllocationSummary, ""), " | "),
+                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                    )
+                                ).Value
+                            },
+                            If(
+                                IsBlank(wBatchEntry),
+                                Blank(),
+                                Value(
+                                    Substitute(
+                                        Trim(First(Split(Last(Split(wBatchEntry, ": ")).Value, " for ")).Value),
+                                        "$",
+                                        ""
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    DisplayPlatesPickedUp,
+                    If(
+                        !IsBlank(RequestID),
+                        PlatesPickedUp,
+                        Trim(
+                            Substitute(
+                                First(
+                                    Filter(
+                                        Split(Coalesce(PlatesPickedUp, ""), " | "),
+                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
+                                    )
+                                ).Value,
+                                varSelectedItem.ReqKey & ": ",
+                                ""
+                            )
+                        )
+                    )
                 ),
                 "PaymentSortAt",
                 SortOrder.Ascending,
@@ -7452,8 +7650,8 @@ If(
                 PrintRequests,
                 LookUp(PrintRequests, ID = varSelectedItem.ID),
                 {
-                    FinalWeight: Sum(colPayments, Weight),
-                    FinalCost: Sum(colPayments, Amount),
+                    FinalWeight: Sum(colPayments, DisplayWeight),
+                    FinalCost: Sum(colPayments, DisplayAmount),
                     PaymentDate: If(CountRows(colPayments) > 0, Max(colPayments, PaymentDate), dpPaymentDate.SelectedDate),
                     StudentOwnMaterial: CountRows(Filter(colPayments, StudentOwnMaterial)) > 0,
                     Status: wResultStatus,
@@ -8079,15 +8277,15 @@ Set(varLoadingMessage, "")
 
 # STEP 12E: Building the Batch Payment Modal
 
-**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a shared transaction header: one transaction number, one payer, one payment date, and one combined material-usage total.
+**What you're doing:** Creating a modal for processing multiple payments at once. When staff clicks "Process Batch Payment" from the selection footer, this modal opens showing all selected items and allowing entry of a shared transaction header: one transaction number, one payer, one payment date, and one combined material-usage total that will be saved as one consolidated `Payments` row for the checkout.
 
 > 🎯 **Use Case:** A student picks up multiple jobs at once (their own + friends'), or buys several items. Instead of processing each individually, staff can handle them all in one transaction.
 >
 > ⚠️ **Batch means final pickup.** This modal is only for requests where the student is taking **all remaining completed pieces for each selected request**. If a request still needs a partial pickup decision, process it through the single-item Payment Modal in Step 12C instead.
 >
-> ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: create one `Payments` row per batch item, mark the picked-up build plates, then recompute `PrintRequests.FinalWeight` / `FinalCost` from `Payments`. Do not rely on `PaymentNotes` alone for history.
+> ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: validate and close each selected request, then write one consolidated `Payments` row for the real-world checkout. The per-request allocation details belong in the saved batch fields and request rollups, not in duplicate ledger rows.
 >
-> ⚠️ **Pricing note:** Batch weight is still allocated across the selected requests proportionally, but each saved `Payments` row must price that request using its own `Method.Value` (`Filament` vs `Resin`).
+> ⚠️ **Pricing note:** Batch weight is still allocated across the selected requests proportionally, but each request's saved allocation must still be priced using its own `Method.Value` (`Filament` vs `Resin`) before the consolidated ledger row is written.
 >
 > ⚠️ **Stable identity rule:** Any request with build plates should still persist `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text, but that snapshot is operational context only. If plates are later re-sliced or replaced, the `Payments` row remains the canonical history.
 
@@ -8104,8 +8302,8 @@ Set(varLoadingMessage, "")
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
-- Requests without build plates remain supported for backward compatibility; they still get one `Payments` row and move to `Paid & Picked Up`.
-- All rows created by the same batch must reuse the same `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one real-world transaction.
+- Requests without build plates remain supported for backward compatibility; they still move to `Paid & Picked Up` and contribute one allocation entry to the consolidated ledger row.
+- Each real-world batch checkout creates exactly one `Payments` row with shared `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one transaction.
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -8911,8 +9109,10 @@ Refresh(Payments);
 ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colAllPayments, Payments);
 Clear(colBatchSucceededItems);
+Clear(colBatchSucceededDetails);
 Clear(colBatchFailedItems);
 Set(varBatchRecordedAt, Now());
+Set(varBatchLedgerSaveFailed, false);
 
 If(
     ddBatchPaymentType.Selected.Value = "TigerCASH" &&
@@ -9052,6 +9252,36 @@ If(
                             ),
                             varMinimumCost
                         )
+                    ),
+                    wPlateLabelSnapshot: If(
+                        CountRows(wRemainingCompletedPlates) > 0,
+                        Concat(
+                            AddColumns(
+                                wRemainingCompletedPlates As plate,
+                                PlateNum,
+                                CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                                ResolvedPlateLabel,
+                                With(
+                                    {
+                                        wDynamicNum: CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                                    },
+                                    If(
+                                        !IsBlank(wStoredLabel),
+                                        wStoredLabel,
+                                        Text(wDynamicNum) & "/" & Text(CountRows(wLatestBuildPlates))
+                                    )
+                                )
+                            ),
+                            ResolvedPlateLabel,
+                            ", "
+                        ),
+                        ""
+                    ),
+                    wPlateIDSnapshot: If(
+                        CountRows(wRemainingCompletedPlates) > 0,
+                        Concat(wRemainingCompletedPlates, PlateKey, ", "),
+                        ""
                     )
                 },
                 If(
@@ -9079,61 +9309,6 @@ If(
                         );
 
                         Patch(
-                            Payments,
-                            Defaults(Payments),
-                            {
-                                RequestID: BatchItem.ID,
-                                ReqKey: BatchItem.ReqKey,
-                                TransactionNumber: txtBatchTransaction.Text,
-                                Weight: wBatchWeight,
-                                Amount: wBatchCost,
-                                PaymentType: {Value: ddBatchPaymentType.Selected.Value},
-                                PaymentDate: dpBatchPaymentDate.SelectedDate,
-                                RecordedAt: varBatchRecordedAt,
-                                PayerName: Trim(txtBatchPayerName.Text),
-                                PlatesPickedUp: If(
-                                    CountRows(wRemainingCompletedPlates) > 0,
-                                    Concat(
-                                        AddColumns(
-                                            wRemainingCompletedPlates As plate,
-                                            PlateNum,
-                                            CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                            ResolvedPlateLabel,
-                                            With(
-                                                {
-                                                    wDynamicNum: CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                                                },
-                                                If(
-                                                    !IsBlank(wStoredLabel),
-                                                    wStoredLabel,
-                                                    Text(wDynamicNum) & "/" & Text(CountRows(wLatestBuildPlates))
-                                                )
-                                            )
-                                        ),
-                                        ResolvedPlateLabel,
-                                        ", "
-                                    ),
-                                    ""
-                                ),
-                                PlateIDsPickedUp: If(
-                                    CountRows(wRemainingCompletedPlates) > 0,
-                                    Concat(wRemainingCompletedPlates, PlateKey, ", "),
-                                    ""
-                                ),
-                                RecordedBy: {
-                                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                                    Department: "",
-                                    DisplayName: ddBatchStaff.Selected.MemberName,
-                                    Email: ddBatchStaff.Selected.MemberEmail,
-                                    JobTitle: "",
-                                    Picture: ""
-                                },
-                                StudentOwnMaterial: chkBatchOwnMaterial.Value
-                            }
-                        );
-
-                        Patch(
                             PrintRequests,
                             LookUp(PrintRequests, ID = BatchItem.ID),
                             {
@@ -9145,10 +9320,10 @@ If(
                                 StaffNotes: Concatenate(
                                     If(IsBlank(wLatestRequest.StaffNotes), "", wLatestRequest.StaffNotes & " | "),
                                     "PAID (BATCH) by " & wStaffShortName &
-                                    ": [Summary] " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
+                                    ": " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
                                     " for " & Text(wBatchWeight) & "g" &
-                                    " [Changes] [Reason] [Context] " &
-                                    " [Comment] " &
+                                    " on shared txn " & Trim(txtBatchTransaction.Text) &
+                                    " covering " & Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", ") &
                                     " - " & Text(Now(), "m/d h:mmam/pm")
                                 ),
                                 LastActionBy: {
@@ -9164,6 +9339,17 @@ If(
                             }
                         );
 
+                        Collect(
+                            colBatchSucceededDetails,
+                            {
+                                ID: BatchItem.ID,
+                                ReqKey: BatchItem.ReqKey,
+                                AllocatedWeight: wBatchWeight,
+                                AllocatedCost: wBatchCost,
+                                PlateLabels: wPlateLabelSnapshot,
+                                PlateIDs: wPlateIDSnapshot
+                            }
+                        );
                         Collect(colBatchSucceededItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey}),
                         Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: Coalesce(FirstError.Message, "Unknown error")})
                     )
@@ -9172,7 +9358,63 @@ If(
         )
     );
 
-    // === STEP 4: REFRESH SNAPSHOTS AND LOG SUCCESSES ===
+    // === STEP 4: WRITE CONSOLIDATED LEDGER ROW ===
+    If(
+        CountRows(colBatchSucceededDetails) > 0,
+        Set(
+            varBatchLedgerSaveFailed,
+            !IfError(
+                Set(
+                    varNewBatchPayment,
+                    Patch(
+                        Payments,
+                        Defaults(Payments),
+                        {
+                            RequestID: Blank(),
+                            ReqKey: Blank(),
+                            BatchRequestIDs: Concat(SortByColumns(colBatchSucceededDetails, "ID", SortOrder.Ascending), Text(ID), ", "),
+                            BatchReqKeys: Concat(SortByColumns(colBatchSucceededDetails, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
+                            BatchAllocationSummary: Concat(
+                                SortByColumns(colBatchSucceededDetails, "ReqKey", SortOrder.Ascending),
+                                ReqKey & ": " & Text(AllocatedCost, "[$-en-US]$#,##0.00") & " for " & Text(AllocatedWeight) & "g",
+                                " | "
+                            ),
+                            TransactionNumber: Trim(txtBatchTransaction.Text),
+                            Weight: Sum(colBatchSucceededDetails, AllocatedWeight),
+                            Amount: Sum(colBatchSucceededDetails, AllocatedCost),
+                            PaymentType: {Value: ddBatchPaymentType.Selected.Value},
+                            PaymentDate: dpBatchPaymentDate.SelectedDate,
+                            RecordedAt: varBatchRecordedAt,
+                            PayerName: Trim(txtBatchPayerName.Text),
+                            PlatesPickedUp: Concat(
+                                Filter(colBatchSucceededDetails, !IsBlank(PlateLabels)),
+                                ReqKey & ": " & PlateLabels,
+                                " | "
+                            ),
+                            PlateIDsPickedUp: Concat(
+                                Filter(colBatchSucceededDetails, !IsBlank(PlateIDs)),
+                                ReqKey & ": " & PlateIDs,
+                                " | "
+                            ),
+                            RecordedBy: {
+                                Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
+                                Department: "",
+                                DisplayName: ddBatchStaff.Selected.MemberName,
+                                Email: ddBatchStaff.Selected.MemberEmail,
+                                JobTitle: "",
+                                Picture: ""
+                            },
+                            StudentOwnMaterial: chkBatchOwnMaterial.Value
+                        }
+                    )
+                );
+                true,
+                false
+            )
+        )
+    );
+
+    // === STEP 5: REFRESH SNAPSHOTS AND LOG SUCCESSES ===
     Refresh(PrintRequests);
     Refresh(BuildPlates);
     Refresh(Payments);
@@ -9202,7 +9444,7 @@ If(
         )
     );
 
-    // === STEP 5: CLEANUP AND NOTIFY ===
+    // === STEP 6: CLEANUP AND NOTIFY ===
     Set(varBatchProcessedCount, CountRows(colBatchSucceededItems));
     If(
         CountRows(colBatchFailedItems) = 0,
@@ -9216,13 +9458,30 @@ If(
         Reset(ddBatchStaff);
         Reset(chkBatchOwnMaterial);
         Reset(ddBatchPaymentType);
-        Notify(varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") & " processed successfully!", NotificationType.Success),
+        Blank(),
 
         RemoveIf(colBatchItems, Not(ID in colBatchFailedItems.ID));
         Reset(txtBatchWeight);
+        Blank()
+    );
+
+    If(
+        varBatchLedgerSaveFailed,
+        Notify(
+            "The selected requests were updated, but the consolidated Payments row failed to save. Reconcile the ledger before processing another batch.",
+            NotificationType.Error
+        ),
+        CountRows(colBatchFailedItems) = 0,
+        Notify(
+            varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") &
+            " processed successfully and saved as one consolidated payment row.",
+            NotificationType.Success
+        ),
         Notify(
             Text(CountRows(colBatchSucceededItems)) & " of " & Text(varBatchItemCount) &
-            " items processed. Review and retry: " & Concat(colBatchFailedItems, ReqKey, ", "),
+            " items processed. The consolidated payment row reflects only: " &
+            Concat(colBatchSucceededItems, ReqKey, ", ") &
+            ". Review and retry: " & Concat(colBatchFailedItems, ReqKey, ", "),
             NotificationType.Warning
         )
     );
@@ -9233,17 +9492,17 @@ If(
 )
 ```
 
-> ⚠️ **Why ForAll + Patch instead of Patch(Table, ForAll)?** The `Patch(DataSource, Table)` bulk pattern has compatibility issues with SharePoint connectors. Using `ForAll` with individual `Patch` calls inside is more reliable and universally supported.
+> ⚠️ **Why ForAll + Patch instead of Patch(Table, ForAll)?** The `Patch(DataSource, Table)` bulk pattern has compatibility issues with SharePoint connectors. Using `ForAll` with individual `Patch` calls inside is more reliable and universally supported for per-request validation and status updates, then one final `Patch(Payments, Defaults(Payments), ...)` saves the consolidated ledger row.
 
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
-> 💡 **Batch history guidance:** Canonical payment history must come from the `Payments` rows created for each batch item. Do not treat appended `PaymentNotes` text as authoritative history.
+> 💡 **Batch history guidance:** Canonical batch payment history must come from the one consolidated `Payments` row created for the checkout. Use `BatchRequestIDs`, `BatchReqKeys`, and `BatchAllocationSummary` for the per-request breakdown. Do not treat appended `StaffNotes` text as authoritative history.
 >
 > 💡 **Transaction number guidance:** For batch payments, `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
 >
-> 💡 **Mixed-method pricing guidance:** The cost preview and each saved `Payments.Amount` value now branch on each request's `Method.Value`, so resin rows are not accidentally charged at the filament rate.
+> 💡 **Mixed-method pricing guidance:** The cost preview and each saved request allocation now branch on each request's `Method.Value`, so resin requests are not accidentally charged at the filament rate before the consolidated total is written.
 >
-> 💡 **Retry guidance:** Failures are tracked per item. Successful rows stay saved, while failed items remain in `colBatchItems` so staff can review and retry only the unfinished subset.
+> 💡 **Retry guidance:** Failures are tracked per item. Successful requests stay updated, failed items remain in `colBatchItems`, and the consolidated `Payments` row is written only from the succeeded subset. If the final ledger write fails, stop and reconcile before processing another batch.
 >
 > 💡 **Plate handling guidance:** For requests with build plates, batch payment is intentionally narrower than the single-item Payment Modal. Step 12E always picks up every remaining completed plate for the request. If the student is only taking some of the completed pieces, go back to Step 12C instead.
 
@@ -14335,7 +14594,20 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 5. Process batch payment
 6. **Verify:** Request A moves to `Paid & Picked Up`
 7. **Verify:** All 3 remaining completed plates on Request A are patched to `Picked Up`
-8. **Verify:** A new `Payments` row is created for Request A with both `PlatesPickedUp` and `PlateIDsPickedUp`
+8. **Verify:** Exactly one consolidated `Payments` row is created for the shared checkout, not one row per request
+9. **Verify:** That consolidated row includes both requests in `BatchRequestIDs` / `BatchReqKeys`
+10. **Verify:** `BatchAllocationSummary` stores Request A's allocated grams and dollars alongside the other request
+11. **Verify:** Opening Request A later still shows both the earlier single payment and the consolidated batch payment in request history using Request A's allocated amount/weight
+
+### Scenario 22B: One Checkout Across Two Jobs
+
+1. Select two completed requests that share the same `Method`
+2. Enter one payment header and one combined total (example: `$26.60` across both jobs)
+3. Click **Record Batch Payment**
+4. **Verify:** Only one new `Payments` row is created for the checkout
+5. **Verify:** `Amount` on that row equals the combined total and `Weight` equals the combined pickup grams
+6. **Verify:** `BatchRequestIDs`, `BatchReqKeys`, and `BatchAllocationSummary` preserve the per-request split
+7. **Verify:** Both requests move to `Paid & Picked Up` and keep their own allocated `FinalWeight` / `FinalCost`
 
 ### Scenario 23: Batch Item Already Fully Picked Up
 
@@ -14415,7 +14687,8 @@ Use this checklist to verify all features work correctly:
 - [ ] **Payments:** Different payers tracked per payment
 - [ ] **Payments:** Plate pickup checkboxes work
 - [ ] **Payments:** Batch payment only succeeds for valid final pickups
-- [ ] **Payments:** Batch payment writes one `Payments` row per request
+- [ ] **Payments:** Batch payment writes one consolidated `Payments` row per checkout
+- [ ] **Payments:** Request history still shows consolidated batch rows using per-request allocated values
 - [ ] **Payments:** Stable `PlateIDsPickedUp` survives plate renumbering/re-slicing
 - [ ] **Core:** Full workflow from submission to pickup
 - [ ] **Core:** Rejection workflow with reason

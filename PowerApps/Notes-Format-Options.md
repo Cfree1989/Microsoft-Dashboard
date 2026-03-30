@@ -217,8 +217,10 @@ Display:
 
 ```text
 PAID (BATCH) - 3/25 10:10am
-Sarah B. - $24.40 for 244g
+Sarah B. - $5.42 for 54.2g (shared checkout)
 ```
+
+Use the request's allocated portion of the shared payment here, not the full batch total.
 
 ### **Build Plate Added**
 

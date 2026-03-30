@@ -347,6 +347,8 @@ formatDateTime(outputs('StartDate'), 'MMMM')
   - **Order By:** `RecordedAt asc, TransactionNumber asc`
    - **Top Count:** `5000`
 
+> **Important:** Do not expand consolidated batch payments back into per-request rows here. The `Payments` list is now the canonical ledger, so one real-world batch checkout should export as one TigerCASH row.
+
 **Configure retry policy:**
 1. Click **three dots (…)** → **Settings**
 2. Under **Networking**, set:
@@ -445,6 +447,8 @@ Before calling the script, convert the SharePoint items into a JSON string that 
 > **Important:** This action creates a clean array of plain values for the script. It replaces the old `Apply to each` + `Add a row into a table` pattern.
 >
 > 💡 **Why both date fields matter:** `PaymentDate` is the business date used for monthly filtering. `RecordedAt` preserves the exact order the transaction was entered, which is critical when several TigerCASH rows share the same day.
+>
+> 💡 **Consolidated batch rule:** If a TigerCASH checkout covered multiple requests, `amount` should still come from the single consolidated `Payments.Amount` value. Do not try to re-split it inside the flow.
 
 > **Important:** If you type `item()?['TransactionNumber']` directly into the field without using the **Expression** tab, Power Automate will treat it as literal text and the script will write that text into Excel.
 
@@ -512,6 +516,7 @@ The export file should:
 
 - contain the `Transactions` table
 - include only TigerCASH rows for the selected month
+- include one row for each consolidated TigerCASH batch checkout
 - be sorted by `RecordedAt asc, TransactionNumber asc`
 - auto-fit the columns to the inserted values
 - include 5 blank rows after the exported payments for manual additions
@@ -531,6 +536,13 @@ The export file should:
 
 1. Run the flow for a month with no TigerCASH payments
 2. Confirm the file still opens and contains headers, 5 blank manual-entry rows, and the total row with only `Amount` populated
+
+### Test 2B: Consolidated Batch Checkout
+
+1. Record one TigerCASH batch payment that covers multiple requests but saves as one consolidated `Payments` row
+2. Run the flow for that month
+3. Confirm the exported workbook shows exactly one row for that checkout
+4. Confirm the exported `Amount` matches the full combined payment total, not a per-request split
 
 ### Test 3: Excel Timing
 
