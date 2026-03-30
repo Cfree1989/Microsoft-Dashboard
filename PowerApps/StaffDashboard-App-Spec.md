@@ -4997,7 +4997,7 @@ Set(varLoadingMessage, "")
 
 # STEP 12B: Building the Change Print Details Modal
 
-**What you're doing:** Creating a modal that allows staff to change Method, Printer, Color, Weight, Hours, and recalculate Cost for a job. All changes are optional — staff can update any combination of fields.
+**What you're doing:** Creating a modal that allows staff to change Method, Printer, Color, Sliced-On Computer, Weight, Hours, and recalculate Cost for a job. All changes are optional — staff can update any combination of fields.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
@@ -5026,6 +5026,8 @@ scrDashboard
     ├── lblDetailsPrinterLabel ← "Printer:"
     ├── ddDetailsMethod        ← Method dropdown (Filament/Resin)
     ├── lblDetailsMethodLabel  ← "Method:"
+    ├── ddDetailsSlicedOnComputer ← Sliced-on computer dropdown
+    ├── lblDetailsSlicedOnLabel   ← "Sliced On Computer:"
     ├── ddDetailsStaff         ← Staff dropdown
     ├── lblDetailsStaffLabel   ← "Performing Action As: *"
     ├── lblDetailsCurrent      ← Shows current settings summary
@@ -5082,9 +5084,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 550) / 2` |
-| Y | `(Parent.Height - 620) / 2` |
+| Y | `(Parent.Height - 660) / 2` |
 | Width | `550` |
-| Height | `620` |
+| Height | `660` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
@@ -5153,6 +5155,7 @@ scrDashboard
 Set(varShowDetailsModal, 0);
 Set(varSelectedItem, Blank());
 Reset(ddDetailsStaff);
+Reset(ddDetailsSlicedOnComputer);
 Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
@@ -5201,6 +5204,7 @@ Reset(txtDetailsTransaction)
 varSelectedItem.Method.Value & " | " &
 varSelectedItem.Printer.Value & " | " &
 varSelectedItem.Color.Value & " | " &
+Coalesce(varSelectedItem.SlicedOnComputer.Value, "No computer") & " | " &
 If(
     IsBlank(varSelectedItem.EstimatedWeight),
     "No estimate",
@@ -5451,17 +5455,71 @@ With(
 
 ---
 
-### Weight Label (lblDetailsWeightLabel)
+### Sliced-On Computer Label (lblDetailsSlicedOnLabel)
 
 43. Click **+ Insert** → **Text label**.
-44. **Rename it:** `lblDetailsWeightLabel`
+44. **Rename it:** `lblDetailsSlicedOnLabel`
 45. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Sliced On Computer:"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 325` |
+| Width | `180` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Sliced-On Computer Dropdown (ddDetailsSlicedOnComputer)
+
+46. Click **+ Insert** → **Combo box**.
+47. **Rename it:** `ddDetailsSlicedOnComputer`
+48. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Items | `colSlicingComputers` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 348` |
+| Width | `200` |
+| Height | `36` |
+| DisplayFields | `["Name"]` |
+| SearchFields | `["Name"]` |
+| DefaultSelectedItems | `If(IsBlank(varSelectedItem.SlicedOnComputer.Value), Blank(), [LookUp(colSlicingComputers, Name = varSelectedItem.SlicedOnComputer.Value)])` |
+| Font | `varAppFont` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisabledBorderColor | `varInputBorderColor` |
+| ChevronBackground | `varChevronBackground` |
+| ChevronFill | `varChevronFill` |
+| ChevronHoverBackground | `varChevronHoverBackground` |
+| ChevronHoverFill | `varChevronHoverFill` |
+| ChevronDisabledBackground | `varChevronBackground` |
+| ChevronDisabledFill | `varChevronBackground` |
+| HoverFill | `varDropdownHoverFill` |
+| PressedFill | `varDropdownPressedFill` |
+| PressedColor | `varDropdownPressedColor` |
+| SelectionFill | `varDropdownSelectionFill` |
+| SelectionColor | `varDropdownSelectionColor` |
+
+> 💡 **Preloaded current computer:** Reuse the same local slicing-computer collection from approval so staff can correct the stored workstation without needing a SharePoint lookup.
+
+---
+
+### Weight Label (lblDetailsWeightLabel)
+
+49. Click **+ Insert** → **Text label**.
+50. **Rename it:** `lblDetailsWeightLabel`
+51. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", "Est. Volume (mL):", "Est. Weight (g):")` |
 | X | `recDetailsModal.X + 20` |
-| Y | `recDetailsModal.Y + 325` |
+| Y | `recDetailsModal.Y + 395` |
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -5470,14 +5528,14 @@ With(
 
 ### Weight Input (txtDetailsWeight)
 
-46. Click **+ Insert** → **Text input**.
-47. **Rename it:** `txtDetailsWeight`
-48. Set properties:
+52. Click **+ Insert** → **Text input**.
+53. **Rename it:** `txtDetailsWeight`
+54. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recDetailsModal.X + 20` |
-| Y | `recDetailsModal.Y + 348` |
+| Y | `recDetailsModal.Y + 418` |
 | Width | `120` |
 | Height | `36` |
 | Format | `TextFormat.Number` |
@@ -5496,15 +5554,15 @@ With(
 
 ### Hours Label (lblDetailsHoursLabel)
 
-49. Click **+ Insert** → **Text label**.
-50. **Rename it:** `lblDetailsHoursLabel`
-51. Set properties:
+55. Click **+ Insert** → **Text label**.
+56. **Rename it:** `lblDetailsHoursLabel`
+57. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Est. Hours:"` |
 | X | `recDetailsModal.X + 160` |
-| Y | `recDetailsModal.Y + 325` |
+| Y | `recDetailsModal.Y + 395` |
 | Width | `100` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -5513,14 +5571,14 @@ With(
 
 ### Hours Input (txtDetailsHours)
 
-52. Click **+ Insert** → **Text input**.
-53. **Rename it:** `txtDetailsHours`
-54. Set properties:
+58. Click **+ Insert** → **Text input**.
+59. **Rename it:** `txtDetailsHours`
+60. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recDetailsModal.X + 160` |
-| Y | `recDetailsModal.Y + 348` |
+| Y | `recDetailsModal.Y + 418` |
 | Width | `100` |
 | Height | `36` |
 | Format | `TextFormat.Number` |
@@ -5539,15 +5597,15 @@ With(
 
 ### Cost Label (lblDetailsCostLabel)
 
-55. Click **+ Insert** → **Text label**.
-56. **Rename it:** `lblDetailsCostLabel`
-57. Set properties:
+61. Click **+ Insert** → **Text label**.
+62. **Rename it:** `lblDetailsCostLabel`
+63. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Calculated Cost:"` |
 | X | `recDetailsModal.X + 280` |
-| Y | `recDetailsModal.Y + 325` |
+| Y | `recDetailsModal.Y + 395` |
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -5556,21 +5614,21 @@ With(
 
 ### Cost Value Display (lblDetailsCostValue)
 
-58. Click **+ Insert** → **Text label**.
-59. **Rename it:** `lblDetailsCostValue`
-60. Set properties:
+64. Click **+ Insert** → **Text label**.
+65. **Rename it:** `lblDetailsCostValue`
+66. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recDetailsModal.X + 280` |
-| Y | `recDetailsModal.Y + 348` |
+| Y | `recDetailsModal.Y + 418` |
 | Width | `150` |
 | Height | `36` |
 | Size | `18` |
 | FontWeight | `FontWeight.Bold` |
 | Color | `RGBA(16, 124, 16, 1)` |
 
-61. Set **Text** (auto-calculates based on weight and method):
+67. Set **Text** (auto-calculates based on weight and method):
 
 ```powerfx
 With(
@@ -5597,15 +5655,15 @@ With(
 
 ### Transaction Number Label (lblDetailsTransLabel)
 
-62. Click **+ Insert** → **Text label**.
-63. **Rename it:** `lblDetailsTransLabel`
-64. Set properties:
+68. Click **+ Insert** → **Text label**.
+69. **Rename it:** `lblDetailsTransLabel`
+70. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Transaction #:"` |
 | X | `recDetailsModal.X + 20` |
-| Y | `recDetailsModal.Y + 395` |
+| Y | `recDetailsModal.Y + 465` |
 | Width | `130` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -5617,14 +5675,14 @@ With(
 
 ### Transaction Number Input (txtDetailsTransaction)
 
-65. Click **+ Insert** → **Text input**.
-66. **Rename it:** `txtDetailsTransaction`
-67. Set properties:
+71. Click **+ Insert** → **Text input**.
+72. **Rename it:** `txtDetailsTransaction`
+73. Set properties:
 
 | Property | Value |
 |----------|-------|
 | X | `recDetailsModal.X + 20` |
-| Y | `recDetailsModal.Y + 418` |
+| Y | `recDetailsModal.Y + 488` |
 | Width | `200` |
 | Height | `36` |
 | HintText | `"e.g., 123"` |
@@ -5645,15 +5703,15 @@ With(
 
 ### Cancel Button (btnDetailsCancel)
 
-68. Click **+ Insert** → **Button**.
-69. **Rename it:** `btnDetailsCancel`
-70. Set properties:
+74. Click **+ Insert** → **Button**.
+75. **Rename it:** `btnDetailsCancel`
+76. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
 | X | `recDetailsModal.X + 230` |
-| Y | `recDetailsModal.Y + 560` |
+| Y | `recDetailsModal.Y + 600` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -5670,12 +5728,13 @@ With(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-71. Set **OnSelect:**
+77. Set **OnSelect:**
 
 ```powerfx
 Set(varShowDetailsModal, 0);
 Set(varSelectedItem, Blank());
 Reset(ddDetailsStaff);
+Reset(ddDetailsSlicedOnComputer);
 Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
@@ -5688,15 +5747,15 @@ Reset(txtDetailsTransaction)
 
 ### Save Changes Button (btnDetailsConfirm)
 
-72. Click **+ Insert** → **Button**.
-73. **Rename it:** `btnDetailsConfirm`
-74. Set properties:
+78. Click **+ Insert** → **Button**.
+79. **Rename it:** `btnDetailsConfirm`
+80. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Text | `"✓ Save Changes"` |
 | X | `recDetailsModal.X + 360` |
-| Y | `recDetailsModal.Y + 560` |
+| Y | `recDetailsModal.Y + 600` |
 | Width | `170` |
 | Height | `varBtnHeight` |
 | Fill | `varColorPrimary` |
@@ -5713,7 +5772,7 @@ Reset(txtDetailsTransaction)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 
-75. Set **DisplayMode:**
+81. Set **DisplayMode:**
 
 ```powerfx
 If(
@@ -5723,6 +5782,7 @@ If(
         Coalesce(ddDetailsMethod.Selected.Value, "") <> Coalesce(varSelectedItem.Method.Value, "") ||
         Coalesce(ddDetailsPrinter.Selected.Value, "") <> Coalesce(varSelectedItem.Printer.Value, "") ||
         Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, "") ||
+        Coalesce(ddDetailsSlicedOnComputer.Selected.Name, "") <> Coalesce(varSelectedItem.SlicedOnComputer.Value, "") ||
         (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0)) ||
         (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0)) ||
         (!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""))
@@ -5732,11 +5792,11 @@ If(
 )
 ```
 
-> 💡 Button is enabled only when staff is selected AND at least one field is being changed (including transaction number for paid items).
+> 💡 Button is enabled only when staff is selected AND at least one field is being changed (including sliced-on computer and transaction number for paid items).
 
-> 💡 **Choice-field comparison:** Use `Coalesce(..., "")` for Method, Printer, and Color comparisons so the Save button still works reliably when a combo box is preloaded or when a field is blank.
+> 💡 **Choice-field comparison:** Use `Coalesce(..., "")` for Method, Printer, Color, and Sliced-On Computer comparisons so the Save button still works reliably when a combo box is preloaded or when a field is blank.
 
-76. Set **OnSelect:**
+82. Set **OnSelect:**
 
 ```powerfx
 // === SHOW LOADING ===
@@ -5753,6 +5813,14 @@ Set(
         If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer)
     )
 );
+Set(
+    varNewSlicedOnComputer,
+    If(
+        !IsBlank(ddDetailsSlicedOnComputer.Selected),
+        {Value: ddDetailsSlicedOnComputer.Selected.Name},
+        varSelectedItem.SlicedOnComputer
+    )
+);
 Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
 Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate))));
 
@@ -5767,6 +5835,8 @@ If(Coalesce(varNewPrinter.Value, "") <> Coalesce(varSelectedItem.Printer.Value, 
         Trim(If(Find("(", varNewPrinter.Value) > 0, Left(varNewPrinter.Value, Find("(", varNewPrinter.Value) - 1), varNewPrinter.Value))));
 If(Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, ""),
     Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Color: " & varSelectedItem.Color.Value & " → " & ddDetailsColor.Selected.Value));
+If(Coalesce(varNewSlicedOnComputer.Value, "") <> Coalesce(varSelectedItem.SlicedOnComputer.Value, ""),
+    Set(varChangeDesc, If(IsBlank(varChangeDesc), "", varChangeDesc & "; ") & "Computer: " & Coalesce(varSelectedItem.SlicedOnComputer.Value, "(none)") & " → " & varNewSlicedOnComputer.Value));
 If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0),
     Set(
         varChangeDesc,
@@ -5791,6 +5861,7 @@ Patch(
         Method: If(!IsBlank(ddDetailsMethod.Selected), ddDetailsMethod.Selected, varSelectedItem.Method),
         Printer: varNewPrinter,
         Color: If(!IsBlank(ddDetailsColor.Selected), ddDetailsColor.Selected, varSelectedItem.Color),
+        SlicedOnComputer: varNewSlicedOnComputer,
         EstimatedWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight),
         EstimatedTime: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstimatedTime),
         EstimatedCost: varNewCost,
@@ -5832,6 +5903,7 @@ Notify("Print details updated successfully!", NotificationType.Success);
 Set(varShowDetailsModal, 0);
 Set(varSelectedItem, Blank());
 Reset(ddDetailsStaff);
+Reset(ddDetailsSlicedOnComputer);
 Reset(ddDetailsMethod);
 Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);

@@ -710,6 +710,7 @@ For each section, verify:
 - [x] `ddDetailsMethod` — Method dropdown (Filament/Resin)
 - [x] `ddDetailsPrinter` — Printer dropdown (filtered by method)
 - [x] `ddDetailsColor` — Color dropdown
+- [x] `ddDetailsSlicedOnComputer` — Sliced-on computer dropdown
 - [x] `txtDetailsWeight`, `txtDetailsHours` — Estimate inputs
 - [x] `txtDetailsTransaction` — Transaction number (visible when exists)
 - [x] `lblDetailsCostValue` — Dynamic cost recalculation
@@ -720,8 +721,8 @@ For each section, verify:
 |---------|--------|
 | Printer dropdown filtered by method (Filament printers vs Resin printers) | ✅ Match |
 | Cost recalculation using weight × rate | ✅ Match |
-| `btnDetailsConfirm.DisplayMode` — Staff required + at least one change | ✅ Match |
-| Patch updates Method, Printer, Color, Weight, Time, Cost | ✅ Match |
+| `btnDetailsConfirm.DisplayMode` — Staff required + at least one change, including sliced-on computer | ✅ Match |
+| Patch updates Method, Printer, Color, SlicedOnComputer, Weight, Time, Cost | ✅ Match |
 | Flow C call with "Details Changed" action | ✅ Match |
 
 ---
