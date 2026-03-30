@@ -138,14 +138,18 @@ function main(
   const table = workbook.getTable("Transactions");
 
   // Remove any placeholder blank rows that were left in the template table.
-  const existingRange = table.getRangeBetweenHeaderAndTotal();
-  const existingValues = existingRange.getValues();
-  for (let i = existingValues.length - 1; i >= 0; i--) {
-    const isBlankRow = existingValues[i].every((cell) =>
-      String(cell ?? "").trim() === ""
-    );
-    if (isBlankRow) {
-      table.deleteRowsAt(i, 1);
+  // Only attempt deletion if the table has data rows (row count > 0).
+  const rowCount = table.getRowCount();
+  if (rowCount > 0) {
+    const existingRange = table.getRangeBetweenHeaderAndTotal();
+    const existingValues = existingRange.getValues();
+    for (let i = existingValues.length - 1; i >= 0; i--) {
+      const isBlankRow = existingValues[i].every((cell) =>
+        String(cell ?? "").trim() === ""
+      );
+      if (isBlankRow) {
+        table.deleteRowsAt(i, 1);
+      }
     }
   }
 
