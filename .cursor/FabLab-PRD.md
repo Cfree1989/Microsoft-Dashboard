@@ -496,7 +496,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 
 **Payment Recording Fields - Actuals at Pickup (5):**
 - **TransactionNumber** (Single line text) - TigerCASH transaction/receipt number
-- **FinalWeight** (Number) - Actual material usage recorded for pricing (grams for filament, mL for resin)
+- **FinalWeight** (Number) - Actual measured pickup weight in grams for both filament and resin
 - **FinalCost** (Currency) - Actual cost charged (calculated from FinalWeight)
 - **PaymentDate** (Date) - Date payment was recorded
 - **PaymentNotes** (Multiple lines text) - Payment discrepancies or special circumstances
@@ -505,7 +505,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - **EstimatedTime** internal name is `EstHours` in SharePoint
 - **EstimatedWeight** internal name is `EstWeight` in SharePoint; the numeric field stores grams for filament and mL for resin
 - **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
-- **FinalWeight** captures actual material used; enables estimate accuracy tracking
+- **FinalWeight** captures the actual weighed pickup amount; enables estimate accuracy tracking and resin gram-to-cost conversion
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
 - For detailed audit attribution with person fields, see AuditLog.Actor
 
@@ -837,13 +837,13 @@ EstimatedCost = Max($3.00, EstimatedWeight × Material_Rate)
 
 **For Final Payment (at Pickup):**
 ```
-FinalCost = Max($3.00, FinalWeight × Material_Rate)
+FinalCost = Max($3.00, FinalWeight × Payment_Rate)
 ```
 
 **Where:**
 - **EstimatedWeight:** Predicted material usage from slicer software (grams for filament, mL for resin)
-- **FinalWeight:** Recorded material usage used for final pricing (grams for filament, mL for resin)
-- **Material_Rate:** $0.10/g (Filament) or $0.30/mL (Resin)
+- **FinalWeight:** Actual weighed pickup amount in grams for both methods
+- **Payment_Rate:** $0.10/g (Filament) or about $0.2703/g for resin pickup billing, derived from $0.30/mL at 1.11 g/mL
 - **$3.00:** Minimum charge applied if calculated cost is lower
 
 #### Calculation Examples
@@ -893,11 +893,11 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 **Payment Recording Workflow:**
 1. Student receives pickup notification email
 2. Student visits Fabrication Lab with ID and TigerCASH
-3. Staff records final material usage in the unit appropriate for the method
+3. Staff weighs the finished print(s) at pickup
 4. Staff clicks "Picked Up" button → Payment Modal opens
 5. Staff enters:
    - **Transaction Number:** TigerCASH receipt/transaction ID
-   - **Final Weight:** Actual material used (grams for filament, mL for resin; auto-calculates FinalCost)
+   - **Final Weight:** Actual weighed grams at pickup (auto-calculates FinalCost)
    - **Payment Date:** Defaults to today (adjustable)
    - **Notes:** Any discrepancies or special circumstances
 6. Student pays with TigerCASH card
@@ -908,7 +908,7 @@ FinalCost = Max($3.00, FinalWeight × Material_Rate)
 | Field | Purpose | Example |
 |-------|---------|---------|
 | TransactionNumber | TigerCASH receipt ID | "TC-2024-12345" |
-| FinalWeight | Actual material used (grams for filament, mL for resin) | 82 |
+| FinalWeight | Actual weighed grams at pickup | 82 |
 | FinalCost | Auto-calculated from FinalWeight | $8.20 |
 | PaymentDate | Date recorded | 12/17/2024 |
 | PaymentNotes | Special circumstances | "Student paid cash, manager approved" |

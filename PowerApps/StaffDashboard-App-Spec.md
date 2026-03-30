@@ -481,6 +481,8 @@ ClearCollect(colPayments, FirstN(colAllPayments, 0));
 // Centralized pricing rates - change here to update all cost calculations
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
 Set(varResinRate, 0.30);       // $ per mL for resin printing  
+Set(varResinDensity, 1.11);    // g per mL for Formlabs Black/Gray/White/Clear V4.1 resin
+Set(varResinGramRate, Round(varResinRate / varResinDensity, 4)); // $ per gram for resin pickup billing
 Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
 // === STYLING / THEMING ===
@@ -665,6 +667,8 @@ Set(varLoadingMessage, "")
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per mL for resin printing | Number |
+| `varResinDensity` | Resin density in g/mL for pickup conversion | Number |
+| `varResinGramRate` | Cost per gram for resin pickup billing | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
 | `varColorPrimary` | Blue - primary actions | Color |
@@ -1754,8 +1758,7 @@ Switch(
 If(
     ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.FinalCost),
     // After payment: show final weight and cost only
-    "⚖ " & Text(ThisItem.FinalWeight) &
-    If(ThisItem.Method.Value = "Resin", "mL", "g") &
+    "⚖ " & Text(ThisItem.FinalWeight) & "g" &
     " · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
     // Before payment: show estimates
     If(
@@ -6402,7 +6405,7 @@ Switch(
 ```powerfx
 If(
     varSelectedItem.Method.Value = "Resin",
-    "Final Resin Used (mL)",
+    "Final Resin Weight (g)",
     If(
         IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
         !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
@@ -6429,7 +6432,7 @@ If(
 )
 ```
 
-> ⚠️ **Sanity check:** Filament entries switch to a warning when entered weight deviates more than 50% from the estimate. Resin uses `mL`, so the label stays unit-specific instead of comparing against a grams-based final measurement.
+> ⚠️ **Sanity check:** Filament entries switch to a warning when entered weight deviates more than 50% from the estimate. Resin estimates are stored in `mL`, so the pickup field stays grams-only and skips that direct comparison.
 
 ---
 
@@ -6446,7 +6449,7 @@ If(
 | Width | `150` |
 | Height | `36` |
 | Format | `TextFormat.Number` |
-| HintText | `If(varSelectedItem.Method.Value = "Resin", "Resin used in mL", "Weight in grams")` |
+| HintText | `"Weight in grams"` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -6506,7 +6509,7 @@ If(
                 varMinimumCost,
                 Value(txtPaymentWeight.Text) * If(
                     varSelectedItem.Method.Value = "Resin",
-                    varResinRate,
+                    varResinGramRate,
                     varFilamentRate
                 )
             )
@@ -6880,8 +6883,9 @@ With(
     },
     If(
         varSelectedItem.Method.Value = "Resin",
-        "Estimated: " & Text(varSelectedItem.EstimatedWeight) & "mL → " &
-        Text(varSelectedItem.EstimatedCost, "[$-en-US]$#,##0.00"),
+        "Estimate: " & Text(varSelectedItem.EstimatedWeight) & "mL → " &
+        Text(varSelectedItem.EstimatedCost, "[$-en-US]$#,##0.00") &
+        " · Pickup billed from grams",
         "Remaining: ~" & Text(Max(0, varSelectedItem.EstimatedWeight - wPaidWeight)) & "g · " &
         Text(
             Max(
@@ -7292,7 +7296,7 @@ Set(varBaseCost,
     Max(
         varMinimumCost,
         Value(txtPaymentWeight.Text) *
-        If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)
+        If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
     )
 );
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
@@ -7465,8 +7469,7 @@ If(
                         If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                         "PAID by " & wStaffShortName &
                         ": [Summary] " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        " for " & Text(Value(txtPaymentWeight.Text)) &
-                        If(varSelectedItem.Method.Value = "Resin", "mL", "g") &
+                        " for " & Text(Value(txtPaymentWeight.Text)) & "g" &
                         " [Changes] [Reason] [Context] " &
                         " [Comment] " &
                         Trim(
@@ -8097,7 +8100,7 @@ Set(varLoadingMessage, "")
 ### Batch Eligibility Rules
 
 - Only requests currently in `Completed` status may enter batch mode.
-- Batch selections must all use the same `Method` so combined resin `mL` is never mixed with filament grams.
+- Batch selections must all use the same `Method` so resin pickup grams never mix with filament grams under different pricing rules.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
@@ -8116,8 +8119,8 @@ scrDashboard
     ├── lblBatchPaymentDateLabel  ← "Payment Date: *"
     ├── txtBatchPayerName         ← Shared payer name input
     ├── lblBatchPayerNameLabel    ← "Payer Name: *"
-    ├── txtBatchWeight            ← Combined weight input
-    ├── lblBatchWeightLabel       ← "Combined Material Used: *"
+    ├── txtBatchWeight            ← Combined pickup weight input
+    ├── lblBatchWeightLabel       ← "Combined Weight (grams): *"
     ├── txtBatchTransaction       ← Transaction number input
     ├── lblBatchTransLabel        ← "Transaction Number: *"
     ├── ddBatchPaymentType        ← Payment type dropdown
@@ -8281,7 +8284,7 @@ Reset(ddBatchPaymentType)
 ```powerfx
 "Estimated Total: " &
 Text(Sum(colBatchItems, EstimatedWeight)) &
-If(CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems), "mL", "g") &
+If(CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems), "mL est.", "g") &
 " → " &
 Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 ```
@@ -8542,7 +8545,7 @@ Switch(
 ```powerfx
 If(
     CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
-    "Combined Resin Used (mL)",
+    "Combined Resin Weight (g)",
     If(
         IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
         Sum(colBatchItems, EstimatedWeight) > 0 &&
@@ -8557,15 +8560,19 @@ If(
 
 ```powerfx
 If(
-    IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
-    Sum(colBatchItems, EstimatedWeight) > 0 &&
-    Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
-    varColorWarning,
-    varColorText
+    CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
+    varColorText,
+    If(
+        IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+        Sum(colBatchItems, EstimatedWeight) > 0 &&
+        Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
+        varColorWarning,
+        varColorText
+    )
 )
 ```
 
-> ⚠️ **Sanity check:** Same >50% deviation warning as the single-payment weight label, but compares against the summed estimated weight of all batch items.
+> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. Resin batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams.
 
 ---
 
@@ -8664,7 +8671,7 @@ With(
                             baseCost: Max(
                                 If(
                                     batchItem.Method.Value = "Resin",
-                                    allocatedWeight * varResinRate,
+                                    allocatedWeight * varResinGramRate,
                                     allocatedWeight * varFilamentRate
                                 ),
                                 varMinimumCost
@@ -8984,7 +8991,7 @@ If(
                             wBaseCost: Max(
                                 If(
                                     batchItem.Method.Value = "Resin",
-                                    wAllocatedWeight * varResinRate,
+                                    wAllocatedWeight * varResinGramRate,
                                     wAllocatedWeight * varFilamentRate
                                 ),
                                 varMinimumCost
@@ -9032,7 +9039,7 @@ If(
                         Max(
                             If(
                                 BatchItem.Method.Value = "Resin",
-                                wBatchWeight * varResinRate,
+                                wBatchWeight * varResinGramRate,
                                 wBatchWeight * varFilamentRate
                             ),
                             varMinimumCost
@@ -9040,7 +9047,7 @@ If(
                         Max(
                             If(
                                 BatchItem.Method.Value = "Resin",
-                                wBatchWeight * varResinRate,
+                                wBatchWeight * varResinGramRate,
                                 wBatchWeight * varFilamentRate
                             ),
                             varMinimumCost
@@ -9139,8 +9146,7 @@ If(
                                     If(IsBlank(wLatestRequest.StaffNotes), "", wLatestRequest.StaffNotes & " | "),
                                     "PAID (BATCH) by " & wStaffShortName &
                                     ": [Summary] " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
-                                    " for " & Text(wBatchWeight) &
-                                    If(BatchItem.Method.Value = "Resin", "mL", "g") &
+                                    " for " & Text(wBatchWeight) & "g" &
                                     " [Changes] [Reason] [Context] " &
                                     " [Comment] " &
                                     " - " & Text(Now(), "m/d h:mmam/pm")
@@ -14428,6 +14434,8 @@ Use this checklist to verify all features work correctly:
 | `colStaff` | App.OnStart | Active staff collection |
 | `varFilamentRate` | App.OnStart | Filament price per gram ($0.10) |
 | `varResinRate` | App.OnStart | Resin price per mL ($0.30) |
+| `varResinDensity` | App.OnStart | Resin density in g/mL (1.11) |
+| `varResinGramRate` | App.OnStart | Resin pickup price per gram (~$0.2703) |
 | `varMinimumCost` | App.OnStart | Minimum charge ($3.00) |
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
@@ -14475,6 +14483,8 @@ LastActionBy: {
 |----------|---------|-------------|
 | `varFilamentRate` | `0.10` | $ per gram for filament |
 | `varResinRate` | `0.30` | $ per mL for resin |
+| `varResinDensity` | `1.11` | g per mL for supported resin colors (Black/Gray/White/Clear V4.1) |
+| `varResinGramRate` | `Round(varResinRate / varResinDensity, 4)` | $ per gram for resin pickup billing |
 | `varMinimumCost` | `3.00` | Minimum charge |
 
 **For Estimates (Approval Modal):**
@@ -14485,13 +14495,13 @@ Max(varMinimumCost, EstimatedWeight * If(Method = "Resin", varResinRate, varFila
 
 **For Finals (Payment Modal):**
 ```powerfx
-// FinalCost from FinalWeight (grams for filament, mL for resin)
+// FinalCost from FinalWeight (grams for both methods)
 // With own material discount: multiply by varOwnMaterialDiscount when chkOwnMaterial.Value is true
-Set(varBaseCost, Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinRate, varFilamentRate)));
+Set(varBaseCost, Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResinGramRate, varFilamentRate)));
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost))
 ```
 
-> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (grams for filament, slicer mL for resin). FinalWeight/FinalCost are recorded at payment pickup using the same unit pattern.
+> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (grams for filament, slicer mL for resin). FinalWeight/FinalCost are recorded at payment pickup in grams for both methods; resin pickup charges convert those grams through `varResinGramRate`.
 >
 > 💡 **Own Material Discount:** When student provides their own filament/resin, check `chkOwnMaterial` for a 70% discount (student pays 30% of normal cost). This is saved to the `StudentOwnMaterial` field.
 

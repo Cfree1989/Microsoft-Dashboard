@@ -220,6 +220,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 > - **Minimum charge:** $3.00 per print (applied automatically)
 > - **Formula:** `Cost = Max($3.00, MaterialUsage × Method Rate)`
 > - **EstimatedTime:** Optional for operational tracking (not used in pricing)
+> - **Pickup billing note:** Resin estimates are created in `mL`, but final pickup can still be entered in grams and converted in-app using the lab's resin density rule
 
 #### 2b. Create helpful **Views**
 Create two modern views to simplify day‑to‑day use. These are lenses on the same data; permissions still control which rows users can see.

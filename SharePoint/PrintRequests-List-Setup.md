@@ -518,7 +518,7 @@ These columns capture actual payment details when a print is picked up.
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `FinalWeight`
-3. **Description:** `Actual material usage recorded for pricing: grams for filament, mL for resin`
+3. **Description:** `Actual measured pickup weight in grams for final pricing`
 4. **Number of decimal places:** 0
 5. Click **Save**
 
@@ -729,7 +729,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 | Column | Type | Required | Default | Purpose |
 |--------|------|----------|---------|---------|
 | TransactionNumber | Single line | No | - | Reference number (receipt, check, or grant/program code) |
-| FinalWeight | Number | No | - | Actual material usage (grams for filament, mL for resin) |
+| FinalWeight | Number | No | - | Actual measured pickup weight in grams |
 | FinalCost | Currency | No | - | Running total charged for this request (from Payments) |
 | PaymentDate | Date | No | - | Date payment was recorded |
 | PaymentNotes | Multi-line | No | - | Payment discrepancies or notes |
@@ -771,7 +771,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - **EstHours** internal name is `EstHours` in SharePoint (Display: EstimatedTime)
 - **EstWeight** internal name is `EstWeight` in SharePoint (Display: EstimatedWeight); the numeric field stores grams for filament and mL for resin
 - **EstimatedCost** vs **FinalCost**: Estimates are set at approval; Finals are recorded at payment pickup
-- **FinalWeight** captures actual material used in the method-appropriate unit; enables estimate accuracy tracking
+- **FinalWeight** captures the actual weighed pickup amount in grams for both methods; resin pricing can convert those grams in-app as needed
 - **LastActionBy** is Single line text (not Person) to allow "System" value for infinite loop prevention
 - For detailed audit attribution with person fields, see AuditLog.Actor
 
