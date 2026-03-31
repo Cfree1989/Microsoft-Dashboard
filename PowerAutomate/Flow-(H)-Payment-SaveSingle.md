@@ -905,15 +905,29 @@ split(replace(triggerBody()['text_6'], ' ', ''), ',')
 **Where to add this:** Inside the `Update Each Plate` loop.
 
 1. Click **+ Add an action** inside the `Update Each Plate` loop
-2. Search for and select **Update item** (SharePoint)
-3. Rename to: `Update Plate Status`
+2. Search for and select **Get item** (SharePoint)
+3. Rename to: `Get Current Plate`
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `BuildPlates`
    - **Id:** click **Expression** tab: `int(items('Update_Each_Plate'))`
+5. **Configure retry policy** on `Get Current Plate`.
+
+
+6. Click **+ Add an action** below `Get Current Plate`
+7. Search for and select **Update item** (SharePoint)
+8. Rename to: `Update Plate Status`
+9. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `BuildPlates`
+   - **Id:** click **Expression** tab: `int(items('Update_Each_Plate'))`
+   - **RequestID:** click **Expression** tab: `body('Get_Current_Plate')?['RequestID']`
+   - **PlateKey:** click **Expression** tab: `body('Get_Current_Plate')?['PlateKey']`
+   - **Machine Value:** click **Expression** tab: `body('Get_Current_Plate')?['Machine']?['Value']`
+   - **Title:** click **Expression** tab: `body('Get_Current_Plate')?['Title']`
    - **Status Value:** `Picked Up`
 
-5. **Configure retry policy** on `Update Plate Status`.
+10. **Configure retry policy** on `Update Plate Status`.
 
 Leave the **False** branch of `Has Plates to Update` empty (no plates to update).
 
@@ -932,11 +946,17 @@ Leave the **False** branch of `Has Plates to Update` empty (no plates to update)
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** click **Expression** tab: `triggerBody()['number']`
+   - **TigerCardNumber:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['TigerCardNumber']`
+   - **StudentConfirmed:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['StudentConfirmed']`
+   - **Status Value:** click **Expression** tab: `outputs('ResultStatus')`
+   - **StudentOwnMaterial:** click **Expression** tab: `or(equals(first(body('Get_Current_Request')?['value'])?['StudentOwnMaterial'], true), triggerBody()['boolean'])`
+   - **NeedsAttention:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['NeedsAttention']`
+   - **PaymentType Value:** click **Expression** tab: `triggerBody()['text_1']`
+   - **BuildPlateLabelsLocked:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['BuildPlateLabelsLocked']`
+   - **BuildPlateOriginalTotal:** click **Expression** tab: `coalesce(first(body('Get_Current_Request')?['value'])?['BuildPlateOriginalTotal'], 0)`
    - **FinalWeight:** click **Expression** tab: `outputs('NewFinalWeight')`
    - **FinalCost:** click **Expression** tab: `outputs('NewFinalCost')`
    - **PaymentDate:** click **Expression** tab: `outputs('NewPaymentDate')`
-   - **StudentOwnMaterial:** click **Expression** tab: `or(equals(first(body('Get_Current_Request')?['value'])?['StudentOwnMaterial'], true), triggerBody()['boolean'])`
-   - **Status Value:** click **Expression** tab: `outputs('ResultStatus')`
    - **StaffNotes:** click **Expression** tab: `outputs('NewStaffNotes')`
    - **PaymentNotes:** click **Expression** tab: `outputs('NewPaymentNotes')`
    - **LastAction Value:** `Picked Up`
