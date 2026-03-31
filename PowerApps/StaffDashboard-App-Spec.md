@@ -7302,140 +7302,7 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Recording payment...");
 
-// Refresh and revalidate immediately before saving to reduce stale-state duplicates
-Refresh(PrintRequests);
-Refresh(BuildPlates);
-Refresh(Payments);
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colAllPayments, Payments);
-Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
-Set(varPaymentRecordedAt, Now());
-
-If(
-    IsBlank(varSelectedItem) || !(varSelectedItem.Status.Value in ["Printing", "Completed"]),
-    Notify("This request is no longer eligible for payment. Close and reopen the modal before trying again.", NotificationType.Error);
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, ""),
-
-    !IsBlank(Trim(txtPaymentTransaction.Text)) && CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtPaymentTransaction.Text))) > 0,
-    Notify("Transaction number '" & Trim(txtPaymentTransaction.Text) & "' already exists. Use a unique number.", NotificationType.Error);
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, ""),
-
-    ClearCollect(
-        colPayments,
-        SortByColumns(
-            AddColumns(
-                Filter(
-                    colAllPayments,
-                    RequestID = varSelectedItem.ID Or Text(varSelectedItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value
-                ),
-                PaymentSortAt,
-                Coalesce(RecordedAt, PaymentDate),
-                DisplayWeight,
-                If(
-                    !IsBlank(RequestID),
-                    Weight,
-                    With(
-                        {
-                            wBatchEntry: First(
-                                Filter(
-                                    Split(Coalesce(BatchAllocationSummary, ""), " | "),
-                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                )
-                            ).Value
-                        },
-                        If(
-                            IsBlank(wBatchEntry),
-                            Blank(),
-                            Value(First(Split(Last(Split(wBatchEntry, " for ")).Value, "g")).Value)
-                        )
-                    )
-                ),
-                DisplayAmount,
-                If(
-                    !IsBlank(RequestID),
-                    Amount,
-                    With(
-                        {
-                            wBatchEntry: First(
-                                Filter(
-                                    Split(Coalesce(BatchAllocationSummary, ""), " | "),
-                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                )
-                            ).Value
-                        },
-                        If(
-                            IsBlank(wBatchEntry),
-                            Blank(),
-                            Value(
-                                Substitute(
-                                    Trim(First(Split(Last(Split(wBatchEntry, ": ")).Value, " for ")).Value),
-                                    "$",
-                                    ""
-                                )
-                            )
-                        )
-                    )
-                ),
-                DisplayPlatesPickedUp,
-                If(
-                    !IsBlank(RequestID),
-                    PlatesPickedUp,
-                    Trim(
-                        Substitute(
-                            First(
-                                Filter(
-                                    Split(Coalesce(PlatesPickedUp, ""), " | "),
-                                    StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                )
-                            ).Value,
-                            varSelectedItem.ReqKey & ": ",
-                            ""
-                        )
-                    )
-                )
-            ),
-            "PaymentSortAt",
-            SortOrder.Ascending,
-            "ID",
-            SortOrder.Ascending
-        )
-    );
-    ClearCollect(
-        colBuildPlates,
-        Sort(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-    );
-    ClearCollect(
-        colBuildPlatesIndexed,
-        AddColumns(
-            colBuildPlates As plate,
-            PlateNum,
-            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-            ResolvedPlateLabel,
-            With(
-                {
-                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                },
-                If(
-                    !IsBlank(wStoredLabel),
-                    wStoredLabel,
-                    Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
-                )
-            )
-        )
-    );
-
-    // Calculate this transaction's cost
-Set(varBaseCost,
-    Max(
-        varMinimumCost,
-        Value(txtPaymentWeight.Text) *
-        If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
-    )
-);
-Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+// Build plate snapshot texts from checked plates
 Set(
     varPickedPlatesText,
     Concat(
@@ -7466,279 +7333,95 @@ Set(
         ", "
     )
 );
-
-// Create a new Payments record
 Set(
-    varPaymentSaved,
-    IfError(
-        Set(
-            varNewPayment,
-            Patch(
-                Payments,
-                Defaults(Payments),
-                {
-                    RequestID: varSelectedItem.ID,
-                    ReqKey: varSelectedItem.ReqKey,
-                    TransactionNumber: If(
-                        IsBlank(Trim(txtPaymentTransaction.Text)),
-                        Blank(),
-                        Trim(txtPaymentTransaction.Text)
-                    ),
-                    Weight: Value(txtPaymentWeight.Text),
-                    Amount: varFinalCost,
-                    PaymentType: {Value: ddPaymentType.Selected.Value},
-                    PaymentDate: dpPaymentDate.SelectedDate,
-                    RecordedAt: varPaymentRecordedAt,
-                    PayerName: If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
-                    PayerTigerCard: If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
-                    PlatesPickedUp: If(
-                        !IsBlank(varPickedPlatesText),
-                        varPickedPlatesText,
-                        ""
-                    ),
-                    PlateIDsPickedUp: If(
-                        !IsBlank(varPickedPlateIDsText),
-                        varPickedPlateIDsText,
-                        ""
-                    ),
-                    RecordedBy: {
-                        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-                        Department: "",
-                        DisplayName: ddPaymentStaff.Selected.MemberName,
-                        Email: ddPaymentStaff.Selected.MemberEmail,
-                        JobTitle: "",
-                        Picture: ""
-                    },
-                    StudentOwnMaterial: chkOwnMaterial.Value
-                }
-            )
-        );
-        true,
-        Notify("Failed to save payment.", NotificationType.Error);
-        false
+    varPickedPlateIDsList,
+    Concat(
+        SortByColumns(
+            ForAll(
+                Distinct(colPickedUpPlates, ID) As pickedPlateId,
+                LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
+            ),
+            "ID",
+            SortOrder.Ascending
+        ),
+        Text(ID),
+        ", "
+    )
+);
+
+// Calculate cost locally for audit message
+Set(varBaseCost,
+    Max(
+        varMinimumCost,
+        Value(txtPaymentWeight.Text) *
+        If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
+    )
+);
+Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+
+// Call Flow H to handle all writes server-side
+Set(
+    varFlowResult,
+    'Flow-(H)-Payment-SaveSingle'.Run(
+        varSelectedItem.ID,
+        Value(txtPaymentWeight.Text),
+        varFilamentRate,
+        varResinGramRate,
+        varMinimumCost,
+        varOwnMaterialDiscount,
+        If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
+        ddPaymentType.Selected.Value,
+        If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
+        If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
+        ddPaymentStaff.Selected.MemberEmail,
+        ddPaymentStaff.Selected.MemberName,
+        varPickedPlateIDsList,
+        varPickedPlatesText,
+        varPickedPlateIDsText,
+        Coalesce(Trim(txtPaymentNotes.Text), ""),
+        chkOwnMaterial.Value,
+        chkPartialPickup.Value,
+        dpPaymentDate.SelectedDate
     )
 );
 
 If(
-    varPaymentSaved,
+    varFlowResult.success = "true",
+
+    // === SUCCESS PATH ===
+    Refresh(PrintRequests);
+    Refresh(BuildPlates);
+    Refresh(Payments);
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllPayments, Payments);
+    Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
+
     With(
         {
-            wPickedPlates: SortByColumns(
-                ForAll(
-                    Distinct(colPickedUpPlates, ID) As pickedPlateId,
-                    LookUp(colPickedUpPlates, ID = pickedPlateId.Value)
-                ),
-                "ID",
-                SortOrder.Ascending
-            ),
-            wStaffShortName:
-                With(
-                    {n: ddPaymentStaff.Selected.MemberName},
-                    Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."
-                )
+            wResultStatus: If(
+                !IsBlank(varSelectedItem),
+                varSelectedItem.Status.Value,
+                "Unknown"
+            )
         },
-        // Mark checked completed plates as picked up
-        If(
-            CountRows(wPickedPlates) > 0,
-            ForAll(
-                wPickedPlates As pickedPlate,
-                Patch(
-                    BuildPlates,
-                    LookUp(BuildPlates, ID = pickedPlate.ID),
-                    {Status: {Value: "Picked Up"}}
-                )
-            )
-        );
-
-        // Refresh supporting collections after save so status checks use the latest data
-        Refresh(Payments);
-        Refresh(BuildPlates);
-        ClearCollect(colAllPayments, Payments);
-        ClearCollect(colPayments,
-            SortByColumns(
-                AddColumns(
-                    Filter(
-                        colAllPayments,
-                        RequestID = varSelectedItem.ID Or Text(varSelectedItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value
-                    ),
-                    PaymentSortAt,
-                    Coalesce(RecordedAt, PaymentDate),
-                    DisplayWeight,
-                    If(
-                        !IsBlank(RequestID),
-                        Weight,
-                        With(
-                            {
-                                wBatchEntry: First(
-                                    Filter(
-                                        Split(Coalesce(BatchAllocationSummary, ""), " | "),
-                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                    )
-                                ).Value
-                            },
-                            If(
-                                IsBlank(wBatchEntry),
-                                Blank(),
-                                Value(First(Split(Last(Split(wBatchEntry, " for ")).Value, "g")).Value)
-                            )
-                        )
-                    ),
-                    DisplayAmount,
-                    If(
-                        !IsBlank(RequestID),
-                        Amount,
-                        With(
-                            {
-                                wBatchEntry: First(
-                                    Filter(
-                                        Split(Coalesce(BatchAllocationSummary, ""), " | "),
-                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                    )
-                                ).Value
-                            },
-                            If(
-                                IsBlank(wBatchEntry),
-                                Blank(),
-                                Value(
-                                    Substitute(
-                                        Trim(First(Split(Last(Split(wBatchEntry, ": ")).Value, " for ")).Value),
-                                        "$",
-                                        ""
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    DisplayPlatesPickedUp,
-                    If(
-                        !IsBlank(RequestID),
-                        PlatesPickedUp,
-                        Trim(
-                            Substitute(
-                                First(
-                                    Filter(
-                                        Split(Coalesce(PlatesPickedUp, ""), " | "),
-                                        StartsWith(Value, varSelectedItem.ReqKey & ": ")
-                                    )
-                                ).Value,
-                                varSelectedItem.ReqKey & ": ",
-                                ""
-                            )
-                        )
-                    )
-                ),
-                "PaymentSortAt",
-                SortOrder.Ascending,
-                "ID",
-                SortOrder.Ascending
-            )
-        );
-        ClearCollect(colAllBuildPlates, BuildPlates);
-        ClearCollect(colBuildPlates,
-            Sort(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-        );
-
-        // Update running totals, notes timeline, and status on the parent request
-        With(
-            {
-                wResultStatus:
-                    If(
-                        chkPartialPickup.Value ||
-                        varSelectedItem.Status.Value = "Printing" ||
-                        CountRows(Filter(colBuildPlates, Status.Value <> "Picked Up")) > 0,
-                        varSelectedItem.Status,
-                        {Value: "Paid & Picked Up"}
-                    )
-            },
-            Patch(
-                PrintRequests,
-                LookUp(PrintRequests, ID = varSelectedItem.ID),
-                {
-                    FinalWeight: Sum(colPayments, DisplayWeight),
-                    FinalCost: Sum(colPayments, DisplayAmount),
-                    PaymentDate: If(CountRows(colPayments) > 0, Max(colPayments, PaymentDate), dpPaymentDate.SelectedDate),
-                    StudentOwnMaterial: CountRows(Filter(colPayments, StudentOwnMaterial)) > 0,
-                    Status: wResultStatus,
-                    PaymentNotes: If(
-                        IsBlank(Trim(txtPaymentNotes.Text)),
-                        varSelectedItem.PaymentNotes,
-                        Concatenate(
-                            If(IsBlank(varSelectedItem.PaymentNotes), "", varSelectedItem.PaymentNotes & " | "),
-                            "PAYMENT NOTE by " & ddPaymentStaff.Selected.MemberName & ": " & txtPaymentNotes.Text
-                        )
-                    ),
-                    StaffNotes: Concatenate(
-                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                        "PAID by " & wStaffShortName &
-                        ": [Summary] " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        " for " & Text(Value(txtPaymentWeight.Text)) & "g" &
-                        " [Changes] [Reason] [Context] " &
-                        " [Comment] " &
-                        Trim(
-                            Substitute(
-                                Substitute(
-                                    Substitute(
-                                        Substitute(
-                                            Substitute(
-                                                Substitute(
-                                                    Substitute(txtPaymentNotes.Text, " | ", "; "),
-                                                    " ~~ ",
-                                                    "; "
-                                                ),
-                                                "[Summary]",
-                                                "(Summary)"
-                                            ),
-                                            "[Changes]",
-                                            "(Changes)"
-                                        ),
-                                        "[Reason]",
-                                        "(Reason)"
-                                    ),
-                                    "[Context]",
-                                    "(Context)"
-                                ),
-                                "[Comment]",
-                                "(Comment)"
-                            )
-                        ) &
-                        " - " & Text(Now(), "m/d h:mmam/pm")
-                    ),
-                    LastAction: {Value: "Picked Up"},
-                    LastActionBy: {
-                        Claims: "i:0#.f|membership|" & ddPaymentStaff.Selected.MemberEmail,
-                        Department: "",
-                        DisplayName: ddPaymentStaff.Selected.MemberName,
-                        Email: ddPaymentStaff.Selected.MemberEmail,
-                        JobTitle: "",
-                        Picture: ""
-                    },
-                    LastActionAt: Now()
-                }
-            );
-            IfError(
-                Set(
-                    varPaymentAuditResult,
-                    'Flow-(C)-Action-LogAction'.Run(
-                        Text(varSelectedItem.ID),
-                        If(wResultStatus.Value = "Paid & Picked Up", "Status Change", "Partial Payment"),
-                        If(wResultStatus.Value = "Paid & Picked Up", "Status", "Payment"),
-                        "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                        If(
-                            CountRows(wPickedPlates) > 0,
-                            " (Plate IDs " & Concat(wPickedPlates, PlateKey, ",") &
-                            " | Display " & Concat(wPickedPlates, ResolvedPlateLabel, ",") & ")",
-                            ""
-                        ) &
-                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
-                        ddPaymentStaff.Selected.MemberEmail
-                    )
-                ),
-                Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
-            )
+        IfError(
+            'Flow-(C)-Action-LogAction'.Run(
+                Text(varSelectedItem.ID),
+                If(wResultStatus = "Paid & Picked Up", "Status Change", "Partial Payment"),
+                If(wResultStatus = "Paid & Picked Up", "Status", "Payment"),
+                "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                If(
+                    !IsBlank(varPickedPlateIDsText),
+                    " (Plate IDs " & varPickedPlateIDsText & " | Display " & varPickedPlatesText & ")",
+                    ""
+                ) &
+                If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
+                ddPaymentStaff.Selected.MemberEmail
+            ),
+            Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
         )
     );
 
-    // Close modal and reset
     Set(varShowPaymentModal, 0);
     Set(varSelectedItem, Blank());
     Reset(txtPaymentTransaction);
@@ -7754,15 +7437,18 @@ If(
     Reset(txtPayerTigerCard);
     Clear(colPickedUpPlates);
     Clear(colPayments);
-    Notify("Payment recorded!", NotificationType.Success)
-);
+    Notify("Payment recorded!", NotificationType.Success),
 
+    // === FAILURE PATH ===
+    Notify(varFlowResult.message, NotificationType.Error)
 );
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
+
+> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(H)-Payment-SaveSingle` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(H)-Payment-SaveSingle.md` for the full server-side implementation.
 
 ### Final Behavior Summary
 
@@ -9106,326 +8792,40 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Processing batch payment...");
 
-// === STEP 1: REFRESH SHARED SNAPSHOTS ===
-Refresh(PrintRequests);
-Refresh(BuildPlates);
-Refresh(Payments);
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colAllPayments, Payments);
-Clear(colBatchSucceededItems);
-Clear(colBatchSucceededDetails);
-Clear(colBatchFailedItems);
-Set(varBatchRecordedAt, Now());
-Set(varBatchLedgerSaveFailed, false);
+// Call Flow I to handle the entire batch save server-side
+Set(varBatchProcessedCount, CountRows(colBatchItems));
+Set(
+    varFlowResult,
+    'Flow-(I)-Payment-SaveBatch'.Run(
+        Value(txtBatchWeight.Text),
+        varFilamentRate,
+        varResinGramRate,
+        varMinimumCost,
+        varOwnMaterialDiscount,
+        Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
+        Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
+        If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
+        ddBatchPaymentType.Selected.Value,
+        Trim(txtBatchPayerName.Text),
+        ddBatchStaff.Selected.MemberEmail,
+        ddBatchStaff.Selected.MemberName,
+        chkBatchOwnMaterial.Value,
+        dpBatchPaymentDate.SelectedDate
+    )
+);
 
 If(
-    ddBatchPaymentType.Selected.Value = "TigerCASH" &&
-    Len(Trim(txtBatchTransaction.Text)) = 16 &&
-    IsNumeric(Trim(txtBatchTransaction.Text)),
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "");
-    Notify("That looks like a TigerCard number. Please enter the receipt or approval number instead.", NotificationType.Error),
+    varFlowResult.success = "true",
 
-    CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtBatchTransaction.Text))) > 0,
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "");
-    Notify("Transaction number '" & Trim(txtBatchTransaction.Text) & "' already exists. Use a unique number.", NotificationType.Error),
-
-    CountRows(Filter(PrintRequests, ID in colBatchItems.ID && Status.Value <> "Completed")) > 0,
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "");
-    Notify("One or more items are no longer in 'Completed' status. Please remove them from the batch and try again.", NotificationType.Error),
-
-    CountRows(
-        Filter(
-            colBatchItems As batchCandidate,
-            CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID)) > 0 &&
-            (
-                CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID, Status.Value in ["Queued", "Printing"])) > 0 ||
-                CountRows(Filter(colAllBuildPlates, RequestID = batchCandidate.ID, Status.Value = "Completed")) = 0
-            )
-        )
-    ) > 0,
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "");
-    Notify("One or more selected requests are no longer valid final pickups. Remove those items from the batch and try again.", NotificationType.Error),
-
-    // === STEP 2: CALCULATE SHARED VALUES ===
-    Set(varBatchTotalEstWeight, Sum(colBatchItems, EstimatedWeight));
-    Set(varBatchCombinedWeight, Value(txtBatchWeight.Text));
-    Set(varBatchItemCount, CountRows(colBatchItems));
-    Set(varBatchLastItemID, Max(colBatchItems, ID));
-    Set(
-        varBatchLastItemWeight,
-        If(
-            varBatchItemCount > 1,
-            varBatchCombinedWeight - Sum(
-                ForAll(
-                    Filter(colBatchItems, ID <> varBatchLastItemID) As remainderItem,
-                    If(
-                        varBatchTotalEstWeight > 0,
-                        Round((remainderItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                        Round(varBatchCombinedWeight / varBatchItemCount, 2)
-                    )
-                ),
-                Value
-            ),
-            varBatchCombinedWeight
-        )
-    );
-    Set(
-        varBatchFinalCost,
-        Sum(
-            ForAll(
-                colBatchItems As batchItem,
-                With(
-                    {
-                        wAllocatedWeight: If(
-                            batchItem.ID = varBatchLastItemID && varBatchItemCount > 1,
-                            varBatchLastItemWeight,
-                            If(
-                                varBatchTotalEstWeight > 0,
-                                Round((batchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                                Round(varBatchCombinedWeight / varBatchItemCount, 2)
-                            )
-                        )
-                    },
-                    With(
-                        {
-                            wBaseCost: Max(
-                                If(
-                                    batchItem.Method.Value = "Resin",
-                                    wAllocatedWeight * varResinGramRate,
-                                    wAllocatedWeight * varFilamentRate
-                                ),
-                                varMinimumCost
-                            )
-                        },
-                        If(chkBatchOwnMaterial.Value, wBaseCost * varOwnMaterialDiscount, wBaseCost)
-                    )
-                )
-            ),
-            Value
-        )
-    );
-
-    // === STEP 3: PROCESS EACH ITEM WITH PER-ITEM REVALIDATION ===
-    ForAll(
-        colBatchItems As BatchItem,
-        Refresh(PrintRequests);
-        Refresh(BuildPlates);
-        Refresh(Payments);
-        With(
-            {
-                wLatestRequest: LookUp(PrintRequests, ID = BatchItem.ID),
-                wLatestBuildPlates: SortByColumns(Filter(BuildPlates, RequestID = BatchItem.ID), "ID", SortOrder.Ascending),
-                wPriorPayments: Filter(Payments, RequestID = BatchItem.ID),
-                wBatchWeight: If(
-                    BatchItem.ID = varBatchLastItemID && varBatchItemCount > 1,
-                    varBatchLastItemWeight,
-                    If(
-                        varBatchTotalEstWeight > 0,
-                        Round((BatchItem.EstimatedWeight / varBatchTotalEstWeight) * varBatchCombinedWeight, 2),
-                        Round(varBatchCombinedWeight / varBatchItemCount, 2)
-                    )
-                ),
-                wRemainingCompletedPlates: Filter(BuildPlates, RequestID = BatchItem.ID, Status.Value = "Completed"),
-                wStaffShortName:
-                    With(
-                        {n: ddBatchStaff.Selected.MemberName},
-                        Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."
-                    )
-            },
-            With(
-                {
-                    wBatchCost: If(
-                        chkBatchOwnMaterial.Value,
-                        Max(
-                            If(
-                                BatchItem.Method.Value = "Resin",
-                                wBatchWeight * varResinGramRate,
-                                wBatchWeight * varFilamentRate
-                            ),
-                            varMinimumCost
-                        ) * varOwnMaterialDiscount,
-                        Max(
-                            If(
-                                BatchItem.Method.Value = "Resin",
-                                wBatchWeight * varResinGramRate,
-                                wBatchWeight * varFilamentRate
-                            ),
-                            varMinimumCost
-                        )
-                    ),
-                    wPlateLabelSnapshot: If(
-                        CountRows(wRemainingCompletedPlates) > 0,
-                        Concat(
-                            AddColumns(
-                                wRemainingCompletedPlates As plate,
-                                PlateNum,
-                                CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                ResolvedPlateLabel,
-                                With(
-                                    {
-                                        wDynamicNum: CountRows(Filter(wLatestBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                                    },
-                                    If(
-                                        !IsBlank(wStoredLabel),
-                                        wStoredLabel,
-                                        Text(wDynamicNum) & "/" & Text(CountRows(wLatestBuildPlates))
-                                    )
-                                )
-                            ),
-                            ResolvedPlateLabel,
-                            ", "
-                        ),
-                        ""
-                    ),
-                    wPlateIDSnapshot: If(
-                        CountRows(wRemainingCompletedPlates) > 0,
-                        Concat(wRemainingCompletedPlates, PlateKey, ", "),
-                        ""
-                    )
-                },
-                If(
-                    IsBlank(wLatestRequest) || wLatestRequest.Status.Value <> "Completed",
-                    Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: "Status changed before save"}),
-
-                    CountRows(wLatestBuildPlates) > 0 &&
-                    (
-                        CountRows(Filter(wLatestBuildPlates, Status.Value in ["Queued", "Printing"])) > 0 ||
-                        CountRows(wRemainingCompletedPlates) = 0
-                    ),
-                    Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: "Plate status changed before save"}),
-
-                    IfError(
-                        If(
-                            CountRows(wRemainingCompletedPlates) > 0,
-                            ForAll(
-                                wRemainingCompletedPlates As pickedPlate,
-                                Patch(
-                                    BuildPlates,
-                                    LookUp(BuildPlates, ID = pickedPlate.ID),
-                                    {Status: {Value: "Picked Up"}}
-                                )
-                            )
-                        );
-
-                        Patch(
-                            PrintRequests,
-                            LookUp(PrintRequests, ID = BatchItem.ID),
-                            {
-                                Status: LookUp(Choices(PrintRequests.Status), Value = "Paid & Picked Up"),
-                                FinalWeight: Sum(wPriorPayments, Weight) + wBatchWeight,
-                                FinalCost: Sum(wPriorPayments, Amount) + wBatchCost,
-                                PaymentDate: If(CountRows(wPriorPayments) > 0, Max(Max(wPriorPayments, PaymentDate), dpBatchPaymentDate.SelectedDate), dpBatchPaymentDate.SelectedDate),
-                                StudentOwnMaterial: chkBatchOwnMaterial.Value || CountRows(Filter(wPriorPayments, StudentOwnMaterial)) > 0,
-                                StaffNotes: Concatenate(
-                                    If(IsBlank(wLatestRequest.StaffNotes), "", wLatestRequest.StaffNotes & " | "),
-                                    "PAID (BATCH) by " & wStaffShortName &
-                                    ": " & Text(wBatchCost, "[$-en-US]$#,##0.00") &
-                                    " for " & Text(wBatchWeight) & "g" &
-                                    " on shared txn " & Trim(txtBatchTransaction.Text) &
-                                    " covering " & Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", ") &
-                                    " - " & Text(Now(), "m/d h:mmam/pm")
-                                ),
-                                LastActionBy: {
-                                    Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                                    Discipline: "",
-                                    DisplayName: ddBatchStaff.Selected.MemberName,
-                                    Email: ddBatchStaff.Selected.MemberEmail,
-                                    JobTitle: "",
-                                    Picture: ""
-                                },
-                                LastActionAt: Now(),
-                                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change")
-                            }
-                        );
-
-                        Collect(
-                            colBatchSucceededDetails,
-                            {
-                                ID: BatchItem.ID,
-                                ReqKey: BatchItem.ReqKey,
-                                AllocatedWeight: wBatchWeight,
-                                AllocatedCost: wBatchCost,
-                                PlateLabels: wPlateLabelSnapshot,
-                                PlateIDs: wPlateIDSnapshot
-                            }
-                        );
-                        Collect(colBatchSucceededItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey}),
-                        Collect(colBatchFailedItems, {ID: BatchItem.ID, ReqKey: BatchItem.ReqKey, Reason: Coalesce(FirstError.Message, "Unknown error")})
-                    )
-                )
-            )
-        )
-    );
-
-    // === STEP 4: WRITE CONSOLIDATED LEDGER ROW ===
-    If(
-        CountRows(colBatchSucceededDetails) > 0,
-        Set(
-            varBatchLedgerSaveFailed,
-            !IfError(
-                Set(
-                    varNewBatchPayment,
-                    Patch(
-                        Payments,
-                        Defaults(Payments),
-                        {
-                            RequestID: Blank(),
-                            ReqKey: Blank(),
-                            BatchRequestIDs: Concat(SortByColumns(colBatchSucceededDetails, "ID", SortOrder.Ascending), Text(ID), ", "),
-                            BatchReqKeys: Concat(SortByColumns(colBatchSucceededDetails, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
-                            BatchAllocationSummary: Concat(
-                                SortByColumns(colBatchSucceededDetails, "ReqKey", SortOrder.Ascending),
-                                ReqKey & ": " & Text(AllocatedCost, "[$-en-US]$#,##0.00") & " for " & Text(AllocatedWeight) & "g",
-                                " | "
-                            ),
-                            TransactionNumber: Trim(txtBatchTransaction.Text),
-                            Weight: Sum(colBatchSucceededDetails, AllocatedWeight),
-                            Amount: Sum(colBatchSucceededDetails, AllocatedCost),
-                            PaymentType: {Value: ddBatchPaymentType.Selected.Value},
-                            PaymentDate: dpBatchPaymentDate.SelectedDate,
-                            RecordedAt: varBatchRecordedAt,
-                            PayerName: Trim(txtBatchPayerName.Text),
-                            PlatesPickedUp: Concat(
-                                Filter(colBatchSucceededDetails, !IsBlank(PlateLabels)),
-                                ReqKey & ": " & PlateLabels,
-                                " | "
-                            ),
-                            PlateIDsPickedUp: Concat(
-                                Filter(colBatchSucceededDetails, !IsBlank(PlateIDs)),
-                                ReqKey & ": " & PlateIDs,
-                                " | "
-                            ),
-                            RecordedBy: {
-                                Claims: "i:0#.f|membership|" & ddBatchStaff.Selected.MemberEmail,
-                                Department: "",
-                                DisplayName: ddBatchStaff.Selected.MemberName,
-                                Email: ddBatchStaff.Selected.MemberEmail,
-                                JobTitle: "",
-                                Picture: ""
-                            },
-                            StudentOwnMaterial: chkBatchOwnMaterial.Value
-                        }
-                    )
-                );
-                true,
-                false
-            )
-        )
-    );
-
-    // === STEP 5: REFRESH SNAPSHOTS AND LOG SUCCESSES ===
+    // === SUCCESS PATH ===
     Refresh(PrintRequests);
     Refresh(BuildPlates);
     Refresh(Payments);
     ClearCollect(colAllBuildPlates, BuildPlates);
     ClearCollect(colAllPayments, Payments);
+
     ForAll(
-        colBatchSucceededItems As BatchItem,
+        colBatchItems As BatchItem,
         IfError(
             'Flow-(C)-Action-LogAction'.Run(
                 Text(BatchItem.ID),
@@ -9448,55 +8848,32 @@ If(
         )
     );
 
-    // === STEP 6: CLEANUP AND NOTIFY ===
-    Set(varBatchProcessedCount, CountRows(colBatchSucceededItems));
-    If(
-        CountRows(colBatchFailedItems) = 0,
-        Clear(colBatchItems);
-        Set(varBatchSelectMode, false);
-        Set(varShowBatchPaymentModal, 0);
-        Reset(txtBatchTransaction);
-        Reset(txtBatchPayerName);
-        Reset(dpBatchPaymentDate);
-        Reset(txtBatchWeight);
-        Reset(ddBatchStaff);
-        Reset(chkBatchOwnMaterial);
-        Reset(ddBatchPaymentType);
-        Blank(),
+    Clear(colBatchItems);
+    Set(varBatchSelectMode, false);
+    Set(varShowBatchPaymentModal, 0);
+    Reset(txtBatchTransaction);
+    Reset(txtBatchPayerName);
+    Reset(dpBatchPaymentDate);
+    Reset(txtBatchWeight);
+    Reset(ddBatchStaff);
+    Reset(chkBatchOwnMaterial);
+    Reset(ddBatchPaymentType);
+    Notify(
+        varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") &
+        " processed successfully and saved as one consolidated payment row.",
+        NotificationType.Success
+    ),
 
-        RemoveIf(colBatchItems, Not(ID in colBatchFailedItems.ID));
-        Reset(txtBatchWeight);
-        Blank()
-    );
+    // === FAILURE PATH ===
+    Notify(varFlowResult.message, NotificationType.Error)
+);
 
-    If(
-        varBatchLedgerSaveFailed,
-        Notify(
-            "The selected requests were updated, but the consolidated Payments row failed to save. Reconcile the ledger before processing another batch.",
-            NotificationType.Error
-        ),
-        CountRows(colBatchFailedItems) = 0,
-        Notify(
-            varBatchProcessedCount & " item" & If(varBatchProcessedCount <> 1, "s", "") &
-            " processed successfully and saved as one consolidated payment row.",
-            NotificationType.Success
-        ),
-        Notify(
-            Text(CountRows(colBatchSucceededItems)) & " of " & Text(varBatchItemCount) &
-            " items processed. The consolidated payment row reflects only: " &
-            Concat(colBatchSucceededItems, ReqKey, ", ") &
-            ". Review and retry: " & Concat(colBatchFailedItems, ReqKey, ", "),
-            NotificationType.Warning
-        )
-    );
-
-    // === HIDE LOADING ===
-    Set(varIsLoading, false);
-    Set(varLoadingMessage, "")
-)
+// === HIDE LOADING ===
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
-> ⚠️ **Why ForAll + Patch instead of Patch(Table, ForAll)?** The `Patch(DataSource, Table)` bulk pattern has compatibility issues with SharePoint connectors. Using `ForAll` with individual `Patch` calls inside is more reliable and universally supported for per-request validation and status updates, then one final `Patch(Payments, Defaults(Payments), ...)` saves the consolidated ledger row.
+> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(I)-Payment-SaveBatch` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(I)-Payment-SaveBatch.md` for the full server-side implementation.
 
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
@@ -9506,7 +8883,7 @@ If(
 >
 > 💡 **Mixed-method pricing guidance:** The cost preview and each saved request allocation now branch on each request's `Method.Value`, so resin requests are not accidentally charged at the filament rate before the consolidated total is written.
 >
-> 💡 **Retry guidance:** Failures are tracked per item. Successful requests stay updated, failed items remain in `colBatchItems`, and the consolidated `Payments` row is written only from the succeeded subset. If the final ledger write fails, stop and reconcile before processing another batch.
+> 💡 **All-or-nothing:** If any request in the batch fails validation, the entire batch is rejected and nothing is written. There is no partial success or retry of subsets. Staff retries the whole batch.
 >
 > 💡 **Plate handling guidance:** For requests with build plates, batch payment is intentionally narrower than the single-item Payment Modal. Step 12E always picks up every remaining completed plate for the request. If the student is only taking some of the completed pieces, go back to Step 12C instead.
 
