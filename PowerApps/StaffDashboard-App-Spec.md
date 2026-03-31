@@ -1287,11 +1287,14 @@ After completing this step, your Tree view should look like:
 | Property | Value |
 |----------|-------|
 | X | `0` |
-| Y | `60` |
+| Y | `55` |
 | Width | `Parent.Width` |
-| Height | `50` |
+| Height | `55` |
+| BorderColor | `RGBA(0, 18, 107, 1)` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | TemplateSize | `varTabGalleryHeight` |
 | TemplatePadding | `3` |
+| Transition | `Transition.Push` |
 | Items | _(see formula below)_ |
 
 **⬇️ FORMULA: Paste into galStatusTabs Items**
@@ -1321,10 +1324,8 @@ Table(
 | X | `5` |
 | Y | `4` |
 | Width | `141` |
-| Height | `40` |
-| Size | `11` |
-| BorderRadius | `20` |
-| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value), If(varNeedsAttention, NeedsAttention = true, true))))` |
+| Size | `10` |
+| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey), If(varNeedsAttention, NeedsAttention = true, true))))` |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
@@ -1334,10 +1335,13 @@ Table(
 | PressedColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `1` |
+| DisabledBorderColor | `RGBA(166, 166, 166, 1)` |
 | FocusedBorderColor | `varInputBorderColor` |
-| FocusedBorderThickness | `1` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
+| PressedBorderColor | `Self.Fill` |
 
-> 💡 **Why these sizes?** 9 tabs × 148px = 1332px fits most tablet screens. The gallery uses `Parent.Width` so tabs scale with screen size. Font size 11 ensures "Paid & Picked Up" fits while remaining readable.
+> 💡 **Why these sizes?** 9 tabs at `Width = 141` with `TemplatePadding = 3` recreate the original compact tab strip while still fitting common tablet widths. Font size `10` keeps "Paid & Picked Up" readable without the rounded pill treatment.
 >
 > ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
 >
@@ -14829,8 +14833,7 @@ ThisItem.Status & " " & Text(
             If(IsBlank(varSearchText), true,
                 varSearchText in Student.DisplayName ||
                 varSearchText in StudentEmail ||
-                varSearchText in ReqKey ||
-                varSearchText in SlicedOnComputer.Value
+                varSearchText in ReqKey
             ),
             If(varNeedsAttention, NeedsAttention = true, true)
         )
