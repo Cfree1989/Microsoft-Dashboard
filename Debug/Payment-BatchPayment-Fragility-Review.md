@@ -620,23 +620,32 @@ Right now, if staff reverts a request from "Paid & Picked Up" back to "Completed
 
 Answer:A
 
-**Question 5 — Should payment saves move to Power Automate (server-side)?**
+**Question 5 — What should the long-term payment save architecture be?**
 
-The biggest issue all three reviews found is that the app saves payment data in multiple steps that can partly fail. The app writes the payment record, then updates the plates, then updates the request — and if any middle step fails, the data is out of sync. The "real" fix is to move all of that into a Power Automate flow that handles it as one unit. But that is a bigger lift. You need to pick one:
+The biggest issue all three reviews found is that payment saves are multi-step operations with no true atomicity. Single payment and batch payment both write to multiple places (`Payments`, `BuildPlates`, and `PrintRequests`), so a failure in the middle can leave the data out of sync. If the goal is a simple, solid architecture, you need to decide whether to keep patching around that in the app or move all payment saves server-side. You need to pick one:
 
-- **(a) Yes, move to Power Automate.** Build a flow that handles the entire save sequence. If anything fails, the flow can undo previous steps or flag the record for review. This is the most reliable approach but takes more development time.
-- **(b) No, keep it in the app.** Add better error handling and "needs reconciliation" flags directly in the Power App so staff knows when something went wrong and can fix it. Faster to build, but the app will always have some risk of partial saves.
+- **(a) Move both single and batch saves to Power Automate as two separate flows.** Build one flow for single payments and one for batch payments, with both following the same server-side save pattern. This is the cleanest long-term architecture and the most reliable, but it is a bigger upfront build.
+- **(b) Move only batch saves to Power Automate for now.** Keep single payments in the app and move only the batch path server-side, since batch is the more fragile workflow. This is a smaller lift, but it leaves the system with two different save architectures.
+- **(c) Keep payment saves in the app.** Add stronger in-app error handling, reconciliation flags, and recovery guidance instead of moving the logic to flows. This is the fastest to build, but partial-save risk remains part of the design.
+
+Answer: A
 
 ### Residual Open Questions (Non-Blocking)
 
 These do not block the top fixes but should be addressed in parallel or during implementation:
 
 - Should Flow G (monthly export) ever need to explode a consolidated batch back to per-request lines for disputes, or is one row per checkout always sufficient for TigerCASH reconciliation?
+   - No
 - For resin jobs, is there an assumed density so mL estimates can be treated as proportional to grams, or is that unstated?
+   - For estimates its in mL for payments its in grams. 
 - Is `BatchAllocationSummary` expected to be parseable by external systems (e.g., export flows, admin reports), or only by the app's own formulas?
+   - No idea what this means
 - How large can `colAllPayments` grow before the non-delegable `Filter` for transaction uniqueness becomes unreliable? What is the current non-delegable row limit setting?
+   - No idea
 - If the app is ever localized or used with non-US locale settings, will `Value()` parsing of `"$21.18"` after `Substitute("$", "")` still work, or will decimal separators cause silent failures?
+   - This will never happen.
 - Do any other formulas besides the payment modal need to parse consolidated batch text to rebuild request-level values?
+   - No idea. 
 
 ### Areas Confirmed Sound by All Three Reviewers
 
