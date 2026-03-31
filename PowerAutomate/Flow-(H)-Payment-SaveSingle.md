@@ -81,37 +81,37 @@ Flow
 │
 ├── Step 2: Validate Transaction Number
 │   ├── Is TigerCard Number? (Condition)
-│   │   └── Yes → Set varSuccess = false
+│   │   └── True → Set varSuccess = false
 │   └── Gate (Condition: varSuccess = true)
-│       └── Yes → Has Transaction Number? (Condition)
-│           └── Yes → Get Items: Check Existing Transaction
+│       └── True → Has Transaction Number? (Condition)
+│           └── True → Get Items: Check Existing Transaction
 │               └── Is Duplicate? (Condition)
-│                   └── Yes → Set varSuccess = false
+│                   └── True → Set varSuccess = false
 │
 ├── Step 3: Load and Validate Request
 │   └── Gate (Condition: varSuccess = true)
-│       └── Yes → Get Items: Get Current Request
+│       └── True → Get Items: Get Current Request
 │           └── Request Invalid? (Condition)
-│               └── Yes → Set varSuccess = false
+│               └── True → Set varSuccess = false
 │
 ├── Step 4: Load Build Plates
 │   └── Gate (Condition: varSuccess = true)
-│       └── Yes → Get Items: Get Request Plates
+│       └── True → Get Items: Get Request Plates
 │           └── Filter Array: Count Already Picked Up
 │
 ├── Step 5: Prepare Calculated Values
 │   └── Gate (Condition: varSuccess = true)
-│       └── Yes → Compose: BaseCost, FinalCost, StaffShortName,
+│       └── True → Compose: BaseCost, FinalCost, StaffShortName,
 │                  ResultStatus, NewFinalWeight, NewFinalCost,
 │                  NewPaymentDate, NewStaffNotes, NewPaymentNotes
 │
 ├── Step 6: Write Payment Data
 │   └── Gate (Condition: varSuccess = true)
-│       └── Yes → Scope: Write All Records
+│       └── True → Scope: Write All Records
 │           ├── Create Item (Payments)
 │           ├── Set varPaymentID
 │           ├── Has Plates? (Condition)
-│           │   └── Yes → Apply to Each → Update Item (BuildPlates)
+│           │   └── True → Apply to Each → Update Item (BuildPlates)
 │           └── Update Item (PrintRequests)
 │       ├── [scope succeeded] → Set varMessage = success
 │       └── [scope failed] → Set varSuccess = false, varMessage = error
@@ -272,16 +272,16 @@ and(equals(triggerBody()['text_1'], 'TigerCASH'), equals(length(trim(coalesce(tr
 5. **Operator:** `is equal to`
 6. **Right side:** `true`
 
-**If yes (it is a TigerCard number):**
+**If true (it is a TigerCard number):**
 
-7. Inside the **Yes** branch, add **Set variable**
+7. Inside the **True** branch, add **Set variable**
 8. Rename to: `Mark TigerCard Failure`
 9. **Name:** `varSuccess` — **Value:** `false`
 10. Add another **Set variable** below it
 11. Rename to: `Set TigerCard Error`
 12. **Name:** `varMessage` — **Value:** `That looks like a TigerCard number. Please enter the receipt or approval number instead.`
 
-**If no:** Leave the **No** branch empty.
+**If false:** Leave the **False** branch empty.
 
 #### Action 2: Gate After TigerCard Check
 
@@ -289,9 +289,9 @@ and(equals(triggerBody()['text_1'], 'TigerCASH'), equals(length(trim(coalesce(tr
 2. Add a **Condition**, rename to: `Gate: Check Uniqueness`
 3. Set: variable `varSuccess` **is equal to** `true`
 
-**If yes (still valid):**
+**If true (still valid):**
 
-4. Inside the **Yes** branch, add a **Condition**, rename to: `Has Transaction Number`
+4. Inside the **True** branch, add a **Condition**, rename to: `Has Transaction Number`
 5. Set — **Expression** tab for left side:
 
 ```
@@ -300,9 +300,9 @@ length(trim(coalesce(triggerBody()['text'], '')))
 
 6. **Operator:** `is greater than` — **Right side:** `0`
 
-**If yes (has a transaction number):**
+**If true (has a transaction number):**
 
-7. Inside the **Yes** branch of `Has Transaction Number`, add **Get items** (SharePoint)
+7. Inside the **True** branch of `Has Transaction Number`, add **Get items** (SharePoint)
 8. Rename to: `Check Existing Transaction`
 9. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
@@ -326,7 +326,7 @@ length(body('Check_Existing_Transaction')?['value'])
 
 13. **Operator:** `is greater than` — **Right side:** `0`
 
-**If yes (duplicate found):**
+**If true (duplicate found):**
 
 14. Add **Set variable**: `varSuccess` = `false`
 15. Add **Set variable**: `varMessage` — **Expression** tab:
@@ -335,11 +335,11 @@ length(body('Check_Existing_Transaction')?['value'])
 concat('Transaction number ''', trim(triggerBody()['text']), ''' already exists. Use a unique number.')
 ```
 
-**If no (not duplicate):** Leave the **No** branch empty.
+**If false (not duplicate):** Leave the **False** branch empty.
 
-**If no (blank transaction number) in `Has Transaction Number`:** Leave the **No** branch empty. Blank transaction numbers are allowed.
+**If false (blank transaction number) in `Has Transaction Number`:** Leave the **False** branch empty. Blank transaction numbers are allowed.
 
-**If no (varSuccess already false) in `Gate: Check Uniqueness`:** Leave the **No** branch empty.
+**If false (varSuccess already false) in `Gate: Check Uniqueness`:** Leave the **False** branch empty.
 
 > **Important:** This uniqueness check is fully delegable against the SharePoint list. It replaces the app's old `Filter(colAllPayments, ...)` check, which was limited by the non-delegable row cap and could miss older duplicates once the `Payments` list grew large.
 
@@ -355,7 +355,7 @@ concat('Transaction number ''', trim(triggerBody()['text']), ''' already exists.
 2. Add a **Condition**, rename to: `Gate: Load Request`
 3. Set: variable `varSuccess` **is equal to** `true`
 
-**If yes:**
+**If true:**
 
 #### Action 2: Get Current Request
 
@@ -385,14 +385,14 @@ if(and(greater(length(body('Get_Current_Request')?['value']), 0), or(equals(firs
 
 10. **Operator:** `is equal to` — **Right side:** `true`
 
-**If no (request invalid):**
+**If false (request invalid):**
 
 11. Add **Set variable**: `varSuccess` = `false`
 12. Add **Set variable**: `varMessage` = `This request is no longer eligible for payment. It may have been processed by another staff member.`
 
-**If yes (request is valid):** Leave the **Yes** branch empty.
+**If true (request is valid):** Leave the **True** branch empty.
 
-**If no (varSuccess was false) in `Gate: Load Request`:** Leave the **No** branch empty.
+**If false (varSuccess was false) in `Gate: Load Request`:** Leave the **False** branch empty.
 
 ---
 
@@ -406,7 +406,7 @@ if(and(greater(length(body('Get_Current_Request')?['value']), 0), or(equals(firs
 2. Add a **Condition**, rename to: `Gate: Load Plates`
 3. Set: variable `varSuccess` **is equal to** `true`
 
-**If yes:**
+**If true:**
 
 #### Action 2: Get Request Plates
 
@@ -439,7 +439,7 @@ item()?['Status']?['Value']
 
 12. **Operator:** `is equal to` — **Right side:** `Picked Up`
 
-**If no (varSuccess was false) in `Gate: Load Plates`:** Leave the **No** branch empty.
+**If false (varSuccess was false) in `Gate: Load Plates`:** Leave the **False** branch empty.
 
 ---
 
@@ -453,7 +453,7 @@ item()?['Status']?['Value']
 2. Add a **Condition**, rename to: `Gate: Calculate`
 3. Set: variable `varSuccess` **is equal to** `true`
 
-**If yes:**
+**If true:**
 
 #### Action 2: BaseCost
 
@@ -577,7 +577,7 @@ if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_
 
 > **What this does:** If the staff entered payment notes, appends them to existing `PaymentNotes`. If not, keeps the current value unchanged.
 
-**If no (varSuccess was false) in `Gate: Calculate`:** Leave the **No** branch empty.
+**If false (varSuccess was false) in `Gate: Calculate`:** Leave the **False** branch empty.
 
 ---
 
@@ -591,11 +591,11 @@ if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_
 2. Add a **Condition**, rename to: `Gate: Write Data`
 3. Set: variable `varSuccess` **is equal to** `true`
 
-**If yes:**
+**If true:**
 
 #### Action 2: Scope — Write All Records
 
-4. Inside the **Yes** branch, add a **Scope** action
+4. Inside the **True** branch, add a **Scope** action
 5. Rename to: `Write All Records`
 
 Inside this scope, add the following actions in order:
@@ -645,11 +645,11 @@ length(trim(coalesce(triggerBody()['text_6'], '')))
 
 17. **Operator:** `is greater than` — **Right side:** `0`
 
-**If yes (has plates):**
+**If true (has plates):**
 
 #### Action 2d: Update Each Plate
 
-18. Inside the **Yes** branch, add **Apply to each**
+18. Inside the **True** branch, add **Apply to each**
 19. Rename to: `Update Each Plate`
 20. **Select an output from previous steps:** click **Expression** tab, paste:
 
@@ -667,7 +667,7 @@ split(replace(triggerBody()['text_6'], ' ', ''), ',')
 
 24. **Configure retry policy** on `Update Plate Status`.
 
-**If no (no plates):** Leave the **No** branch empty.
+**If false (no plates):** Leave the **False** branch empty.
 
 #### Action 2e: Update Parent Request
 
@@ -698,7 +698,7 @@ This is the end of the scope. Now add the success and failure handlers.
 
 #### Action 3: Mark Write Success
 
-29. Click **+ Add an action** below the `Write All Records` scope (still inside the **Yes** branch of `Gate: Write Data`)
+29. Click **+ Add an action** below the `Write All Records` scope (still inside the **True** branch of `Gate: Write Data`)
 30. Add **Set variable**, rename to: `Mark Write Success`
 31. **Name:** `varMessage` — **Value:** `Payment saved.`
 
@@ -723,7 +723,7 @@ if(greater(variables('varPaymentID'), 0), concat('Payment record #', string(vari
 
 > **Important:** These two actions only execute when the scope fails. If `varPaymentID` is greater than 0, it means the payment record was created before the failure — staff needs to know this so they can check SharePoint rather than blindly retrying.
 
-**If no (varSuccess was false) in `Gate: Write Data`:** Leave the **No** branch empty.
+**If false (varSuccess was false) in `Gate: Write Data`:** Leave the **False** branch empty.
 
 ---
 
