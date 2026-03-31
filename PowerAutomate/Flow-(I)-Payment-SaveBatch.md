@@ -40,7 +40,7 @@ Add inputs in the exact order listed below.
 | 6 | BatchItemIDs | Text | `triggerBody()['text']` | Comma-separated `PrintRequests.ID` values (e.g., `164, 165`) |
 | 7 | BatchItemReqKeys | Text | `triggerBody()['text_1']` | Comma-separated `ReqKey` values (e.g., `REQ-00164, REQ-00165`) |
 | 8 | TransactionNumber | Text | `triggerBody()['text_2']` | Receipt / check number / grant code |
-| 9 | PaymentType | Text | `triggerBody()['text_3']` | `TigerCASH`, `Check`, or `Code` |
+| 9 | PaymentType | Text | `triggerBody()['text_3']` | `TigerCASH`, `Check`, or `Grant/Program Code` |
 | 10 | PayerName | Text | `triggerBody()['text_4']` | Name of the person who paid |
 | 11 | StaffEmail | Text | `triggerBody()['text_5']` | Email of the staff member processing the payment |
 | 12 | StaffName | Text | `triggerBody()['text_6']` | Full name of the staff member |

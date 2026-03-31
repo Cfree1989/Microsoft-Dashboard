@@ -2921,7 +2921,7 @@ scrDashboard
     ├── chkTooSmall            ← Checkbox: Features too small/thin
     ├── lblRejectReasonsLabel  ← "Rejection Reasons..."
     ├── ddRejectStaff          ← Staff dropdown
-    ├── lblRejectStaffLabel    ← "Performing Action As: *"
+    ├── lblRejectStaffLabel    ← "Performing Action As"
     ├── lblRejectStudent       ← Student name and email
     ├── lblRejectTitle         ← "Reject Request - REQ-00042"
     ├── recRejectModal         ← White modal box
@@ -3089,7 +3089,7 @@ Reset(chkNotJoined)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 90` |
 | Width | `200` |
@@ -3597,7 +3597,7 @@ Reset(ddSlicedOnComputer)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recApprovalModal.X + 20` |
 | Y | `recApprovalModal.Y + 90` |
 | Width | `200` |
@@ -4253,7 +4253,7 @@ scrDashboard
     ├── txtArchiveReason      ← Reason text input
     ├── lblArchiveReasonLabel ← "Reason (optional):"
     ├── ddArchiveStaff        ← Staff dropdown
-    ├── lblArchiveStaffLabel  ← "Performing Action As: *"
+    ├── lblArchiveStaffLabel  ← "Performing Action As"
     ├── lblArchiveWarning     ← Warning message
     ├── lblArchiveTitle       ← "Archive Request - REQ-00042"
     ├── recArchiveModal       ← White modal box
@@ -4409,7 +4409,7 @@ Reset(ddArchiveStaff)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recArchiveModal.X + 20` |
 | Y | `recArchiveModal.Y + 120` |
 | Width | `200` |
@@ -4664,7 +4664,7 @@ scrDashboard
     ├── btnCompleteCancel     ← Cancel button
     ├── lblActualPrinters     ← Read-only printers display (auto-populated from plates)
     ├── ddCompleteStaff       ← Staff dropdown
-    ├── lblCompleteStaffLabel ← "Performing Action As: *"
+    ├── lblCompleteStaffLabel ← "Performing Action As"
     ├── lblCompleteWarning    ← Warning about email notification
     ├── lblCompleteTitle      ← "Mark [Student Name] Complete - REQ-00042"
     ├── recCompleteModal      ← White modal box (340px tall)
@@ -4818,7 +4818,7 @@ Reset(ddCompleteStaff)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recCompleteModal.X + 20` |
 | Y | `recCompleteModal.Y + 115` |
 | Width | `200` |
@@ -5102,7 +5102,7 @@ scrDashboard
     ├── ddDetailsSlicedOnComputer ← Sliced-on computer dropdown
     ├── lblDetailsSlicedOnLabel   ← "Sliced On Computer:"
     ├── ddDetailsStaff         ← Staff dropdown
-    ├── lblDetailsStaffLabel   ← "Performing Action As: *"
+    ├── lblDetailsStaffLabel   ← "Performing Action As"
     ├── lblDetailsCurrent      ← Shows current settings summary
     ├── lblDetailsCurrentLabel ← "Current Settings:"
     ├── lblDetailsTitle        ← "Change Print Details - REQ-00042"
@@ -5298,7 +5298,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recDetailsModal.X + 20` |
 | Y | `recDetailsModal.Y + 115` |
 | Width | `200` |
@@ -6243,7 +6243,7 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 110` |
 | Width | `240` |
@@ -6298,7 +6298,7 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Type: *"` |
+| Text | `"Payment Type"` |
 | X | `recPaymentModal.X + 280` |
 | Y | `recPaymentModal.Y + 110` |
 | Width | `180` |
@@ -6317,7 +6317,7 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Items | `["TigerCASH", "Check", "Code"]` |
+| Items | `["TigerCASH", "Check", "Grant/Program Code"]` |
 | X | `recPaymentModal.X + 280` |
 | Y | `recPaymentModal.Y + 135` |
 | Width | `180` |
@@ -6339,7 +6339,7 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
 
-> 💡 **Payment types:** `TigerCASH` for standard campus payments, `Check` for checks, and `Code` for grants/program codes.
+> 💡 **Payment types:** `TigerCASH` for standard campus payments, `Check` for checks, and `Grant/Program Code` for grants/program codes.
 
 ---
 
@@ -6364,10 +6364,10 @@ Text(varSelectedItem.EstimatedCost, "[$-en-US]#,##0.00")
 ```powerfx
 Switch(
     ddPaymentType.Selected.Value,
-    "TigerCASH", "Transaction Number: *",
-    "Check", "Check Number: *",
-    "Code", "Grant/Program Code (optional):",
-    "Reference Number: *"
+    "TigerCASH", "Transaction #",
+    "Check", "Check #",
+    "Grant/Program Code", "Grant/Program Code",
+    "Transaction #"
 )
 ```
 
@@ -6404,14 +6404,14 @@ Switch(
     ddPaymentType.Selected.Value,
     "TigerCASH", "TigerCASH receipt number",
     "Check", "Check number",
-    "Code", "Leave blank if code is pending",
-    "Reference number"
+    "Grant/Program Code", "Leave blank if code is unknown",
+    "Receipt or reference number"
 )
 ```
 
 > 💡 **Important:** This field is `TextFormat.Text`, not number-only. Checks and grant/program codes may contain letters.
 >
-> 💡 **Pending-code workflow:** For `Code` payments, staff should be able to save the transaction even if the grant/program code is not known yet. Store the payment row with a blank `TransactionNumber` and fill it in later when accounting provides the code.
+> 💡 **Pending-code workflow:** For `Grant/Program Code` payments, staff should be able to save the transaction even if the grant/program code is not known yet. Store the payment row with a blank `TransactionNumber` and fill it in later when accounting provides the code.
 
 ---
 
@@ -6423,7 +6423,7 @@ Switch(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Date: *"` |
+| Text | `"Payment Date"` |
 | X | `recPaymentModal.X + 280` |
 | Y | `recPaymentModal.Y + 190` |
 | Width | `180` |
@@ -6648,7 +6648,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payer Name: *"` |
+| Text | `"Payer Name"` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 430` |
 | Width | `200` |
@@ -6689,7 +6689,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payer Tiger Card: *"` |
+| Text | `"Payer Tiger Card"` |
 | X | `recPaymentModal.X + 20` |
 | Y | `recPaymentModal.Y + 510` |
 | Width | `200` |
@@ -7291,9 +7291,9 @@ If(
 )
 ```
 
-> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown. Transaction number is required for TigerCASH payments but optional for Check and Code (grant) payments, since grant codes are not always available at the time of payment.
+> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown. Transaction number is required for TigerCASH payments but optional for Check and Grant/Program Code payments, since grant codes are not always available at the time of payment.
 >
-> 💡 **Code payments:** Treat a blank `TransactionNumber` as "code pending", not as a validation failure.
+> 💡 **Grant/Program Code payments:** Treat a blank `TransactionNumber` as "code pending", not as a validation failure.
 
 136. Set **OnSelect:**
 
@@ -7486,12 +7486,12 @@ scrDashboard
     ├── btnRevertConfirm         ← Confirm Revert button
     ├── btnRevertCancel          ← Cancel button
     ├── txtRevertReason          ← Reason text input (required)
-    ├── lblRevertReasonLabel     ← "Reason for Revert: *"
+    ├── lblRevertReasonLabel     ← "Reason for Revert"
     ├── ddRevertTarget           ← Target status dropdown
-    ├── lblRevertTargetLabel     ← "Revert To: *"
+    ├── lblRevertTargetLabel     ← "Revert To"
     ├── lblRevertCurrentStatus   ← Shows current status
     ├── ddRevertStaff            ← Staff dropdown
-    ├── lblRevertStaffLabel      ← "Performing Action As: *"
+    ├── lblRevertStaffLabel      ← "Performing Action As"
     ├── lblRevertTitle           ← "Revert Status - REQ-00042"
     ├── recRevertModal           ← White modal box
     └── recRevertOverlay         ← Dark semi-transparent background
@@ -7624,7 +7624,7 @@ Reset(txtRevertReason)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recRevertModal.X + 20` |
 | Y | `recRevertModal.Y + 55` |
 | Width | `200` |
@@ -7698,7 +7698,7 @@ Reset(txtRevertReason)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Revert To: *"` |
+| Text | `"Revert To"` |
 | X | `recRevertModal.X + 20` |
 | Y | `recRevertModal.Y + 150` |
 | Width | `200` |
@@ -7765,7 +7765,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Reason for Revert: *"` |
+| Text | `"Reason for Revert"` |
 | X | `recRevertModal.X + 20` |
 | Y | `recRevertModal.Y + 215` |
 | Width | `200` |
@@ -8004,17 +8004,17 @@ scrDashboard
     ├── lblBatchCostValue         ← Auto-calculated combined cost
     ├── lblBatchCostLabel         ← "Total Cost:"
     ├── dpBatchPaymentDate        ← Shared payment date picker
-    ├── lblBatchPaymentDateLabel  ← "Payment Date: *"
+    ├── lblBatchPaymentDateLabel  ← "Payment Date"
     ├── txtBatchPayerName         ← Shared payer name input
-    ├── lblBatchPayerNameLabel    ← "Payer Name: *"
+    ├── lblBatchPayerNameLabel    ← "Payer Name"
     ├── txtBatchWeight            ← Combined pickup weight input
-    ├── lblBatchWeightLabel       ← "Combined Weight (grams): *"
+    ├── lblBatchWeightLabel       ← "Combined Weight (grams)"
     ├── txtBatchTransaction       ← Transaction number input
-    ├── lblBatchTransLabel        ← "Transaction Number: *"
+    ├── lblBatchTransLabel        ← "Transaction Number"
     ├── ddBatchPaymentType        ← Payment type dropdown
-    ├── lblBatchPaymentTypeLabel  ← "Payment Type: *"
+    ├── lblBatchPaymentTypeLabel  ← "Payment Type"
     ├── ddBatchStaff              ← Staff dropdown
-    ├── lblBatchStaffLabel        ← "Performing Action As: *"
+    ├── lblBatchStaffLabel        ← "Performing Action As"
     ├── lblBatchSummary           ← Summary showing count and estimated total
     ├── lblBatchTitle             ← "Batch Payment - X Items"
     ├── recBatchPaymentModal      ← White modal box
@@ -8189,7 +8189,7 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recBatchPaymentModal.X + 20` |
 | Y | `recBatchPaymentModal.Y + 85` |
 | Width | `200` |
@@ -8230,7 +8230,7 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Type: *"` |
+| Text | `"Payment Type"` |
 | X | `recBatchPaymentModal.X + 310` |
 | Y | `recBatchPaymentModal.Y + 85` |
 | Width | `120` |
@@ -8247,7 +8247,7 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 
 | Property | Value |
 |----------|-------|
-| Items | `["TigerCASH", "Check", "Code"]` |
+| Items | `["TigerCASH", "Check", "Grant/Program Code"]` |
 | X | `recBatchPaymentModal.X + 310` |
 | Y | `recBatchPaymentModal.Y + 110` |
 | Width | `130` |
@@ -8280,10 +8280,10 @@ Text(Sum(colBatchItems, EstimatedCost), "[$-en-US]$#,##0.00")
 ```powerfx
 Switch(
     ddBatchPaymentType.Selected.Value,
-    "TigerCASH", "Transaction #: *",
-    "Check", "Check #: *",
-    "Code", "Grant/Program Code:",
-    "Receipt #: *"
+    "TigerCASH", "Transaction #",
+    "Check", "Check #",
+    "Grant/Program Code", "Grant/Program Code",
+    "Transaction #"
 )
 ```
 
@@ -8319,10 +8319,10 @@ Switch(
 ```powerfx
 Switch(
     ddBatchPaymentType.Selected.Value,
-    "TigerCASH", "TigerCASH receipt #",
+    "TigerCASH", "TigerCASH receipt number",
     "Check", "Check number",
-    "Code", "Leave blank if pending",
-    "Reference number"
+    "Grant/Program Code", "Leave blank if code is pending",
+    "Receipt or reference number"
 )
 ```
 
@@ -8336,7 +8336,7 @@ Switch(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payer Name: *"` |
+| Text | `"Payer Name"` |
 | X | `recBatchPaymentModal.X + 20` |
 | Y | `recBatchPaymentModal.Y + 160` |
 | Width | `200` |
@@ -8381,7 +8381,7 @@ Switch(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Payment Date: *"` |
+| Text | `"Payment Date"` |
 | X | `recBatchPaymentModal.X + 310` |
 | Y | `recBatchPaymentModal.Y + 160` |
 | Width | `140` |
@@ -10199,7 +10199,7 @@ With(
 )
 ```
 
-> This queries the local `colAllPayments` collection (pre-loaded at startup) for preview purposes only. The actual export uses Power Automate with server-side filtering — no delegation limits. Only TigerCASH payments are included; Check and Code payments are excluded.
+> This queries the local `colAllPayments` collection (pre-loaded at startup) for preview purposes only. The actual export uses Power Automate with server-side filtering — no delegation limits. Only TigerCASH payments are included; Check and Grant/Program Code payments are excluded.
 
 ---
 
@@ -10677,7 +10677,7 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Add note as: *"` |
+| Text | `"Add note as"` |
 | X | `recNotesModal.X + 20` |
 | Y | `txtStaffNotesContent.Y + txtStaffNotesContent.Height + 16` |
 | Width | `200` |
@@ -11738,7 +11738,7 @@ scrDashboard
     ├── btnFileSave              ← Save Changes button
     ├── frmAttachmentsEdit       ← Edit form for attachments
     ├── ddFileActor              ← Staff dropdown
-    ├── lblFileStaffLabel        ← "Performing Action As: *"
+    ├── lblFileStaffLabel        ← "Performing Action As"
     ├── lblFileTitle             ← "Manage Attachments - REQ-00042"
     ├── recFileModal             ← White modal box
     └── recFileOverlay           ← Dark semi-transparent background
@@ -11916,7 +11916,7 @@ Reset(ddFileActor)
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recFileModal.X + 20` |
 | Y | `recFileModal.Y + 55` |
 | Width | `200` |
@@ -12328,11 +12328,11 @@ scrDashboard
     ├── btnViewMsgMarkRead          ← "Mark All Read" button (visible when unread)
     ├── lblViewMsgCharCount         ← Character count display
     ├── txtViewMsgBody              ← Message body input
-    ├── lblViewMsgBodyLabel         ← "Message: *"
+    ├── lblViewMsgBodyLabel         ← "Message"
     ├── txtViewMsgSubject           ← Subject input
-    ├── lblViewMsgSubjectLabel      ← "Subject: *"
+    ├── lblViewMsgSubjectLabel      ← "Subject"
     ├── ddViewMsgStaff              ← Staff dropdown
-    ├── lblViewMsgStaffLabel        ← "Performing Action As: *"
+    ├── lblViewMsgStaffLabel        ← "Performing Action As"
     ├── recViewMsgSeparator         ← Line separating history from compose
     ├── galViewMessages             ← Flexible-height message gallery
     │   ├── recVMsgBg               ← Background (direction-based colors)
@@ -12646,7 +12646,7 @@ If the thread still overlaps after these updates, check these exact issues:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Performing Action As: *"` |
+| Text | `"Performing Action As"` |
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 325` |
 | Width | `200` |
@@ -12702,7 +12702,7 @@ If the thread still overlaps after these updates, check these exact issues:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Subject: *"` |
+| Text | `"Subject"` |
 | X | `recViewMsgModal.X + 290` |
 | Y | `recViewMsgModal.Y + 325` |
 | Width | `100` |
@@ -12748,7 +12748,7 @@ If the thread still overlaps after these updates, check these exact issues:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Message: *"` |
+| Text | `"Message"` |
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 395` |
 | Width | `150` |
@@ -13953,7 +13953,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. First payment: TigerCASH
 2. Second payment: Check
-3. Third payment: Grant Code
+3. Third payment: Grant/Program Code
 4. **Verify:** Each `Payments` record has correct `PaymentType`
 5. **Verify:** Export shows payment type per row
 

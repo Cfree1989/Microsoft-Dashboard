@@ -40,7 +40,7 @@ Add inputs in the exact order listed below. The expression column shows how to r
 | 5 | MinimumCost | Number | `triggerBody()['number_4']` | Minimum charge floor |
 | 6 | OwnMaterialDiscount | Number | `triggerBody()['number_5']` | Discount multiplier when student provides own material (e.g., `0.3` for 70% off) |
 | 7 | TransactionNumber | Text | `triggerBody()['text']` | Receipt / check number / grant code (may be blank for grants) |
-| 8 | PaymentType | Text | `triggerBody()['text_1']` | `TigerCASH`, `Check`, or `Code` |
+| 8 | PaymentType | Text | `triggerBody()['text_1']` | `TigerCASH`, `Check`, or `Grant/Program Code` |
 | 9 | PayerName | Text | `triggerBody()['text_2']` | Name of the person who paid |
 | 10 | PayerTigerCard | Text | `triggerBody()['text_3']` | Payer's TigerCard number (may be blank) |
 | 11 | StaffEmail | Text | `triggerBody()['text_4']` | Email of the staff member processing the payment |

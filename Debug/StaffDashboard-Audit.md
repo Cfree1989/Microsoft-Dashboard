@@ -737,7 +737,7 @@ For each section, verify:
 
 - [x] `conPaymentModal` — Container with `Visible: varShowPaymentModal > 0`
 - [x] `ddPaymentStaff` — Staff dropdown
-- [x] `ddPaymentType` — Payment type (TigerCASH, Check, Code)
+- [x] `ddPaymentType` — Payment type (TigerCASH, Check, Grant/Program Code)
 - [x] `txtPaymentTransaction` — Transaction number input
 - [x] `txtPaymentWeight` — Final weight input
 - [x] `dpPaymentDate` — Payment date picker

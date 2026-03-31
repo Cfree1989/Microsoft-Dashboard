@@ -128,7 +128,7 @@ The Payments list stores transaction ledger records for print jobs. Unlike the s
 4. **Choices:**
    - TigerCASH
    - Check
-   - Code
+   - Grant/Program Code
 5. **Default value:** TigerCASH
 6. **Require that this column contains information:** Yes
 7. Click **Save**
@@ -247,7 +247,7 @@ The Payments list should be accessible **only to staff**, not students.
 | TransactionNumber | Single line | No | - | Receipt/check/code reference (not always available for grants) |
 | Weight | Number | Yes | - | Grams picked up in this ledger row |
 | Amount | Currency | Yes | - | Cost charged in this ledger row |
-| PaymentType | Choice | Yes | TigerCASH | TigerCASH / Check / Code |
+| PaymentType | Choice | Yes | TigerCASH | TigerCASH / Check / Grant/Program Code |
 | PaymentDate | Date | Yes | - | Business date of the payment |
 | RecordedAt | DateTime | Yes | - | Exact timestamp the payment row was saved |
 | PayerName | Single line | No | - | Who paid |
