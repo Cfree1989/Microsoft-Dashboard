@@ -1291,7 +1291,7 @@ After completing this step, your Tree view should look like:
 | Width | `Parent.Width` |
 | Height | `55` |
 | BorderColor | `RGBA(0, 18, 107, 1)` |
-| FocusedBorderThickness | `0` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
 | TemplateSize | `varTabGalleryHeight` |
 | TemplatePadding | `3` |
 | Transition | `Transition.Push` |
@@ -1324,22 +1324,21 @@ Table(
 | X | `5` |
 | Y | `4` |
 | Width | `141` |
-| Font | `varAppFont` |
 | Size | `10` |
 | Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey), If(varNeedsAttention, NeedsAttention = true, true))))` |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
-| HoverFill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
-| PressedFill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
+| HoverFill | `ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -10%)` |
+| PressedFill | `ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)` |
 | HoverColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | PressedColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
-| BorderColor | `If(varSelectedStatus = ThisItem.Status, Color.Transparent, varInputBorderColor)` |
+| BorderColor | `varInputBorderColor` |
 | BorderThickness | `1` |
 | DisabledBorderColor | `RGBA(166, 166, 166, 1)` |
-| FocusedBorderColor | `Color.Transparent` |
+| FocusedBorderColor | `varInputBorderColor` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `If(varSelectedStatus = ThisItem.Status, Color.Transparent, ColorFade(Self.BorderColor, 20%))` |
+| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
 | PressedBorderColor | `Self.Fill` |
 
 > 💡 **Why these sizes?** 9 tabs at `Width = 141` with `TemplatePadding = 3` recreate the original compact tab strip while still fitting common tablet widths. Font size `10` keeps "Paid & Picked Up" readable without the rounded pill treatment.
