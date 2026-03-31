@@ -512,3 +512,138 @@ Reviewed the full `StaffDashboard-App-Spec.md` (15,071 lines), `Payments-List-Se
 - **TigerCard vs receipt guard** on batch transaction input (```9121:9126:PowerApps/StaffDashboard-App-Spec.md```) is a practical fat-finger control aligned with `Payments-List-Setup.md`.
 - **Per-item revalidation** inside batch `ForAll` (refresh + latest request/plates) reduces stale-card races compared with a single upfront snapshot.
 - **Consolidated batch row** shape (`BatchRequestIDs`, `BatchReqKeys`, `BatchAllocationSummary`) matches the documented ledger model and export intent better than duplicate per-request rows for one swipe.
+
+---
+
+## Cross-Review Consensus — March 30, 2026
+
+**Reviewers:** GPT-5.4, Claude (Opus), Composer (Cursor)
+
+This section synthesizes findings across all three independent reviews to surface unanimous agreement, shared themes, and the design decisions that must be resolved before fixes can proceed.
+
+### Unanimous Critical Findings
+
+These issues were independently identified by all three reviewers at Critical severity:
+
+1. **Non-atomic saves in both payment paths**
+   - Single payment inserts the `Payments` row first, then patches plates and parent separately. Batch patches plates and parent first, then writes the consolidated ledger row. Neither path is transactional. A partial failure at any step leaves the system in an inconsistent state that the app treats as success.
+   - All three reviewers recommend server-side orchestration (Power Automate) or explicit compensation logic that flags incomplete saves for reconciliation.
+
+2. **Batch closes requests before the consolidated ledger row exists**
+   - Step 3 marks requests `Paid & Picked Up` and updates rollups. Step 4 writes the single consolidated `Payments` row. If Step 4 fails, requests appear paid with no canonical payment record.
+   - All three reviewers recommend reversing the order (write the ledger row first, then close requests) or staging the entire operation server-side.
+
+3. **Batch rollup filter excludes prior consolidated batch history**
+   - `wPriorPayments: Filter(Payments, RequestID = BatchItem.ID)` only finds direct-match rows. Prior consolidated batch rows where `RequestID` is blank and the request appears only inside `BatchRequestIDs` are invisible to this filter. The broader filter (`RequestID = ID Or Text(ID) in Split(BatchRequestIDs, ", ").Value`) is used elsewhere in the app but not here.
+   - All three reviewers recommend centralizing one reusable definition of "all payments affecting this request" and using it everywhere — rollups, history display, and export.
+
+### Strongly Agreed High-Severity Findings
+
+These issues were raised by at least two reviewers at High severity, with the third confirming or identifying a closely related variant:
+
+4. **Text parsing of `BatchAllocationSummary` is structurally fragile**
+   - Request-level `DisplayWeight`, `DisplayAmount`, and `DisplayPlatesPickedUp` for consolidated rows are reconstructed by parsing human-readable strings. Manual edits, format drift, locale changes, or extra delimiters can silently produce `Blank()` (treated as 0 by `Sum`), with no error surfaced to staff.
+   - Recommendation: store per-request allocation as structured data (JSON column or parallel numeric columns) and keep text as a denormalized display-only view.
+
+5. **Same-Method batch rule is documented but not enforced**
+   - Batch eligibility rules state that all selected items must use the same `Method`, but neither card selection nor confirm-time validations check method consistency. Pricing already branches per item by `Method.Value`, so mixed-method batches work in practice but violate the written policy.
+   - Recommendation: either enforce the rule at selection and confirm time, or remove the documented restriction and explicitly support mixed-method batches.
+
+6. **Partial batch retry path is internally contradictory**
+   - After a partial batch success, the succeeded subset consumes the transaction number via the consolidated `Payments` row. Retrying the failed subset with the same number is blocked by the uniqueness check. Retrying with a new number splits one real-world checkout across two ledger rows, breaking the one-checkout-one-row model.
+   - Recommendation: decide between true all-or-nothing batches or a resumable model that can append failed items into the same ledger record. The current hybrid promises retry but cannot deliver a clean accounting outcome.
+
+7. **Revert from `Paid & Picked Up` does not reset plate statuses**
+   - Reverting to `Completed` changes the parent status but leaves all `BuildPlates` rows as `Picked Up`. Staff cannot then re-record a payment with plates because the plate pickup checklist filters on `Status = "Completed"` and finds nothing.
+   - Recommendation: either automatically revert plate statuses during the revert operation or provide a separate plate-reset action before the status change completes.
+
+### Additional Notable Findings (Reviewer-Specific)
+
+These were raised by individual reviewers and are worth confirming or addressing:
+
+- **Stale `Refresh` risk in single payment rollups** (Claude): `Refresh(Payments)` has no error surface and no guarantee the just-saved row appears in the refreshed data. The parent rollup could silently undercount if SharePoint returns a cached response.
+- **`ForAll` parallel execution risk** (Claude): Microsoft docs state `ForAll` may process records in any order and potentially in parallel. The per-iteration `Refresh` calls inside batch `ForAll` are global data-source refreshes that could produce unpredictable side effects if iterations overlap.
+- **Resin mL-vs-grams unit mismatch in batch allocation** (Composer): `EstimatedWeight` for resin jobs represents mL, but the batch combined weight is entered in grams. Proportional allocation treats both as the same unit, producing incorrect per-request splits even in same-method resin batches.
+- **`colAllPayments` non-delegable row limit** (Claude): Transaction number uniqueness checks filter a local collection. If `Payments` exceeds the non-delegable row limit (default 500 or 2,000), older duplicates can be missed entirely.
+- **Audit logging fires even when ledger save fails** (Composer): Batch Step 5 logs "Paid & Picked Up" actions for succeeded items without gating on `varBatchLedgerSaveFailed`, weakening audit-vs-ledger reconciliation.
+- **Spec contradiction on revert transitions** (Composer): The Step 12D transition table still states paid requests cannot be reverted, while `ddRevertTarget` and `btnRevert` implement the `Paid & Picked Up → Completed` path.
+
+### Design Decisions Required Before Fixing
+
+The following questions must be answered to determine the fix approach. Many findings are clear defects, but the remediation shape depends on these choices:
+
+| # | Decision | Options | Impact |
+|---|----------|---------|--------|
+| 1 | **Should batch be all-or-nothing, or should partial success be supported?** | (a) All-or-nothing: fail the entire batch if any item fails. (b) Partial success with resumable retry. (c) Partial success with manual reconciliation only. | Determines save ordering, retry model, and whether a server-side flow is required. |
+| 2 | **Should `BatchAllocationSummary` be immutable system data?** | (a) Write-once, never manually edited — lock the field in SharePoint. (b) Staff-editable for corrections — must move to structured storage so parsing is not required. | Determines whether text parsing is acceptable long-term or must be replaced now. |
+| 3 | **Are mixed-method batches allowed?** | (a) Enforce same-method at selection and confirm time. (b) Explicitly support mixed-method and remove the documented restriction. | Simple enforcement either way, but pricing and allocation math must be validated against the chosen policy. |
+| 4 | **Should revert automatically reset plate statuses?** | (a) Yes — revert plates from `Picked Up` back to `Completed` during the revert operation. (b) No — provide a separate plate-reset tool. (c) No — accept the gap and document manual SharePoint correction. | Affects whether the revert flow needs additional `BuildPlates` patches and whether staff training must cover a manual step. |
+| 5 | **Is server-side orchestration (Power Automate) the long-term direction for payment saves?** | (a) Yes — move both single and batch save paths to Power Automate flows with sequential execution and compensation. (b) No — keep saves in-app and add robust in-app compensation (reconciliation flags, guards, retry logic). | The "correct" fix for atomicity is server-side. If that is on the roadmap, some in-app mitigations become temporary stopgaps. If not, in-app compensation must be thorough. |
+
+#### Plain-Language Version of the Design Decisions
+
+**Question 1 — If a batch payment partly fails, what should happen?**
+
+Right now, if a staff member processes a batch of 5 requests and 2 of them fail mid-save, the app saves the 3 that worked and tells staff to "review and retry" the other 2. But the receipt number is already used up, so retrying cleanly is not actually possible. You need to pick one:
+
+- **(a) All or nothing.** If any item in the batch fails, the whole batch fails. Nothing is saved. Staff retries the entire batch. Simplest to reason about, but staff loses progress on the items that would have worked.
+- **(b) Partial success with smart retry.** The app saves what it can and lets staff retry the rest under the same receipt. More complex to build, but matches how a real checkout works — one swipe, one receipt.
+- **(c) Partial success, staff fixes it manually.** The app saves what it can, warns staff about the failures, and staff goes into SharePoint to clean up. Cheapest to build, but puts the burden on staff and risks mistakes.
+
+Answer:A
+
+**Question 2 — Can staff hand-edit the batch breakdown text in SharePoint?**
+
+When a batch payment is saved, the app writes a human-readable summary like `REQ-00164: $21.18 for 181.41g | REQ-00165: $12.50 for 100.00g` into a SharePoint column. The app later reads that text back and breaks it apart to show payment history. If someone edits that text — even just fixing a typo — the app could silently misread the numbers. You need to pick one:
+
+- **(a) Lock it down.** Treat that field as system-generated data that nobody touches. Keep the current text-parsing approach.
+- **(b) Let staff edit it.** If corrections are needed, staff should be able to fix it. But then the app needs to store the breakdown in a more structured way (not as a sentence to parse) so edits don't break anything.
+
+Answer:A
+
+**Question 3 — Can a batch mix filament and resin requests together?**
+
+The written rules say every request in a batch must use the same print method (all filament or all resin). But the app does not actually check this — staff can select a mix and it will process fine because the pricing math already handles each method separately. You need to pick one:
+
+- **(a) Enforce the rule.** Block staff from adding a resin request to a filament batch (or vice versa). Keeps things simple and avoids any unit-mixing confusion.
+- **(b) Drop the rule.** Allow mixed batches officially. The pricing already works, so just remove the outdated restriction from the documentation and training materials.
+
+Answer:B
+
+**Question 4 — When staff reopens a paid request, should the plates go back to "ready" automatically?**
+
+Right now, if staff reverts a request from "Paid & Picked Up" back to "Completed" (e.g., the payment was wrong), the request status changes but all the build plates stay marked as "Picked Up." That means if staff tries to re-do the payment, there are no plates available to check off. You need to pick one:
+
+- **(a) Auto-reset plates.** When a request is reverted, automatically flip its plates back to "Completed" so staff can re-process normally.
+- **(b) Provide a separate reset button.** Give staff a dedicated "Reset Plates" action they can use before or after reverting.
+- **(c) Accept the gap.** Leave it as-is and train staff to manually fix plate statuses in SharePoint when this comes up. Only makes sense if reverts are extremely rare.
+
+Answer:A
+
+**Question 5 — Should payment saves move to Power Automate (server-side)?**
+
+The biggest issue all three reviews found is that the app saves payment data in multiple steps that can partly fail. The app writes the payment record, then updates the plates, then updates the request — and if any middle step fails, the data is out of sync. The "real" fix is to move all of that into a Power Automate flow that handles it as one unit. But that is a bigger lift. You need to pick one:
+
+- **(a) Yes, move to Power Automate.** Build a flow that handles the entire save sequence. If anything fails, the flow can undo previous steps or flag the record for review. This is the most reliable approach but takes more development time.
+- **(b) No, keep it in the app.** Add better error handling and "needs reconciliation" flags directly in the Power App so staff knows when something went wrong and can fix it. Faster to build, but the app will always have some risk of partial saves.
+
+### Residual Open Questions (Non-Blocking)
+
+These do not block the top fixes but should be addressed in parallel or during implementation:
+
+- Should Flow G (monthly export) ever need to explode a consolidated batch back to per-request lines for disputes, or is one row per checkout always sufficient for TigerCASH reconciliation?
+- For resin jobs, is there an assumed density so mL estimates can be treated as proportional to grams, or is that unstated?
+- Is `BatchAllocationSummary` expected to be parseable by external systems (e.g., export flows, admin reports), or only by the app's own formulas?
+- How large can `colAllPayments` grow before the non-delegable `Filter` for transaction uniqueness becomes unreliable? What is the current non-delegable row limit setting?
+- If the app is ever localized or used with non-US locale settings, will `Value()` parsing of `"$21.18"` after `Substitute("$", "")` still work, or will decimal separators cause silent failures?
+- Do any other formulas besides the payment modal need to parse consolidated batch text to rebuild request-level values?
+
+### Areas Confirmed Sound by All Three Reviewers
+
+- **Consolidated batch architecture** — One `Payments` row per real-world checkout is the correct ledger model and aligns with finance/export needs.
+- **`IfError` wrapping on the primary `Payments` insert** — Both single and batch paths protect the critical ledger write with error detection and early exit.
+- **Pre-save revalidation** — Both paths refresh data sources and re-check status eligibility before proceeding, defending against the most obvious stale-state races.
+- **Transaction number uniqueness check** — Both paths block duplicate transaction numbers before creating a `Payments` row (with the caveat about non-delegable row limits for mature deployments).
+- **Per-item revalidation inside batch `ForAll`** — Refresh + `LookUp` per item reduces stale-card races compared with a single upfront snapshot.
+- **`PlateKey` as stable identity** — `Text(GUID())` for `PlateKey` persisted to `PlateIDsPickedUp` gives a durable audit trail that survives relabeling and reprints.
+- **Export treats `Payments` as canonical** — The TigerCASH export flow reads from `Payments` directly and does not reconstruct transactions from rollup fields.
