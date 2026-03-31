@@ -79,7 +79,7 @@ Flow
 ├── Initialize varMessage (String, "")
 ├── Initialize varPaymentID (Integer, 0)
 │
-├── Step 2: Validate Transaction Number
+├── Step 2: Validate Transaction Number              ── no loops, runs once
 │   ├── Is TigerCard Number? (Condition)
 │   │   └── True → Set varSuccess = false
 │   └── Gate (Condition: varSuccess = true)
@@ -88,33 +88,34 @@ Flow
 │               └── Is Duplicate? (Condition)
 │                   └── True → Set varSuccess = false
 │
-├── Step 3: Load and Validate Request
+├── Step 3: Load and Validate Request                 ── no loops, runs once
 │   └── Gate (Condition: varSuccess = true)
 │       └── True → Get Items: Get Current Request
 │           └── Request Invalid? (Condition)
 │               └── True → Set varSuccess = false
 │
-├── Step 4: Load Build Plates
+├── Step 4: Load Build Plates                         ── no loops, runs once
 │   └── Gate (Condition: varSuccess = true)
 │       └── True → Get Items: Get Request Plates
 │           └── Filter Array: Count Already Picked Up
 │
-├── Step 5: Prepare Calculated Values
+├── Step 5: Prepare Calculated Values                 ── no loops, runs once
 │   └── Gate (Condition: varSuccess = true)
 │       └── True → Compose: BaseCost, FinalCost, StaffShortName,
 │                  ResultStatus, NewFinalWeight, NewFinalCost,
 │                  NewPaymentDate, NewStaffNotes, NewPaymentNotes
 │
-├── Step 6: Write Payment Data
+├── Step 6: Write Payment Data                        ── HAS A LOOP (see below)
 │   └── Gate (Condition: varSuccess = true)
 │       └── True → Scope: Write All Records
-│           ├── Create Item (Payments)
-│           ├── Set varPaymentID
-│           ├── Has Plates? (Condition)
-│           │   └── True → Apply to Each → Update Item (BuildPlates)
-│           └── Update Item (PrintRequests)
-│       ├── [scope succeeded] → Set varMessage = success
-│       └── [scope failed] → Set varSuccess = false, varMessage = error
+│           ├── Create Item (Payments)                    ── not in loop, runs once
+│           ├── Set varPaymentID                          ── not in loop, runs once
+│           ├── Has Plates? (Condition)                   ── not in loop, runs once
+│           │   └── True → Apply to Each (LOOP)           ── LOOP STARTS HERE
+│           │       └── Update Item (BuildPlates)         ── IN LOOP, runs per plate
+│           └── Update Item (PrintRequests)               ── not in loop, runs once
+│       ├── [scope succeeded] → Set varMessage = success  ── outside scope
+│       └── [scope failed] → Set varSuccess = false       ── outside scope
 │
 └── Step 7: Return Result
     └── Respond to PowerApp (varSuccess, varMessage, varPaymentID)
@@ -258,53 +259,89 @@ Use this retry policy on all SharePoint **Get items**, **Create item**, and **Up
 
 **What this does:** Catches two common input problems before any data is loaded: a TigerCard number entered as a receipt number, and a transaction number that has already been used.
 
+> **No loops in this step.** All actions are conditions that run once. The nesting here is conditions inside conditions (a gate wrapping a uniqueness check), but nothing repeats.
+
 #### Action 1: Is TigerCard Number
 
-1. Click **+ Add an action** below `Initialize varPaymentID`
+**Where to add this:** Below `Initialize varPaymentID`, at the top level of the flow.
+
+1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename to: `Is TigerCard Number`
-4. Set the condition — click **Expression** tab for the left side, paste:
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 and(equals(triggerBody()['text_1'], 'TigerCASH'), equals(length(trim(coalesce(triggerBody()['text'], ''))), 16), isFloat(trim(coalesce(triggerBody()['text'], ''))))
 ```
 
-5. **Operator:** `is equal to`
-6. **Right side:** `true`
+5. Set the **Operator** to: `is equal to`
+6. Set the **Right side** to: `true`
 
-**If true (it is a TigerCard number):**
+---
 
-7. Inside the **True** branch, add **Set variable**
-8. Rename to: `Mark TigerCard Failure`
-9. **Name:** `varSuccess` — **Value:** `false`
-10. Add another **Set variable** below it
-11. Rename to: `Set TigerCard Error`
-12. **Name:** `varMessage` — **Value:** `That looks like a TigerCard number. Please enter the receipt or approval number instead.`
+#### Action 2: Mark TigerCard Failure
 
-**If false:** Leave the **False** branch empty.
+**Where to add this:** Inside the **True** branch of `Is TigerCard Number`.
 
-#### Action 2: Gate After TigerCard Check
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Set variable**
+3. Rename to: `Mark TigerCard Failure`
+4. **Name:** `varSuccess`
+5. **Value:** `false`
 
-1. Click **+ Add an action** below the `Is TigerCard Number` condition (after both branches rejoin)
-2. Add a **Condition**, rename to: `Gate: Check Uniqueness`
-3. Set: variable `varSuccess` **is equal to** `true`
+---
 
-**If true (still valid):**
+#### Action 3: Set TigerCard Error
 
-4. Inside the **True** branch, add a **Condition**, rename to: `Has Transaction Number`
-5. Set — **Expression** tab for left side:
+**Where to add this:** Below `Mark TigerCard Failure`, still inside the **True** branch of `Is TigerCard Number`.
+
+1. Click **+ Add an action** below `Mark TigerCard Failure`
+2. Search for and select **Set variable**
+3. Rename to: `Set TigerCard Error`
+4. **Name:** `varMessage`
+5. **Value:** `That looks like a TigerCard number. Please enter the receipt or approval number instead.`
+
+Leave the **False** branch of `Is TigerCard Number` empty.
+
+---
+
+#### Action 4: Gate: Check Uniqueness
+
+**Where to add this:** Below `Is TigerCard Number`, after both branches rejoin. This is back at the top level of the flow.
+
+1. Click **+ Add an action** below `Is TigerCard Number`
+2. Search for and select **Condition**
+3. Rename to: `Gate: Check Uniqueness`
+4. Set the condition: variable `varSuccess` **is equal to** `true`
+
+---
+
+#### Action 5: Has Transaction Number
+
+**Where to add this:** Inside the **True** branch of `Gate: Check Uniqueness`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Condition**
+3. Rename to: `Has Transaction Number`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 length(trim(coalesce(triggerBody()['text'], '')))
 ```
 
-6. **Operator:** `is greater than` — **Right side:** `0`
+5. Set the **Operator** to: `is greater than`
+6. Set the **Right side** to: `0`
 
-**If true (has a transaction number):**
+---
 
-7. Inside the **True** branch of `Has Transaction Number`, add **Get items** (SharePoint)
-8. Rename to: `Check Existing Transaction`
-9. Fill in:
+#### Action 6: Check Existing Transaction
+
+**Where to add this:** Inside the **True** branch of `Has Transaction Number`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Get items** (SharePoint)
+3. Rename to: `Check Existing Transaction`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `Payments`
    - **Filter Query:** click **Expression** tab, paste:
@@ -315,31 +352,61 @@ concat('TransactionNumber eq ''', trim(triggerBody()['text']), '''')
 
    - **Top Count:** `1`
 
-10. **Configure retry policy** on this action (see Retry Policy section above).
+5. **Configure retry policy** on this action (see Retry Policy section above).
 
-11. Add a **Condition** below `Check Existing Transaction`, rename to: `Is Duplicate Transaction`
-12. Set — **Expression** tab for left side:
+---
+
+#### Action 7: Is Duplicate Transaction
+
+**Where to add this:** Below `Check Existing Transaction`, still inside the **True** branch of `Has Transaction Number`.
+
+1. Click **+ Add an action** below `Check Existing Transaction`
+2. Search for and select **Condition**
+3. Rename to: `Is Duplicate Transaction`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 length(body('Check_Existing_Transaction')?['value'])
 ```
 
-13. **Operator:** `is greater than` — **Right side:** `0`
+5. Set the **Operator** to: `is greater than`
+6. Set the **Right side** to: `0`
 
-**If true (duplicate found):**
+---
 
-14. Add **Set variable**: `varSuccess` = `false`
-15. Add **Set variable**: `varMessage` — **Expression** tab:
+#### Action 8: Mark Duplicate Failure
+
+**Where to add this:** Inside the **True** branch of `Is Duplicate Transaction`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Set variable**
+3. Rename to: `Mark Duplicate Failure`
+4. **Name:** `varSuccess`
+5. **Value:** `false`
+
+---
+
+#### Action 9: Set Duplicate Error
+
+**Where to add this:** Below `Mark Duplicate Failure`, still inside the **True** branch of `Is Duplicate Transaction`.
+
+1. Click **+ Add an action** below `Mark Duplicate Failure`
+2. Search for and select **Set variable**
+3. Rename to: `Set Duplicate Error`
+4. **Name:** `varMessage`
+5. **Value:** click **Expression** tab, paste:
 
 ```
 concat('Transaction number ''', trim(triggerBody()['text']), ''' already exists. Use a unique number.')
 ```
 
-**If false (not duplicate):** Leave the **False** branch empty.
+---
 
-**If false (blank transaction number) in `Has Transaction Number`:** Leave the **False** branch empty. Blank transaction numbers are allowed.
+Leave the **False** branch of `Is Duplicate Transaction` empty.
 
-**If false (varSuccess already false) in `Gate: Check Uniqueness`:** Leave the **False** branch empty.
+Leave the **False** branch of `Has Transaction Number` empty. Blank transaction numbers are allowed.
+
+Leave the **False** branch of `Gate: Check Uniqueness` empty.
 
 > **Important:** This uniqueness check is fully delegable against the SharePoint list. It replaces the app's old `Filter(colAllPayments, ...)` check, which was limited by the non-delegable row cap and could miss older duplicates once the `Payments` list grew large.
 
@@ -349,19 +416,27 @@ concat('Transaction number ''', trim(triggerBody()['text']), ''' already exists.
 
 **What this does:** Loads the current request from SharePoint using fresh data and verifies it is still in a status that allows payment.
 
-#### Action 1: Gate Before Request Load
+> **No loops in this step.** A gate condition wraps a Get Items call and a validation check. Everything runs once.
 
-1. Click **+ Add an action** below `Gate: Check Uniqueness` (after all branches rejoin)
-2. Add a **Condition**, rename to: `Gate: Load Request`
-3. Set: variable `varSuccess` **is equal to** `true`
+#### Action 1: Gate: Load Request
 
-**If true:**
+**Where to add this:** Below `Gate: Check Uniqueness` (after all branches rejoin), back at the top level of the flow.
+
+1. Click **+ Add an action**
+2. Search for and select **Condition**
+3. Rename to: `Gate: Load Request`
+4. Set the condition: variable `varSuccess` **is equal to** `true`
+
+---
 
 #### Action 2: Get Current Request
 
-4. Add **Get items** (SharePoint)
-5. Rename to: `Get Current Request`
-6. Fill in:
+**Where to add this:** Inside the **True** branch of `Gate: Load Request`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Get items** (SharePoint)
+3. Rename to: `Get Current Request`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Filter Query:** click **Expression** tab, paste:
@@ -372,27 +447,55 @@ concat('ID eq ', triggerBody()['number'])
 
    - **Top Count:** `1`
 
-7. **Configure retry policy.**
+5. **Configure retry policy.**
 
-#### Action 3: Check Request Valid
+---
 
-8. Add a **Condition** below `Get Current Request`, rename to: `Is Request Valid`
-9. Set — **Expression** tab for left side:
+#### Action 3: Is Request Valid
+
+**Where to add this:** Below `Get Current Request`, still inside the **True** branch of `Gate: Load Request`.
+
+1. Click **+ Add an action** below `Get Current Request`
+2. Search for and select **Condition**
+3. Rename to: `Is Request Valid`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 if(and(greater(length(body('Get_Current_Request')?['value']), 0), or(equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Completed'), equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Printing'))), true, false)
 ```
 
-10. **Operator:** `is equal to` — **Right side:** `true`
+5. Set the **Operator** to: `is equal to`
+6. Set the **Right side** to: `true`
 
-**If false (request invalid):**
+Leave the **True** branch of `Is Request Valid` empty (the request is valid — the flow continues below).
 
-11. Add **Set variable**: `varSuccess` = `false`
-12. Add **Set variable**: `varMessage` = `This request is no longer eligible for payment. It may have been processed by another staff member.`
+---
 
-**If true (request is valid):** Leave the **True** branch empty.
+#### Action 4: Mark Request Invalid
 
-**If false (varSuccess was false) in `Gate: Load Request`:** Leave the **False** branch empty.
+**Where to add this:** Inside the **False** branch of `Is Request Valid`.
+
+1. Click **+ Add an action** inside the **False** branch
+2. Search for and select **Set variable**
+3. Rename to: `Mark Request Invalid`
+4. **Name:** `varSuccess`
+5. **Value:** `false`
+
+---
+
+#### Action 5: Set Request Error
+
+**Where to add this:** Below `Mark Request Invalid`, still inside the **False** branch of `Is Request Valid`.
+
+1. Click **+ Add an action** below `Mark Request Invalid`
+2. Search for and select **Set variable**
+3. Rename to: `Set Request Error`
+4. **Name:** `varMessage`
+5. **Value:** `This request is no longer eligible for payment. It may have been processed by another staff member.`
+
+---
+
+Leave the **False** branch of `Gate: Load Request` empty.
 
 ---
 
@@ -400,19 +503,27 @@ if(and(greater(length(body('Get_Current_Request')?['value']), 0), or(equals(firs
 
 **What this does:** Loads the request's build plates so the flow can count plate states and determine whether the request should be closed after payment.
 
-#### Action 1: Gate Before Plate Load
+> **No loops in this step.** Get Items returns all plates at once, and Filter Array processes the list in a single operation — neither is a loop.
 
-1. Click **+ Add an action** below `Gate: Load Request` (after all branches rejoin)
-2. Add a **Condition**, rename to: `Gate: Load Plates`
-3. Set: variable `varSuccess` **is equal to** `true`
+#### Action 1: Gate: Load Plates
 
-**If true:**
+**Where to add this:** Below `Gate: Load Request` (after all branches rejoin), back at the top level of the flow.
+
+1. Click **+ Add an action**
+2. Search for and select **Condition**
+3. Rename to: `Gate: Load Plates`
+4. Set the condition: variable `varSuccess` **is equal to** `true`
+
+---
 
 #### Action 2: Get Request Plates
 
-4. Add **Get items** (SharePoint)
-5. Rename to: `Get Request Plates`
-6. Fill in:
+**Where to add this:** Inside the **True** branch of `Gate: Load Plates`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Get items** (SharePoint)
+3. Rename to: `Get Request Plates`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `BuildPlates`
    - **Filter Query:** click **Expression** tab, paste:
@@ -424,22 +535,30 @@ concat('RequestID eq ', triggerBody()['number'])
    - **Order By:** `ID asc`
    - **Top Count:** `500`
 
-7. **Configure retry policy.**
+5. **Configure retry policy.**
 
-#### Action 3: Count Already Picked Up
+---
 
-8. Add a **Filter array** action below `Get Request Plates`
-9. Rename to: `Already Picked Up Plates`
-10. **From:** select the `value` output from `Get Request Plates`
-11. Set the filter condition — click **Expression** tab for left side:
+#### Action 3: Already Picked Up Plates
+
+**Where to add this:** Below `Get Request Plates`, still inside the **True** branch of `Gate: Load Plates`.
+
+1. Click **+ Add an action** below `Get Request Plates`
+2. Search for and select **Filter array**
+3. Rename to: `Already Picked Up Plates`
+4. **From:** select the `value` output from `Get Request Plates`
+5. Click the left side of the filter condition, switch to the **Expression** tab, and paste:
 
 ```
 item()?['Status']?['Value']
 ```
 
-12. **Operator:** `is equal to` — **Right side:** `Picked Up`
+6. Set the **Operator** to: `is equal to`
+7. Set the **Right side** to: `Picked Up`
 
-**If false (varSuccess was false) in `Gate: Load Plates`:** Leave the **False** branch empty.
+---
+
+Leave the **False** branch of `Gate: Load Plates` empty.
 
 ---
 
@@ -447,18 +566,29 @@ item()?['Status']?['Value']
 
 **What this does:** Calculates the payment amount, the staff short name, the new running totals, and the result status — all stored in Compose actions so the write step can reference them.
 
-#### Action 1: Gate Before Calculations
+> **No loops in this step.** All twelve Compose actions run once, sequentially, inside a single gate condition.
+>
+> Actions 2–12 below are all inside the **True** branch of `Gate: Calculate`. Each one goes directly below the previous one.
 
-1. Click **+ Add an action** below `Gate: Load Plates` (after all branches rejoin)
-2. Add a **Condition**, rename to: `Gate: Calculate`
-3. Set: variable `varSuccess` **is equal to** `true`
+#### Action 1: Gate: Calculate
 
-**If true:**
+**Where to add this:** Below `Gate: Load Plates` (after all branches rejoin), back at the top level of the flow.
+
+1. Click **+ Add an action**
+2. Search for and select **Condition**
+3. Rename to: `Gate: Calculate`
+4. Set the condition: variable `varSuccess` **is equal to** `true`
+
+---
 
 #### Action 2: BaseCost
 
-4. Add a **Compose** action, rename to: `BaseCost`
-5. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Inside the **True** branch of `Gate: Calculate`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Compose**
+3. Rename to: `BaseCost`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 max(triggerBody()['number_4'], mul(triggerBody()['number_1'], if(equals(first(body('Get_Current_Request')?['value'])?['Method']?['Value'], 'Resin'), triggerBody()['number_3'], triggerBody()['number_2'])))
@@ -466,10 +596,16 @@ max(triggerBody()['number_4'], mul(triggerBody()['number_1'], if(equals(first(bo
 
 > **What this calculates:** `Max(MinimumCost, Weight × rate)`. The rate depends on the request's print method (resin or filament).
 
+---
+
 #### Action 3: FinalCost
 
-6. Add a **Compose** action, rename to: `FinalCost`
-7. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `BaseCost`.
+
+1. Click **+ Add an action** below `BaseCost`
+2. Search for and select **Compose**
+3. Rename to: `FinalCost`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(triggerBody()['boolean'], mul(outputs('BaseCost'), triggerBody()['number_5']), outputs('BaseCost'))
@@ -477,10 +613,16 @@ if(triggerBody()['boolean'], mul(outputs('BaseCost'), triggerBody()['number_5'])
 
 > **What this calculates:** If `StudentOwnMaterial` is true, multiplies by the discount factor. Otherwise uses the base cost unchanged.
 
+---
+
 #### Action 4: StaffShortName
 
-8. Add a **Compose** action, rename to: `StaffShortName`
-9. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `FinalCost`.
+
+1. Click **+ Add an action** below `FinalCost`
+2. Search for and select **Compose**
+3. Rename to: `StaffShortName`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 concat(first(split(triggerBody()['text_5'], ' ')), ' ', substring(last(split(triggerBody()['text_5'], ' ')), 0, 1), '.')
@@ -488,10 +630,16 @@ concat(first(split(triggerBody()['text_5'], ' ')), ' ', substring(last(split(tri
 
 > **What this produces:** `"John S."` from `"John Smith"`.
 
+---
+
 #### Action 5: BeingPickedUpCount
 
-10. Add a **Compose** action, rename to: `BeingPickedUpCount`
-11. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `StaffShortName`.
+
+1. Click **+ Add an action** below `StaffShortName`
+2. Search for and select **Compose**
+3. Rename to: `BeingPickedUpCount`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(empty(trim(coalesce(triggerBody()['text_6'], ''))), 0, length(split(replace(triggerBody()['text_6'], ' ', ''), ',')))
@@ -499,10 +647,16 @@ if(empty(trim(coalesce(triggerBody()['text_6'], ''))), 0, length(split(replace(t
 
 > **What this counts:** The number of plate IDs the app sent for pickup. Returns `0` if PickedPlateIDs is blank.
 
+---
+
 #### Action 6: ResultStatus
 
-12. Add a **Compose** action, rename to: `ResultStatus`
-13. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `BeingPickedUpCount`.
+
+1. Click **+ Add an action** below `BeingPickedUpCount`
+2. Search for and select **Compose**
+3. Rename to: `ResultStatus`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(or(triggerBody()['boolean_1'], equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Printing')), first(body('Get_Current_Request')?['value'])?['Status']?['Value'], if(or(equals(length(body('Get_Request_Plates')?['value']), 0), greaterOrEquals(add(length(body('Already_Picked_Up_Plates')), outputs('BeingPickedUpCount')), length(body('Get_Request_Plates')?['value']))), 'Paid & Picked Up', first(body('Get_Current_Request')?['value'])?['Status']?['Value']))
@@ -513,10 +667,16 @@ if(or(triggerBody()['boolean_1'], equals(first(body('Get_Current_Request')?['val
 > - If the request has no plates, or all plates will be `Picked Up` after this transaction → `Paid & Picked Up`.
 > - Otherwise → keep the current status.
 
+---
+
 #### Action 7: NewFinalWeight
 
-14. Add a **Compose** action, rename to: `NewFinalWeight`
-15. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `ResultStatus`.
+
+1. Click **+ Add an action** below `ResultStatus`
+2. Search for and select **Compose**
+3. Rename to: `NewFinalWeight`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalWeight'], 0), triggerBody()['number_1'])
@@ -524,19 +684,31 @@ add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalWeight'], 0), t
 
 > **What this calculates:** Adds the new weight to the request's current `FinalWeight`. This is a delta approach — it assumes the existing `FinalWeight` is correct from prior saves.
 
+---
+
 #### Action 8: NewFinalCost
 
-16. Add a **Compose** action, rename to: `NewFinalCost`
-17. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `NewFinalWeight`.
+
+1. Click **+ Add an action** below `NewFinalWeight`
+2. Search for and select **Compose**
+3. Rename to: `NewFinalCost`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalCost'], 0), outputs('FinalCost'))
 ```
 
+---
+
 #### Action 9: NewPaymentDate
 
-18. Add a **Compose** action, rename to: `NewPaymentDate`
-19. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `NewFinalCost`.
+
+1. Click **+ Add an action** below `NewFinalCost`
+2. Search for and select **Compose**
+3. Rename to: `NewPaymentDate`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(and(not(empty(first(body('Get_Current_Request')?['value'])?['PaymentDate'])), greater(ticks(first(body('Get_Current_Request')?['value'])?['PaymentDate']), ticks(triggerBody()['date']))), first(body('Get_Current_Request')?['value'])?['PaymentDate'], triggerBody()['date'])
@@ -544,10 +716,16 @@ if(and(not(empty(first(body('Get_Current_Request')?['value'])?['PaymentDate'])),
 
 > **What this calculates:** The later of the current `PaymentDate` and the new payment date.
 
+---
+
 #### Action 10: SanitizedNotes
 
-20. Add a **Compose** action, rename to: `SanitizedNotes`
-21. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `NewPaymentDate`.
+
+1. Click **+ Add an action** below `NewPaymentDate`
+2. Search for and select **Compose**
+3. Rename to: `SanitizedNotes`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 replace(replace(replace(replace(replace(replace(replace(coalesce(triggerBody()['text_9'], ''), ' | ', '; '), ' ~~ ', '; '), '[Summary]', '(Summary)'), '[Changes]', '(Changes)'), '[Reason]', '(Reason)'), '[Context]', '(Context)'), '[Comment]', '(Comment)')
@@ -555,10 +733,16 @@ replace(replace(replace(replace(replace(replace(replace(coalesce(triggerBody()['
 
 > **What this does:** Replaces delimiter characters in the staff notes so they don't break the structured `StaffNotes` format.
 
+---
+
 #### Action 11: NewStaffNotes
 
-22. Add a **Compose** action, rename to: `NewStaffNotes`
-23. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `SanitizedNotes`.
+
+1. Click **+ Add an action** below `SanitizedNotes`
+2. Search for and select **Compose**
+3. Rename to: `NewStaffNotes`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['StaffNotes'], '')), '', concat(first(body('Get_Current_Request')?['value'])?['StaffNotes'], ' | ')), 'PAID by ', outputs('StaffShortName'), ': [Summary] $', formatNumber(outputs('FinalCost'), '0.00'), ' for ', string(triggerBody()['number_1']), 'g [Changes] [Reason] [Context] [Comment] ', outputs('SanitizedNotes'), ' - ', formatDateTime(utcNow(), 'M/d h:mmtt'))
@@ -566,10 +750,16 @@ concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['StaffNot
 
 > **What this builds:** Appends a `PAID by ...` entry to the existing `StaffNotes`, using the same `[Summary] [Changes] [Reason] [Context] [Comment]` format the app uses.
 
+---
+
 #### Action 12: NewPaymentNotes
 
-24. Add a **Compose** action, rename to: `NewPaymentNotes`
-25. **Inputs** — click **Expression** tab, paste:
+**Where to add this:** Below `NewStaffNotes`.
+
+1. Click **+ Add an action** below `NewStaffNotes`
+2. Search for and select **Compose**
+3. Rename to: `NewPaymentNotes`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], ''), concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], '')), '', concat(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], ' | ')), 'PAYMENT NOTE by ', triggerBody()['text_5'], ': ', triggerBody()['text_9']))
@@ -577,7 +767,9 @@ if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_
 
 > **What this does:** If the staff entered payment notes, appends them to existing `PaymentNotes`. If not, keeps the current value unchanged.
 
-**If false (varSuccess was false) in `Gate: Calculate`:** Leave the **False** branch empty.
+---
+
+Leave the **False** branch of `Gate: Calculate` empty.
 
 ---
 
@@ -585,95 +777,158 @@ if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_
 
 **What this does:** Creates the payment record, updates plate statuses, and patches the parent request. All three writes live inside a Scope so the flow can catch any failure as a group.
 
-#### Action 1: Gate Before Writes
+> **This step has a scope and a loop.** Here is what runs where:
+>
+> | Actions | Container | Runs |
+> |---------|-----------|------|
+> | 2a (Create Payment Record), 2b (Set varPaymentID), 2c (Has Plates condition), 2e (Update Parent Request) | Inside the `Write All Records` scope | Once |
+> | 2d (Update Each Plate) → 2d-inner (Update Plate Status) | Inside the scope **and** inside an `Apply to Each` loop | Once **per plate** |
+> | 3 (Mark Write Success), 4a–4b (Handle Write Failure) | Outside the scope (but still inside the gate's True branch) | Once |
 
-1. Click **+ Add an action** below `Gate: Calculate` (after all branches rejoin)
-2. Add a **Condition**, rename to: `Gate: Write Data`
-3. Set: variable `varSuccess` **is equal to** `true`
+#### Action 1: Gate: Write Data
 
-**If true:**
+**Where to add this:** Below `Gate: Calculate` (after all branches rejoin), back at the top level of the flow.
 
-#### Action 2: Scope — Write All Records
+1. Click **+ Add an action**
+2. Search for and select **Condition**
+3. Rename to: `Gate: Write Data`
+4. Set the condition: variable `varSuccess` **is equal to** `true`
 
-4. Inside the **True** branch, add a **Scope** action
-5. Rename to: `Write All Records`
+---
 
-Inside this scope, add the following actions in order:
+#### Action 2: Write All Records (Scope)
+
+> *In scope, not in a loop — runs once.*
+
+**Where to add this:** Inside the **True** branch of `Gate: Write Data`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Scope**
+3. Rename to: `Write All Records`
+
+---
 
 #### Action 2a: Create Payment Record
 
-6. Inside the scope, add **Create item** (SharePoint)
-7. Rename to: `Create Payment Record`
-8. Fill in:
+> *Inside the scope. Not in a loop — runs once.*
+
+**Where to add this:** Inside the `Write All Records` scope.
+
+1. Click **+ Add an action** inside the scope
+2. Search for and select **Create item** (SharePoint)
+3. Rename to: `Create Payment Record`
+4. Fill in — use this **same order** as the action’s Parameters list in the designer (primary fields first, then **Show advanced options** in the same sequence):
+
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `Payments`
-   - **RequestID:** select **Expression** tab: `triggerBody()['number']`
-   - **ReqKey:** select **Expression** tab: `first(body('Get_Current_Request')?['value'])?['ReqKey']`
-   - **TransactionNumber:** select **Expression** tab: `if(empty(trim(coalesce(triggerBody()['text'], ''))), null, trim(triggerBody()['text']))`
-   - **Weight:** select **Expression** tab: `triggerBody()['number_1']`
    - **Amount:** select **Expression** tab: `outputs('FinalCost')`
-   - **PaymentType Value:** select the `PaymentType` input from trigger (or enter expression): `triggerBody()['text_1']`
    - **PaymentDate:** select the `PaymentDate` input from trigger: `triggerBody()['date']`
    - **RecordedAt:** select **Expression** tab: `utcNow()`
+   - **Weight:** select **Expression** tab: `triggerBody()['number_1']`
+   - **RequestID:** select **Expression** tab: `triggerBody()['number']`
+   - **TransactionNumber:** select **Expression** tab: `if(empty(trim(coalesce(triggerBody()['text'], ''))), null, trim(triggerBody()['text']))`
    - **PayerName:** select **Expression** tab: `triggerBody()['text_2']`
+   - **PaymentType Value:** select the `PaymentType` input from trigger (or enter expression): `triggerBody()['text_1']`
    - **PayerTigerCard:** select **Expression** tab: `triggerBody()['text_3']`
    - **PlatesPickedUp:** select **Expression** tab: `coalesce(triggerBody()['text_7'], '')`
    - **PlateIDsPickedUp:** select **Expression** tab: `coalesce(triggerBody()['text_8'], '')`
    - **RecordedBy Claims:** select **Expression** tab: `concat('i:0#.f|membership|', triggerBody()['text_4'])`
    - **StudentOwnMaterial:** select the `StudentOwnMaterial` input from trigger: `triggerBody()['boolean']`
+   - **BatchReqKeys:** leave blank (single-request payment; not a consolidated batch row)
+   - **BatchRequestIDs:** leave blank (single-request payment)
+   - **BatchAllocationSummary:** leave blank (single-request payment)
+   - **ReqKey:** select **Expression** tab: `first(body('Get_Current_Request')?['value'])?['ReqKey']`
 
-9. **Configure retry policy.**
+   > **Optional designer-only fields** (if shown): **Limit Columns by View** — use all columns; **Title** — leave blank; **Content type Id** — leave at default.
+
+5. **Configure retry policy.**
 
 > **Important:** This is the most critical write. It creates the canonical finance ledger row. If this action fails, the scope stops immediately and no plates or requests are touched.
 
+---
+
 #### Action 2b: Set varPaymentID
 
-10. Add **Set variable** below `Create Payment Record` (still inside the scope)
-11. Rename to: `Set varPaymentID`
-12. **Name:** `varPaymentID`
-13. **Value:** select **Expression** tab: `body('Create_Payment_Record')?['ID']`
+> *Inside the scope. Not in a loop — runs once.*
+
+**Where to add this:** Below `Create Payment Record`, still inside the `Write All Records` scope.
+
+1. Click **+ Add an action** below `Create Payment Record`
+2. Search for and select **Set variable**
+3. Rename to: `Set varPaymentID`
+4. **Name:** `varPaymentID`
+5. **Value:** select **Expression** tab: `body('Create_Payment_Record')?['ID']`
+
+---
 
 #### Action 2c: Has Plates to Update
 
-14. Add a **Condition** below `Set varPaymentID` (still inside the scope)
-15. Rename to: `Has Plates to Update`
-16. Set — **Expression** tab for left side:
+> *Inside the scope. Not in a loop — this condition runs once.*
+
+**Where to add this:** Below `Set varPaymentID`, still inside the `Write All Records` scope.
+
+1. Click **+ Add an action** below `Set varPaymentID`
+2. Search for and select **Condition**
+3. Rename to: `Has Plates to Update`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 length(trim(coalesce(triggerBody()['text_6'], '')))
 ```
 
-17. **Operator:** `is greater than` — **Right side:** `0`
+5. Set the **Operator** to: `is greater than`
+6. Set the **Right side** to: `0`
 
-**If true (has plates):**
+---
 
-#### Action 2d: Update Each Plate
+#### Action 2d: Update Each Plate (Apply to Each)
 
-18. Inside the **True** branch, add **Apply to each**
-19. Rename to: `Update Each Plate`
-20. **Select an output from previous steps:** click **Expression** tab, paste:
+> *Inside the scope. This is the LOOP — everything inside it repeats once per plate ID.*
+
+**Where to add this:** Inside the **True** branch of `Has Plates to Update`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Apply to each**
+3. Rename to: `Update Each Plate`
+4. In **Select an output from previous steps**, click the **Expression** tab and paste:
 
 ```
 split(replace(triggerBody()['text_6'], ' ', ''), ',')
 ```
 
-21. Inside the loop, add **Update item** (SharePoint)
-22. Rename to: `Update Plate Status`
-23. Fill in:
+---
+
+#### Action 2d-inner: Update Plate Status
+
+> *Inside the loop — this action repeats for each plate.*
+
+**Where to add this:** Inside the `Update Each Plate` loop.
+
+1. Click **+ Add an action** inside the `Update Each Plate` loop
+2. Search for and select **Update item** (SharePoint)
+3. Rename to: `Update Plate Status`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `BuildPlates`
    - **Id:** click **Expression** tab: `int(items('Update_Each_Plate'))`
    - **Status Value:** `Picked Up`
 
-24. **Configure retry policy** on `Update Plate Status`.
+5. **Configure retry policy** on `Update Plate Status`.
 
-**If false (no plates):** Leave the **False** branch empty.
+Leave the **False** branch of `Has Plates to Update` empty (no plates to update).
+
+---
 
 #### Action 2e: Update Parent Request
 
-25. Add **Update item** (SharePoint) below the `Has Plates to Update` condition (still inside the scope, after both branches rejoin)
-26. Rename to: `Update Parent Request`
-27. Fill in:
+> *Inside the scope, but NOT in the loop — runs once, after all plates have been updated.*
+
+**Where to add this:** Below the `Has Plates to Update` condition (after both branches rejoin), still inside the `Write All Records` scope.
+
+1. Click **+ Add an action** below `Has Plates to Update`
+2. Search for and select **Update item** (SharePoint)
+3. Rename to: `Update Parent Request`
+4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** click **Expression** tab: `triggerBody()['number']`
@@ -688,48 +943,78 @@ split(replace(triggerBody()['text_6'], ' ', ''), ',')
    - **LastActionBy Claims:** click **Expression** tab: `concat('i:0#.f|membership|', triggerBody()['text_4'])`
    - **LastActionAt:** click **Expression** tab: `utcNow()`
 
-28. **Configure retry policy.**
+5. **Configure retry policy.**
 
 > **Important:** This is the last action inside the scope. If everything above succeeded, this patches the parent request with updated totals, status, notes, and audit fields.
 
 ---
 
-This is the end of the scope. Now add the success and failure handlers.
+This is the end of the `Write All Records` scope. The next two actions go **below** the scope but are still inside the **True** branch of `Gate: Write Data`.
+
+---
 
 #### Action 3: Mark Write Success
 
-29. Click **+ Add an action** below the `Write All Records` scope (still inside the **True** branch of `Gate: Write Data`)
-30. Add **Set variable**, rename to: `Mark Write Success`
-31. **Name:** `varMessage` — **Value:** `Payment saved.`
+> *Outside the scope, not in a loop — runs once.*
+
+**Where to add this:** Below the `Write All Records` scope, still inside the **True** branch of `Gate: Write Data`.
+
+1. Click **+ Add an action** below the `Write All Records` scope
+2. Search for and select **Set variable**
+3. Rename to: `Mark Write Success`
+4. **Name:** `varMessage`
+5. **Value:** `Payment saved.`
 
 > **Important:** This action should only run when the scope succeeded. By default, actions below a scope run only on success, so no extra configuration is needed here.
 
-#### Action 4: Handle Write Failure
+---
 
-32. Click **+ Add an action** below `Mark Write Success`
-33. Add **Set variable**, rename to: `Handle Write Failure - Success`
-34. **Name:** `varSuccess` — **Value:** `false`
+#### Action 4a: Handle Write Failure — Success
 
-35. **Configure run after:** Click the **three dots (…)** → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
+> *Outside the scope, not in a loop — runs once. Only executes when the scope fails.*
 
-36. Add another **Set variable** below it, rename to: `Handle Write Failure - Message`
-37. **Name:** `varMessage` — **Value:** click **Expression** tab, paste:
+**Where to add this:** Below `Mark Write Success`, still inside the **True** branch of `Gate: Write Data`.
+
+1. Click **+ Add an action** below `Mark Write Success`
+2. Search for and select **Set variable**
+3. Rename to: `Handle Write Failure - Success`
+4. **Name:** `varSuccess`
+5. **Value:** `false`
+6. **Configure run after:** Click the **three dots (…)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
+
+---
+
+#### Action 4b: Handle Write Failure — Message
+
+> *Same location as Action 4a. Only executes when the scope fails.*
+
+**Where to add this:** Below `Handle Write Failure - Success`, still inside the **True** branch of `Gate: Write Data`.
+
+1. Click **+ Add an action** below `Handle Write Failure - Success`
+2. Search for and select **Set variable**
+3. Rename to: `Handle Write Failure - Message`
+4. **Name:** `varMessage`
+5. **Value:** click **Expression** tab, paste:
 
 ```
 if(greater(variables('varPaymentID'), 0), concat('Payment record #', string(variables('varPaymentID')), ' was created, but a later update failed. Check the payment, plates, and request manually in SharePoint.'), 'Failed to save the payment record. Nothing was written. Try again.')
 ```
 
-38. **Configure run after** on this action too: uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
+6. **Configure run after:** Click the **three dots (…)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
-> **Important:** These two actions only execute when the scope fails. If `varPaymentID` is greater than 0, it means the payment record was created before the failure — staff needs to know this so they can check SharePoint rather than blindly retrying.
+> **Important:** Actions 4a and 4b only execute when the scope fails. If `varPaymentID` is greater than 0, it means the payment record was created before the failure — staff needs to know this so they can check SharePoint rather than blindly retrying.
 
-**If false (varSuccess was false) in `Gate: Write Data`:** Leave the **False** branch empty.
+---
+
+Leave the **False** branch of `Gate: Write Data` empty.
 
 ---
 
 ## Step 7: Return Result
 
 **What this does:** Sends the final result back to the Power App. This is the only Respond action in the flow, and it always executes regardless of what happened above.
+
+> **No loops, no scope.** This action sits at the top level of the flow, outside all conditions. It runs exactly once every time.
 
 #### Action 1: Return Result
 
