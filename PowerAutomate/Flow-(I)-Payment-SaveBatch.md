@@ -47,7 +47,7 @@ Add inputs in the exact order listed below.
 | 13 | StudentOwnMaterial | Yes/No | `triggerBody()['boolean']` | Whether the student provided their own material |
 | 14 | PaymentDate | Date | `triggerBody()['date']` | Business date of the payment |
 
-> **Important:** Add inputs in this exact order. See Flow H for a detailed explanation of why order matters.
+> **Important:** Add inputs in this exact order. Expressions like `triggerBody()['number_1']` and `triggerBody()['text_3']` depend on the order you add inputs of each type. If you add them in a different order, those internal keys shift and every downstream expression can point to the wrong input.
 
 ---
 
@@ -58,6 +58,8 @@ Add inputs in the exact order listed below.
 | Success | Text | `"true"` on success, `"false"` on failure |
 | Message | Text | Human-readable result or error description |
 | PaymentID | Text | The consolidated `Payments` row ID on success, or `"0"` on failure |
+
+> **Important:** Power Apps reads these as lowercase properties: `success`, `message`, `paymentid`.
 
 ---
 
@@ -108,13 +110,41 @@ Flow
 
 ## Error Handling Strategy
 
-Same variable-gated pattern as Flow H. See `Flow-(H)-Payment-SaveSingle.md` for a full explanation.
+This flow uses the same **variable-gated** pattern as Flow H:
+
+1. `varSuccess` starts as `true`. Each validation step can flip it to `false`.
+2. Every later gate checks `varSuccess` first. If it is `false`, that entire section is skipped.
+3. All writes live inside one **Scope** so a late write failure is caught as a group.
+4. After the scope, run-after handlers set `varSuccess = false` and a clear error message if anything in the write scope failed.
+5. One single **Respond to a PowerApp or flow** action at the end returns the final result.
+
+This guarantees exactly one response per run and prevents partial batch processing when validation fails.
 
 ---
 
 ## Retry Policy
 
-Same retry policy as Flow H. Apply to all SharePoint actions: **Exponential interval**, Count `2`, Interval `PT10S`, Min `PT5S`, Max `PT30S`. See `Flow-(H)-Payment-SaveSingle.md` for full setup instructions and the rationale for these values (Power Apps ~2-minute timeout constraint).
+Use this retry policy on all SharePoint **Get item**, **Get items**, **Create item**, and **Update item** actions:
+
+- **Retry policy:** `Exponential interval`
+- **Count:** `2`
+- **Interval:** `PT10S`
+- **Minimum interval:** `PT5S`
+- **Maximum interval:** `PT30S`
+
+> **Why these values?** Power Apps has a roughly 2-minute timeout for synchronous flow calls. These settings keep retry windows short enough that the batch flow can still finish before the app times out.
+
+**How to set retry policy on any action:**
+1. Click the **three dots (...)** on the action card
+2. Choose **Settings**
+3. Scroll to the **Networking** section
+4. In **Retry policy**, choose **Exponential interval**
+5. Fill in all four fields:
+   - **Count:** `2`
+   - **Interval:** `PT10S`
+   - **Minimum interval:** `PT5S`
+   - **Maximum interval:** `PT30S`
+6. Click **Done**
 
 ---
 
@@ -131,7 +161,9 @@ Same retry policy as Flow H. Apply to all SharePoint actions: **Exponential inte
 
 ### Inputs
 
-Add inputs in the exact order from the Input Reference table above.
+**UI steps:**
+1. Open the trigger card
+2. Add each input in the exact order from the Input Reference table above. For each input, click **+ Add an input**, select the type, then rename it.
 
 **Number inputs (add first):**
 
@@ -193,12 +225,112 @@ Create each variable using **Initialize variable**. Add them in this order below
 
 ## Step 2: Validate Transaction Number
 
-**What this does:** Same checks as Flow H — TigerCard number detection and duplicate transaction number check. Follow the exact same pattern as Flow H Step 2, but use these expression references for the batch inputs:
+**What this does:** Catches two common input problems before any batch data is loaded: a TigerCard number entered as a transaction number, and a transaction number that has already been used.
 
-- Transaction number: `triggerBody()['text_2']` (not `triggerBody()['text']`)
-- Payment type: `triggerBody()['text_3']` (not `triggerBody()['text_1']`)
+#### Action 1: Is TigerCard Number
 
-Build the same three nested conditions (Is TigerCard Number → Gate → Has Transaction Number → Check Existing Transaction → Is Duplicate). Adjust every expression that references the transaction number or payment type to use the batch input positions above.
+1. Add a **Condition** below the initialized variables
+2. Rename it to: `Is TigerCard Number`
+3. Click the left side of the condition, switch to the **Expression** tab, and paste:
+
+```
+and(equals(triggerBody()['text_3'], 'TigerCASH'), equals(length(trim(coalesce(triggerBody()['text_2'], ''))), 16), isFloat(trim(coalesce(triggerBody()['text_2'], ''))))
+```
+
+4. Set the **Operator** to: `is equal to`
+5. Set the **Right side** to: `true`
+
+#### Action 2: Mark TigerCard Failure
+
+6. Inside the **True** branch, add **Set variable**
+7. Rename it to: `Mark TigerCard Failure`
+8. **Name:** `varSuccess`
+9. **Value:** `false`
+
+#### Action 3: Set TigerCard Error
+
+10. Below `Mark TigerCard Failure`, still in the **True** branch, add **Set variable**
+11. Rename it to: `Set TigerCard Error`
+12. **Name:** `varMessage`
+13. **Value:** `That looks like a TigerCard number. Please enter the receipt or approval number instead.`
+
+Leave the **False** branch of `Is TigerCard Number` empty.
+
+#### Action 4: Gate: Check Uniqueness
+
+14. Below `Is TigerCard Number`, after both branches rejoin, add a **Condition**
+15. Rename it to: `Gate: Check Uniqueness`
+16. Set the condition exactly like this:
+    - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+    - **Operator:** `is equal to`
+    - Right side: switch to the **Expression** tab, paste `true`
+17. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** Do not type plain `varSuccess` into the left box. In code view, this gate must compare `@variables('varSuccess')` to the boolean `true`. If the code shows `"varSuccess"` instead, the condition will always evaluate to false and all later work will be skipped.
+
+#### Action 5: Has Transaction Number
+
+18. Inside the **True** branch of `Gate: Check Uniqueness`, add a **Condition**
+19. Rename it to: `Has Transaction Number`
+20. Click the left side of the condition, switch to the **Expression** tab, and paste:
+
+```
+length(trim(coalesce(triggerBody()['text_2'], '')))
+```
+
+21. Set the **Operator** to: `is greater than`
+22. Set the **Right side** to: `0`
+
+#### Action 6: Check Existing Transaction
+
+23. Inside the **True** branch of `Has Transaction Number`, add **Get items** (SharePoint)
+24. Rename it to: `Check Existing Transaction`
+25. Fill in:
+    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+    - **List Name:** `Payments`
+    - **Filter Query:** click the **Expression** tab and paste:
+
+```
+concat('TransactionNumber eq ''', trim(triggerBody()['text_2']), '''')
+```
+
+    - **Top Count:** `1`
+26. **Configure retry policy** on this action.
+
+#### Action 7: Is Duplicate Transaction
+
+27. Below `Check Existing Transaction`, still inside the **True** branch of `Has Transaction Number`, add a **Condition**
+28. Rename it to: `Is Duplicate Transaction`
+29. Click the left side of the condition, switch to the **Expression** tab, and paste:
+
+```
+length(body('Check_Existing_Transaction')?['value'])
+```
+
+30. Set the **Operator** to: `is greater than`
+31. Set the **Right side** to: `0`
+
+#### Action 8: Mark Duplicate Failure
+
+32. Inside the **True** branch of `Is Duplicate Transaction`, add **Set variable**
+33. Rename it to: `Mark Duplicate Failure`
+34. **Name:** `varSuccess`
+35. **Value:** `false`
+
+#### Action 9: Set Duplicate Error
+
+36. Below `Mark Duplicate Failure`, still inside the **True** branch of `Is Duplicate Transaction`, add **Set variable**
+37. Rename it to: `Set Duplicate Error`
+38. **Name:** `varMessage`
+39. **Value:** click the **Expression** tab and paste:
+
+```
+concat('Transaction number ''', trim(triggerBody()['text_2']), ''' already exists. Use a unique number.')
+```
+
+Leave the **False** branch of `Is Duplicate Transaction` empty.
+Leave the **False** branch of `Has Transaction Number` empty. Blank transaction numbers are allowed.
+Leave the **False** branch of `Gate: Check Uniqueness` empty.
 
 ---
 
@@ -209,7 +341,13 @@ Build the same three nested conditions (Is TigerCard Number → Gate → Has Tra
 #### Action 1: Gate Before Request Load
 
 1. Add a **Condition** below Step 2, rename to: `Gate: Load Batch Requests`
-2. Set: variable `varSuccess` **is equal to** `true`
+2. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+3. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 **If yes:**
 
@@ -285,7 +423,13 @@ length(body('Get_Batch_Requests')?['value'])
 #### Action 1: Gate Before Plate Load
 
 1. Add a **Condition**, rename to: `Gate: Load Batch Plates`
-2. Set: `varSuccess` **is equal to** `true`
+2. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+3. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 **If yes:**
 
@@ -334,7 +478,13 @@ concat('RequestID eq ', replace(triggerBody()['text'], ', ', ' or RequestID eq '
 #### Action 1: Gate Before Calculations
 
 1. Add a **Condition**, rename to: `Gate: Calculate Allocations`
-2. Set: `varSuccess` **is equal to** `true`
+2. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+3. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 **If yes:**
 
@@ -509,7 +659,13 @@ concat(variables('varPlateKeysText'), if(empty(variables('varPlateKeysText')), '
 #### Action 1: Gate Before Writes
 
 1. Add a **Condition**, rename to: `Gate: Write Data`
-2. Set: `varSuccess` **is equal to** `true`
+2. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+3. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`. If this gate evaluates false unexpectedly, `Write All Records` and everything inside it will be skipped.
 
 **If yes:**
 
@@ -555,6 +711,8 @@ Inside the scope:
 #### Action 2c: Set varPaymentID
 
 9. Add **Set variable**: `varPaymentID` — **Expression**: `body('Create_Consolidated_Payment')?['ID']`
+
+> **Critical build check:** The action must contain both **Name** and **Value**. If the card only shows `Name = varPaymentID` and the value box is blank, the flow can still run to completion but will return `PaymentID = "0"` even after a successful create.
 
 #### Action 2d: Update Each Batch Request
 
@@ -616,6 +774,8 @@ concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), 
     - **LastActionAt:** select **Expression**: `utcNow()`
 28. **Configure retry policy.**
 
+> **Critical build check:** Do not save this action with only the **Id** and a few batch-only fields filled in. Make sure the final weight, final cost, payment date, student-own-material flag, staff notes, and audit fields are all mapped, or the request update will be incomplete even if the run looks green.
+
 (End of inner loop)
 
 ---
@@ -626,11 +786,15 @@ This is the end of the scope. Now add the success and failure handlers below the
 
 29. Add **Set variable**: `varMessage` = `Batch payment saved.`
 
+> **Important:** This action should only run when the scope succeeded. By default, actions below a scope run only on success, so no extra configuration is needed here.
+>
+> **Critical build check:** This action must have a literal **Value** of `Batch payment saved.`. If the card only shows `Name = varMessage` with no value, the flow may return `Success = "true"` with an empty `Message`, which is a sign that the build is incomplete.
+
 #### Action 4: Handle Write Failure
 
 30. Add **Set variable**, rename to: `Handle Write Failure - Success`
 31. **Name:** `varSuccess` — **Value:** `false`
-32. **Configure run after:** uncheck **is successful** → check **has failed** and **has timed out**
+32. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
 33. Add **Set variable**, rename to: `Handle Write Failure - Message`
 34. **Name:** `varMessage` — **Expression**:
@@ -639,7 +803,7 @@ This is the end of the scope. Now add the success and failure handlers below the
 if(greater(variables('varPaymentID'), 0), concat('Consolidated payment record #', string(variables('varPaymentID')), ' was created, but a later update failed. Check the payment, plates, and requests manually in SharePoint.'), 'Failed to save the consolidated payment record. Nothing was written. Try again.')
 ```
 
-35. **Configure run after:** uncheck **is successful** → check **has failed** and **has timed out**
+35. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
 **If no (varSuccess was false) in `Gate: Write Data`:** Leave the **No** branch empty.
 
@@ -649,12 +813,21 @@ if(greater(variables('varPaymentID'), 0), concat('Consolidated payment record #'
 
 #### Action 1: Return Result
 
-1. Add **Respond to a PowerApp or flow** at the top level (after all gates rejoin)
+1. Add **Respond to a PowerApp or flow** at the top level (after all gates rejoin — this must sit below `Gate: Write Data`, not inside a branch)
 2. Rename to: `Return Result`
-3. Add outputs — same structure as Flow H:
-   - **Success** (Text): `string(variables('varSuccess'))`
-   - **Message** (Text): select variable `varMessage`
-   - **PaymentID** (Text): `string(variables('varPaymentID'))`
+3. Add **Text** output:
+   - **Title:** `Success`
+   - **Value:** click the **Expression** tab: `string(variables('varSuccess'))`
+4. Add **Text** output:
+   - **Title:** `Message`
+   - **Value:** select variable `varMessage`
+5. Add **Text** output:
+   - **Title:** `PaymentID`
+   - **Value:** click the **Expression** tab: `string(variables('varPaymentID'))`
+
+> **Important:** All three outputs are returned as text strings. In Power Apps, the returned properties are lowercase: `success`, `message`, `paymentid`.
+>
+> **Validation check:** A good success response is `success = "true"` (or `"True"` depending on serialization), `message = "Batch payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
 
 ---
 
@@ -665,13 +838,29 @@ A successful flow run should:
 - Create exactly one consolidated row in `Payments` with `BatchRequestIDs`, `BatchReqKeys`, `BatchAllocationSummary`, combined weight/amount, and transaction details
 - Mark all `Completed` plates for every batch request as `Picked Up`
 - Update every batch `PrintRequests` record with allocated `FinalWeight`, `FinalCost`, `Status = Paid & Picked Up`, batch `StaffNotes` entry, and audit fields
-- Return `Success = "true"` with the consolidated payment ID
+- Return `Success = "true"`, `Message = "Batch payment saved."`, and `PaymentID` = the consolidated payment row ID
 
 A failed flow run should:
 
 - Return `Success = "false"` with a clear error message
 - If validation failed: no data was changed anywhere
 - If a write failed after the payment record: the message includes the payment ID
+
+---
+
+## Build Verification Checklist
+
+After wiring the flow, inspect these cards once in the designer or code view before running any tests:
+
+1. `Set varPaymentID` includes **Value** = `body('Create_Consolidated_Payment')?['ID']`
+2. `Mark Write Success` includes **Value** = `Batch payment saved.`
+3. `Handle Write Failure - Success` includes **Value** = `false`
+4. `Handle Write Failure - Message` includes the full failure expression
+5. Every `Gate: ...` condition uses left-side expression `variables('varSuccess')`, right-side expression `true`, and has no extra blank row
+6. `Update Batch Request` includes the full field mapping, not just `Id`
+7. `Return Result` is outside all conditions and returns all three outputs
+
+If any of those cards are missing their value mappings, the flow can appear to "run successfully" while writing nothing or while returning misleading defaults.
 
 ---
 
@@ -685,6 +874,7 @@ A failed flow run should:
 4. Confirm all plates for all batch requests are now `Picked Up`
 5. Confirm all batch requests are `Paid & Picked Up` with correct allocated `FinalWeight` and `FinalCost`
 6. Confirm the allocation summary adds up to the combined weight and total cost
+7. Confirm the flow returns `Success = "true"`, `Message = "Batch payment saved."`, and `PaymentID` greater than `0`
 
 ### Test 2: One Request Changed Status After Selection
 
@@ -695,19 +885,40 @@ A failed flow run should:
 ### Test 3: Duplicate Transaction Number
 
 1. Use a transaction number that already exists in `Payments`
-2. Confirm the flow returns failure and nothing was written
+2. Confirm the flow returns `Success = "false"` with the duplicate-transaction message
+3. Confirm no `Payments` row was created and nothing else was written
 
 ### Test 4: Single-Item Batch
 
 1. Select just one request
 2. Confirm the flow processes it correctly — the allocation is 100% of the combined weight
 3. Confirm the `Payments` row is a consolidated row (uses `BatchRequestIDs` instead of `RequestID`)
+4. Confirm the flow returns `Success = "true"`, `Message = "Batch payment saved."`, and `PaymentID` greater than `0`
 
 ### Test 5: Allocation Rounding
 
 1. Select 3 requests with estimated weights that produce repeating decimals when divided
 2. Confirm allocated weights sum to exactly the combined weight (last item absorbs the rounding difference)
 3. Confirm `BatchAllocationSummary` shows correct per-request values
+
+### Test 6: TigerCard Number as Transaction
+
+1. Set `PaymentType = "TigerCASH"` and `TransactionNumber` to a 16-digit number
+2. Confirm the flow returns `Success = "false"` with the TigerCard warning
+3. Confirm no data was changed anywhere
+
+### Test 7: Blank Transaction Number
+
+1. Leave `TransactionNumber` blank
+2. Confirm the flow still processes the batch successfully when the rest of the inputs are valid
+3. Confirm the consolidated `Payments` row is created with a blank transaction number
+4. Confirm the flow returns `Success = "true"`, `Message = "Batch payment saved."`, and `PaymentID` greater than `0`
+
+### Test 8: Ineligible Plate in Batch
+
+1. Select a batch where at least one request still has a plate in `Queued` or `Printing`
+2. Confirm the flow returns `Success = "false"` with the ineligible-plates message
+3. Confirm no `Payments` row was created and no plates/requests were changed
 
 ---
 
