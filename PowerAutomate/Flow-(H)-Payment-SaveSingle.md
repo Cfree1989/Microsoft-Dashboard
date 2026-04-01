@@ -314,7 +314,13 @@ Leave the **False** branch of `Is TigerCard Number` empty.
 1. Click **+ Add an action** below `Is TigerCard Number`
 2. Search for and select **Condition**
 3. Rename to: `Gate: Check Uniqueness`
-4. Set the condition: variable `varSuccess` **is equal to** `true`
+4. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+5. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** Do not type plain `varSuccess` into the left box. In code view, this gate must compare `@variables('varSuccess')` to the boolean `true`. If the code shows `"varSuccess"` instead, the condition will always evaluate to false and all later work will be skipped.
 
 ---
 
@@ -427,7 +433,13 @@ Leave the **False** branch of `Gate: Check Uniqueness` empty.
 1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename to: `Gate: Load Request`
-4. Set the condition: variable `varSuccess` **is equal to** `true`
+4. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+5. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 ---
 
@@ -512,7 +524,13 @@ Leave the **False** branch of `Gate: Load Request` empty.
 1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename to: `Gate: Load Plates`
-4. Set the condition: variable `varSuccess` **is equal to** `true`
+4. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+5. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 ---
 
@@ -577,7 +595,13 @@ Leave the **False** branch of `Gate: Load Plates` empty.
 1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename to: `Gate: Calculate`
-4. Set the condition: variable `varSuccess` **is equal to** `true`
+4. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+5. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`.
 
 ---
 
@@ -792,7 +816,13 @@ Leave the **False** branch of `Gate: Calculate` empty.
 1. Click **+ Add an action**
 2. Search for and select **Condition**
 3. Rename to: `Gate: Write Data`
-4. Set the condition: variable `varSuccess` **is equal to** `true`
+4. Set the condition exactly like this:
+   - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+   - **Operator:** `is equal to`
+   - Right side: switch to the **Expression** tab, paste `true`
+5. Delete any extra blank condition row. The gate should have exactly **one** row.
+
+> **Critical build check:** In code view, this gate should compare `@variables('varSuccess')` to `true`, not the literal string `"varSuccess"`. If this gate evaluates false unexpectedly, `Write All Records` and everything inside it will be skipped.
 
 ---
 
@@ -858,6 +888,8 @@ Leave the **False** branch of `Gate: Calculate` empty.
 3. Rename to: `Set varPaymentID`
 4. **Name:** `varPaymentID`
 5. **Value:** select **Expression** tab: `body('Create_Payment_Record')?['ID']`
+
+> **Critical build check:** The action must contain both **Name** and **Value**. If the card only shows `Name = varPaymentID` and the **Value** box is blank, the flow can still run to completion but will return `PaymentID = "0"` even after a successful create.
 
 ---
 
@@ -976,6 +1008,8 @@ Leave the **False** branch of `Has Plates to Update` empty (no plates to update)
 5. **Configure retry policy.**
 
 > **Important:** This is the last action inside the scope. If everything above succeeded, this patches the parent request with updated totals, status, notes, and audit fields.
+>
+> **Critical build check:** Do not save this action with only the **Id** filled in. In code view, the `parameters` object should include the fields above (`Status`, `StudentOwnMaterial`, `PaymentType`, `FinalWeight`, `FinalCost`, `PaymentDate`, `StaffNotes`, `PaymentNotes`, `LastAction`, `LastActionBy`, `LastActionAt`, plus the echoed required fields). If only `id` is present, the run may look green but the parent request will not actually be updated.
 
 ---
 
@@ -996,6 +1030,8 @@ This is the end of the `Write All Records` scope. The next two actions go **belo
 5. **Value:** `Payment saved.`
 
 > **Important:** This action should only run when the scope succeeded. By default, actions below a scope run only on success, so no extra configuration is needed here.
+>
+> **Critical build check:** This action must have a literal **Value** of `Payment saved.`. If the card only shows `Name = varMessage` with no value, the flow may return `Success = "true"` with an empty `Message`, which is a sign that the build is incomplete.
 
 ---
 
@@ -1064,6 +1100,8 @@ Leave the **False** branch of `Gate: Write Data` empty.
 12. **Value:** click **Expression** tab: `string(variables('varPaymentID'))`
 
 > **Important:** All three outputs are returned as text strings. In Power Apps, the returned properties are lowercase: `success`, `message`, `paymentid`.
+>
+> **Validation check:** A good success response is `success = "true"` (or `"True"` depending on serialization), `message = "Payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
 
 ---
 
@@ -1082,6 +1120,20 @@ A failed flow run should:
 - If the failure was during validation (before any writes), no data was changed
 - If the failure was after the payment record was created, the message includes the payment ID so staff can investigate
 
+## Build Verification Checklist
+
+After wiring the flow, inspect these cards once in the designer or code view before running any tests:
+
+1. `Set varPaymentID` includes **Value** = `body('Create_Payment_Record')?['ID']`
+2. `Mark Write Success` includes **Value** = `Payment saved.`
+3. `Handle Write Failure - Success` includes **Value** = `false`
+4. `Handle Write Failure - Message` includes the full failure expression
+5. Every `Gate: ...` condition uses left-side expression `variables('varSuccess')`, right-side expression `true`, and has no extra blank row
+6. `Update Parent Request` includes the full field mapping, not just `Id`
+7. `Return Result` is outside all conditions and returns all three outputs
+
+If any of those cards are missing their value mappings, the flow can appear to "run successfully" while writing nothing or while returning misleading defaults.
+
 ---
 
 ## Testing
@@ -1092,14 +1144,14 @@ A failed flow run should:
 2. Confirm a new `Payments` row exists with correct values
 3. Confirm the specified plates are now `Picked Up`
 4. Confirm the `PrintRequests` record shows updated `FinalWeight`, `FinalCost`, and `Status = Paid & Picked Up`
-5. Confirm the flow returns `Success = "true"`
+5. Confirm the flow returns `Success = "true"`, `Message = "Payment saved."`, and `PaymentID` greater than `0`
 
 ### Test 2: Single Payment Without Plates
 
 1. Use a request that has no build plates
 2. Confirm the payment record is created
 3. Confirm `PrintRequests.Status` becomes `Paid & Picked Up` (since there are no plates to gate on)
-4. Confirm the flow returns `Success = "true"`
+4. Confirm the flow returns `Success = "true"`, `Message = "Payment saved."`, and `PaymentID` greater than `0`
 
 ### Test 3: Partial Pickup
 
@@ -1107,7 +1159,7 @@ A failed flow run should:
 2. Confirm the payment record is created
 3. Confirm only the specified plates change to `Picked Up`
 4. Confirm `PrintRequests.Status` stays at its current value (not `Paid & Picked Up`)
-5. Confirm the flow returns `Success = "true"`
+5. Confirm the flow returns `Success = "true"`, `Message = "Payment saved."`, and `PaymentID` greater than `0`
 
 ### Test 4: Duplicate Transaction Number
 
@@ -1131,7 +1183,7 @@ A failed flow run should:
 
 1. Leave `TransactionNumber` blank (simulating a grant payment without a code yet)
 2. Confirm the flow creates the payment record with `TransactionNumber` blank
-3. Confirm the flow returns `Success = "true"`
+3. Confirm the flow returns `Success = "true"`, `Message = "Payment saved."`, and `PaymentID` greater than `0`
 
 ---
 
