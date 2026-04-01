@@ -90,7 +90,7 @@ Flow
 │
 ├── Step 3: Load and Validate Request                 ── no loops, runs once
 │   └── Gate (Condition: varSuccess = true)
-│       └── True → Get Items: Get Current Request
+│       └── True → Get Item: Get Current Request
 │           └── Request Invalid? (Condition)
 │               └── True → Set varSuccess = false
 │
@@ -139,13 +139,15 @@ This guarantees exactly one response per flow run.
 
 ## Retry Policy
 
-Use this retry policy on all SharePoint **Get items**, **Create item**, and **Update item** actions:
+Use this retry policy on all SharePoint **Get item**, **Get items**, **Create item**, and **Update item** actions:
 
 - **Retry policy:** `Exponential interval`
-- **Count:** `4`
-- **Interval:** `PT1M`
-- **Minimum interval:** `PT20S`
-- **Maximum interval:** `PT1H`
+- **Count:** `2`
+- **Interval:** `PT10S`
+- **Minimum interval:** `PT5S`
+- **Maximum interval:** `PT30S`
+
+> **Why these values?** Power Apps has a ~2-minute timeout for synchronous flow calls. The previous policy (4 retries, PT1H max) was designed for background flows and could cause a single action to retry for up to an hour, far exceeding the timeout. With 2 retries and a 30-second max interval, any single action's retry window stays under 1 minute, leaving headroom for the other actions in the flow.
 
 **How to set retry policy on any action:**
 1. Click the **three dots (…)** on the action card
@@ -153,10 +155,10 @@ Use this retry policy on all SharePoint **Get items**, **Create item**, and **Up
 3. Scroll down to **Networking** section
 4. In **Retry policy** dropdown, select **Exponential interval**
 5. Fill in ALL four fields (all are required):
-   - **Count:** `4`
-   - **Interval:** `PT1M`
-   - **Minimum interval:** `PT20S`
-   - **Maximum interval:** `PT1H`
+   - **Count:** `2`
+   - **Interval:** `PT10S`
+   - **Minimum interval:** `PT5S`
+   - **Maximum interval:** `PT30S`
 6. Click **Done**
 
 ---
@@ -434,20 +436,16 @@ Leave the **False** branch of `Gate: Check Uniqueness` empty.
 **Where to add this:** Inside the **True** branch of `Gate: Load Request`.
 
 1. Click **+ Add an action** inside the **True** branch
-2. Search for and select **Get items** (SharePoint)
+2. Search for and select **Get item** (SharePoint) — note: **Get item** (singular), not Get items
 3. Rename to: `Get Current Request`
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
-   - **Filter Query:** click **Expression** tab, paste:
-
-```
-concat('ID eq ', triggerBody()['number'])
-```
-
-   - **Top Count:** `1`
+   - **Id:** click **Expression** tab, paste: `triggerBody()['number']`
 
 5. **Configure retry policy.**
+
+> **Why `Get item` instead of `Get items`?** For single-record lookups by ID, `Get item` is simpler (no filter query, no `first()` unwrapping). If the item doesn't exist, the action fails — which is correct behavior since the app validated the request before calling this flow.
 
 ---
 
@@ -461,11 +459,13 @@ concat('ID eq ', triggerBody()['number'])
 4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
-if(and(greater(length(body('Get_Current_Request')?['value']), 0), or(equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Completed'), equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Printing'))), true, false)
+or(equals(body('Get_Current_Request')?['Status']?['Value'], 'Completed'), equals(body('Get_Current_Request')?['Status']?['Value'], 'Printing'))
 ```
 
 5. Set the **Operator** to: `is equal to`
 6. Set the **Right side** to: `true`
+
+> **Note:** The old `Get items` approach needed a `length() > 0` existence check. With `Get item` by ID, the action itself fails if the item doesn't exist, so we only need to validate the status here.
 
 Leave the **True** branch of `Is Request Valid` empty (the request is valid — the flow continues below).
 
@@ -591,7 +591,7 @@ Leave the **False** branch of `Gate: Load Plates` empty.
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-max(triggerBody()['number_4'], mul(triggerBody()['number_1'], if(equals(first(body('Get_Current_Request')?['value'])?['Method']?['Value'], 'Resin'), triggerBody()['number_3'], triggerBody()['number_2'])))
+max(triggerBody()['number_4'], mul(triggerBody()['number_1'], if(equals(body('Get_Current_Request')?['Method']?['Value'], 'Resin'), triggerBody()['number_3'], triggerBody()['number_2'])))
 ```
 
 > **What this calculates:** `Max(MinimumCost, Weight × rate)`. The rate depends on the request's print method (resin or filament).
@@ -659,7 +659,7 @@ if(empty(trim(coalesce(triggerBody()['text_6'], ''))), 0, length(split(replace(t
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-if(or(triggerBody()['boolean_1'], equals(first(body('Get_Current_Request')?['value'])?['Status']?['Value'], 'Printing')), first(body('Get_Current_Request')?['value'])?['Status']?['Value'], if(or(equals(length(body('Get_Request_Plates')?['value']), 0), greaterOrEquals(add(length(body('Already_Picked_Up_Plates')), outputs('BeingPickedUpCount')), length(body('Get_Request_Plates')?['value']))), 'Paid & Picked Up', first(body('Get_Current_Request')?['value'])?['Status']?['Value']))
+if(or(triggerBody()['boolean_1'], equals(body('Get_Current_Request')?['Status']?['Value'], 'Printing')), body('Get_Current_Request')?['Status']?['Value'], if(or(equals(length(body('Get_Request_Plates')?['value']), 0), greaterOrEquals(add(length(body('Already_Picked_Up_Plates')), outputs('BeingPickedUpCount')), length(body('Get_Request_Plates')?['value']))), 'Paid & Picked Up', body('Get_Current_Request')?['Status']?['Value']))
 ```
 
 > **What this determines:**
@@ -679,7 +679,7 @@ if(or(triggerBody()['boolean_1'], equals(first(body('Get_Current_Request')?['val
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalWeight'], 0), triggerBody()['number_1'])
+add(coalesce(body('Get_Current_Request')?['FinalWeight'], 0), triggerBody()['number_1'])
 ```
 
 > **What this calculates:** Adds the new weight to the request's current `FinalWeight`. This is a delta approach — it assumes the existing `FinalWeight` is correct from prior saves.
@@ -696,7 +696,7 @@ add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalWeight'], 0), t
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalCost'], 0), outputs('FinalCost'))
+add(coalesce(body('Get_Current_Request')?['FinalCost'], 0), outputs('FinalCost'))
 ```
 
 ---
@@ -711,7 +711,7 @@ add(coalesce(first(body('Get_Current_Request')?['value'])?['FinalCost'], 0), out
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-if(and(not(empty(first(body('Get_Current_Request')?['value'])?['PaymentDate'])), greater(ticks(first(body('Get_Current_Request')?['value'])?['PaymentDate']), ticks(triggerBody()['date']))), first(body('Get_Current_Request')?['value'])?['PaymentDate'], triggerBody()['date'])
+if(and(not(empty(body('Get_Current_Request')?['PaymentDate'])), greater(ticks(body('Get_Current_Request')?['PaymentDate']), ticks(triggerBody()['date']))), body('Get_Current_Request')?['PaymentDate'], triggerBody()['date'])
 ```
 
 > **What this calculates:** The later of the current `PaymentDate` and the new payment date.
@@ -745,7 +745,7 @@ replace(replace(replace(replace(replace(replace(replace(coalesce(triggerBody()['
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['StaffNotes'], '')), '', concat(first(body('Get_Current_Request')?['value'])?['StaffNotes'], ' | ')), 'PAID by ', outputs('StaffShortName'), ': [Summary] $', formatNumber(outputs('FinalCost'), '0.00'), ' for ', string(triggerBody()['number_1']), 'g [Changes] [Reason] [Context] [Comment] ', outputs('SanitizedNotes'), ' - ', formatDateTime(utcNow(), 'M/d h:mmtt'))
+concat(if(empty(coalesce(body('Get_Current_Request')?['StaffNotes'], '')), '', concat(body('Get_Current_Request')?['StaffNotes'], ' | ')), 'PAID by ', outputs('StaffShortName'), ': [Summary] $', formatNumber(outputs('FinalCost'), '0.00'), ' for ', string(triggerBody()['number_1']), 'g [Changes] [Reason] [Context] [Comment] ', outputs('SanitizedNotes'), ' - ', formatDateTime(utcNow(), 'M/d h:mmtt'))
 ```
 
 > **What this builds:** Appends a `PAID by ...` entry to the existing `StaffNotes`, using the same `[Summary] [Changes] [Reason] [Context] [Comment]` format the app uses.
@@ -762,7 +762,7 @@ concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['StaffNot
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], ''), concat(if(empty(coalesce(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], '')), '', concat(first(body('Get_Current_Request')?['value'])?['PaymentNotes'], ' | ')), 'PAYMENT NOTE by ', triggerBody()['text_5'], ': ', triggerBody()['text_9']))
+if(empty(trim(coalesce(triggerBody()['text_9'], ''))), coalesce(body('Get_Current_Request')?['PaymentNotes'], ''), concat(if(empty(coalesce(body('Get_Current_Request')?['PaymentNotes'], '')), '', concat(body('Get_Current_Request')?['PaymentNotes'], ' | ')), 'PAYMENT NOTE by ', triggerBody()['text_5'], ': ', triggerBody()['text_9']))
 ```
 
 > **What this does:** If the staff entered payment notes, appends them to existing `PaymentNotes`. If not, keeps the current value unchanged.
@@ -837,7 +837,7 @@ Leave the **False** branch of `Gate: Calculate` empty.
    - **BatchReqKeys:** leave blank (single-request payment; not a consolidated batch row)
    - **BatchRequestIDs:** leave blank (single-request payment)
    - **BatchAllocationSummary:** leave blank (single-request payment)
-   - **ReqKey:** select **Expression** tab: `first(body('Get_Current_Request')?['value'])?['ReqKey']`
+   - **ReqKey:** select **Expression** tab: `body('Get_Current_Request')?['ReqKey']`
 
    > **Optional designer-only fields** (if shown): **Limit Columns by View** — use all columns; **Title** — leave blank; **Content type Id** — leave at default.
 
@@ -898,36 +898,46 @@ split(replace(triggerBody()['text_6'], ' ', ''), ',')
 
 ---
 
-#### Action 2d-inner: Update Plate Status
+#### Action 2d-inner-1: Find Current Plate
 
-> *Inside the loop — this action repeats for each plate.*
+> *Inside the loop — repeats for each plate. In-memory filter, no API call.*
 
 **Where to add this:** Inside the `Update Each Plate` loop.
 
 1. Click **+ Add an action** inside the `Update Each Plate` loop
-2. Search for and select **Get item** (SharePoint)
-3. Rename to: `Get Current Plate`
+2. Search for and select **Filter array**
+3. Rename to: `Find Current Plate`
+4. **From:** select the `value` output from `Get Request Plates`
+5. Click the left side of the filter condition, switch to the **Expression** tab, and paste: `item()?['ID']`
+6. Set the **Operator** to: `is equal to`
+7. Set the **Right side** — **Expression** tab: `int(items('Update_Each_Plate'))`
+
+> **Why filter instead of `Get item`?** The plate data was already loaded in Step 4's `Get Request Plates`. Filtering from that in-memory array avoids one SharePoint API call per plate in the loop.
+
+---
+
+#### Action 2d-inner-2: Update Plate Status
+
+> *Inside the loop — repeats for each plate.*
+
+**Where to add this:** Below `Find Current Plate`, still inside the `Update Each Plate` loop.
+
+1. Click **+ Add an action** below `Find Current Plate`
+2. Search for and select **Update item** (SharePoint)
+3. Rename to: `Update Plate Status`
 4. Fill in:
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `BuildPlates`
    - **Id:** click **Expression** tab: `int(items('Update_Each_Plate'))`
-5. **Configure retry policy** on `Get Current Plate`.
-
-
-6. Click **+ Add an action** below `Get Current Plate`
-7. Search for and select **Update item** (SharePoint)
-8. Rename to: `Update Plate Status`
-9. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `BuildPlates`
-   - **Id:** click **Expression** tab: `int(items('Update_Each_Plate'))`
-   - **RequestID:** click **Expression** tab: `body('Get_Current_Plate')?['RequestID']`
-   - **PlateKey:** click **Expression** tab: `body('Get_Current_Plate')?['PlateKey']`
-   - **Machine Value:** click **Expression** tab: `body('Get_Current_Plate')?['Machine']?['Value']`
-   - **Title:** click **Expression** tab: `body('Get_Current_Plate')?['Title']`
+   - **RequestID:** click **Expression** tab: `first(body('Find_Current_Plate'))?['RequestID']`
+   - **PlateKey:** click **Expression** tab: `first(body('Find_Current_Plate'))?['PlateKey']`
+   - **Machine Value:** click **Expression** tab: `first(body('Find_Current_Plate'))?['Machine']?['Value']`
+   - **Title:** click **Expression** tab: `first(body('Find_Current_Plate'))?['Title']`
    - **Status Value:** `Picked Up`
 
-10. **Configure retry policy** on `Update Plate Status`.
+5. **Configure retry policy** on `Update Plate Status`.
+
+> **Why echo back RequestID, PlateKey, Machine, and Title?** The Power Automate designer requires values for all columns marked as required in the SharePoint list. SharePoint's PATCH semantics preserve unspecified fields at the API level, but the designer validates required fields before saving. The values come from the pre-loaded plate data (no extra API calls).
 
 Leave the **False** branch of `Has Plates to Update` empty (no plates to update).
 
@@ -946,14 +956,14 @@ Leave the **False** branch of `Has Plates to Update` empty (no plates to update)
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `PrintRequests`
    - **Id:** click **Expression** tab: `triggerBody()['number']`
-   - **TigerCardNumber:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['TigerCardNumber']`
-   - **StudentConfirmed:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['StudentConfirmed']`
+   - **TigerCardNumber:** click **Expression** tab: `body('Get_Current_Request')?['TigerCardNumber']`
+   - **StudentConfirmed:** click **Expression** tab: `body('Get_Current_Request')?['StudentConfirmed']`
    - **Status Value:** click **Expression** tab: `outputs('ResultStatus')`
-   - **StudentOwnMaterial:** click **Expression** tab: `or(equals(first(body('Get_Current_Request')?['value'])?['StudentOwnMaterial'], true), triggerBody()['boolean'])`
-   - **NeedsAttention:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['NeedsAttention']`
+   - **StudentOwnMaterial:** click **Expression** tab: `or(equals(body('Get_Current_Request')?['StudentOwnMaterial'], true), triggerBody()['boolean'])`
+   - **NeedsAttention:** click **Expression** tab: `body('Get_Current_Request')?['NeedsAttention']`
    - **PaymentType Value:** click **Expression** tab: `triggerBody()['text_1']`
-   - **BuildPlateLabelsLocked:** click **Expression** tab: `first(body('Get_Current_Request')?['value'])?['BuildPlateLabelsLocked']`
-   - **BuildPlateOriginalTotal:** click **Expression** tab: `coalesce(first(body('Get_Current_Request')?['value'])?['BuildPlateOriginalTotal'], 0)`
+   - **BuildPlateLabelsLocked:** click **Expression** tab: `body('Get_Current_Request')?['BuildPlateLabelsLocked']`
+   - **BuildPlateOriginalTotal:** click **Expression** tab: `coalesce(body('Get_Current_Request')?['BuildPlateOriginalTotal'], 0)`
    - **FinalWeight:** click **Expression** tab: `outputs('NewFinalWeight')`
    - **FinalCost:** click **Expression** tab: `outputs('NewFinalCost')`
    - **PaymentDate:** click **Expression** tab: `outputs('NewPaymentDate')`

@@ -1037,15 +1037,49 @@ Keep the current Flow H / Flow I design with only minor refinements (e.g. prefer
 
 ## Consensus
 
-**Status:** All seven multi-model reviewer entries are consolidated above (March 31–April 1, 2026). Synthesis of consensus is not yet started — complete when the document owner is ready.
+**Status:** Complete — synthesized from all seven reviewer entries (March 31–April 1, 2026).
 
-This section will be filled in after the owner reviews the merged entries. The consensus will:
+### Decision: Keep the Architecture, Apply Targeted Refinements
 
-1. Determine whether the current Flow H / Flow I design should be kept, modified, or replaced
-2. If modified: list the specific changes with rationale
-3. If replaced: document the agreed alternative architecture in enough detail to build from
-4. Record any dissenting opinions from reviewers
-5. Identify any follow-up questions that need answers before implementation
+**6 out of 7 reviewers** say keep the current two-flow design (Flow H + Flow I) with specific improvements. Only one (Claude Sonnet 4) recommended replacing it, but that review contains factual errors — it claims SharePoint `$batch` provides "true atomicity," which every other reviewer explicitly refutes with documentation evidence. `$batch` is a performance tool, not a correctness tool.
+
+### Unanimous Agreements
+
+These points had zero dissent across all seven reviews:
+
+- **Two separate flows is correct** — merging into one mode-flag flow adds branching at every step for no real gain
+- **Payment-first write order is correct** — directly fixes the critical "requests closed before ledger exists" bug from the fragility review
+- **Scope + run-after is the right error-handling pattern** — it's Power Automate's documented try/catch equivalent
+- **Variable-gated pattern is correct** — `Terminate` kills the `Respond to PowerApp` action, so you can't use it when you must always return a structured response
+- **Last-item remainder allocation is optimal** — standard financial rounding, no simpler alternative in PA
+- **Filter array from pre-loaded data is better than Get item per iteration** in loops — zero API calls vs N API calls
+
+### Recommended Changes (by reviewer agreement)
+
+| # | Change | Reviewers | Priority |
+|---|--------|-----------|----------|
+| 1 | **Replace `xpath(xml(json(...)))` hack** in Flow I's summary/plate-snapshot string building — use either Select Text Mode or Append to string variable in existing loops | 7/7 | High |
+| 2 | **Use `Get item` by ID** instead of `Get items` + filter + `first()` for single-record lookups (Flow H's request load) | 5/7 | Medium |
+| 3 | **Remove redundant `Get Current Plate`** in Flow H's plate update loop — PA's Update item uses PATCH semantics, so unspecified fields are preserved | 2/7 explicit, but strongly argued | Medium |
+| 4 | **Reduce retry policy** or document the 2-minute Power Apps timeout risk — the current 4-retry/1-hour-max policy is designed for background flows, not synchronous PA calls | 3/7 | Medium |
+| 5 | **Verify Flow I's batch plate update echoes required BuildPlates fields** — if it only sets Status + ID, it may silently blank other columns (or it may be fine under PATCH semantics — needs a real test) | 2/7 | High (if confirmed as defect) |
+| 6 | **Switch `max()` to `last()`** for `LastItemID` in Flow I — results are already sorted by ID asc, and `max()` on object arrays is undocumented | 1/7 but compelling | Low |
+
+### What Not To Do
+
+Every reviewer except the outlier agreed on what to avoid:
+
+- **Don't use SharePoint `$batch` via HTTP** — it's not transactional, the multipart/mixed payload is brittle, and it removes per-action retry policies. Only consider it if throttling becomes a measured problem.
+- **Don't extract shared validation into a child flow yet** — the shared logic is only ~9 actions across 2 flows. Child flows add solution packaging, connection management, and testing overhead that exceeds the duplication cost. Revisit if a third payment flow is ever added.
+- **Don't use `Terminate`** — it prevents `Respond to PowerApp` from executing, breaking the structured response contract.
+
+### Dissenting Opinion
+
+**Claude Sonnet 4** recommended replacing both flows with a single unified flow using `$batch` HTTP, claiming 60-70% fewer actions and "true atomicity." This was the most aggressive proposal and was contradicted by all other reviewers on its key claims (`$batch` isn't transactional, `select()` can't replace allocation loops, `$expand` doesn't work on SharePoint lists via the PA connector). The proposed 15-20 action count is unrealistic given the validation, calculation, and error-handling requirements.
+
+### Bottom Line
+
+The architecture is sound. The flows solve the exact problems identified in the fragility review. The primary cleanup is replacing the `xpath` hack in Flow I — every reviewer flagged it. The secondary cleanup is using `Get item` by ID where appropriate in Flow H. Everything else is optional polish.
 
 ---
 

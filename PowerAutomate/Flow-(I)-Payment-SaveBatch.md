@@ -114,7 +114,7 @@ Same variable-gated pattern as Flow H. See `Flow-(H)-Payment-SaveSingle.md` for 
 
 ## Retry Policy
 
-Same retry policy as Flow H. Apply to all SharePoint actions. See `Flow-(H)-Payment-SaveSingle.md` for the settings.
+Same retry policy as Flow H. Apply to all SharePoint actions: **Exponential interval**, Count `2`, Interval `PT10S`, Min `PT5S`, Max `PT30S`. See `Flow-(H)-Payment-SaveSingle.md` for full setup instructions and the rationale for these values (Power Apps ~2-minute timeout constraint).
 
 ---
 
@@ -358,10 +358,10 @@ add(variables('varTotalEstWeight'), coalesce(items('Sum_Estimated_Weights')?['Es
 8. **Inputs** — **Expression** tab:
 
 ```
-max(body('Get_Batch_Requests')?['value'], 'ID')
+last(body('Get_Batch_Requests')?['value'])?['ID']
 ```
 
-> **Note:** If `max()` does not work on your connector version, use: `last(body('Get_Batch_Requests')?['value'])?['ID']` (since results are ordered by `ID asc`).
+> **Why `last()` instead of `max()`?** The results from `Get Batch Requests` are already ordered by `ID asc`, so the last item has the highest ID. Using `last()` is reliable and well-documented, whereas `max()` with a property path on an object array is undocumented behavior that may not work on all connector versions.
 
 #### Action 4: BatchItemCount
 
@@ -445,26 +445,18 @@ json(concat('{"ID":', string(first(body('Last_Item_Only'))?['ID']), ',"ReqKey":"
 
 30. Add a **Select** action (Data Operation), rename to: `Allocation Summary Lines`
 31. **From:** `variables('varBatchDetails')`
-32. Map — one property:
-   - Key: `line`
-   - Value — **Expression**: `concat(item()?['ReqKey'], ': $', formatNumber(float(item()?['Cost']), '0.00'), ' for ', string(item()?['AllocWeight']), 'g')`
+32. Switch the Select action to **text mode**: click the toggle icon (the small `T` or text-mode switch) on the right side of the **Map** row so the mapping shows a single text field instead of key/value columns. Paste this expression:
+
+```
+concat(item()?['ReqKey'], ': $', formatNumber(float(item()?['Cost']), '0.00'), ' for ', string(item()?['AllocWeight']), 'g')
+```
+
+> **Why text mode?** In text mode, Select produces a flat array of strings (e.g., `["REQ-00164: $21.18 for 181.41g", "REQ-00165: $5.42 for 54.2g"]`) instead of an array of objects. This lets you `join()` directly without extraction hacks.
 
 33. Add a **Compose**, rename to: `BatchAllocationSummary`
-34. **Inputs** — **Expression**: `join(body('Allocation_Summary_Lines')?['line'], ' | ')`
+34. **Inputs** — **Expression**: `join(body('Allocation_Summary_Lines'), ' | ')`
 
 > **What this produces:** `REQ-00164: $21.18 for 181.41g | REQ-00165: $5.42 for 54.2g`
-
-Wait, the Select action with a single mapped property produces an array of objects like `[{"line": "..."}, ...]`. To join just the line values, I need to extract them. Let me use a different approach.
-
-Actually, I should use the Select action in "text mode" (map from → to) or use an expression. Let me fix this.
-
-34. **Inputs** — **Expression**:
-
-```
-join(xpath(xml(json(concat('{"a":', string(body('Allocation_Summary_Lines')), '}'))), '//line/text()'), ' | ')
-```
-
-> **Note:** If the xpath approach is confusing, you can instead use an Apply to Each loop to build the summary string in a variable (same pattern as the plate labels below).
 
 #### Action 9: Build Plate Snapshot Texts
 
@@ -485,21 +477,21 @@ Inside the loop:
 **If yes:**
 
 42. **Select**, rename to: `Detail Plate Labels`
-43. **From:** `body('Detail_Completed_Plates')` — Map: `label` = `coalesce(item()?['DisplayLabel'], item()?['PlateKey'])`
+43. **From:** `body('Detail_Completed_Plates')` — switch to **text mode** (same toggle as Allocation Summary Lines above), then paste: `coalesce(item()?['DisplayLabel'], item()?['PlateKey'])`
 
 44. **Select**, rename to: `Detail Plate Keys`
-45. **From:** `body('Detail_Completed_Plates')` — Map: `key` = `item()?['PlateKey']`
+45. **From:** `body('Detail_Completed_Plates')` — switch to **text mode**, then paste: `item()?['PlateKey']`
 
 46. **Set variable**: `varPlateLabelsText` — **Expression**:
 
 ```
-concat(variables('varPlateLabelsText'), if(empty(variables('varPlateLabelsText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(xpath(xml(json(concat('{"a":', string(body('Detail_Plate_Labels')), '}'))), '//label/text()'), ', '))
+concat(variables('varPlateLabelsText'), if(empty(variables('varPlateLabelsText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Labels'), ', '))
 ```
 
 47. **Set variable**: `varPlateKeysText` — **Expression**:
 
 ```
-concat(variables('varPlateKeysText'), if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(xpath(xml(json(concat('{"a":', string(body('Detail_Plate_Keys')), '}'))), '//key/text()'), ', '))
+concat(variables('varPlateKeysText'), if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Keys'), ', '))
 ```
 
 **If no (no completed plates):** Leave empty.
@@ -587,8 +579,14 @@ Inside the loop:
     - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** `BuildPlates`
     - **Id:** select **Expression**: `items('Update_Batch_Plate')?['ID']`
+    - **RequestID:** select **Expression**: `items('Update_Batch_Plate')?['RequestID']`
+    - **PlateKey:** select **Expression**: `items('Update_Batch_Plate')?['PlateKey']`
+    - **Machine Value:** select **Expression**: `items('Update_Batch_Plate')?['Machine']?['Value']`
+    - **Title:** select **Expression**: `items('Update_Batch_Plate')?['Title']`
     - **Status Value:** `Picked Up`
 21. **Configure retry policy.**
+
+> **Why echo back required fields?** The Power Automate designer requires values for all columns marked as required in the SharePoint list (RequestID, PlateKey, Machine, Title). The values come from the loop item — the plates were already loaded by `Get All Batch Plates` in Step 4, so no extra API calls are needed. SharePoint's PATCH semantics would preserve unspecified fields at the API level, but the designer validates required fields before saving.
 
 **If no (no plates):** Leave empty.
 
