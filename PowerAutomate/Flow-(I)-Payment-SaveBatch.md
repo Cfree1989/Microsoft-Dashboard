@@ -205,21 +205,94 @@ Use this retry policy on all SharePoint **Get item**, **Get items**, **Create it
 
 **What this does:** Creates the tracking variables for flow result, allocation calculations, and per-request detail collection.
 
-Create each variable using **Initialize variable**. Add them in this order below the trigger:
+Add these actions immediately below the trigger. For each one:
+1. Click **+ Add an action**
+2. Search for **Initialize variable**
+3. Rename the action as shown below
+4. Fill in **Name**, **Type**, and **Value**
 
-| # | Rename to | Type | Initial Value |
-|---|-----------|------|---------------|
-| 1 | Initialize varSuccess | Boolean | `true` |
-| 2 | Initialize varMessage | String | (blank) |
-| 3 | Initialize varPaymentID | Integer | `0` |
-| 4 | Initialize varTotalEstWeight | Float | `0` |
-| 5 | Initialize varSumAllocatedWeights | Float | `0` |
-| 6 | Initialize varTotalCost | Float | `0` |
-| 7 | Initialize varBatchDetails | Array | `[]` |
-| 8 | Initialize varPlateLabelsText | String | (blank) |
-| 9 | Initialize varPlateKeysText | String | (blank) |
+#### Action 1: Initialize varSuccess
 
-> **Important:** `varBatchDetails` will hold one JSON object per request with the calculated allocation. Initialize it with `[]` (empty array) using the Expression tab.
+- **Rename to:** `Initialize varSuccess`
+- **Name:** `varSuccess`
+- **Type:** `Boolean`
+- **Value:** `true`
+
+> **What this is for:** Master pass/fail flag for the whole flow. Every later `Gate: ...` action checks this variable before doing more work.
+
+#### Action 2: Initialize varMessage
+
+- **Rename to:** `Initialize varMessage`
+- **Name:** `varMessage`
+- **Type:** `String`
+- **Value:** leave blank
+
+> **What this is for:** Human-readable success or error message returned to Power Apps at the end.
+
+#### Action 3: Initialize varPaymentID
+
+- **Rename to:** `Initialize varPaymentID`
+- **Name:** `varPaymentID`
+- **Type:** `Integer`
+- **Value:** `0`
+
+> **What this is for:** Stores the ID of the consolidated `Payments` row after it is created.
+
+#### Action 4: Initialize varTotalEstWeight
+
+- **Rename to:** `Initialize varTotalEstWeight`
+- **Name:** `varTotalEstWeight`
+- **Type:** `Float`
+- **Value:** `0`
+
+> **What this is for:** Running total of all selected requests' `EstimatedWeight` values.
+
+#### Action 5: Initialize varSumAllocatedWeights
+
+- **Rename to:** `Initialize varSumAllocatedWeights`
+- **Name:** `varSumAllocatedWeights`
+- **Type:** `Float`
+- **Value:** `0`
+
+> **What this is for:** Running total of the non-last allocation weights so the final request can absorb any rounding drift.
+
+#### Action 6: Initialize varTotalCost
+
+- **Rename to:** `Initialize varTotalCost`
+- **Name:** `varTotalCost`
+- **Type:** `Float`
+- **Value:** `0`
+
+> **What this is for:** Running total of all per-request costs. This becomes the consolidated `Payments.Amount`.
+
+#### Action 7: Initialize varBatchDetails
+
+- **Rename to:** `Initialize varBatchDetails`
+- **Name:** `varBatchDetails`
+- **Type:** `Array`
+- **Value:** click the **Expression** tab and enter `[]`
+
+> **What this is for:** Holds one JSON object per request with the calculated allocation details. Later loops read from this array to build summaries and update each request.
+
+#### Action 8: Initialize varPlateLabelsText
+
+- **Rename to:** `Initialize varPlateLabelsText`
+- **Name:** `varPlateLabelsText`
+- **Type:** `String`
+- **Value:** leave blank
+
+> **What this is for:** Final combined text snapshot of the plate display labels written onto the consolidated payment row.
+
+#### Action 9: Initialize varPlateKeysText
+
+- **Rename to:** `Initialize varPlateKeysText`
+- **Name:** `varPlateKeysText`
+- **Type:** `String`
+- **Value:** leave blank
+
+> **What this is for:** Final combined text snapshot of the plate keys written onto the consolidated payment row.
+
+> **Critical build check:** `varBatchDetails` must be initialized as the array expression `[]`, not the text string `"[]"`. If this variable is created as text instead of array, all later append/select actions that depend on it will fail.
 
 ---
 
