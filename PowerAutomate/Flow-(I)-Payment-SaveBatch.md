@@ -742,14 +742,12 @@ Leave the **False** branch of `Has Ineligible Plates` empty.
 Inside the loop:
 
 5. Click **+ Add an action** inside the loop
-6. Search for and select **Set variable**
+6. Search for and select **Increment variable**
 7. Rename to: `Add Est Weight`
 8. **Name:** select `varTotalEstWeight` from the dropdown
-9. **Value:** click the **Expression** tab and paste:
+9. **Value:** click the **Expression** tab and paste: `coalesce(items('Sum_Estimated_Weights')?['EstimatedWeight'], 0)`
 
-```
-add(variables('varTotalEstWeight'), coalesce(items('Sum_Estimated_Weights')?['EstimatedWeight'], 0))
-```
+> **Why Increment variable?** Power Automate does not allow a Set variable action to reference its own current value (self-reference error). Increment variable handles the addition internally — it adds the Value to the variable's current value without you needing to write the `add()` wrapper.
 
 #### Action 3: LastItemID
 
@@ -801,12 +799,18 @@ item()?['ID']
 3. Rename to: `Calculate Non Last Items`
 4. **Select an output:** click the **Expression** tab and paste: `body('Non_Last_Items')`
 
-Inside the loop, add these actions in order:
+Inside the loop, add Actions 6a–6f in order:
 
-5. Click **+ Add an action** inside the loop
-6. Search for and select **Compose**
-7. Rename to: `NonLastAllocWeight`
-8. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+---
+
+#### Action 6a: NonLastAllocWeight
+
+**Where to add this:** Inside the `Calculate Non Last Items` loop.
+
+1. Click **+ Add an action** inside the loop
+2. Search for and select **Compose**
+3. Rename to: `NonLastAllocWeight`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(greater(variables('varTotalEstWeight'), 0), round(div(mul(coalesce(items('Calculate_Non_Last_Items')?['EstimatedWeight'], 0), triggerBody()['number']), variables('varTotalEstWeight')), 2), round(div(triggerBody()['number'], outputs('BatchItemCount')), 2))
@@ -814,10 +818,16 @@ if(greater(variables('varTotalEstWeight'), 0), round(div(mul(coalesce(items('Cal
 
 > **What this calculates:** `Round((EstimatedWeight / TotalEstWeight) × CombinedWeight, 2)`. If total estimated weight is zero, divides evenly.
 
-9. Click **+ Add an action** below `NonLastAllocWeight`
-10. Search for and select **Compose**
-11. Rename to: `NonLastCost`
-12. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+---
+
+#### Action 6b: NonLastCost
+
+**Where to add this:** Below `NonLastAllocWeight`, still inside the `Calculate Non Last Items` loop.
+
+1. Click **+ Add an action** below `NonLastAllocWeight`
+2. Search for and select **Compose**
+3. Rename to: `NonLastCost`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(triggerBody()['boolean'], mul(max(triggerBody()['number_3'], mul(outputs('NonLastAllocWeight'), if(equals(items('Calculate_Non_Last_Items')?['Method']?['Value'], 'Resin'), triggerBody()['number_2'], triggerBody()['number_1']))), triggerBody()['number_4']), max(triggerBody()['number_3'], mul(outputs('NonLastAllocWeight'), if(equals(items('Calculate_Non_Last_Items')?['Method']?['Value'], 'Resin'), triggerBody()['number_2'], triggerBody()['number_1']))))
@@ -825,37 +835,62 @@ if(triggerBody()['boolean'], mul(max(triggerBody()['number_3'], mul(outputs('Non
 
 > **What this calculates:** `Max(MinimumCost, AllocWeight × rate) × discount`. Same formula as Flow H but per-item.
 
-13. Click **+ Add an action** below `NonLastCost`
-14. Search for and select **Set variable**
-15. Rename to: `Accumulate Alloc Weights`
-16. **Name:** select `varSumAllocatedWeights` from the dropdown
-17. **Value:** click the **Expression** tab and paste: `add(variables('varSumAllocatedWeights'), outputs('NonLastAllocWeight'))`
+---
 
-18. Click **+ Add an action** below `Accumulate Alloc Weights`
-19. Search for and select **Set variable**
-20. Rename to: `Accumulate Total Cost`
-21. **Name:** select `varTotalCost` from the dropdown
-22. **Value:** click the **Expression** tab and paste: `add(variables('varTotalCost'), outputs('NonLastCost'))`
+#### Action 6c: Accumulate Alloc Weights
 
-23. Click **+ Add an action** below `Accumulate Total Cost`
-24. Search for and select **Compose**
-25. Rename to: `NonLastDetail`
-26. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+**Where to add this:** Below `NonLastCost`, still inside the `Calculate Non Last Items` loop.
+
+1. Click **+ Add an action** below `NonLastCost`
+2. Search for and select **Increment variable**
+3. Rename to: `Accumulate Alloc Weights`
+4. **Name:** select `varSumAllocatedWeights` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `NonLastAllocWeight`
+
+---
+
+#### Action 6d: Accumulate Total Cost
+
+**Where to add this:** Below `Accumulate Alloc Weights`, still inside the `Calculate Non Last Items` loop.
+
+1. Click **+ Add an action** below `Accumulate Alloc Weights`
+2. Search for and select **Increment variable**
+3. Rename to: `Accumulate Total Cost`
+4. **Name:** select `varTotalCost` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `NonLastCost`
+
+---
+
+#### Action 6e: NonLastDetail
+
+**Where to add this:** Below `Accumulate Total Cost`, still inside the `Calculate Non Last Items` loop.
+
+1. Click **+ Add an action** below `Accumulate Total Cost`
+2. Search for and select **Compose**
+3. Rename to: `NonLastDetail`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 json(concat('{"ID":', string(items('Calculate_Non_Last_Items')?['ID']), ',"ReqKey":"', items('Calculate_Non_Last_Items')?['ReqKey'], '","AllocWeight":', string(outputs('NonLastAllocWeight')), ',"Cost":', string(outputs('NonLastCost')), ',"Method":"', items('Calculate_Non_Last_Items')?['Method']?['Value'], '"}'))
 ```
 
-27. Click **+ Add an action** below `NonLastDetail`
-28. Search for and select **Append to array variable**
-29. **Name:** select `varBatchDetails` from the dropdown
-30. **Value:** click the field, then select from **Dynamic content**: the output of `NonLastDetail`
+---
 
-(End of loop)
+#### Action 6f: Append Non-Last Detail
 
-#### Action 7: Calculate Last Item
+**Where to add this:** Below `NonLastDetail`, still inside the `Calculate Non Last Items` loop. This is the last action in the loop.
 
-**Where to add this:** Below `Calculate Non Last Items`, after the loop ends, still inside the **True** branch of `Gate: Calculate Allocations`.
+1. Click **+ Add an action** below `NonLastDetail`
+2. Search for and select **Append to array variable**
+3. Rename to: `Append Non-Last Detail`
+4. **Name:** select `varBatchDetails` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `NonLastDetail`
+
+(End of `Calculate Non Last Items` loop)
+
+#### Action 7: Last Item Only
+
+**Where to add this:** Below the `Calculate Non Last Items` loop, still inside the **True** branch of `Gate: Calculate Allocations`.
 
 1. Click **+ Add an action** below the `Calculate Non Last Items` loop
 2. Search for and select **Filter array**
@@ -870,10 +905,16 @@ item()?['ID']
 6. Set the **Operator** dropdown to: `is equal to`
 7. Click the right side, then select from **Dynamic content**: the output of `LastItemID`
 
-8. Click **+ Add an action** below `Last Item Only`
-9. Search for and select **Compose**
-10. Rename to: `LastAllocWeight`
-11. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+---
+
+#### Action 7a: LastAllocWeight
+
+**Where to add this:** Below `Last Item Only`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `Last Item Only`
+2. Search for and select **Compose**
+3. Rename to: `LastAllocWeight`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(greater(outputs('BatchItemCount'), 1), sub(triggerBody()['number'], variables('varSumAllocatedWeights')), triggerBody()['number'])
@@ -881,39 +922,65 @@ if(greater(outputs('BatchItemCount'), 1), sub(triggerBody()['number'], variables
 
 > **What this calculates:** `CombinedWeight − sum of all other allocated weights`. This absorbs rounding drift so the total always matches exactly.
 
-12. Click **+ Add an action** below `LastAllocWeight`
-13. Search for and select **Compose**
-14. Rename to: `LastCost`
-15. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+---
+
+#### Action 7b: LastCost
+
+**Where to add this:** Below `LastAllocWeight`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `LastAllocWeight`
+2. Search for and select **Compose**
+3. Rename to: `LastCost`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 if(triggerBody()['boolean'], mul(max(triggerBody()['number_3'], mul(outputs('LastAllocWeight'), if(equals(first(body('Last_Item_Only'))?['Method']?['Value'], 'Resin'), triggerBody()['number_2'], triggerBody()['number_1']))), triggerBody()['number_4']), max(triggerBody()['number_3'], mul(outputs('LastAllocWeight'), if(equals(first(body('Last_Item_Only'))?['Method']?['Value'], 'Resin'), triggerBody()['number_2'], triggerBody()['number_1']))))
 ```
 
-16. Click **+ Add an action** below `LastCost`
-17. Search for and select **Set variable**
-18. **Name:** select `varTotalCost` from the dropdown
-19. **Value:** click the **Expression** tab and paste: `add(variables('varTotalCost'), outputs('LastCost'))`
+---
 
-20. Click **+ Add an action** below the previous Set variable
-21. Search for and select **Compose**
-22. Rename to: `LastDetail`
-23. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+#### Action 7c: Add Last Cost
+
+**Where to add this:** Below `LastCost`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `LastCost`
+2. Search for and select **Increment variable**
+3. Rename to: `Add Last Cost`
+4. **Name:** select `varTotalCost` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `LastCost`
+
+---
+
+#### Action 7d: LastDetail
+
+**Where to add this:** Below `Add Last Cost`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `Add Last Cost`
+2. Search for and select **Compose**
+3. Rename to: `LastDetail`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 json(concat('{"ID":', string(first(body('Last_Item_Only'))?['ID']), ',"ReqKey":"', first(body('Last_Item_Only'))?['ReqKey'], '","AllocWeight":', string(outputs('LastAllocWeight')), ',"Cost":', string(outputs('LastCost')), ',"Method":"', first(body('Last_Item_Only'))?['Method']?['Value'], '"}'))
 ```
 
-24. Click **+ Add an action** below `LastDetail`
-25. Search for and select **Append to array variable**
-26. **Name:** select `varBatchDetails` from the dropdown
-27. **Value:** click the field, then select from **Dynamic content**: the output of `LastDetail`
+---
+
+#### Action 7e: Append Last Detail
+
+**Where to add this:** Below `LastDetail`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `LastDetail`
+2. Search for and select **Append to array variable**
+3. Rename to: `Append Last Detail`
+4. **Name:** select `varBatchDetails` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `LastDetail`
 
 #### Action 8: Build Allocation Summary
 
 **Where to add this:** Below `Calculate Last Item`, still inside the **True** branch of `Gate: Calculate Allocations`.
 
-1. Click **+ Add an action** below the last item's Append step
+1. Click **+ Add an action** below `Append Last Detail`
 2. Search for and select **Select** (Data Operation)
 3. Rename to: `Allocation Summary Lines`
 4. **From:** click the **Expression** tab and paste: `variables('varBatchDetails')`
@@ -944,18 +1011,19 @@ These loops build the `PlatesPickedUp` and `PlateIDsPickedUp` texts for the cons
 3. Rename to: `Build Plate Snapshots`
 4. **Select an output:** click the **Expression** tab and paste: `variables('varBatchDetails')`
 
-Inside the loop:
+Inside the loop, add Actions 9a–9h in order:
 
-**Where to add these inner actions:**
-- `Detail Completed Plates` goes inside the `Build Plate Snapshots` loop.
-- `Has Completed Plates` goes below `Detail Completed Plates`, still inside the `Build Plate Snapshots` loop.
-- `Detail Plate Labels`, `Detail Plate Keys`, `varPlateLabelsText`, and `varPlateKeysText` go inside the **True** branch of `Has Completed Plates`.
+---
 
-5. Click **+ Add an action** inside the loop
-6. Search for and select **Filter array**
-7. Rename to: `Detail Completed Plates`
-8. **From:** click the **Expression** tab and paste: `body('Get_All_Batch_Plates')?['value']`
-9. Click **Edit in advanced mode** (below the filter condition row) and paste:
+#### Action 9a: Detail Completed Plates
+
+**Where to add this:** Inside the `Build Plate Snapshots` loop.
+
+1. Click **+ Add an action** inside the loop
+2. Search for and select **Filter array**
+3. Rename to: `Detail Completed Plates`
+4. **From:** click the **Expression** tab and paste: `body('Get_All_Batch_Plates')?['value']`
+5. Click **Edit in advanced mode** (below the filter condition row) and paste:
 
 ```
 @and(equals(item()?['RequestID'], items('Build_Plate_Snapshots')?['ID']), equals(item()?['Status']?['Value'], 'Completed'))
@@ -963,55 +1031,111 @@ Inside the loop:
 
 > **Why advanced mode?** This filter matches on two fields at once (RequestID and Status). Basic mode only supports one comparison per row.
 
-10. Click **+ Add an action** below `Detail Completed Plates`
-11. Search for and select **Condition**
-12. Rename to: `Has Completed Plates`
-13. Click the left side of the condition, switch to the **Expression** tab, and paste:
+---
+
+#### Action 9b: Has Completed Plates
+
+**Where to add this:** Below `Detail Completed Plates`, still inside the `Build Plate Snapshots` loop.
+
+1. Click **+ Add an action** below `Detail Completed Plates`
+2. Search for and select **Condition**
+3. Rename to: `Has Completed Plates`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 length(body('Detail_Completed_Plates'))
 ```
 
-14. Set the **Operator** dropdown to: `is greater than`
-15. Type directly on the right side: `0`
+5. Set the **Operator** dropdown to: `is greater than`
+6. Type directly on the right side: `0`
 
-**True branch of `Has Completed Plates`:**
+Inside the **True** branch of `Has Completed Plates`, add Actions 9c–9h:
 
-16. Click **+ Add an action** inside the **True** branch
-17. Search for and select **Select** (Data Operation)
-18. Rename to: `Detail Plate Labels`
-19. **From:** click the **Expression** tab and paste: `body('Detail_Completed_Plates')`
-20. Switch to **text mode**: click the toggle icon (the small `T` or text-mode switch) on the right side of the **Map** row so the mapping shows a single text field instead of key/value columns
-21. Click the text field, switch to the **Expression** tab, and paste: `coalesce(item()?['DisplayLabel'], item()?['PlateKey'])`
+---
 
-22. Click **+ Add an action** below `Detail Plate Labels`
-23. Search for and select **Select** (Data Operation)
-24. Rename to: `Detail Plate Keys`
-25. **From:** click the **Expression** tab and paste: `body('Detail_Completed_Plates')`
-26. Switch to **text mode** (same toggle as above)
-27. Click the text field, switch to the **Expression** tab, and paste: `item()?['PlateKey']`
+#### Action 9c: Detail Plate Labels
 
-28. Click **+ Add an action** below `Detail Plate Keys`
-29. Search for and select **Set variable**
-30. **Name:** select `varPlateLabelsText` from the dropdown
-31. **Value:** click the **Expression** tab and paste:
+**Where to add this:** Inside the **True** branch of `Has Completed Plates`.
+
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Select** (Data Operation)
+3. Rename to: `Detail Plate Labels`
+4. **From:** click the **Expression** tab and paste: `body('Detail_Completed_Plates')`
+5. Switch to **text mode**: click the toggle icon (the small `T` or text-mode switch) on the right side of the **Map** row so the mapping shows a single text field instead of key/value columns
+6. Click the text field, switch to the **Expression** tab, and paste: `coalesce(item()?['DisplayLabel'], item()?['PlateKey'])`
+
+---
+
+#### Action 9d: Detail Plate Keys
+
+**Where to add this:** Below `Detail Plate Labels`, still inside the **True** branch of `Has Completed Plates`.
+
+1. Click **+ Add an action** below `Detail Plate Labels`
+2. Search for and select **Select** (Data Operation)
+3. Rename to: `Detail Plate Keys`
+4. **From:** click the **Expression** tab and paste: `body('Detail_Completed_Plates')`
+5. Switch to **text mode** (same toggle as above)
+6. Click the text field, switch to the **Expression** tab, and paste: `item()?['PlateKey']`
+
+---
+
+#### Action 9e: PlateLabelsAppend
+
+**Where to add this:** Below `Detail Plate Keys`, still inside the **True** branch of `Has Completed Plates`.
+
+1. Click **+ Add an action** below `Detail Plate Keys`
+2. Search for and select **Compose**
+3. Rename to: `PlateLabelsAppend`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-concat(variables('varPlateLabelsText'), if(empty(variables('varPlateLabelsText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Labels'), ', '))
+concat(if(empty(variables('varPlateLabelsText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Labels'), ', '))
 ```
 
-32. Click **+ Add an action** below the previous Set variable
-33. Search for and select **Set variable**
-34. **Name:** select `varPlateKeysText` from the dropdown
-35. **Value:** click the **Expression** tab and paste:
+> **Why a Compose first?** Power Automate does not allow an Append action to reference its own variable in the Value expression. The Compose reads the current value of `varPlateLabelsText` to decide the separator, then the Append action uses the Compose output without self-referencing.
+
+---
+
+#### Action 9f: Append Plate Labels
+
+**Where to add this:** Below `PlateLabelsAppend`, still inside the **True** branch of `Has Completed Plates`.
+
+1. Click **+ Add an action** below `PlateLabelsAppend`
+2. Search for and select **Append to string variable**
+3. Rename to: `Append Plate Labels`
+4. **Name:** select `varPlateLabelsText` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `PlateLabelsAppend`
+
+---
+
+#### Action 9g: PlateKeysAppend
+
+**Where to add this:** Below `Append Plate Labels`, still inside the **True** branch of `Has Completed Plates`.
+
+1. Click **+ Add an action** below `Append Plate Labels`
+2. Search for and select **Compose**
+3. Rename to: `PlateKeysAppend`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-concat(variables('varPlateKeysText'), if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Keys'), ', '))
+concat(if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_Snapshots')?['ReqKey'], ': ', join(body('Detail_Plate_Keys'), ', '))
 ```
 
-**False branch of `Has Completed Plates` (this request has no completed plates):** Leave empty.
+---
 
-(End of loop)
+#### Action 9h: Append Plate Keys
+
+**Where to add this:** Below `PlateKeysAppend`, still inside the **True** branch of `Has Completed Plates`. This is the last action in the True branch.
+
+1. Click **+ Add an action** below `PlateKeysAppend`
+2. Search for and select **Append to string variable**
+3. Rename to: `Append Plate Keys`
+4. **Name:** select `varPlateKeysText` from the dropdown
+5. **Value:** click the field, then select from **Dynamic content**: the output of `PlateKeysAppend`
+
+**False branch of `Has Completed Plates`:** Leave empty.
+
+(End of `Build Plate Snapshots` loop)
 
 **False branch (`varSuccess` was false) in `Gate: Calculate Allocations`:** Leave the **False** branch empty.
 
@@ -1055,7 +1179,13 @@ Inside the scope:
 1. Click **+ Add an action** inside the scope
 2. Search for and select **Compose**
 3. Rename to: `StaffShortName`
-4. Click the **Inputs** field, switch to the **Expression** tab, and paste: `concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(triggerBody()['text_6'], ' ')), 0, 1), '.')`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+
+```
+concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(triggerBody()['text_6'], ' ')), 0, 1), '.')
+```
+
+> **What this produces:** `"John S."` from `"John Smith"`.
 
 #### Action 2b: Create Consolidated Payment
 
@@ -1069,10 +1199,7 @@ Inside the scope:
    - **List Name:** type directly: `Payments`
    - **RequestID:** (leave blank — batch rows do not use RequestID)
    - **ReqKey:** (leave blank)
-   - **BatchRequestIDs:** click the **Expression** tab and paste: `replace(triggerBody()['text'], ' ', '')`
-
-> **Note:** Store IDs without spaces for cleaner data: `164,165` instead of `164, 165`. The app's Split formula handles both formats.
-
+   - **BatchRequestIDs:** click the **Expression** tab and paste: `replace(triggerBody()['text'], ' ', '')` — this stores IDs without spaces (`164,165` instead of `164, 165`); the app's Split formula handles both formats
    - **BatchReqKeys:** click the **Expression** tab and paste: `triggerBody()['text_1']`
    - **BatchAllocationSummary:** click the field, then select from **Dynamic content**: the output of `BatchAllocationSummary`
    - **TransactionNumber:** click the **Expression** tab and paste: `if(empty(trim(coalesce(triggerBody()['text_2'], ''))), null, trim(triggerBody()['text_2']))`
@@ -1110,52 +1237,63 @@ Inside the scope:
 3. Rename to: `Update Each Batch Detail`
 4. **Select an output:** click the **Expression** tab and paste: `variables('varBatchDetails')`
 
-Inside the loop:
+Inside the loop, add Actions 2d-1 through 2d-7 in order:
 
-**Where to add these inner actions:**
-- `This Request Completed Plates` goes inside the `Update Each Batch Detail` loop.
-- `Request Has Plates to Update` goes below `This Request Completed Plates`, still inside the `Update Each Batch Detail` loop.
-- `Update Batch Plate` goes inside the **True** branch of `Request Has Plates to Update`.
-- `Set Plate Picked Up` goes inside the `Update Batch Plate` loop.
-- `Find This Request` goes below `Request Has Plates to Update`, after both branches rejoin, still inside the `Update Each Batch Detail` loop.
-- `BatchStaffNotes` goes below `Find This Request`, still inside the `Update Each Batch Detail` loop.
-- `Update Batch Request` goes below `BatchStaffNotes`, still inside the `Update Each Batch Detail` loop.
+---
 
-5. Click **+ Add an action** inside the loop
-6. Search for and select **Filter array**
-7. Rename to: `This Request Completed Plates`
-8. **From:** click the **Expression** tab and paste: `body('Get_All_Batch_Plates')?['value']`
-9. Click **Edit in advanced mode** (below the filter condition row) and paste:
+#### Action 2d-1: This Request Completed Plates
+
+**Where to add this:** Inside the `Update Each Batch Detail` loop.
+
+1. Click **+ Add an action** inside the loop
+2. Search for and select **Filter array**
+3. Rename to: `This Request Completed Plates`
+4. **From:** click the **Expression** tab and paste: `body('Get_All_Batch_Plates')?['value']`
+5. Click **Edit in advanced mode** (below the filter condition row) and paste:
 
 ```
 @and(equals(item()?['RequestID'], items('Update_Each_Batch_Detail')?['ID']), equals(item()?['Status']?['Value'], 'Completed'))
 ```
 
-10. Click **+ Add an action** below `This Request Completed Plates`
-11. Search for and select **Condition**
-12. Rename to: `Request Has Plates to Update`
-13. Click the left side of the condition, switch to the **Expression** tab, and paste:
+---
+
+#### Action 2d-2: Request Has Plates to Update
+
+**Where to add this:** Below `This Request Completed Plates`, still inside the `Update Each Batch Detail` loop.
+
+1. Click **+ Add an action** below `This Request Completed Plates`
+2. Search for and select **Condition**
+3. Rename to: `Request Has Plates to Update`
+4. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
 ```
 length(body('This_Request_Completed_Plates'))
 ```
 
-14. Set the **Operator** dropdown to: `is greater than`
-15. Type directly on the right side: `0`
+5. Set the **Operator** dropdown to: `is greater than`
+6. Type directly on the right side: `0`
 
-**True branch of `Request Has Plates to Update`:**
+---
 
-16. Click **+ Add an action** inside the **True** branch
-17. Search for and select **Apply to each**
-18. Rename to: `Update Batch Plate`
-19. **Select an output:** click the **Expression** tab and paste: `body('This_Request_Completed_Plates')`
+#### Action 2d-3: Update Batch Plate
 
-Inside the `Update Batch Plate` loop:
+**Where to add this:** Inside the **True** branch of `Request Has Plates to Update`.
 
-20. Click **+ Add an action** inside the loop
-21. Search for and select **Update item** (SharePoint)
-22. Rename to: `Set Plate Picked Up`
-23. Fill in:
+1. Click **+ Add an action** inside the **True** branch
+2. Search for and select **Apply to each**
+3. Rename to: `Update Batch Plate`
+4. **Select an output:** click the **Expression** tab and paste: `body('This_Request_Completed_Plates')`
+
+---
+
+#### Action 2d-4: Set Plate Picked Up
+
+**Where to add this:** Inside the `Update Batch Plate` loop.
+
+1. Click **+ Add an action** inside the `Update Batch Plate` loop
+2. Search for and select **Update item** (SharePoint)
+3. Rename to: `Set Plate Picked Up`
+4. Fill in:
     - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** type directly: `BuildPlates`
     - **Id:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['ID']`
@@ -1164,38 +1302,56 @@ Inside the `Update Batch Plate` loop:
     - **Machine Value:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['Machine']?['Value']`
     - **Title:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['Title']`
     - **Status Value:** type directly: `Picked Up`
-24. **Configure retry policy.**
+5. **Configure retry policy.**
 
-> **Why echo back required fields?** The Power Automate designer requires values for all columns marked as required in the SharePoint list (RequestID, PlateKey, Machine, Title). The values come from the loop item — the plates were already loaded by `Get All Batch Plates` in Step 4, so no extra API calls are needed. SharePoint's PATCH semantics would preserve unspecified fields at the API level, but the designer validates required fields before saving.
+> **Why echo back required fields?** The Power Automate designer requires values for all columns marked as required in the SharePoint list (RequestID, PlateKey, Machine, Title). The values come from the loop item — the plates were already loaded by `Get All Batch Plates` in Step 4, so no extra API calls are needed.
 
-**False branch of `Request Has Plates to Update` (this request has no completed plates to mark as picked up):** Leave empty.
+**False branch of `Request Has Plates to Update`:** Leave empty.
 
-25. Click **+ Add an action** below `Request Has Plates to Update` (after both branches rejoin)
-26. Search for and select **Filter array**
-27. Rename to: `Find This Request`
-28. **From:** click the **Expression** tab and paste: `body('Get_Batch_Requests')?['value']`
-29. Click the left side of the filter condition, switch to the **Expression** tab, and paste:
+---
+
+#### Action 2d-5: Find This Request
+
+**Where to add this:** Below `Request Has Plates to Update`, after both branches rejoin, still inside the `Update Each Batch Detail` loop.
+
+1. Click **+ Add an action** below `Request Has Plates to Update` (after both branches rejoin)
+2. Search for and select **Filter array**
+3. Rename to: `Find This Request`
+4. **From:** click the **Expression** tab and paste: `body('Get_Batch_Requests')?['value']`
+5. Click the left side of the filter condition, switch to the **Expression** tab, and paste:
 
 ```
 item()?['ID']
 ```
 
-30. Set the **Operator** dropdown to: `is equal to`
-31. Click the right side, switch to the **Expression** tab, and paste: `items('Update_Each_Batch_Detail')?['ID']`
+6. Set the **Operator** dropdown to: `is equal to`
+7. Click the right side, switch to the **Expression** tab, and paste: `items('Update_Each_Batch_Detail')?['ID']`
 
-32. Click **+ Add an action** below `Find This Request`
-33. Search for and select **Compose**
-34. Rename to: `BatchStaffNotes`
-35. Click the **Inputs** field, switch to the **Expression** tab, and paste:
+---
+
+#### Action 2d-6: BatchStaffNotes
+
+**Where to add this:** Below `Find This Request`, still inside the `Update Each Batch Detail` loop.
+
+1. Click **+ Add an action** below `Find This Request`
+2. Search for and select **Compose**
+3. Rename to: `BatchStaffNotes`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
 concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), '', concat(first(body('Find_This_Request'))?['StaffNotes'], ' | ')), 'PAID (BATCH) by ', outputs('StaffShortName'), ': ', formatNumber(float(items('Update_Each_Batch_Detail')?['Cost']), '$#,##0.00'), ' for ', string(items('Update_Each_Batch_Detail')?['AllocWeight']), 'g on shared txn ', trim(triggerBody()['text_2']), ' covering ', triggerBody()['text_1'], ' - ', formatDateTime(utcNow(), 'M/d h:mmtt'))
 ```
 
-36. Click **+ Add an action** below `BatchStaffNotes`
-37. Search for and select **Update item** (SharePoint)
-38. Rename to: `Update Batch Request`
-39. Fill in:
+---
+
+#### Action 2d-7: Update Batch Request
+
+**Where to add this:** Below `BatchStaffNotes`, still inside the `Update Each Batch Detail` loop. This is the last action in the loop.
+
+1. Click **+ Add an action** below `BatchStaffNotes`
+2. Search for and select **Update item** (SharePoint)
+3. Rename to: `Update Batch Request`
+4. Fill in:
     - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** type directly: `PrintRequests`
     - **Id:** click the **Expression** tab and paste: `items('Update_Each_Batch_Detail')?['ID']`
@@ -1208,11 +1364,11 @@ concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), 
     - **LastAction Value:** type directly: `Status Change`
     - **LastActionBy Claims:** click the **Expression** tab and paste: `concat('i:0#.f|membership|', triggerBody()['text_5'])`
     - **LastActionAt:** click the **Expression** tab and paste: `utcNow()`
-40. **Configure retry policy.**
+5. **Configure retry policy.**
 
 > **Critical build check:** Do not save this action with only the **Id** and a few batch-only fields filled in. Make sure the final weight, final cost, payment date, student-own-material flag, staff notes, and audit fields are all mapped, or the request update will be incomplete even if the run looks green.
 
-(End of inner loop)
+(End of `Update Each Batch Detail` loop)
 
 ---
 
@@ -1314,6 +1470,8 @@ After wiring the flow, inspect these cards once in the designer or code view bef
 5. Every `Gate: ...` condition uses left-side expression `variables('varSuccess')`, right-side expression `true`, and has no extra blank row
 6. `Update Batch Request` includes the full field mapping, not just `Id`
 7. `Return Result` is outside all conditions and returns all three outputs
+8. All accumulator actions (`Add Est Weight`, `Accumulate Alloc Weights`, `Accumulate Total Cost`, `Add Last Cost`) use **Increment variable**, not Set variable — Set variable with a self-referencing `add()` expression will fail to save
+9. `PlateLabelsAppend` and `PlateKeysAppend` are **Compose** actions, and `Append Plate Labels` and `Append Plate Keys` use **Append to string variable** — do not use Set variable with a self-referencing `concat()` expression
 
 If any of those cards are missing their value mappings, the flow can appear to "run successfully" while writing nothing or while returning misleading defaults.
 
