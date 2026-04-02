@@ -1488,11 +1488,22 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 ```powerfx
 If(
     varBatchSelectMode && ThisItem.Status.Value = "Completed",
-    // Batch mode: toggle item in collection
+    // Batch mode: toggle item in collection (Filament and Resin cannot mix—same Method.Value only)
     If(
         ThisItem.ID in colBatchItems.ID,
         Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)),
-        Collect(colBatchItems, ThisItem)
+        If(
+            CountRows(colBatchItems) = 0,
+            Collect(colBatchItems, ThisItem),
+            If(
+                ThisItem.Method.Value = First(colBatchItems).Method.Value,
+                Collect(colBatchItems, ThisItem),
+                Notify(
+                    "Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.",
+                    NotificationType.Warning
+                )
+            )
+        )
     ),
     // Normal mode: select item for details (no action needed here - buttons handle modals)
     Set(varSelectedItem, ThisItem)
@@ -7186,7 +7197,18 @@ Trim(
 ```powerfx
 If(
     !(varSelectedItem.ID in colBatchItems.ID),
-    Collect(colBatchItems, varSelectedItem)
+    If(
+        CountRows(colBatchItems) = 0,
+        Collect(colBatchItems, varSelectedItem),
+        If(
+            varSelectedItem.Method.Value = First(colBatchItems).Method.Value,
+            Collect(colBatchItems, varSelectedItem),
+            Notify(
+                "Cannot mix Filament and Resin in one batch. Clear the batch or remove jobs until only one print method remains.",
+                NotificationType.Warning
+            )
+        )
+    )
 );
 Set(varBatchSelectMode, true);
 Set(varShowPaymentModal, 0);
@@ -7404,12 +7426,16 @@ Set(
         Coalesce(Trim(txtPaymentNotes.Text), ""),
         chkOwnMaterial.Value,
         chkPartialPickup.Value,
-        dpPaymentDate.SelectedDate
+        Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")
     )
 );
 
+// Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
 If(
-    varFlowResult.success = "true",
+    Or(
+        varFlowResult.success = true,
+        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
+    ),
 
     // === SUCCESS PATH ===
     Refresh(PrintRequests);
@@ -7479,7 +7505,9 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(H)-Payment-SaveSingle` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(H)-Payment-SaveSingle.md` for the full server-side implementation.
+> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(H)-Payment-SaveSingle` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(H)-Payment-SaveSingle.md` for the full server-side implementation. **Payment date:** pass **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** into the flow’s last argument so the trigger’s **Text** `PaymentDate` matches the flow spec; Flow H parses it with **inline `parseDateTime`** on the actions that need a datetime (**no Compose** — same pattern as Flow I).
+
+> **Power Fx date format:** In **`Text( date, format )`**, the month token is **lowercase `mm`**. Using **`"yyyy-MM-dd"`** (uppercase **`MM`**) emits the **literal characters** `MM` (e.g. **`2026-MM-02`**), which **`parseDateTime`** in the flow rejects. Use **`"yyyy-mm-dd"`** so the value is a real ISO-style string (e.g. **`2026-04-02`**).
 
 ### Troubleshooting: After adding Flow H / Flow I (App Checker errors)
 
@@ -7491,6 +7519,9 @@ Set(varLoadingMessage, "")
 | **Invalid argument type (Boolean). Expecting a Record** / **`IfError` has invalid arguments** | `Notify(...)` returns a **Boolean**. `'Flow-(C)-Action-LogAction'.Run(...)` returns a **Record**. Using **`IfError(Run, Notify)`** mixes types and fails under strict checking. | Use **`IfError(Run(...), Blank())`** inside a **`With({ wAudit: ... }, If(IsBlank(wAudit), Notify(...)))`** — same pattern as batch audit logging in **`btnBatchPaymentConfirm`**. |
 | **Invalid argument type (Boolean). Expecting a Record** / **Filter has invalid arguments** | `Filter`’s first argument must be a **table/collection**, not `true`/`false`. Often happens when an **`If(...)`** branch returns a Boolean instead of a table, e.g. `If(x, Filter(col, ...), false)` or `Filter(If(x, true, col), ...)`. | Make **both** branches of `If` return the same kind of value (both tables, or both records). Ensure `Filter( *first arg* , ...)` is never `Filter(chkSomething.Value, ...)` or `Filter(varBatchSelectMode, ...)`. |
 | **Flow name errors** | Flow title in Power Automate does not match the formula | In **Data** → flow must appear as **`Flow-(H)-Payment-SaveSingle`** and **`Flow-(I)-Payment-SaveBatch`**, or change the quoted name in every `'...'.Run(` to match **exactly** (including spelling and hyphens). |
+| **`TriggerInputSchemaMismatch`** / *String `M/D/YYYY` does not validate against format `date`* | The flow trigger still has **PaymentDate** as type **Date** while Power Apps sends a **locale** date string, or the app still passes **`SelectedDate`** instead of an ISO string | Align with **`Flow-(H)-Payment-SaveSingle.md`** / **`Flow-(I)-Payment-SaveBatch.md`**: trigger **PaymentDate** = **Text**; app passes **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** (single) or **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`** (batch). **Both H and I:** inline **`parseDateTime`** where SharePoint needs a datetime (**no payment-date Compose**). Remove and re-add the flow under **Data** after changing the trigger. |
+| **`parseDateTime`… `'2026-MM-02'` was not valid** / **`InvalidTemplate`** on **Create Consolidated Payment** (batch) | **`Text`** used **`"yyyy-MM-dd"`**; **`MM`** is **not** the month in Power Fx and is written literally | Use **`"yyyy-mm-dd"`** (lowercase **`mm`**) so the trigger receives a numeric month (e.g. **`2026-04-02`**). See **Power Fx date format** note above. |
+| **Red error banner but text says “Batch payment saved.” / success wording** | **`Respond to a Power App`** returns **`Success`** as **`string(bool)`**, which is often **`"True"`** (capital **T**). **`varFlowResult.success = "true"`** is **false**, so the app takes the **failure** branch and calls **`Notify(..., NotificationType.Error)`** with the success **message** | Use the **`Or(varFlowResult.success = true, Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true")`** pattern in **`btnPaymentConfirm`** / **`btnBatchPaymentConfirm`** (this spec), **or** set the flow output to **`toLower(string(variables('varSuccess')))`** so the string is always lowercase. |
 
 **Correct split (this spec):** Single checkout → **`btnPaymentConfirm`** calls **`'Flow-(H)-Payment-SaveSingle'.Run(...)`** using **`varSelectedItem`** and the payment modal fields. Batch checkout → **`btnBatchPaymentConfirm`** calls **`'Flow-(I)-Payment-SaveBatch'.Run(...)`** using **`colBatchItems`**. Do not route both through one button unless every `If` branch passes valid types into `Filter` / `.Run`.
 
@@ -8019,26 +8050,26 @@ Set(varLoadingMessage, "")
 >
 > ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: validate and close each selected request, then write one consolidated `Payments` row for the real-world checkout. The per-request allocation details belong in the saved batch fields and request rollups, not in duplicate ledger rows.
 >
-> ⚠️ **Pricing note:** Batch weight is still allocated across the selected requests proportionally, but each request's saved allocation must still be priced using its own `Method.Value` (`Filament` vs `Resin`) before the consolidated ledger row is written.
+> ⚠️ **Pricing note:** Batch weight is allocated **proportionally** across the selected requests. **Filament and Resin are not batched together** (see **Batch Eligibility Rules**), so every row shares one `Method.Value` and comparable **EstimatedWeight** units—no mixing mL and grams in the same checkout.
 >
 > ⚠️ **Stable identity rule:** Any request with build plates should still persist `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text, but that snapshot is operational context only. If plates are later re-sliced or replaced, the `Payments` row remains the canonical history.
 
 > ⚠️ **Reminder:** Use Classic controls as described in Step 10. Classic TextInput uses `.Text`, Classic Button uses `Fill`/`Color` properties.
 
-### Control Hierarchy (Container-Based)
-
-```
-
 ### Batch Eligibility Rules
 
 - Only requests currently in `Completed` status may enter batch mode.
-- Batch selections **may mix** `Filament` and `Resin` in one checkout. Staff enter **one combined pickup weight in grams**; `Flow-(I)-Payment-SaveBatch` and the batch modal (`lblBatchCostValue`) allocate that total **proportionally** by each row's `EstimatedWeight`, then price each allocation using that row's `Method.Value` (`varFilamentRate` vs `varResinGramRate`).
-- **Unit caveat:** Proportional split assumes every selected row's `EstimatedWeight` is **comparable** (e.g. all grams for billing). If resin rows store **mL** and filament rows **grams** in the same SharePoint column, the default `Sum(colBatchItems, EstimatedWeight)` and the >50% deviation logic are **not reliable**—prefer same-method batches, normalize stored estimates, or set **Combined Weight** explicitly with that limitation in mind.
+- **Single print method per batch.** Selections **must not mix** `Filament` and `Resin`. The gallery blocks adding a second method; **Process Batch Payment** and **`Flow-(I)-Payment-SaveBatch`** also reject mixed batches. Staff process mixed-method pickups as **separate** checkouts (or use single-item payment). This keeps **EstimatedWeight** sums and proportional allocation meaningful (filament in **g**, resin estimates often in **mL**—never added together).
+- Staff enter **one combined pickup total** in **Combined weight**; `Flow-(I)-Payment-SaveBatch` and `lblBatchCostValue` allocate it **proportionally** by each row's `EstimatedWeight` and apply **`varFilamentRate`** or **`varResinGramRate`** according to the **shared** method for that batch.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
 - Requests without build plates remain supported for backward compatibility; they still move to `Paid & Picked Up` and contribute one allocation entry to the consolidated ledger row.
 - Each real-world batch checkout creates exactly one `Payments` row with shared `TransactionNumber`, `PayerName`, `PaymentDate`, and `RecordedAt`, because accounting treats the batch as one transaction.
+
+### Control Hierarchy (Container-Based)
+
+```
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
     ├── btnBatchPaymentConfirm    ← Record Batch Payment button
@@ -8053,7 +8084,7 @@ scrDashboard
     ├── txtBatchPayerName         ← Shared payer name input
     ├── lblBatchPayerNameLabel    ← "Payer Name"
     ├── txtBatchWeight            ← Combined pickup weight input
-    ├── lblBatchWeightLabel       ← "Combined Weight (grams)"
+    ├── lblBatchWeightLabel       ← "Combined weight" (same unit family as estimates: g for filament, g weighed at pickup for resin batches)
     ├── txtBatchTransaction       ← Transaction number input
     ├── lblBatchTransLabel        ← "Transaction Number"
     ├── ddBatchPaymentType        ← Payment type dropdown
@@ -8505,7 +8536,7 @@ If(
 )
 ```
 
-> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. **All-resin** batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams. **Mixed-method** batches (not every row is Resin) follow the filament-style deviation path against `Sum(colBatchItems, EstimatedWeight)`—only meaningful when those estimates share a comparable unit.
+> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. **All-resin** batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams. **Mixed Filament + Resin in one batch is blocked** in the gallery and in `Flow-(I)-Payment-SaveBatch`, so this label logic only runs for **homogeneous** batches.
 
 ---
 
@@ -8855,12 +8886,16 @@ Set(
         ddBatchStaff.Selected.MemberEmail,
         ddBatchStaff.Selected.MemberName,
         chkBatchOwnMaterial.Value,
-        dpBatchPaymentDate.SelectedDate
+        Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")
     )
 );
 
+// Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
 If(
-    varFlowResult.success = "true",
+    Or(
+        varFlowResult.success = true,
+        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
+    ),
 
     // === SUCCESS PATH ===
     Refresh(PrintRequests);
@@ -8918,7 +8953,7 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(I)-Payment-SaveBatch` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(I)-Payment-SaveBatch.md` for the full server-side implementation.
+> ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(I)-Payment-SaveBatch` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(I)-Payment-SaveBatch.md` for the full server-side implementation. **Payment date:** pass **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`** as the last `.Run` argument (same **lowercase `mm`** rule as single payment — not **`"yyyy-MM-dd"`**); the flow parses it with **inline `parseDateTime`** on the SharePoint actions (no Compose).
 
 > ⚠️ **Division-by-Zero Protection:** If total estimated weight is 0 (e.g., all items have no estimates), the weight and cost are distributed evenly across all items instead of using proportional calculation.
 
@@ -8926,7 +8961,7 @@ Set(varLoadingMessage, "")
 >
 > 💡 **Transaction number guidance:** For batch payments, `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
 >
-> 💡 **Mixed-method pricing guidance:** The cost preview and each saved request allocation now branch on each request's `Method.Value`, so resin requests are not accidentally charged at the filament rate before the consolidated total is written.
+> 💡 **Single-method batch pricing:** The batch modal and `Flow-(I)-Payment-SaveBatch` only run when every selected row shares the same `Method.Value`, so the live cost preview and saved allocations use one rate family (`varFilamentRate` or `varResinGramRate`) for the whole checkout.
 >
 > 💡 **All-or-nothing:** If any request in the batch fails validation, the entire batch is rejected and nothing is written. There is no partial success or retry of subsets. Staff retries the whole batch.
 >
@@ -8937,6 +8972,12 @@ Set(varLoadingMessage, "")
 ### Troubleshooting: Batch Payment Modal Errors
 
 If you see formula errors after building this modal, here are the most common causes and fixes:
+
+#### Strange estimated total vs. total cost (e.g. mL + grams), or modal stays open after “success”
+
+**Cause:** **Filament** and **Resin** were previously allowed in one batch; **EstimatedWeight** for resin is often **mL** while filament is **grams**, so summing estimates and splitting proportionally produced misleading UI and odd totals.
+
+**Fix:** This spec **blocks mixed-method batches** in the gallery, on **Process Batch Payment**, and in **`Flow-(I)-Payment-SaveBatch`**. Rebuild those formulas and publish. For the modal not closing after payment, also confirm **`btnBatchPaymentConfirm`** uses the **`Or(varFlowResult.success = true, Lower(Trim(...)) = "true")`** success test and the flow’s **Respond** action uses **`toLower(string(variables('varSuccess')))`** so the success branch actually runs.
 
 #### Error: "Name isn't valid. 'Text' isn't recognized."
 
@@ -11750,10 +11791,17 @@ Notify("Batch selection cancelled.", NotificationType.Information)
 40. Set **OnSelect:**
 
 ```powerfx
-Set(varShowBatchPaymentModal, 1)
+If(
+    CountRows(Distinct(colBatchItems, Method.Value)) > 1,
+    Notify(
+        "Cannot open batch payment: selection mixes Filament and Resin. Remove items until only one print method remains.",
+        NotificationType.Warning
+    ),
+    Set(varShowBatchPaymentModal, 1)
+)
 ```
 
-> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight and transaction number for all selected items.
+> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight and transaction number for all selected items. The **`Distinct`** guard enforces **one `Method.Value` per batch** (defense in depth if data ever drifts).
 
 ---
 
@@ -14024,14 +14072,12 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 6. **Verify:** `BatchRequestIDs`, `BatchReqKeys`, and `BatchAllocationSummary` preserve the per-request split
 7. **Verify:** Both requests move to `Paid & Picked Up` and keep their own allocated `FinalWeight` / `FinalCost`
 
-### Scenario 22C: Mixed Filament and Resin in One Batch
+### Scenario 22C: Filament and Resin Cannot Share One Batch
 
-1. Select one completed **Filament** request and one completed **Resin** request whose `EstimatedWeight` values are **comparable** (e.g. both stored in grams for billing—not mL mixed with grams in the same field)
-2. Enter combined pickup weight in grams and complete payment fields as usual
-3. Click **Record Batch Payment**
-4. **Verify:** Only one consolidated `Payments` row is created
-5. **Verify:** `BatchAllocationSummary` shows each `ReqKey` with allocated grams and dollars, with filament lines priced at the filament rate and resin lines at `varResinGramRate`
-6. **Verify:** Sum of allocated weights equals the entered combined weight and total charged matches the batch modal preview
+1. Enter batch mode and select a completed **Filament** request, then try to add a completed **Resin** request (or the reverse)
+2. **Verify:** A **Warning** notification explains that Filament and Resin cannot mix; the second job is **not** added (or **Process Batch Payment** refuses to open if both slipped in from legacy data)
+3. **Verify:** Completing two jobs that use different methods requires **two** checkouts (or single-item payment), not one consolidated batch row
+4. **Optional (flow):** If a mixed ID list is sent anyway, **Verify:** `Flow-(I)-Payment-SaveBatch` fails with the mixed-method message and writes nothing
 
 ### Scenario 23: Batch Item Already Fully Picked Up
 

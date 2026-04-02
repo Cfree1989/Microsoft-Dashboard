@@ -23,6 +23,7 @@ If the `Payments` write fails, nothing else is written and the flow returns fail
 - `SharePoint/BuildPlates-List-Setup.md`
 - `SharePoint/PrintRequests-List-Setup.md`
 - `PowerApps/StaffDashboard-App-Spec.md` — `btnPaymentConfirm.OnSelect`
+- `PowerAutomate/Flow-(I)-Payment-SaveBatch.md` — **parity:** no payment-date **Compose** under the trigger — **inline `parseDateTime`** on each action that needs it; Power Apps **`Text`** → **`"yyyy-mm-dd"`**; workflow **`parseDateTime`** third arg **`'yyyy-MM-dd'`**; **Respond** **`Success`** = **`toLower(string(variables('varSuccess')))`**
 - `PowerAutomate/Flow-(C)-Action-LogAction.md` — audit logging (still called by the app after this flow succeeds)
 
 ---
@@ -51,9 +52,11 @@ Add inputs in the exact order listed below. The expression column shows how to r
 | 16 | PaymentNotes | Text | `triggerBody()['text_9']` | Optional staff payment notes |
 | 17 | StudentOwnMaterial | Yes/No | `triggerBody()['boolean']` | Whether the student provided their own material |
 | 18 | IsPartialPickup | Yes/No | `triggerBody()['boolean_1']` | Whether this is a partial pickup (do not close the request) |
-| 19 | PaymentDate | Date | `triggerBody()['date']` | Business date of the payment |
+| 19 | PaymentDate | Text | `triggerBody()['text_10']` | ISO-style **full date** from Power Apps: `Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")` (**lowercase `mm`** — see **Parsed payment date** under Step 1). Convert to SharePoint **datetime** with **inline `parseDateTime`** on **Create Payment** and in **`NewPaymentDate`** (no Compose — same as **Flow I**). |
 
 > **Important:** Add inputs in this exact order. Expressions like `triggerBody()['number_1']` depend on the order you add inputs of each type. If you add Weight before RequestID, `number` and `number_1` will be swapped and every expression that references them will point to the wrong input.
+
+> **Why input 19 is Text, not Date:** Same as **Flow-(I)-Payment-SaveBatch** — Power Apps often sends a **locale** date string; the trigger **Date** type expects a proper calendar date and can throw **`TriggerInputSchemaMismatch`**. With this table, **PaymentDate** is the **11th** text input (`text_10` after `text` … `text_9`). If your trigger order differs, confirm the key on a failed run’s trigger output.
 
 ---
 
@@ -213,17 +216,35 @@ Use this retry policy on all SharePoint **Get item**, **Get items**, **Create it
 | 17 | + Add an input → Yes/No | StudentOwnMaterial |
 | 18 | + Add an input → Yes/No | IsPartialPickup |
 
-**Date input (add last):**
+**Text input (payment date — add last):**
 
 | # | Click | Rename to |
 |---|-------|-----------|
-| 19 | + Add an input → Date | PaymentDate |
+| 19 | + Add an input → Text | PaymentDate |
+
+Power Apps must pass **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** as this argument (see `StaffDashboard-App-Spec.md`, **`btnPaymentConfirm.OnSelect`**).
 
 ---
 
 ## Step 1: Initialize Variables
 
-**What this does:** Creates three variables the flow uses to track whether things are going well, what message to return, and the ID of the payment record if one is created.
+**What this does:** Creates the three variables the flow uses to track success, the message returned to Power Apps, and the payment row ID. **Payment date** is **not** parsed in a Compose here — same pattern as **`Flow-(I)-Payment-SaveBatch`**: use the **Parsed payment date** expression **inline** wherever a **datetime** is needed (see below), so the designer never depends on a Compose directly under the trigger (which can get a bad **`runAfter`** in code view).
+
+### Parsed payment date (inline expression)
+
+Use this **exact** expression anywhere you need the trigger’s payment date as a **datetime** for SharePoint (copy-paste into **`NewPaymentDate`** and **Create Payment** → **PaymentDate** — no separate Compose):
+
+```
+parseDateTime(trim(coalesce(triggerBody()?['text_10'], '')), 'en-US', 'yyyy-MM-dd')
+```
+
+> **Parameter order:** Workflow **`parseDateTime`** is **`('<timestamp>', '<locale>'?, '<format>'?)`** — use **`'en-US'`** then **`'yyyy-MM-dd'`**. Swapping them makes **`'yyyy-MM-dd'`** be read as a locale and fails at runtime.
+
+> **Power Apps vs workflow (month token):** In canvas apps, **`Text( date, "yyyy-mm-dd")`** uses **lowercase `mm`** for month. **`"yyyy-MM-dd"`** in **`Text`** outputs literal **`MM`** (e.g. **`2026-MM-02`**). In **this** expression’s third argument, **`'yyyy-MM-dd'`** must keep **uppercase `MM`**: workflow **`parseDateTime`** format follows **.NET-style** rules where **`mm`** means **minutes**, not month. Same split as **`Flow-(I)-Payment-SaveBatch.md`**.
+
+> **Why no Compose?** Matches **Flow I**: a Compose directly under the trigger sometimes ends up with an empty **`runAfter`** in code view, and the new designer may not let you fix it. Inlining **`parseDateTime`** avoids **`outputs('...')`** references entirely.
+
+> **If this expression fails at runtime:** Confirm the trigger’s internal key for **PaymentDate** on a failed run. Replace **`text_10`** if needed. **`text_10`** is correct when inputs **7–16** are exactly the ten text fields in the Input Reference table and **19** is **PaymentDate** (Text).
 
 #### Action 1: Initialize varSuccess
 
@@ -735,10 +756,10 @@ add(coalesce(body('Get_Current_Request')?['FinalCost'], 0), outputs('FinalCost')
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-if(and(not(empty(body('Get_Current_Request')?['PaymentDate'])), greater(ticks(body('Get_Current_Request')?['PaymentDate']), ticks(triggerBody()['date']))), body('Get_Current_Request')?['PaymentDate'], triggerBody()['date'])
+if(and(not(empty(body('Get_Current_Request')?['PaymentDate'])), greater(ticks(body('Get_Current_Request')?['PaymentDate']), ticks(parseDateTime(trim(coalesce(triggerBody()?['text_10'], '')), 'en-US', 'yyyy-MM-dd')))), body('Get_Current_Request')?['PaymentDate'], parseDateTime(trim(coalesce(triggerBody()?['text_10'], '')), 'en-US', 'yyyy-MM-dd'))
 ```
 
-> **What this calculates:** The later of the current `PaymentDate` and the new payment date.
+> **What this calculates:** The later of the current `PaymentDate` and the new payment date. **`parseDateTime(...)`** appears twice in the expression on purpose — same **Parsed payment date** snippet as **Step 1** and **Create Payment** (no shared Compose, matching **Flow I**).
 
 ---
 
@@ -852,7 +873,7 @@ Leave the **False** branch of `Gate: Calculate` empty.
    - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** `Payments`
    - **Amount:** select **Expression** tab: `outputs('FinalCost')`
-   - **PaymentDate:** select the `PaymentDate` input from trigger: `triggerBody()['date']`
+   - **PaymentDate:** click the **Expression** tab and paste: `parseDateTime(trim(coalesce(triggerBody()?['text_10'], '')), 'en-US', 'yyyy-MM-dd')` (same as **Step 1** — inline, no Compose). **Do not** use **`'yyyy-mm-dd'`** in this third argument: in **workflow** format strings **`MM`** = month and **`mm`** = **minutes**; lowercase here breaks parsing. Only the **Power Apps** `Text(..., "yyyy-mm-dd")` uses lowercase **`mm`** for month.)
    - **RecordedAt:** select **Expression** tab: `utcNow()`
    - **Weight:** select **Expression** tab: `triggerBody()['number_1']`
    - **RequestID:** select **Expression** tab: `triggerBody()['number']`
@@ -1089,7 +1110,7 @@ Leave the **False** branch of `Gate: Write Data` empty.
 3. Rename to: `Return Result`
 4. Click **+ Add an output** → **Text**
 5. **Title:** `Success`
-6. **Value:** click **Expression** tab: `string(variables('varSuccess'))`
+6. **Value:** click **Expression** tab: `toLower(string(variables('varSuccess')))`
 
 7. Click **+ Add an output** → **Text**
 8. **Title:** `Message`
@@ -1101,7 +1122,9 @@ Leave the **False** branch of `Gate: Write Data` empty.
 
 > **Important:** All three outputs are returned as text strings. In Power Apps, the returned properties are lowercase: `success`, `message`, `paymentid`.
 >
-> **Validation check:** A good success response is `success = "true"` (or `"True"` depending on serialization), `message = "Payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
+> **Success value must be lowercase:** Use **`toLower(string(variables('varSuccess')))`** for the **Success** output — **same as `Flow-(I)-Payment-SaveBatch` → Step 7: Return Result**. **`string(variables('varSuccess'))` alone** often yields **`"True"`**, which fails **`varFlowResult.success = "true"`** in the app and shows success text in an **error** banner. See `StaffDashboard-App-Spec.md` (**`btnPaymentConfirm`**) for the defensive **`Or(...)`** success check.
+>
+> **Validation check:** A good success response is `success = "true"`, `message = "Payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
 
 ---
 

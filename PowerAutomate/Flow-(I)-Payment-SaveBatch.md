@@ -45,9 +45,25 @@ Add inputs in the exact order listed below.
 | 11 | StaffEmail | Text | `triggerBody()['text_5']` | Email of the staff member processing the payment |
 | 12 | StaffName | Text | `triggerBody()['text_6']` | Full name of the staff member |
 | 13 | StudentOwnMaterial | Yes/No | `triggerBody()['boolean']` | Whether the student provided their own material |
-| 14 | PaymentDate | Date | `triggerBody()['date']` | Business date of the payment |
+| 14 | PaymentDate | Text | `triggerBody()['text_7']` | ISO-style **full date** from Power Apps: `Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")` (**lowercase `mm`** — see **Power Apps vs workflow** below). Convert to a datetime for SharePoint with the **Parsed payment date** expression below (inline on **Create Consolidated Payment** and **Update Batch Request** — no separate Compose). |
 
 > **Important:** Add inputs in this exact order. Expressions like `triggerBody()['number_1']` and `triggerBody()['text_3']` depend on the order you add inputs of each type. If you add them in a different order, those internal keys shift and every downstream expression can point to the wrong input.
+
+> **Why input 14 is Text, not Date:** The Power Apps → Power Automate connector often sends a **locale** date string (e.g. `4/2/2026`). The trigger schema for type **Date** only accepts a proper calendar date (e.g. `2026-04-02`), which surfaces as **`TriggerInputSchemaMismatch`** when the app sends a non-ISO string. Sending an ISO-style **text** value and parsing with **`parseDateTime`** in the SharePoint actions avoids that. If your trigger inputs do not match this table, open a failed run’s trigger outputs and confirm the real key for the payment date (it may not be `text_7`).
+
+### Parsed payment date (inline expression)
+
+Use this **exact** expression anywhere you need the trigger’s payment date as a **datetime** for SharePoint (copy-paste; repeat in each action — no Compose, so the designer never has to reference another action’s output):
+
+```
+parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')
+```
+
+> **Parameter order:** Workflow language defines **`parseDateTime('<timestamp>', '<locale>'?, '<format>'?)`** — **locale before format**. Passing **`'yyyy-MM-dd'`** as the second argument makes the engine treat it as a **locale** and fails with *unable to find the locale associated with 'yyyy-MM-dd'*.
+
+> **Power Apps vs workflow (month token):** In canvas apps, **`Text( date, "yyyy-mm-dd")`** uses **lowercase `mm`** for the month. **`"yyyy-MM-dd"`** in **`Text`** outputs **literal** `MM`, producing invalid values like **`2026-MM-02`** and **`parseDateTime`** fails. In **`parseDateTime`**’s **third** argument, keep **`'yyyy-MM-dd'`** (uppercase **`MM`**) — workflow format follows **.NET-style** rules where **`mm`** means **minutes**, not month; it parses strings such as **`2026-04-02`** from the app. **Flow H** uses the same pattern with **`text_10`** instead of **`text_7`**.
+
+> **Why no Compose?** A Compose directly under the trigger sometimes ends up with an empty **`runAfter`** in code view, and the new designer may not let you fix that. Inlining **`parseDateTime`** avoids **`outputs('...')`** references entirely.
 
 ---
 
@@ -77,7 +93,7 @@ Flow
 │
 ├── Step 3: Load and Validate Batch Requests
 │   └── Gate → Get Items: Get Batch Requests
-│       └── Validate count matches and all are Completed
+│       └── Validate count matches → single print method (no Filament + Resin mix) → all are Completed
 │
 ├── Step 4: Load and Validate Batch Plates
 │   └── Gate → Get Items: Get All Batch Plates
@@ -193,17 +209,21 @@ Use this retry policy on all SharePoint **Get item**, **Get items**, **Create it
 |---|-------|-----------|
 | 13 | + Add an input → Yes/No | StudentOwnMaterial |
 
-**Date input:**
+**Text input (payment date — must be last):**
 
 | # | Click | Rename to |
 |---|-------|-----------|
-| 14 | + Add an input → Date | PaymentDate |
+| 14 | + Add an input → Text | PaymentDate |
+
+Power Apps must pass **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`** as this argument (see `StaffDashboard-App-Spec.md`, **`btnBatchPaymentConfirm.OnSelect`**).
 
 ---
 
 ## Step 1: Initialize Variables
 
 **What this does:** Creates the tracking variables for flow result, allocation calculations, and per-request detail collection.
+
+**Payment date:** Do **not** add a Compose for the date. Use the **Parsed payment date** expression from the Input Reference section **inline** on **Create Consolidated Payment** and **Update Batch Request** → **PaymentDate**.
 
 Add these actions immediately below the trigger. For each one:
 1. Click **+ Add an action**
@@ -427,7 +447,7 @@ Leave the **False** branch of `Gate: Check Uniqueness` empty.
 
 ## Step 3: Load and Validate Batch Requests
 
-**What this does:** Loads all selected requests from SharePoint in one query and verifies every one is still in `Completed` status. If any request is missing or in the wrong status, the entire batch fails.
+**What this does:** Loads all selected requests from SharePoint in one query and verifies every one is still in `Completed` status, that **all rows share the same `Method`** (no mixed Filament/Resin batch), and that counts match the app’s ID list. If any check fails, the entire batch fails.
 
 #### Action 1: Gate Before Request Load
 
@@ -527,24 +547,94 @@ length(body('Get_Batch_Requests')?['value'])
 4. **Name:** select `varMessage` from the dropdown
 5. **Value:** type directly: `One or more batch items could not be found. They may have been deleted.`
 
-Leave the **True** branch of `All Requests Found` empty.
+#### Action 5c: Compose First Batch Method
+
+**Where to add this:** Inside the **True** branch of `All Requests Found` (before the filter — avoids nested `first(...)` inside **Filter array**, which can fail validation).
+
+1. Click **+ Add an action** inside the **True** branch of `All Requests Found`
+2. Search for and select **Compose**
+3. Rename to: `First Batch Method`
+4. **Inputs** — click the **Expression** tab and paste:
+
+```
+first(body('Get_Batch_Requests')?['value'])?['Method']?['Value']
+```
+
+#### Action 5c2: Filter Method Mismatch Rows
+
+**Where to add this:** Below `First Batch Method`, still inside the **True** branch of `All Requests Found`.
+
+1. Click **+ Add an action** below `First Batch Method`
+2. Search for and select **Filter array**
+3. Rename to: `Method Mismatch Rows`
+4. **From** — **Expression** tab:
+
+```
+body('Get_Batch_Requests')?['value']
+```
+
+5. Configure the row condition in **basic mode** (not advanced “Edit in JSON”), so the designer emits a valid template **`where`** expression:
+   - **Left:** click **Expression** and paste: `item()?['Method']?['Value']`
+   - **Operator:** **is not equal to**
+   - **Right:** click **Dynamic content** → select the output of **`First Batch Method`** (the Compose). Do **not** type plain text.
+
+> **Save error `WorkflowRunActionInputsInvalidProperty` / `where` must be a template language expression:** The new designer rejects a **Filter array** whose condition was pasted as raw text or uses an invalid advanced expression. Using **Compose** + **basic** compare (left expression, right dynamic) fixes this. If you must use advanced mode only, the whole condition must be a single workflow expression, e.g. `@not(equals(item()?['Method']?['Value'], outputs('First_Batch_Method')))` — internal action names use underscores (`First_Batch_Method`).
+
+> **What this does:** After `Get Batch Requests` returns every row, this keeps only rows whose `Method.Value` differs from the **first** row’s method. If the filtered array is non-empty, the batch mixes **Filament** and **Resin** (or inconsistent choice values). The Power App should already block this; this is **server-side defense in depth**.
+
+#### Action 5d: Any Mixed Methods
+
+**Where to add this:** Below `Method Mismatch Rows`, still inside the **True** branch of `All Requests Found`.
+
+1. Click **+ Add an action** below `Method Mismatch Rows`
+2. Search for and select **Condition**
+3. Rename to: `Any Mixed Methods`
+4. Left side — **Expression** tab (use whichever matches a successful test run’s **outputs** shape):
+
+```
+length(outputs('Method_Mismatch_Rows')?['body'])
+```
+
+If that expression is invalid in your tenant, try `length(body('Method_Mismatch_Rows'))`.
+
+5. **Operator:** `is greater than`
+6. Right side: `0`
+
+#### Action 5e: Mark Mixed Method Failure
+
+**Where to add this:** Inside the **True** branch of `Any Mixed Methods`.
+
+1. **Set variable** — rename to `Mark Mixed Method Failure`
+2. **Name:** `varSuccess` → **Value:** `false`
+
+#### Action 5f: Set Mixed Method Error
+
+**Where to add this:** Below `Mark Mixed Method Failure`, still inside the **True** branch of `Any Mixed Methods`.
+
+1. **Set variable** — rename to `Set Mixed Method Error`
+2. **Name:** `varMessage` → **Value:** `Cannot combine Filament and Resin in one batch payment. Remove items until every selected job uses the same print method, or check out separately.`
+
+Leave the **False** branch of `Any Mixed Methods` empty.
 
 #### Action 6: Non Completed Requests
 
-**Where to add this:** Below `All Requests Found`, after both branches rejoin, still inside the **True** branch of `Gate: Load Batch Requests`.
+**Where to add this:** Below `Any Mixed Methods`, after both branches rejoin (same nesting level as `All Requests Found`), still inside the **True** branch of `Gate: Load Batch Requests`.
 
-1. Click **+ Add an action** below `All Requests Found`
-2. Search for and select **Filter array**
-3. Rename to: `Non Completed Requests`
-4. **From:** click the **Expression** tab and paste: `body('Get_Batch_Requests')?['value']`
-5. Click the left side of the filter condition, switch to the **Expression** tab, and paste:
+1. Click **+ Add an action** below `Any Mixed Methods` (or below `All Requests Found` if your designer flattens the tree — **must** run only after `Get Batch Requests` succeeded and counts matched)
+
+**Designer note:** If actions after `All Requests Found` run for both outcomes, ensure `Non Completed Requests` and everything below still respects **`varSuccess`** (later gates already do). Prefer chaining **`Method Mismatch Rows` → `Any Mixed Methods` → `Non Completed Requests`** so mixed-method batches never hit allocation logic.
+
+1. Search for and select **Filter array**
+2. Rename to: `Non Completed Requests`
+3. **From:** click the **Expression** tab and paste: `body('Get_Batch_Requests')?['value']`
+4. Click the left side of the filter condition, switch to the **Expression** tab, and paste:
 
 ```
 item()?['Status']?['Value']
 ```
 
-6. Set the **Operator** dropdown to: `is not equal to`
-7. Type directly on the right side: `Completed`
+5. Set the **Operator** dropdown to: `is not equal to`
+6. Type directly on the right side: `Completed`
 
 ---
 
@@ -1212,7 +1302,7 @@ concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(tri
    - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** type directly: `Payments`
    - **Amount:** click the **Expression** tab and paste: `variables('varTotalCost')`
-   - **PaymentDate:** click the **Expression** tab and paste: `triggerBody()['date']`
+   - **PaymentDate:** click the **Expression** tab and paste: `parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')`
    - **RecordedAt:** click the **Expression** tab and paste: `utcNow()`
    - **Weight:** click the **Expression** tab and paste: `triggerBody()['number']`
    - **RequestID:** (leave blank — batch rows do not use RequestID)
@@ -1383,7 +1473,7 @@ concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), 
     - **LastActionAt:** click the **Expression** tab and paste: `utcNow()`
     - **FinalWeight:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalWeight'], 0), float(items('Update_Each_Batch_Detail')?['AllocWeight']))`
     - **FinalCost:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalCost'], 0), float(items('Update_Each_Batch_Detail')?['Cost']))`
-    - **PaymentDate:** click the **Expression** tab and paste: `if(and(not(empty(first(body('Find_This_Request'))?['PaymentDate'])), greater(ticks(first(body('Find_This_Request'))?['PaymentDate']), ticks(triggerBody()['date']))), first(body('Find_This_Request'))?['PaymentDate'], triggerBody()['date'])`
+    - **PaymentDate:** click the **Expression** tab and paste: `if(and(not(empty(first(body('Find_This_Request'))?['PaymentDate'])), greater(ticks(first(body('Find_This_Request'))?['PaymentDate']), ticks(parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')))), first(body('Find_This_Request'))?['PaymentDate'], parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd'))`
 5. **Configure retry policy.**
 
 > **Critical build check:** Do not save this action with only the **Id** and a few batch-only fields filled in. Make sure the final weight, final cost, payment date, student-own-material flag, staff notes, and audit fields are all mapped, or the request update will be incomplete even if the run looks green.
@@ -1456,7 +1546,7 @@ if(greater(variables('varPaymentID'), 0), concat('Consolidated payment record #'
 3. Rename to: `Return Result`
 4. Click **+ Add an output** → select **Text**
 5. **Title:** type directly: `Success`
-6. **Value:** click the **Expression** tab and paste: `string(variables('varSuccess'))`
+6. **Value:** click the **Expression** tab and paste: `toLower(string(variables('varSuccess')))`
 7. Click **+ Add an output** → select **Text**
 8. **Title:** type directly: `Message`
 9. **Value:** click the field, then select from **Dynamic content**: the variable `varMessage`
@@ -1466,7 +1556,9 @@ if(greater(variables('varPaymentID'), 0), concat('Consolidated payment record #'
 
 > **Important:** All three outputs are returned as text strings. In Power Apps, the returned properties are lowercase: `success`, `message`, `paymentid`.
 >
-> **Validation check:** A good success response is `success = "true"` (or `"True"` depending on serialization), `message = "Batch payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
+> **Success value must be lowercase:** Use **`toLower(string(variables('varSuccess')))`** for the **Success** output — not **`string(variables('varSuccess'))` alone**. Otherwise Power Automate often emits **`"True"`** (capital **T**), and **`varFlowResult.success = "true"`** in the app is **false**. The user then sees **`Notify(varFlowResult.message, NotificationType.Error)`** with **`Batch payment saved.`** (success text, error styling). The Staff app spec uses a defensive **`Or(...)`** check; normalizing the flow output avoids relying on that alone.
+>
+> **Validation check:** A good success response is `success = "true"`, `message = "Batch payment saved."`, and `paymentid` greater than `0`. If you get `success = "true"` with `message = ""` and `paymentid = "0"`, treat that as a build defect, not a successful save.
 
 ---
 
