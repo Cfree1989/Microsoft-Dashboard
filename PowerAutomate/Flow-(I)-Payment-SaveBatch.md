@@ -216,7 +216,7 @@ Add these actions immediately below the trigger. For each one:
 - **Rename to:** `Initialize varSuccess`
 - **Name:** type directly: `varSuccess`
 - **Type:** select from dropdown: `Boolean`
-- **Value:** type directly: `true`
+- **Value:** select `true` from the Value dropdown (or type `true`)
 
 > **What this is for:** Master pass/fail flag for the whole flow. Every later `Gate: ...` action checks this variable before doing more work.
 
@@ -322,7 +322,7 @@ and(equals(triggerBody()['text_3'], 'TigerCASH'), equals(length(trim(coalesce(tr
 6. Inside the **True** branch, add **Set variable**
 7. Rename it to: `Mark TigerCard Failure`
 8. **Name:** select `varSuccess` from the dropdown
-9. **Value:** type directly: `false`
+9. **Value:** select `false` from the Value dropdown (or type `false`)
 
 #### Action 3: Set TigerCard Error
 
@@ -404,7 +404,7 @@ length(body('Check_Existing_Transaction')?['value'])
 32. Inside the **True** branch of `Is Duplicate Transaction`, add **Set variable**
 33. Rename it to: `Mark Duplicate Failure`
 34. **Name:** select `varSuccess` from the dropdown
-35. **Value:** type directly: `false`
+35. **Value:** select `false` from the Value dropdown (or type `false`)
 
 #### Action 9: Set Duplicate Error
 
@@ -515,7 +515,7 @@ length(body('Get_Batch_Requests')?['value'])
 2. Search for and select **Set variable**
 3. Rename it to: `Mark Missing Request Failure`
 4. **Name:** select `varSuccess` from the dropdown
-5. **Value:** type directly: `false`
+5. **Value:** select `false` from the Value dropdown (or type `false`)
 
 #### Action 5b: Set Missing Request Error
 
@@ -576,7 +576,7 @@ length(body('Non_Completed_Requests'))
 2. Search for and select **Set variable**
 3. Rename it to: `Mark Not Completed Failure`
 4. **Name:** select `varSuccess` from the dropdown
-5. **Value:** type directly: `false`
+5. **Value:** select `false` from the Value dropdown (or type `false`)
 
 ---
 
@@ -689,7 +689,7 @@ length(body('Ineligible_Plates'))
 2. Search for and select **Set variable**
 3. Rename it to: `Mark Ineligible Plate Failure`
 4. **Name:** select `varSuccess` from the dropdown
-5. **Value:** type directly: `false`
+5. **Value:** select `false` from the Value dropdown (or type `false`)
 
 ---
 
@@ -1420,7 +1420,7 @@ This is the end of the scope. Now add the success and failure handlers below the
 2. Search for and select **Set variable**
 3. Rename to: `Handle Write Failure - Success`
 4. **Name:** select `varSuccess` from the dropdown
-5. **Value:** type directly: `false`
+5. **Value:** select `false` from the Value dropdown (or type `false`)
 6. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
 ---
