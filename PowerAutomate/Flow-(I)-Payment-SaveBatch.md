@@ -89,8 +89,8 @@ Flow
 │       ├── Compose: LastItemID, BatchItemCount
 │       ├── Filter: Non-Last Items
 │       ├── Loop: Calculate Non-Last Allocations → Append
-│       ├── Calculate Last Item Allocation → Append
-│       └── Build summary texts (Select + Join)
+│       ├── Filter + Calculate Last Item Allocation → Append
+│       └── Build summary texts (Select + Join + Plate Snapshots)
 │
 ├── Step 6: Write Payment Data
 │   └── Gate → Scope: Write All Records
@@ -976,9 +976,9 @@ json(concat('{"ID":', string(first(body('Last_Item_Only'))?['ID']), ',"ReqKey":"
 4. **Name:** select `varBatchDetails` from the dropdown
 5. **Value:** click the field, then select from **Dynamic content**: the output of `LastDetail`
 
-#### Action 8: Build Allocation Summary
+#### Action 8a: Allocation Summary Lines
 
-**Where to add this:** Below `Calculate Last Item`, still inside the **True** branch of `Gate: Calculate Allocations`.
+**Where to add this:** Below `Append Last Detail`, still inside the **True** branch of `Gate: Calculate Allocations`.
 
 1. Click **+ Add an action** below `Append Last Detail`
 2. Search for and select **Select** (Data Operation)
@@ -993,12 +993,20 @@ concat(item()?['ReqKey'], ': $', formatNumber(float(item()?['Cost']), '0.00'), '
 
 > **Why text mode?** In text mode, Select produces a flat array of strings (e.g., `["REQ-00164: $21.18 for 181.41g", "REQ-00165: $5.42 for 54.2g"]`) instead of an array of objects. This lets you `join()` directly without extraction hacks.
 
-7. Click **+ Add an action** below `Allocation Summary Lines`
-8. Search for and select **Compose**
-9. Rename to: `BatchAllocationSummary`
-10. Click the **Inputs** field, switch to the **Expression** tab, and paste: `join(body('Allocation_Summary_Lines'), ' | ')`
+---
+
+#### Action 8b: BatchAllocationSummary
+
+**Where to add this:** Below `Allocation Summary Lines`, still inside the **True** branch of `Gate: Calculate Allocations`.
+
+1. Click **+ Add an action** below `Allocation Summary Lines`
+2. Search for and select **Compose**
+3. Rename to: `BatchAllocationSummary`
+4. Click the **Inputs** field, switch to the **Expression** tab, and paste: `join(body('Allocation_Summary_Lines'), ' | ')`
 
 > **What this produces:** `REQ-00164: $21.18 for 181.41g | REQ-00165: $5.42 for 54.2g`
+
+---
 
 #### Action 9: Build Plate Snapshot Texts
 
@@ -1162,6 +1170,8 @@ concat(if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_S
 
 **True branch of `Gate: Write Data`:**
 
+---
+
 #### Action 2: Scope — Write All Records
 
 **Where to add this:** Inside the **True** branch of `Gate: Write Data`.
@@ -1171,6 +1181,8 @@ concat(if(empty(variables('varPlateKeysText')), '', ' | '), items('Build_Plate_S
 3. Rename to: `Write All Records`
 
 Inside the scope:
+
+---
 
 #### Action 2a: StaffShortName
 
@@ -1187,6 +1199,8 @@ concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(tri
 
 > **What this produces:** `"John S."` from `"John Smith"`.
 
+---
+
 #### Action 2b: Create Consolidated Payment
 
 **Where to add this:** Below `StaffShortName`, still inside the `Write All Records` scope.
@@ -1197,24 +1211,27 @@ concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(tri
 4. Fill in:
    - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** type directly: `Payments`
-   - **RequestID:** (leave blank — batch rows do not use RequestID)
-   - **ReqKey:** (leave blank)
-   - **BatchRequestIDs:** click the **Expression** tab and paste: `replace(triggerBody()['text'], ' ', '')` — this stores IDs without spaces (`164,165` instead of `164, 165`); the app's Split formula handles both formats
-   - **BatchReqKeys:** click the **Expression** tab and paste: `triggerBody()['text_1']`
-   - **BatchAllocationSummary:** click the field, then select from **Dynamic content**: the output of `BatchAllocationSummary`
-   - **TransactionNumber:** click the **Expression** tab and paste: `if(empty(trim(coalesce(triggerBody()['text_2'], ''))), null, trim(triggerBody()['text_2']))`
-   - **Weight:** click the **Expression** tab and paste: `triggerBody()['number']`
    - **Amount:** click the **Expression** tab and paste: `variables('varTotalCost')`
-   - **PaymentType Value:** click the **Expression** tab and paste: `triggerBody()['text_3']`
    - **PaymentDate:** click the **Expression** tab and paste: `triggerBody()['date']`
    - **RecordedAt:** click the **Expression** tab and paste: `utcNow()`
+   - **Weight:** click the **Expression** tab and paste: `triggerBody()['number']`
+   - **RequestID:** (leave blank — batch rows do not use RequestID)
+   - **TransactionNumber:** click the **Expression** tab and paste: `if(empty(trim(coalesce(triggerBody()['text_2'], ''))), null, trim(triggerBody()['text_2']))`
    - **PayerName:** click the **Expression** tab and paste: `triggerBody()['text_4']`
+   - **PaymentType Value:** click the **Expression** tab and paste: `triggerBody()['text_3']`
+   - **PayerTigerCard:** (leave blank — batch flow has no TigerCard input)
    - **PlatesPickedUp:** click the field, then select from **Dynamic content**: the variable `varPlateLabelsText`
    - **PlateIDsPickedUp:** click the field, then select from **Dynamic content**: the variable `varPlateKeysText`
    - **RecordedBy Claims:** click the **Expression** tab and paste: `concat('i:0#.f|membership|', triggerBody()['text_5'])`
    - **StudentOwnMaterial:** click the **Expression** tab and paste: `triggerBody()['boolean']`
+   - **BatchReqKeys:** click the **Expression** tab and paste: `triggerBody()['text_1']`
+   - **BatchRequestIDs:** click the **Expression** tab and paste: `replace(triggerBody()['text'], ' ', '')` — this stores IDs without spaces (`164,165` instead of `164, 165`); the app's Split formula handles both formats
+   - **BatchAllocationSummary:** click the field, then select from **Dynamic content**: the output of `BatchAllocationSummary`
+   - **ReqKey:** (leave blank)
 
 5. **Configure retry policy.**
+
+---
 
 #### Action 2c: Set varPaymentID
 
@@ -1227,6 +1244,8 @@ concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(tri
 5. **Value:** click the **Expression** tab and paste: `body('Create_Consolidated_Payment')?['ID']`
 
 > **Critical build check:** The action must contain both **Name** and **Value**. If the card only shows `Name = varPaymentID` and the value box is blank, the flow can still run to completion but will return `PaymentID = "0"` even after a successful create.
+
+---
 
 #### Action 2d: Update Each Batch Request
 
@@ -1355,15 +1374,16 @@ concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), 
     - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
     - **List Name:** type directly: `PrintRequests`
     - **Id:** click the **Expression** tab and paste: `items('Update_Each_Batch_Detail')?['ID']`
+    - **TigerCardNumber:** click the **Expression** tab and paste: `first(body('Find_This_Request'))?['TigerCardNumber']`
     - **Status Value:** type directly: `Paid & Picked Up`
-    - **FinalWeight:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalWeight'], 0), float(items('Update_Each_Batch_Detail')?['AllocWeight']))`
-    - **FinalCost:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalCost'], 0), float(items('Update_Each_Batch_Detail')?['Cost']))`
-    - **PaymentDate:** click the **Expression** tab and paste: `if(and(not(empty(first(body('Find_This_Request'))?['PaymentDate'])), greater(ticks(first(body('Find_This_Request'))?['PaymentDate']), ticks(triggerBody()['date']))), first(body('Find_This_Request'))?['PaymentDate'], triggerBody()['date'])`
     - **StudentOwnMaterial:** click the **Expression** tab and paste: `or(equals(first(body('Find_This_Request'))?['StudentOwnMaterial'], true), triggerBody()['boolean'])`
     - **StaffNotes:** click the field, then select from **Dynamic content**: the output of `BatchStaffNotes`
     - **LastAction Value:** type directly: `Status Change`
     - **LastActionBy Claims:** click the **Expression** tab and paste: `concat('i:0#.f|membership|', triggerBody()['text_5'])`
     - **LastActionAt:** click the **Expression** tab and paste: `utcNow()`
+    - **FinalWeight:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalWeight'], 0), float(items('Update_Each_Batch_Detail')?['AllocWeight']))`
+    - **FinalCost:** click the **Expression** tab and paste: `add(coalesce(first(body('Find_This_Request'))?['FinalCost'], 0), float(items('Update_Each_Batch_Detail')?['Cost']))`
+    - **PaymentDate:** click the **Expression** tab and paste: `if(and(not(empty(first(body('Find_This_Request'))?['PaymentDate'])), greater(ticks(first(body('Find_This_Request'))?['PaymentDate']), ticks(triggerBody()['date']))), first(body('Find_This_Request'))?['PaymentDate'], triggerBody()['date'])`
 5. **Configure retry policy.**
 
 > **Critical build check:** Do not save this action with only the **Id** and a few batch-only fields filled in. Make sure the final weight, final cost, payment date, student-own-material flag, staff notes, and audit fields are all mapped, or the request update will be incomplete even if the run looks green.
@@ -1373,6 +1393,8 @@ concat(if(empty(coalesce(first(body('Find_This_Request'))?['StaffNotes'], '')), 
 ---
 
 This is the end of the scope. Now add the success and failure handlers below the scope (still inside the **True** branch of `Gate: Write Data`).
+
+---
 
 #### Action 3: Mark Write Success
 
@@ -1388,11 +1410,11 @@ This is the end of the scope. Now add the success and failure handlers below the
 >
 > **Critical build check:** This action must have a literal **Value** of `Batch payment saved.`. If the card only shows `Name = varMessage` with no value, the flow may return `Success = "true"` with an empty `Message`, which is a sign that the build is incomplete.
 
-#### Action 4: Handle Write Failure
+---
+
+#### Action 4a: Handle Write Failure - Success
 
 **Where to add this:** Below `Mark Write Success`, still inside the **True** branch of `Gate: Write Data`.
-
-The first failure handler action (`Handle Write Failure - Success`) goes directly below `Mark Write Success`. The second failure handler action (`Handle Write Failure - Message`) goes below `Handle Write Failure - Success`.
 
 1. Click **+ Add an action** below `Mark Write Success`
 2. Search for and select **Set variable**
@@ -1401,17 +1423,23 @@ The first failure handler action (`Handle Write Failure - Success`) goes directl
 5. **Value:** type directly: `false`
 6. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
-7. Click **+ Add an action** below `Handle Write Failure - Success`
-8. Search for and select **Set variable**
-9. Rename to: `Handle Write Failure - Message`
-10. **Name:** select `varMessage` from the dropdown
-11. **Value:** click the **Expression** tab and paste:
+---
+
+#### Action 4b: Handle Write Failure - Message
+
+**Where to add this:** Below `Handle Write Failure - Success`, still inside the **True** branch of `Gate: Write Data`.
+
+1. Click **+ Add an action** below `Handle Write Failure - Success`
+2. Search for and select **Set variable**
+3. Rename to: `Handle Write Failure - Message`
+4. **Name:** select `varMessage` from the dropdown
+5. **Value:** click the **Expression** tab and paste:
 
 ```
 if(greater(variables('varPaymentID'), 0), concat('Consolidated payment record #', string(variables('varPaymentID')), ' was created, but a later update failed. Check the payment, plates, and requests manually in SharePoint.'), 'Failed to save the consolidated payment record. Nothing was written. Try again.')
 ```
 
-12. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
+6. **Configure run after:** click the **three dots (...)** on the action card → **Configure run after** → uncheck **is successful** → check **has failed** and **has timed out** → click **Done**
 
 **False branch (`varSuccess` was false) in `Gate: Write Data`:** Leave the **False** branch empty.
 
