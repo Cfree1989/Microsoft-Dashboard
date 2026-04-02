@@ -813,10 +813,10 @@ Inside the loop, add Actions 6a–6f in order:
 4. Click the **Inputs** field, switch to the **Expression** tab, and paste:
 
 ```
-if(greater(variables('varTotalEstWeight'), 0), round(div(mul(coalesce(items('Calculate_Non_Last_Items')?['EstimatedWeight'], 0), triggerBody()['number']), variables('varTotalEstWeight')), 2), round(div(triggerBody()['number'], outputs('BatchItemCount')), 2))
+if(greater(variables('varTotalEstWeight'), 0), float(formatNumber(div(mul(coalesce(items('Calculate_Non_Last_Items')?['EstimatedWeight'], 0), triggerBody()['number']), variables('varTotalEstWeight')), '#0.00')), float(formatNumber(div(triggerBody()['number'], outputs('BatchItemCount')), '#0.00')))
 ```
 
-> **What this calculates:** `Round((EstimatedWeight / TotalEstWeight) × CombinedWeight, 2)`. If total estimated weight is zero, divides evenly.
+> **What this calculates:** Rounds to 2 decimals: `(EstimatedWeight / TotalEstWeight) × CombinedWeight`. If total estimated weight is zero, divides evenly. **Note:** Power Automate expressions have no `round()` — use `float(formatNumber(..., '#0.00'))` instead.
 
 ---
 

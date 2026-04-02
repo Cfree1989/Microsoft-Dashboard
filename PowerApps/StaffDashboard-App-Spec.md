@@ -351,8 +351,10 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 **In the Power Automate panel**, you should see:
 - ✅ Flow-(C)-Action-LogAction
+- ✅ Flow-(H)-Payment-SaveSingle
+- ✅ Flow-(I)-Payment-SaveBatch
 
-> ⚠️ **Flow Name Note:** All formulas in this guide use `'Flow-(C)-Action-LogAction'`. If your flow has a different name in Power Apps, replace accordingly.
+> ⚠️ **Flow Name Note:** Formulas use quoted names exactly as above. If your flow titles differ in Power Apps, change every `'...'.Run(` to match the **Data** panel name.
 
 ---
 
@@ -438,8 +440,18 @@ Set(varBatchLastItemID, 0);
 Set(varBatchLastItemWeight, 0);
 Set(varBatchFinalCost, 0);
 Set(varBatchProcessedCount, 0);
-Set(varBatchRecordedAt, Blank());
-Set(varPaymentRecordedAt, Blank());
+// DateTime — use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
+Set(varBatchRecordedAt, Now());
+Set(varPaymentRecordedAt, Now());
+
+// === PAYMENT FLOW SCRATCH (Flow H / Flow I + App Checker types) ===
+// Initialize before any control references these; flow .Run() overwrites varFlowResult.
+Set(varFlowResult, {success: "false", message: "", paymentid: ""});
+Set(varPickedPlatesText, "");
+Set(varPickedPlateIDsText, "");
+Set(varPickedPlateIDsList, "");
+Set(varBaseCost, 0);
+Set(varFinalCost, 0);
 
 // Currently selected item for modals (typed to PrintRequests schema)
 Set(varSelectedItem, Blank());
@@ -664,6 +676,11 @@ Set(varLoadingMessage, "")
 | `colPrintersUsed` | Distinct printers used for current item | Table |
 | `colPayments` | Payment records for current modal context | Table |
 | `varPickedPlatesText` | Deduped, sorted comma-separated plate numbers for the current payment save | Text |
+| `varPickedPlateIDsText` | Comma-separated `PlateKey` values passed to Flow H | Text |
+| `varPickedPlateIDsList` | Comma-separated numeric `BuildPlates.ID` values passed to Flow H | Text |
+| `varFlowResult` | Last instant-flow response (`success`, `message`, `paymentid` — lowercase) | Record |
+| `varBaseCost` | Payment modal: base cost before own-material discount | Number |
+| `varFinalCost` | Payment modal: final cost after discount | Number |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
 | `varResinRate` | Cost per mL for resin printing | Number |
@@ -7404,21 +7421,29 @@ If(
                 "Unknown"
             )
         },
-        IfError(
-            'Flow-(C)-Action-LogAction'.Run(
-                Text(varSelectedItem.ID),
-                If(wResultStatus = "Paid & Picked Up", "Status Change", "Partial Payment"),
-                If(wResultStatus = "Paid & Picked Up", "Status", "Payment"),
-                "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
-                If(
-                    !IsBlank(varPickedPlateIDsText),
-                    " (Plate IDs " & varPickedPlateIDsText & " | Display " & varPickedPlatesText & ")",
-                    ""
-                ) &
-                If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
-                ddPaymentStaff.Selected.MemberEmail
-            ),
-            Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+        With(
+            {
+                wAudit: IfError(
+                    'Flow-(C)-Action-LogAction'.Run(
+                        Text(varSelectedItem.ID),
+                        If(wResultStatus = "Paid & Picked Up", "Status Change", "Partial Payment"),
+                        If(wResultStatus = "Paid & Picked Up", "Status", "Payment"),
+                        "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                        If(
+                            !IsBlank(varPickedPlateIDsText),
+                            " (Plate IDs " & varPickedPlateIDsText & " | Display " & varPickedPlatesText & ")",
+                            ""
+                        ) &
+                        If(!IsBlank(txtPaymentNotes.Text), " - " & txtPaymentNotes.Text, ""),
+                        ddPaymentStaff.Selected.MemberEmail
+                    ),
+                    Blank()
+                )
+            },
+            If(
+                IsBlank(wAudit),
+                Notify("Payment saved, but could not log to audit.", NotificationType.Warning)
+            )
         )
     );
 
@@ -7449,6 +7474,19 @@ Set(varLoadingMessage, "")
 ```
 
 > ⚠️ **Server-side save architecture:** As of the Payment Strengthening Phase, all writes (`Payments`, `BuildPlates`, `PrintRequests`) are handled by `Flow-(H)-Payment-SaveSingle` in Power Automate. The app only collects inputs, calls the flow, and displays the result. See `PowerAutomate/Flow-(H)-Payment-SaveSingle.md` for the full server-side implementation.
+
+### Troubleshooting: After adding Flow H / Flow I (App Checker errors)
+
+| App Checker message | Typical cause | Fix |
+|---------------------|---------------|-----|
+| **No type found for `varIsBatchSelected`** | Variable name not in this spec; referenced in a formula but never initialized | **Preferred:** Remove it and use **`varBatchSelectMode`** (already set in App.OnStart). **Or** add `Set(varIsBatchSelected, false);` to App.OnStart if you intentionally keep a separate flag. |
+| **No type found for `varPaymentSelected`** | Same — not part of this guide | **Preferred:** Use **`varSelectedItem`** (PrintRequests row for the single-payment modal). **Or** if you meant a Boolean, add `Set(varPaymentSelected, false);` to OnStart. Do not use ambiguous names that duplicate `varSelectedItem`. |
+| **No type found for `varBatchRecordedAt` / `varPaymentRecordedAt`** | `Set(varX, Blank())` does **not** give a **DateTime** type; App Checker cannot infer the variable type. | In App.OnStart use **`Set(varBatchRecordedAt, Now());`** and **`Set(varPaymentRecordedAt, Now());`** (this spec), or any other **typed** `DateTime` literal. Only use `IsBlank` on these if you switch to a separate “has value” flag. |
+| **Invalid argument type (Boolean). Expecting a Record** / **`IfError` has invalid arguments** | `Notify(...)` returns a **Boolean**. `'Flow-(C)-Action-LogAction'.Run(...)` returns a **Record**. Using **`IfError(Run, Notify)`** mixes types and fails under strict checking. | Use **`IfError(Run(...), Blank())`** inside a **`With({ wAudit: ... }, If(IsBlank(wAudit), Notify(...)))`** — same pattern as batch audit logging in **`btnBatchPaymentConfirm`**. |
+| **Invalid argument type (Boolean). Expecting a Record** / **Filter has invalid arguments** | `Filter`’s first argument must be a **table/collection**, not `true`/`false`. Often happens when an **`If(...)`** branch returns a Boolean instead of a table, e.g. `If(x, Filter(col, ...), false)` or `Filter(If(x, true, col), ...)`. | Make **both** branches of `If` return the same kind of value (both tables, or both records). Ensure `Filter( *first arg* , ...)` is never `Filter(chkSomething.Value, ...)` or `Filter(varBatchSelectMode, ...)`. |
+| **Flow name errors** | Flow title in Power Automate does not match the formula | In **Data** → flow must appear as **`Flow-(H)-Payment-SaveSingle`** and **`Flow-(I)-Payment-SaveBatch`**, or change the quoted name in every `'...'.Run(` to match **exactly** (including spelling and hyphens). |
+
+**Correct split (this spec):** Single checkout → **`btnPaymentConfirm`** calls **`'Flow-(H)-Payment-SaveSingle'.Run(...)`** using **`varSelectedItem`** and the payment modal fields. Batch checkout → **`btnBatchPaymentConfirm`** calls **`'Flow-(I)-Payment-SaveBatch'.Run(...)`** using **`colBatchItems`**. Do not route both through one button unless every `If` branch passes valid types into `Filter` / `.Run`.
 
 ### Final Behavior Summary
 
