@@ -8026,7 +8026,8 @@ Set(varLoadingMessage, "")
 ### Batch Eligibility Rules
 
 - Only requests currently in `Completed` status may enter batch mode.
-- Batch selections must all use the same `Method` so resin pickup grams never mix with filament grams under different pricing rules.
+- Batch selections **may mix** `Filament` and `Resin` in one checkout. Staff enter **one combined pickup weight in grams**; `Flow-(I)-Payment-SaveBatch` and the batch modal (`lblBatchCostValue`) allocate that total **proportionally** by each row's `EstimatedWeight`, then price each allocation using that row's `Method.Value` (`varFilamentRate` vs `varResinGramRate`).
+- **Unit caveat:** Proportional split assumes every selected row's `EstimatedWeight` is **comparable** (e.g. all grams for billing). If resin rows store **mL** and filament rows **grams** in the same SharePoint column, the default `Sum(colBatchItems, EstimatedWeight)` and the >50% deviation logic are **not reliable**—prefer same-method batches, normalize stored estimates, or set **Combined Weight** explicitly with that limitation in mind.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
@@ -8498,7 +8499,7 @@ If(
 )
 ```
 
-> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. Resin batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams.
+> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. **All-resin** batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams. **Mixed-method** batches (not every row is Resin) follow the filament-style deviation path against `Sum(colBatchItems, EstimatedWeight)`—only meaningful when those estimates share a comparable unit.
 
 ---
 
@@ -14020,13 +14021,22 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 ### Scenario 22B: One Checkout Across Two Jobs
 
-1. Select two completed requests that share the same `Method`
+1. Select two completed requests in batch mode (same or different `Method`; if different, use rows whose `EstimatedWeight` values are comparable for proportional allocation)
 2. Enter one payment header and one combined total (example: `$26.60` across both jobs)
 3. Click **Record Batch Payment**
 4. **Verify:** Only one new `Payments` row is created for the checkout
 5. **Verify:** `Amount` on that row equals the combined total and `Weight` equals the combined pickup grams
 6. **Verify:** `BatchRequestIDs`, `BatchReqKeys`, and `BatchAllocationSummary` preserve the per-request split
 7. **Verify:** Both requests move to `Paid & Picked Up` and keep their own allocated `FinalWeight` / `FinalCost`
+
+### Scenario 22C: Mixed Filament and Resin in One Batch
+
+1. Select one completed **Filament** request and one completed **Resin** request whose `EstimatedWeight` values are **comparable** (e.g. both stored in grams for billing—not mL mixed with grams in the same field)
+2. Enter combined pickup weight in grams and complete payment fields as usual
+3. Click **Record Batch Payment**
+4. **Verify:** Only one consolidated `Payments` row is created
+5. **Verify:** `BatchAllocationSummary` shows each `ReqKey` with allocated grams and dollars, with filament lines priced at the filament rate and resin lines at `varResinGramRate`
+6. **Verify:** Sum of allocated weights equals the entered combined weight and total charged matches the batch modal preview
 
 ### Scenario 23: Batch Item Already Fully Picked Up
 
