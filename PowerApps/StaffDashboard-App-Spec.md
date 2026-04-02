@@ -4221,7 +4221,13 @@ If(
             PlateKey: Text(GUID()),
             Machine: If(
                 varSelectedItem.Method.Value = "Resin",
-                LookUp(Choices([@BuildPlates].Machine), Value = "Form 3+ (5.7×5.7×7.3in)"),
+                Coalesce(
+                    LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
+                    LookUp(
+                        Choices([@BuildPlates].Machine),
+                        Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 ("))
+                    )
+                ),
                 varSelectedItem.Printer
             ),
             Status: {Value: "Queued"},
@@ -5446,7 +5452,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | Width | `340` |
 | Height | `36` |
 | DisplayFields | `["Value"]` |
-| DefaultSelectedItems | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", [LookUp(Choices([@PrintRequests].Printer), Value = "Form 3+ (5.7×5.7×7.3in)")], If(IsBlank(varSelectedItem.Printer), Blank(), [varSelectedItem.Printer]))` |
+| DefaultSelectedItems | `If(Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value) = "Resin", [LookUp(Choices([@PrintRequests].Printer), Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")))], If(IsBlank(varSelectedItem.Printer), Blank(), [varSelectedItem.Printer]))` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5477,9 +5483,9 @@ With(
         ) ||
         If(
             selectedMethod = "Filament",
-            StartsWith(Value, "Prusa MK4S") || StartsWith(Value, "Prusa XL") || StartsWith(Value, "Raise3D") || StartsWith(Value, "Raised3D"),
+            StartsWith(Value, "Prusa MK4S") || StartsWith(Value, "Prusa XL") || StartsWith(Value, "Raise"),
             selectedMethod = "Resin",
-            Value = "Form 3+ (5.7×5.7×7.3in)",
+            StartsWith(Value, "Form 3+") || StartsWith(Value, "Form 3 ("),
             true
         )
     )
@@ -5490,7 +5496,7 @@ With(
 
 > ⚠️ **Important:** This avoids a common UX bug where the combo appears blank even though a printer is already saved, and it ensures printer-only changes are easier to detect.
 >
-> **Resin default:** When staff switches Method to `Resin`, reset `ddDetailsPrinter` so the printer auto-populates to `Form 3+`.
+> **Resin default:** When staff switches Method to `Resin`, reset `ddDetailsPrinter` so the printer auto-populates to the first resin choice (`Form 3+…` or `Form 3 (…)` per your SharePoint labels).
 
 ---
 
@@ -5899,7 +5905,7 @@ Set(
     varNewPrinter,
     If(
         varNewMethod = "Resin",
-        LookUp(Choices([@PrintRequests].Printer), Value = "Form 3+ (5.7×5.7×7.3in)"),
+        LookUp(Choices([@PrintRequests].Printer), Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 ("))),
         If(!IsBlank(ddDetailsPrinter.Selected), ddDetailsPrinter.Selected, varSelectedItem.Printer)
     )
 );
@@ -9344,7 +9350,7 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 |----------|-------|
 | Control | Dropdown |
 | Name | `drpPlateMachine` |
-| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
+| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")), true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
 | Value | `"DisplayValue"` |
 | Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
 | X | `116` |
@@ -9410,7 +9416,7 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 ```
 
-> 💡 **Method filter:** Filament jobs show MK4S, XL, and any printer choice that starts with `Raise` (covers `Raise3D`, `Raised3D`, and spaced variants like `Raise 3D`). Resin jobs show only Form 3+.
+> 💡 **Method filter:** Filament jobs show MK4S, XL, and any machine choice that **starts with `Raise`** (covers `Raise3D`, `Raise 3D`, vendor spacing, and model suffixes—SharePoint labels vary). Resin jobs show Formlabs resin lines that start with `Form 3+` or `Form 3 (` (covers labels with or without `+` before the dimension parenthesis).
 >
 > **Modal-only display cleanup:** In this modal, the dropdown shows shortened labels like `Prusa MK4S` and `Raise3D Pro 2 Plus`, but the app still patches the original full SharePoint choice value behind the scenes.
 >
@@ -9768,7 +9774,7 @@ If(
 >
 > **Numbering rule:** Do not use a simple `CountRows(...)+1` approach for reprint labels, because it can reuse numbers after deletions. Instead, calculate the next suffix from the highest existing `Reprint N` label and add 1.
 >
-> **Default printer logic:** The app first tries to use the request's current printer if it is valid for the selected method. If not, it falls back to the first valid machine for that method. Filament jobs accept MK4S, XL, and any choice starting with `Raise`; resin jobs use Form 3+.
+> **Default printer logic:** `PrintRequests.Printer` and `BuildPlates.Machine` are separate SharePoint choice columns—their option text must align for an exact match. The app sets `Machine` with `Coalesce(LookUp(..., Value = varSelectedItem.Printer.Value), LookUp(filtered method choices, true))` so resin jobs first reuse the same text as the request’s printer when it exists on `BuildPlates.Machine`, then fall back to the first resin choice (`Form 3+` or `Form 3 (` prefix). Using only `StartsWith("Form 3+")` or only exact match can leave `Machine` blank and trigger **Field 'Machine' is required** on `Patch`.
 
 **OnSelect:**
 
@@ -9803,6 +9809,7 @@ With(
                             RequestID: varSelectedItem.ID,
                             ReqKey: varSelectedItem.ReqKey,
                             Machine: Coalesce(
+                                LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
                                 LookUp(
                                     Filter(
                                         Choices([@BuildPlates].Machine),
@@ -9810,23 +9817,11 @@ With(
                                             varSelectedItem.Method.Value = "Filament",
                                             StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
                                             varSelectedItem.Method.Value = "Resin",
-                                            Value = "Form 3+ (5.7×5.7×7.3in)",
+                                            Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
                                             true
                                         )
                                     ),
-                                    Value = varSelectedItem.Printer.Value
-                                ),
-                                First(
-                                    Filter(
-                                        Choices([@BuildPlates].Machine),
-                                        If(
-                                            varSelectedItem.Method.Value = "Filament",
-                                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                                            varSelectedItem.Method.Value = "Resin",
-                                            Value = "Form 3+ (5.7×5.7×7.3in)",
-                                            true
-                                        )
-                                    )
+                                    true
                                 )
                             ),
                             PlateKey: Text(GUID()),
@@ -9941,7 +9936,7 @@ Before moving on, verify:
 - [ ] After labels lock, `+ Add Reprint` creates queued reprint rows with numbered labels such as `Reprint 1`
 - [ ] Reprint numbering continues upward from the highest existing reprint number instead of reusing deleted numbers
 - [ ] New plates default to the request's current printer when valid, otherwise fall back to the first valid machine for that method
-- [ ] Method filter works on the row dropdown: Resin jobs only show Form 3+, Filament jobs show MK4S/XL/Raise3D-family printers
+- [ ] Method filter works on the row dropdown: Resin jobs only show Form 3+ / Form 3 resin choices, Filament jobs show MK4S/XL/Raise3D-family printers
 - [ ] Adding a plate creates a new BuildPlates record with Status="Queued"
 - [ ] Removing a plate deletes the BuildPlates record only when that row is eligible for deletion
 - [ ] Progress label updates when plate statuses change
@@ -13872,9 +13867,9 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 ### Scenario 9: Resin Job Printer Filter
 
 1. Open Build Plates modal for a Resin request
-2. **Verify:** "Add Printer" dropdown shows only "Form 3+"
-3. Add Form 3+ → add plates
-4. **Verify:** All plates have Machine = "Form 3+"
+2. **Verify:** "Add Printer" dropdown shows only the resin line(s) (e.g. `Form 3+…` or `Form 3 (…)` per list labels)
+3. Add a plate on the resin printer → add plates
+4. **Verify:** All plates have `Machine` set to that resin choice (not blank)
 
 ### Scenario 10: Machine Edit on Queued/Printing Plate
 
@@ -13907,11 +13902,11 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. Open Complete Confirmation Modal for a Printing item (record shows "Prusa MK4S...")
 2. `ddCompletePrinter` pre-selects "Prusa MK4S..."
-3. Staff changes the dropdown to "Raised3D Pro 2 Plus..."
+3. Staff changes the dropdown to "Raise3D Pro 2 Plus..."
 4. Staff selects their name and clicks "Confirm Complete"
-5. **Verify:** `ActualPrinter` = "Raised3D Pro 2 Plus (12.0×12.0×23in)"
+5. **Verify:** `ActualPrinter` = "Raise3D Pro 2 Plus (12.0×12.0×23in)"
 6. **Verify:** `Printer` still = "Prusa MK4S (9.8×8.3×8.7in)" (original request preserved)
-7. **Verify:** Audit log entry reads `"Completed (Printer corrected: Prusa MK4S → Raised3D Pro 2 Plus)"`
+7. **Verify:** Audit log entry reads `"Completed (Printer corrected: Prusa MK4S → Raise3D Pro 2 Plus)"`
 
 ### Scenario 13: Resin Job Printer Filter
 
@@ -14109,7 +14104,7 @@ Use this checklist to verify all features work correctly:
 - [ ] **Printer Verification:** Correct printer pre-selected
 - [ ] **Printer Verification:** Wrong printer can be corrected
 - [ ] **Printer Verification:** Audit log notes correction
-- [ ] **Printer Verification:** Resin jobs filter to Form 3+ only
+- [ ] **Printer Verification:** Resin jobs filter to Form 3+ / Form 3 resin choices only
 - [ ] **Payments:** Single payment records correctly
 - [ ] **Payments:** Multiple partial payments accumulate
 - [ ] **Payments:** Payment history displays in modal
