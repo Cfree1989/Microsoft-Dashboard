@@ -9432,11 +9432,20 @@ With(
         wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
         wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
         wOldMachine: Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)),
-        wNewMachine: drpPlateMachine.Selected.Value
+        wNewMachine: drpPlateMachine.Selected.Value,
+        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
     },
     Patch(BuildPlates,
-        LookUp(BuildPlates, ID = ThisItem.ID),
-        { Machine: { Value: drpPlateMachine.Selected.Value } }
+        wFreshPlate,
+        { 
+            Machine: { Value: drpPlateMachine.Selected.Value },
+            // Preserve required fields
+            ReqKey: wFreshPlate.ReqKey,
+            RequestID: wFreshPlate.RequestID,
+            PlateKey: wFreshPlate.PlateKey,
+            Status: wFreshPlate.Status,
+            Title: wFreshPlate.Title
+        }
     );
     Patch(
         PrintRequests,
@@ -9532,32 +9541,67 @@ ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `ThisItem.Status.Value = "Queued" && varSelectedItem.Status.Value = "Printing"` |
 
+| **DisplayMode** | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
+
 **Replace the existing `OnSelect` formula with:**
 
 ```powerfx
+// Show loading overlay to prevent double-clicks
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Updating plate status...");
+
 With(
     {
         wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
+        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
+        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
     },
-    Patch(BuildPlates,
-        LookUp(BuildPlates, ID = ThisItem.ID),
-        { Status: { Value: "Printing" } }
+    // Update BuildPlate with explicit field preservation
+    Set(
+        varPlatePatchSuccess,
+        IfError(
+            Patch(BuildPlates,
+                wFreshPlate,
+                { 
+                    Status: { Value: "Printing" },
+                    // Explicitly preserve required fields to prevent clearing
+                    RequestID: wFreshPlate.RequestID,
+                    ReqKey: wFreshPlate.ReqKey,
+                    PlateKey: wFreshPlate.PlateKey,
+                    Machine: wFreshPlate.Machine,
+                    Title: wFreshPlate.Title
+                }
+            ),
+            Blank()
+        )
     );
-    Patch(
-        PrintRequests,
-        wFreshRequest,
-        {
-            StaffNotes: Concatenate(
-                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                "BUILD PLATE by " & wBuildPlateActor &
-                ": [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
-                Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
-                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-            )
-        }
+    
+    // Only update request if plate update succeeded
+    If(
+        !IsBlank(varPlatePatchSuccess),
+        Patch(
+            PrintRequests,
+            wFreshRequest,
+            {
+                StaffNotes: Concatenate(
+                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                    "BUILD PLATE by " & wBuildPlateActor &
+                    ": [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
+                    Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
+                    " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                )
+            }
+        );
+        Notify("Plate marked as printing", NotificationType.Success, 2000),
+        // Error notification
+        Notify("Failed to update plate status. Please try again.", NotificationType.Error, 3000)
     )
 );
+
+// Hide loading overlay
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
+;
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
@@ -9614,57 +9658,99 @@ Same properties as `btnMarkPrinting` with:
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `ThisItem.Status.Value = "Printing"` |
+| **DisplayMode** | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 **Replace the existing `OnSelect` formula with:**
 
 ```powerfx
+// Show loading overlay to prevent double-clicks
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Marking plate as completed...");
+
 With(
     {
         wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
-        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false)
+        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),
+        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
     },
-    Patch(BuildPlates,
-        LookUp(BuildPlates, ID = ThisItem.ID),
-        { Status: { Value: "Completed" } }
-    );
-    If(
-        wShouldLockLabels,
-        ForAll(
-            AddColumns(
-                colBuildPlates As plate,
-                FrozenLabel,
-                Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
-            ) As plateToLock,
-            Patch(
-                BuildPlates,
-                LookUp(BuildPlates, ID = plateToLock.ID),
-                { DisplayLabel: plateToLock.FrozenLabel }
-            )
-        );
-        Set(
-            varSelectedItem,
-            Patch(
-                PrintRequests,
-                LookUp(PrintRequests, ID = varSelectedItem.ID),
-                {
-                    BuildPlateLabelsLocked: true,
-                    BuildPlateOriginalTotal: CountRows(colBuildPlates)
+    // Update BuildPlate with explicit field preservation
+    Set(
+        varPlatePatchSuccess,
+        IfError(
+            Patch(BuildPlates,
+                wFreshPlate,
+                { 
+                    Status: { Value: "Completed" },
+                    // Explicitly preserve required fields to prevent clearing
+                    RequestID: wFreshPlate.RequestID,
+                    ReqKey: wFreshPlate.ReqKey,
+                    PlateKey: wFreshPlate.PlateKey,
+                    Machine: wFreshPlate.Machine,
+                    Title: wFreshPlate.Title
                 }
-            )
+            ),
+            Blank()
         )
     );
-    Patch(
-        PrintRequests,
-        LookUp(PrintRequests, ID = varSelectedItem.ID),
-        {
-            StaffNotes: Concatenate(
-                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                "BUILD PLATE by " & wBuildPlateActor &
-                ": [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+    
+    // Only continue if plate update succeeded
+    If(
+        !IsBlank(varPlatePatchSuccess),
+        // Lock labels if this is the first completed plate
+        If(
+            wShouldLockLabels,
+            ForAll(
+                AddColumns(
+                    colBuildPlates As plate,
+                    FrozenLabel,
+                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
+                ) As plateToLock,
+                Patch(
+                    BuildPlates,
+                    LookUp(BuildPlates, ID = plateToLock.ID),
+                    { 
+                        DisplayLabel: plateToLock.FrozenLabel,
+                        // Preserve ReqKey in label-locking updates
+                        ReqKey: plateToLock.ReqKey
+                    }
+                )
+            );
+            Set(
+                varSelectedItem,
+                Patch(
+                    PrintRequests,
+                    wFreshRequest,
+                    {
+                        BuildPlateLabelsLocked: true,
+                        BuildPlateOriginalTotal: CountRows(colBuildPlates)
+                    }
+                )
             )
-        }
+        );
+        // Update request notes
+        Patch(
+            PrintRequests,
+            wFreshRequest,
+            {
+                StaffNotes: Concatenate(
+                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                    "BUILD PLATE by " & wBuildPlateActor &
+                    ": [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                )
+            }
+        );
+        Notify("Plate marked as completed", NotificationType.Success, 2000),
+        // Error notification
+        Notify("Failed to update plate status. Please try again.", NotificationType.Error, 3000)
     )
 );
+
+// Hide loading overlay
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
+
+// Refresh collection
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
@@ -9693,6 +9779,14 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 > 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
 >
 > **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` may append a `StaffNotes` entry, but it must not change label-lock state or parent request status.
+>
+> 🔒 **Concurrency Protection & Field Preservation:**
+> - Both status buttons now use `IfError()` to catch patch conflicts when clicking too quickly
+> - **Critical:** All Patch operations explicitly preserve `ReqKey` and other required fields (`RequestID`, `PlateKey`, `Machine`, `Title`)
+> - Without explicit field preservation, SharePoint may clear values during update, causing "orphaned" plates that don't show up in filtered views
+> - Loading overlay (`varIsLoading`) prevents double-clicks while patch is in progress
+> - Success/error notifications inform staff immediately if an update fails
+> - The `wFreshPlate` lookup ensures the patch operates on the latest record version, preventing version conflicts
 
 ---
 
