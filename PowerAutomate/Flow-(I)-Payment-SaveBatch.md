@@ -1407,13 +1407,14 @@ length(body('This_Request_Completed_Plates'))
     - **List Name:** type directly: `BuildPlates`
     - **Id:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['ID']`
     - **RequestID:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['RequestID']`
+    - **ReqKey:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['ReqKey']`
     - **PlateKey:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['PlateKey']`
     - **Machine Value:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['Machine']?['Value']`
     - **Title:** click the **Expression** tab and paste: `items('Update_Batch_Plate')?['Title']`
     - **Status Value:** type directly: `Picked Up`
 5. **Configure retry policy.**
 
-> **Why echo back required fields?** The Power Automate designer requires values for all columns marked as required in the SharePoint list (RequestID, PlateKey, Machine, Title). The values come from the loop item — the plates were already loaded by `Get All Batch Plates` in Step 4, so no extra API calls are needed.
+> **Why echo back required fields?** The Power Automate designer requires values for all columns marked as required in the SharePoint list (RequestID, ReqKey, PlateKey, Machine, Title). The values come from the loop item — the plates were already loaded by `Get All Batch Plates` in Step 4, so no extra API calls are needed.
 
 **False branch of `Request Has Plates to Update`:** Leave empty.
 
