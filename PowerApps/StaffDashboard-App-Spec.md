@@ -6510,12 +6510,17 @@ Switch(
 If(
     varSelectedItem.Method.Value = "Resin",
     "Final Resin Weight (g)",
-    If(
-        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
-        !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
-        Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
-        "⚠️ Weight (" & Text(Round(Value(txtPaymentWeight.Text) / varSelectedItem.EstimatedWeight * 100, 0)) & "% of est.)",
-        "Final Weight"
+    With(
+        {
+            varRemainingWeight: Max(0, varSelectedItem.EstimatedWeight - Coalesce(varSelectedItem.FinalWeight, 0))
+        },
+        If(
+            IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+            !IsBlank(varRemainingWeight) && varRemainingWeight > 0 &&
+            Abs(Value(txtPaymentWeight.Text) - varRemainingWeight) / varRemainingWeight > 0.5,
+            "⚠️ Weight (" & Text(Round(Value(txtPaymentWeight.Text) / varRemainingWeight * 100, 0)) & "% of remaining)",
+            "Final Weight"
+        )
     )
 )
 ```
@@ -6526,17 +6531,22 @@ If(
 If(
     varSelectedItem.Method.Value = "Resin",
     varColorText,
-    If(
-        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
-        !IsBlank(varSelectedItem.EstimatedWeight) && varSelectedItem.EstimatedWeight > 0 &&
-        Abs(Value(txtPaymentWeight.Text) - varSelectedItem.EstimatedWeight) / varSelectedItem.EstimatedWeight > 0.5,
-        varColorWarning,
-        varColorText
+    With(
+        {
+            varRemainingWeight: Max(0, varSelectedItem.EstimatedWeight - Coalesce(varSelectedItem.FinalWeight, 0))
+        },
+        If(
+            IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0 &&
+            !IsBlank(varRemainingWeight) && varRemainingWeight > 0 &&
+            Abs(Value(txtPaymentWeight.Text) - varRemainingWeight) / varRemainingWeight > 0.5,
+            varColorWarning,
+            varColorText
+        )
     )
 )
 ```
 
-> ⚠️ **Sanity check:** Filament entries switch to a warning when entered weight deviates more than 50% from the estimate. Resin estimates are stored in `mL`, so the pickup field stays grams-only and skips that direct comparison.
+> ⚠️ **Sanity check:** Filament entries switch to a warning when entered weight deviates more than 50% from the **remaining weight** (original estimate minus already-picked-up weight). For partial pickups, this ensures the warning reflects what's left, not the original estimate. Resin estimates are stored in `mL`, so the pickup field stays grams-only and skips that direct comparison.
 
 ---
 
@@ -8510,12 +8520,17 @@ Switch(
 If(
     CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
     "Combined Resin Weight (g)",
-    If(
-        IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
-        Sum(colBatchItems, EstimatedWeight) > 0 &&
-        Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
-        "⚠️ Weight (" & Text(Round(Value(txtBatchWeight.Text) / Sum(colBatchItems, EstimatedWeight) * 100, 0)) & "% of est.)",
-        "Combined Weight"
+    With(
+        {
+            varBatchRemainingWeight: Sum(colBatchItems, Max(0, EstimatedWeight - Coalesce(FinalWeight, 0)))
+        },
+        If(
+            IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+            varBatchRemainingWeight > 0 &&
+            Abs(Value(txtBatchWeight.Text) - varBatchRemainingWeight) / varBatchRemainingWeight > 0.5,
+            "⚠️ Weight (" & Text(Round(Value(txtBatchWeight.Text) / varBatchRemainingWeight * 100, 0)) & "% of remaining)",
+            "Combined Weight"
+        )
     )
 )
 ```
@@ -8526,17 +8541,22 @@ If(
 If(
     CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
     varColorText,
-    If(
-        IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
-        Sum(colBatchItems, EstimatedWeight) > 0 &&
-        Abs(Value(txtBatchWeight.Text) - Sum(colBatchItems, EstimatedWeight)) / Sum(colBatchItems, EstimatedWeight) > 0.5,
-        varColorWarning,
-        varColorText
+    With(
+        {
+            varBatchRemainingWeight: Sum(colBatchItems, Max(0, EstimatedWeight - Coalesce(FinalWeight, 0)))
+        },
+        If(
+            IsNumeric(txtBatchWeight.Text) && Value(txtBatchWeight.Text) > 0 &&
+            varBatchRemainingWeight > 0 &&
+            Abs(Value(txtBatchWeight.Text) - varBatchRemainingWeight) / varBatchRemainingWeight > 0.5,
+            varColorWarning,
+            varColorText
+        )
     )
 )
 ```
 
-> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label. **All-resin** batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams. **Mixed Filament + Resin in one batch is blocked** in the gallery and in `Flow-(I)-Payment-SaveBatch`, so this label logic only runs for **homogeneous** batches.
+> ⚠️ **Sanity check:** Filament batches use the same >50% deviation warning as the single-payment weight label, comparing against the sum of **remaining weights** (original estimates minus already-picked-up weights) for all requests in the batch. **All-resin** batches skip the direct comparison because estimates are stored in `mL` while pickup is entered in grams. **Mixed Filament + Resin in one batch is blocked** in the gallery and in `Flow-(I)-Payment-SaveBatch`, so this label logic only runs for **homogeneous** batches.
 
 ---
 
