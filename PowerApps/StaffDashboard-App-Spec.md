@@ -7423,7 +7423,7 @@ Set(
         varPickedPlateIDsList,
         varPickedPlatesText,
         varPickedPlateIDsText,
-        Coalesce(Trim(txtPaymentNotes.Text), ""),
+        If(IsBlank(Trim(txtPaymentNotes.Text)), " ", Trim(txtPaymentNotes.Text)),
         chkOwnMaterial.Value,
         chkPartialPickup.Value,
         Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")
