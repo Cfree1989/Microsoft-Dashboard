@@ -9422,68 +9422,87 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 | Font | `varAppFont` |
 | BorderColor | `If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)` |
 | ChevronBackground | `If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Color.Transparent)` |
-| DisplayMode | `If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled)` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled))` |
 
 **OnChange:**
 
 ```powerfx
-With(
-    {
-        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
-        wOldMachine: Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)),
-        wNewMachine: drpPlateMachine.Selected.Value,
-        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
-    },
-    Patch(BuildPlates,
-        wFreshPlate,
-        { 
-            Machine: { Value: drpPlateMachine.Selected.Value },
-            // Preserve required fields
-            ReqKey: wFreshPlate.ReqKey,
-            RequestID: wFreshPlate.RequestID,
-            PlateKey: wFreshPlate.PlateKey,
-            Status: wFreshPlate.Status,
-            Title: wFreshPlate.Title
-        }
-    );
-    Patch(
-        PrintRequests,
-        wFreshRequest,
-        {
-            StaffNotes: Concatenate(
-                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                "BUILD PLATE by " & wBuildPlateActor &
-                ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " & wOldMachine & " -> " & wNewMachine &
-                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-            )
-        }
-    )
-);
-// Refresh collections
-ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
-ClearCollect(
-    colBuildPlatesIndexed,
-    AddColumns(
-        colBuildPlates As plate,
-        PlateNum,
-        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-        ResolvedPlateLabel,
+// Loading overlay prevents rapid dropdown changes from conflicting patches
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Updating machine...");
+
+Set(
+    varMachineChangeSuccess,
+    IfError(
         With(
             {
-                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+                wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
+                wOldMachine: Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)),
+                wNewMachine: drpPlateMachine.Selected.Value,
+                wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
             },
-            If(
-                !IsBlank(wStoredLabel),
-                wStoredLabel,
-                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
-            )
-        )
+            Patch(
+                BuildPlates,
+                wFreshPlate,
+                {
+                    Machine: { Value: drpPlateMachine.Selected.Value },
+                    ReqKey: wFreshPlate.ReqKey,
+                    RequestID: wFreshPlate.RequestID,
+                    PlateKey: wFreshPlate.PlateKey,
+                    Status: wFreshPlate.Status,
+                    Title: wFreshPlate.Title
+                }
+            ) && Patch(
+                PrintRequests,
+                wFreshRequest,
+                {
+                    StaffNotes: Concatenate(
+                        If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                        "BUILD PLATE by " & wBuildPlateActor &
+                        ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " & wOldMachine & " -> " & wNewMachine &
+                        " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                    )
+                }
+            ) && true
+        ),
+        Blank()
     )
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value))
+
+If(
+    !IsBlank(varMachineChangeSuccess),
+    (
+        ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
+        ClearCollect(
+            colBuildPlatesIndexed,
+            AddColumns(
+                colBuildPlates As plate,
+                PlateNum,
+                CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                ResolvedPlateLabel,
+                With(
+                    {
+                        wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                    },
+                    If(
+                        !IsBlank(wStoredLabel),
+                        wStoredLabel,
+                        Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+                    )
+                )
+            )
+        );
+        ClearCollect(colAllBuildPlates, BuildPlates);
+        ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
+        Notify("Machine updated", NotificationType.Success, 2000)
+    ),
+    Notify("Failed to update machine. Please try again.", NotificationType.Error, 3000)
+);
+
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 > 💡 **Method filter:** Filament jobs show MK4S, XL, and any machine choice that **starts with `Raise`** (covers `Raise3D`, `Raise 3D`, vendor spacing, and model suffixes—SharePoint labels vary). Resin jobs show Formlabs resin lines that start with `Form 3+` or `Form 3 (` (covers labels with or without `+` before the dimension parenthesis).
@@ -9923,7 +9942,7 @@ If(
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| DisplayMode | `DisplayMode.Edit` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 > 💡 **Simplified UX:** Before labels lock, `+ Add Plate` creates a new plate immediately. After labels lock, the same button becomes `+ Add Reprint` and creates clearly labeled rows such as `Reprint 1`, `Reprint 2` without forcing staff to select a source plate first.
 >
@@ -9934,100 +9953,123 @@ If(
 **OnSelect:**
 
 ```powerfx
-With(
-    {
-        wNextReprintNum:
-            Coalesce(
-                Max(
-                    AddColumns(
-                        Filter(colBuildPlates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint ")),
-                        ReprintNum,
-                        Value(Substitute(Trim(Coalesce(DisplayLabel, "")), "Reprint ", ""))
-                    ),
-                    ReprintNum
-                ),
-                0
-            ) + 1,
-        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
-    },
-    With(
-        {
-            wNewDisplayLabel: If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Reprint " & Text(wNextReprintNum), Text(CountRows(colBuildPlates) + 1) & "/" & Text(CountRows(colBuildPlates) + 1))
-        },
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Adding plate...");
+
+Set(
+    varAddPlateSuccess,
+    IfError(
         With(
             {
-                wCreatedPlate:
-                    Patch(BuildPlates,
-                        Defaults(BuildPlates),
-                        {
-                            RequestID: varSelectedItem.ID,
-                            ReqKey: varSelectedItem.ReqKey,
-                            Machine: Coalesce(
-                                LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
-                                LookUp(
-                                    Filter(
-                                        Choices([@BuildPlates].Machine),
-                                        If(
-                                            varSelectedItem.Method.Value = "Filament",
-                                            StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                                            varSelectedItem.Method.Value = "Resin",
-                                            Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
+                wNextReprintNum:
+                    Coalesce(
+                        Max(
+                            AddColumns(
+                                Filter(colBuildPlates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint ")),
+                                ReprintNum,
+                                Value(Substitute(Trim(Coalesce(DisplayLabel, "")), "Reprint ", ""))
+                            ),
+                            ReprintNum
+                        ),
+                        0
+                    ) + 1,
+                wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
+                wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
+            },
+            With(
+                {
+                    wNewDisplayLabel: If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Reprint " & Text(wNextReprintNum), Text(CountRows(colBuildPlates) + 1) & "/" & Text(CountRows(colBuildPlates) + 1))
+                },
+                With(
+                    {
+                        wCreatedPlate:
+                            Patch(
+                                BuildPlates,
+                                Defaults(BuildPlates),
+                                {
+                                    RequestID: varSelectedItem.ID,
+                                    ReqKey: varSelectedItem.ReqKey,
+                                    Machine: Coalesce(
+                                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
+                                        LookUp(
+                                            Filter(
+                                                Choices([@BuildPlates].Machine),
+                                                If(
+                                                    varSelectedItem.Method.Value = "Filament",
+                                                    StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                                                    varSelectedItem.Method.Value = "Resin",
+                                                    Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
+                                                    true
+                                                )
+                                            ),
                                             true
                                         )
                                     ),
-                                    true
-                                )
-                            ),
-                            PlateKey: Text(GUID()),
-                            Status: { Value: "Queued" },
-                            DisplayLabel: If(
-                                Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
-                                "Reprint " & Text(wNextReprintNum),
-                                Blank()
+                                    PlateKey: Text(GUID()),
+                                    Status: { Value: "Queued" },
+                                    DisplayLabel: If(
+                                        Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+                                        "Reprint " & Text(wNextReprintNum),
+                                        Blank()
+                                    )
+                                }
+                            )
+                    },
+                    Patch(
+                        PrintRequests,
+                        wFreshRequest,
+                        {
+                            StaffNotes: Concatenate(
+                                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                                "BUILD PLATE by " & wBuildPlateActor &
+                                ": [Summary] Added " & wNewDisplayLabel & " on " &
+                                Trim(If(Find("(", wCreatedPlate.Machine.Value) > 0, Left(wCreatedPlate.Machine.Value, Find("(", wCreatedPlate.Machine.Value) - 2), wCreatedPlate.Machine.Value)) &
+                                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                             )
                         }
                     )
-            },
-            Patch(
-                PrintRequests,
-                wFreshRequest,
-                {
-                    StaffNotes: Concatenate(
-                        If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                        "BUILD PLATE by " & wBuildPlateActor &
-                        ": [Summary] Added " & wNewDisplayLabel & " on " &
-                        Trim(If(Find("(", wCreatedPlate.Machine.Value) > 0, Left(wCreatedPlate.Machine.Value, Find("(", wCreatedPlate.Machine.Value) - 2), wCreatedPlate.Machine.Value)) &
-                        " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                )
+            )
+        ),
+        Blank()
+    )
+);
+
+If(
+    !IsBlank(varAddPlateSuccess),
+    (
+        ClearCollect(
+            colBuildPlates,
+            Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+        );
+        ClearCollect(
+            colBuildPlatesIndexed,
+            AddColumns(
+                colBuildPlates As plate,
+                PlateNum,
+                CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                ResolvedPlateLabel,
+                With(
+                    {
+                        wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                    },
+                    If(
+                        !IsBlank(wStoredLabel),
+                        wStoredLabel,
+                        Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
                     )
-                }
+                )
             )
-        )
-    )
+        );
+        ClearCollect(colAllBuildPlates, BuildPlates);
+        Notify("Plate added", NotificationType.Success, 2000)
+    ),
+    Notify("Failed to add plate. Please try again.", NotificationType.Error, 3000)
 );
-ClearCollect(colBuildPlates,
-    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-);
-ClearCollect(colBuildPlatesIndexed,
-    AddColumns(
-        colBuildPlates As plate,
-        PlateNum,
-        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-        ResolvedPlateLabel,
-        With(
-            {
-                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-            },
-            If(
-                !IsBlank(wStoredLabel),
-                wStoredLabel,
-                Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
-            )
-        )
-    )
-);
-ClearCollect(colAllBuildPlates, BuildPlates)
+
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 ---
@@ -11666,13 +11708,41 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 | Color | `If(ThisItem.NeedsAttention, RGBA(255, 215, 0, 1), varColorDisabled)` |
 | Tooltip | `If(ThisItem.NeedsAttention, "Mark as handled", "Mark as needing attention")` |
 | Visible | `!varBatchSelectMode` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 5. Set **OnSelect:**
 
 ```powerfx
-Patch(PrintRequests, ThisItem, {NeedsAttention: !ThisItem.NeedsAttention});
-// When marking as needing attention, play notification sound
-If(!ThisItem.NeedsAttention, Reset(audNotification); Set(varPlaySound, true))
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Updating attention flag...");
+
+With(
+    { wRow: LookUp(PrintRequests, ID = ThisItem.ID) },
+    Set(
+        varAttentionToggleSuccess,
+        IfError(
+            Patch(PrintRequests, wRow, { NeedsAttention: !wRow.NeedsAttention }),
+            Blank()
+        )
+    );
+    If(
+        !IsBlank(varAttentionToggleSuccess),
+        (
+            If(
+                !wRow.NeedsAttention,
+                (
+                    Reset(audNotification);
+                    Set(varPlaySound, true)
+                )
+            );
+            Notify("Attention flag updated", NotificationType.Success, 1500)
+        ),
+        Notify("Could not update attention flag. Please try again.", NotificationType.Error, 3000)
+    )
+);
+
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 > 💡 **Simple Toggle:** This is a quick flag toggle for staff to mark items needing attention. When they turn the lightbulb *on* (NeedsAttention = true), we call `Reset(audNotification)` then `Set(varPlaySound, true)` so the chime plays. It doesn't log to the audit trail since it's a temporary visual indicator, not a workflow action.
@@ -13187,23 +13257,42 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | Visible | `!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 75. Set **OnSelect:**
 
 ```powerfx
-UpdateIf(
-    RequestComments,
-    RequestID = varSelectedItem.ID &&
-    Direction.Value = "Inbound" &&
-    ReadByStaff = false,
-    {ReadByStaff: true}
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Marking messages read...");
+
+Set(
+    varMarkReadSuccess,
+    IfError(
+        UpdateIf(
+            RequestComments,
+            RequestID = varSelectedItem.ID &&
+            Direction.Value = "Inbound" &&
+            ReadByStaff = false,
+            { ReadByStaff: true }
+        );
+        Patch(
+            PrintRequests,
+            LookUp(PrintRequests, ID = varSelectedItem.ID),
+            { NeedsAttention: false }
+        );
+        true,
+        Blank()
+    )
 );
 
-// Clear NeedsAttention flag on the print request
-// Using LookUp to get fresh record avoids concurrency conflicts
-Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {NeedsAttention: false});
+If(
+    !IsBlank(varMarkReadSuccess),
+    Notify("Messages marked as read", NotificationType.Success),
+    Notify("Could not mark messages read. Please try again.", NotificationType.Error, 3000)
+);
 
-Notify("Messages marked as read", NotificationType.Success)
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
 > **Note:** This button only appears when there are unread inbound messages. After clicking, it disappears, the NeedsAttention flag is cleared, and the unread badge on the job card also updates.
