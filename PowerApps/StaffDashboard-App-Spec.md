@@ -9427,78 +9427,81 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 **OnChange:**
 
 ```powerfx
-// Loading overlay prevents rapid dropdown changes from conflicting patches
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Updating machine...");
 
+// Patch 1: Update the BuildPlate machine, preserving all required fields
 Set(
     varMachineChangeSuccess,
     IfError(
-        With(
+        Patch(
+            BuildPlates,
+            LookUp(BuildPlates, ID = ThisItem.ID),
             {
-                wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-                wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
-                wOldMachine: Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)),
-                wNewMachine: drpPlateMachine.Selected.Value,
-                wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
-            },
-            Patch(
-                BuildPlates,
-                wFreshPlate,
-                {
-                    Machine: { Value: drpPlateMachine.Selected.Value },
-                    ReqKey: wFreshPlate.ReqKey,
-                    RequestID: wFreshPlate.RequestID,
-                    PlateKey: wFreshPlate.PlateKey,
-                    Status: wFreshPlate.Status,
-                    Title: wFreshPlate.Title
-                }
-            ) && Patch(
-                PrintRequests,
-                wFreshRequest,
-                {
-                    StaffNotes: Concatenate(
-                        If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                        "BUILD PLATE by " & wBuildPlateActor &
-                        ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " & wOldMachine & " -> " & wNewMachine &
-                        " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                    )
-                }
-            ) && true
-        ),
-        Blank()
+                Machine: { Value: drpPlateMachine.Selected.Value },
+                ReqKey: LookUp(BuildPlates, ID = ThisItem.ID).ReqKey,
+                RequestID: LookUp(BuildPlates, ID = ThisItem.ID).RequestID,
+                PlateKey: LookUp(BuildPlates, ID = ThisItem.ID).PlateKey,
+                Status: LookUp(BuildPlates, ID = ThisItem.ID).Status,
+                Title: LookUp(BuildPlates, ID = ThisItem.ID).Title
+            }
+        );
+        true,
+        Notify("Failed to update machine.", NotificationType.Error, 3000);
+        false
     )
 );
 
+// Patch 2: Append StaffNotes on the parent request (only if Patch 1 succeeded)
 If(
-    !IsBlank(varMachineChangeSuccess),
-    (
-        ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
-        ClearCollect(
-            colBuildPlatesIndexed,
-            AddColumns(
-                colBuildPlates As plate,
-                PlateNum,
-                CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                ResolvedPlateLabel,
-                With(
-                    {
-                        wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                    },
-                    If(
-                        !IsBlank(wStoredLabel),
-                        wStoredLabel,
-                        Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+    varMachineChangeSuccess,
+    Set(
+        varMachineChangeSuccess,
+        IfError(
+            Patch(
+                PrintRequests,
+                LookUp(PrintRequests, ID = varSelectedItem.ID),
+                {
+                    StaffNotes: Concatenate(
+                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                        "BUILD PLATE by " & With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                        ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " &
+                        Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
+                        " -> " & drpPlateMachine.Selected.Value &
+                        " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                     )
-                )
+                }
+            );
+            true,
+            Notify("Machine updated but could not log note.", NotificationType.Warning, 3000);
+            true
+        )
+    )
+);
+
+// Refresh collections and notify on success
+If(
+    varMachineChangeSuccess,
+    ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
+    ClearCollect(
+        colBuildPlatesIndexed,
+        AddColumns(
+            colBuildPlates As plate,
+            PlateNum,
+            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+            ResolvedPlateLabel,
+            With(
+                {
+                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                },
+                If(!IsBlank(wStoredLabel), wStoredLabel, Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates)))
             )
-        );
-        ClearCollect(colAllBuildPlates, BuildPlates);
-        ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
-        Notify("Machine updated", NotificationType.Success, 2000)
-    ),
-    Notify("Failed to update machine. Please try again.", NotificationType.Error, 3000)
+        )
+    );
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
+    Notify("Machine updated", NotificationType.Success, 2000)
 );
 
 Set(varIsLoading, false);
@@ -9956,116 +9959,117 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Adding plate...");
 
+// Compute reprint number and display label before patching
 Set(
-    varAddPlateSuccess,
-    IfError(
-        With(
-            {
-                wNextReprintNum:
-                    Coalesce(
-                        Max(
-                            AddColumns(
-                                Filter(colBuildPlates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint ")),
-                                ReprintNum,
-                                Value(Substitute(Trim(Coalesce(DisplayLabel, "")), "Reprint ", ""))
-                            ),
-                            ReprintNum
-                        ),
-                        0
-                    ) + 1,
-                wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-                wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
-            },
-            With(
-                {
-                    wNewDisplayLabel: If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Reprint " & Text(wNextReprintNum), Text(CountRows(colBuildPlates) + 1) & "/" & Text(CountRows(colBuildPlates) + 1))
-                },
-                With(
-                    {
-                        wCreatedPlate:
-                            Patch(
-                                BuildPlates,
-                                Defaults(BuildPlates),
-                                {
-                                    RequestID: varSelectedItem.ID,
-                                    ReqKey: varSelectedItem.ReqKey,
-                                    Machine: Coalesce(
-                                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
-                                        LookUp(
-                                            Filter(
-                                                Choices([@BuildPlates].Machine),
-                                                If(
-                                                    varSelectedItem.Method.Value = "Filament",
-                                                    StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
-                                                    varSelectedItem.Method.Value = "Resin",
-                                                    Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
-                                                    true
-                                                )
-                                            ),
-                                            true
-                                        )
-                                    ),
-                                    PlateKey: Text(GUID()),
-                                    Status: { Value: "Queued" },
-                                    DisplayLabel: If(
-                                        Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
-                                        "Reprint " & Text(wNextReprintNum),
-                                        Blank()
-                                    )
-                                }
-                            )
-                    },
-                    Patch(
-                        PrintRequests,
-                        wFreshRequest,
-                        {
-                            StaffNotes: Concatenate(
-                                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                                "BUILD PLATE by " & wBuildPlateActor &
-                                ": [Summary] Added " & wNewDisplayLabel & " on " &
-                                Trim(If(Find("(", wCreatedPlate.Machine.Value) > 0, Left(wCreatedPlate.Machine.Value, Find("(", wCreatedPlate.Machine.Value) - 2), wCreatedPlate.Machine.Value)) &
-                                " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                            )
-                        }
-                    )
-                )
-            )
+    varNextReprintNum,
+    Coalesce(
+        Max(
+            AddColumns(
+                Filter(colBuildPlates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint ")),
+                ReprintNum,
+                Value(Substitute(Trim(Coalesce(DisplayLabel, "")), "Reprint ", ""))
+            ),
+            ReprintNum
         ),
-        Blank()
+        0
+    ) + 1
+);
+Set(
+    varNewDisplayLabel,
+    If(
+        Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+        "Reprint " & Text(varNextReprintNum),
+        Text(CountRows(colBuildPlates) + 1) & "/" & Text(CountRows(colBuildPlates) + 1)
     )
 );
 
-If(
-    !IsBlank(varAddPlateSuccess),
-    (
-        ClearCollect(
-            colBuildPlates,
-            Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-        );
-        ClearCollect(
-            colBuildPlatesIndexed,
-            AddColumns(
-                colBuildPlates As plate,
-                PlateNum,
-                CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                ResolvedPlateLabel,
-                With(
-                    {
-                        wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                    },
-                    If(
-                        !IsBlank(wStoredLabel),
-                        wStoredLabel,
-                        Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+// Patch 1: Create the new BuildPlate record
+Set(
+    varAddPlateSuccess,
+    IfError(
+        Patch(
+            BuildPlates,
+            Defaults(BuildPlates),
+            {
+                RequestID: varSelectedItem.ID,
+                ReqKey: varSelectedItem.ReqKey,
+                Machine: Coalesce(
+                    LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
+                    LookUp(
+                        Filter(
+                            Choices([@BuildPlates].Machine),
+                            If(
+                                varSelectedItem.Method.Value = "Filament",
+                                StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                                varSelectedItem.Method.Value = "Resin",
+                                Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
+                                true
+                            )
+                        ),
+                        true
                     )
+                ),
+                PlateKey: Text(GUID()),
+                Status: { Value: "Queued" },
+                DisplayLabel: If(
+                    Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
+                    "Reprint " & Text(varNextReprintNum),
+                    Blank()
                 )
-            )
+            }
         );
-        ClearCollect(colAllBuildPlates, BuildPlates);
-        Notify("Plate added", NotificationType.Success, 2000)
-    ),
-    Notify("Failed to add plate. Please try again.", NotificationType.Error, 3000)
+        true,
+        Notify("Failed to add plate. Please try again.", NotificationType.Error, 3000);
+        false
+    )
+);
+
+// Patch 2: Append StaffNotes on the parent request (only if Patch 1 succeeded)
+If(
+    varAddPlateSuccess,
+    Set(
+        varAddPlateSuccess,
+        IfError(
+            Patch(
+                PrintRequests,
+                LookUp(PrintRequests, ID = varSelectedItem.ID),
+                {
+                    StaffNotes: Concatenate(
+                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                        "BUILD PLATE by " & With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                        ": [Summary] Added " & varNewDisplayLabel & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                    )
+                }
+            );
+            true,
+            Notify("Plate added but could not log note.", NotificationType.Warning, 3000);
+            true
+        )
+    )
+);
+
+// Refresh collections and notify on success
+If(
+    varAddPlateSuccess,
+    ClearCollect(colBuildPlates, Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending));
+    ClearCollect(
+        colBuildPlatesIndexed,
+        AddColumns(
+            colBuildPlates As plate,
+            PlateNum,
+            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+            ResolvedPlateLabel,
+            With(
+                {
+                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                },
+                If(!IsBlank(wStoredLabel), wStoredLabel, Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates)))
+            )
+        )
+    );
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    Notify("Plate added", NotificationType.Success, 2000)
 );
 
 Set(varIsLoading, false);
@@ -11716,30 +11720,22 @@ In Power Apps, controls that are **higher in the Tree view** (closer to the top)
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Updating attention flag...");
 
-With(
-    { wRow: LookUp(PrintRequests, ID = ThisItem.ID) },
-    Set(
-        varAttentionToggleSuccess,
-        IfError(
-            Patch(PrintRequests, wRow, { NeedsAttention: !wRow.NeedsAttention }),
-            Blank()
-        )
-    );
-    If(
-        !IsBlank(varAttentionToggleSuccess),
-        (
-            If(
-                !wRow.NeedsAttention,
-                (
-                    Reset(audNotification);
-                    Set(varPlaySound, true)
-                )
-            );
-            Notify("Attention flag updated", NotificationType.Success, 1500)
-        ),
-        Notify("Could not update attention flag. Please try again.", NotificationType.Error, 3000)
+// Capture current state before patching so we know which direction the toggle went
+Set(varWasAttention, ThisItem.NeedsAttention);
+
+Set(
+    varAttentionToggleSuccess,
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = ThisItem.ID), { NeedsAttention: !varWasAttention });
+        true,
+        Notify("Could not update attention flag. Please try again.", NotificationType.Error, 3000);
+        false
     )
 );
+
+// Play sound only when turning attention ON (was false, now true)
+If(varAttentionToggleSuccess && !varWasAttention, Reset(audNotification); Set(varPlaySound, true));
+If(varAttentionToggleSuccess, Notify("Attention flag updated", NotificationType.Success, 1500));
 
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
@@ -13265,31 +13261,31 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Marking messages read...");
 
+// Mark all inbound unread comments as read
+UpdateIf(
+    RequestComments,
+    RequestID = varSelectedItem.ID &&
+    Direction.Value = "Inbound" &&
+    ReadByStaff = false,
+    { ReadByStaff: true }
+);
+
+// Clear the NeedsAttention flag on the request
 Set(
     varMarkReadSuccess,
     IfError(
-        UpdateIf(
-            RequestComments,
-            RequestID = varSelectedItem.ID &&
-            Direction.Value = "Inbound" &&
-            ReadByStaff = false,
-            { ReadByStaff: true }
-        );
         Patch(
             PrintRequests,
             LookUp(PrintRequests, ID = varSelectedItem.ID),
             { NeedsAttention: false }
         );
         true,
-        Blank()
+        Notify("Could not clear attention flag. Please try again.", NotificationType.Error, 3000);
+        false
     )
 );
 
-If(
-    !IsBlank(varMarkReadSuccess),
-    Notify("Messages marked as read", NotificationType.Success),
-    Notify("Could not mark messages read. Please try again.", NotificationType.Error, 3000)
-);
+If(varMarkReadSuccess, Notify("Messages marked as read", NotificationType.Success));
 
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
