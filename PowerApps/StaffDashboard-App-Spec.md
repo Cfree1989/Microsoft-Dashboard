@@ -2538,9 +2538,7 @@ Patch(PrintRequests, varCurrentItem, {
     },
     StaffNotes: Concatenate(
         If(IsBlank(varCurrentItem.StaffNotes), "", varCurrentItem.StaffNotes & " | "),
-        "STATUS by " &
-        With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": [Summary] Ready to Print -> Printing [Changes] [Reason] [Context] [Comment] - " &
+        "STATUS: [Summary] Ready to Print -> Printing [Changes] [Reason] [Context] [Comment] - " &
         Text(Now(), "m/d h:mmam/pm")
     )
 });
@@ -9464,8 +9462,7 @@ If(
                 {
                     StaffNotes: Concatenate(
                         If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                        "BUILD PLATE by " & With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                        ": [Summary] " & ThisItem.ResolvedPlateLabel & " machine " &
+                        "BUILD PLATE: [Summary] " & ThisItem.ResolvedPlateLabel & " machine " &
                         Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
                         " -> " & drpPlateMachine.Selected.Value &
                         " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
@@ -9575,7 +9572,6 @@ Set(varLoadingMessage, "Updating plate status...");
 With(
     {
         wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
         wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)
     },
     // Update BuildPlate with explicit field preservation
@@ -9607,8 +9603,7 @@ With(
             {
                 StaffNotes: Concatenate(
                     If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE by " & wBuildPlateActor &
-                    ": [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
+                    "BUILD PLATE: [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
                     Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
                     " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                 )
@@ -9691,7 +9686,6 @@ Set(varLoadingMessage, "Marking plate as completed...");
 
 With(
     {
-        wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
         wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),
         wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),
         wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
@@ -9757,8 +9751,7 @@ With(
             {
                 StaffNotes: Concatenate(
                     If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE by " & wBuildPlateActor &
-                    ": [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                    "BUILD PLATE: [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                 )
             }
         );
@@ -9844,8 +9837,7 @@ If(
     Notify("Original locked plates cannot be deleted. Add a reprint instead.", NotificationType.Warning),
     With(
         {
-            wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-            wBuildPlateActor: With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".")
+            wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
         },
         Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
         Patch(
@@ -9854,8 +9846,7 @@ If(
             {
                 StaffNotes: Concatenate(
                     If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE by " & wBuildPlateActor &
-                    ": [Summary] Removed " & ThisItem.ResolvedPlateLabel &
+                    "BUILD PLATE: [Summary] Removed " & ThisItem.ResolvedPlateLabel &
                     " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                 )
             }
@@ -10036,8 +10027,7 @@ If(
                 {
                     StaffNotes: Concatenate(
                         If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                        "BUILD PLATE by " & With({n: varMeName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                        ": [Summary] Added " & varNewDisplayLabel & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                        "BUILD PLATE: [Summary] Added " & varNewDisplayLabel & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                     )
                 }
             );
@@ -10779,7 +10769,7 @@ If(
                     },
                     With(
                         {
-                            action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), "NOTE")),
+                            action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), If(colonPos > 0, Upper(Left(text, colonPos - 1)), "NOTE"))),
                             rawName: If(
                                 !isManualNote && byPos > 0 && colonPos > byPos + 4,
                                 Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
