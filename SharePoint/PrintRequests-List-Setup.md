@@ -1,4 +1,4 @@
-# PrintRequests SharePoint List Setup
+﻿# PrintRequests SharePoint List Setup
 
 **Purpose:** Central repository for all 3D print requests  
 **Time Required:** 45 minutes
@@ -170,6 +170,7 @@ Please enter your 16-digit Tiger Card POS number (NOT your LSUID). This is the l
    - Class Project
    - Research
    - Personal
+   - Capstone
    - Other
 5. Click **Save**
 
@@ -693,7 +694,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 | TigerCardNumber | Single line | Yes | - | 16-digit POS number (NOT LSUID) for manual payment entry |
 | Course Number | Number | No | - | Optional class number |
 | Discipline | Choice | No | - | Academic discipline |
-| ProjectType | Choice | No | - | Class Project; Research; Personal; Other |
+| ProjectType | Choice | No | - | Class Project; Research; Personal; Capstone; Other |
 | Color | Choice | Yes | - | Any; Black; Matte Black; White; Matte White; Gray; Light Gray; Matte Light Gray; Red; Matte Red; Orange; Matte Orange; Yellow; Matte Yellow; Gold; Green; Matte Green; Forest Green; Blue; Matte Blue; Cobalt Blue; Purple; Matte Purple; Brown; Light Brown; Chocolate Brown; Matte Chocolate; Copper; Bronze; Silver; Clear |
 | Method | Choice | Yes | - | Filament; Resin |
 | Printer | Choice | Yes | - | Printer with build dimensions |

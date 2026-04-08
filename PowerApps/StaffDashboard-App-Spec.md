@@ -1,4 +1,4 @@
-# Staff Console — Canvas App (Tablet)
+﻿# Staff Console — Canvas App (Tablet)
 
 **⏱️ Time Required:** 8-12 hours (can be done in multiple sessions)  
 **🎯 Goal:** Staff can view, manage, and process all 3D print requests through an intuitive dashboard
@@ -947,6 +947,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnDetailsConfirm
         btnDetailsCancel
         lblDetailsCostValue
+        chkDetailsOwnMaterial
         lblDetailsCostLabel
         txtDetailsHours
         lblDetailsHoursLabel
@@ -2836,9 +2837,10 @@ Set(varShowPaymentModal, ThisItem.ID)
 
 ```powerfx
 Set(varShowDetailsModal, ThisItem.ID);
-Set(varSelectedItem, ThisItem)
-```
+Set(varSelectedItem, ThisItem);
+Set(varDetailsComputerChanged, false)
 
+```
 > 💡 **Visibility:** Available on ALL status tabs except Pending. Positioned near the "Additional Details" header for consistent placement regardless of which action buttons are showing.
 
 ### Revert Status Button (btnRevert)
@@ -3456,6 +3458,7 @@ scrDashboard
     ├── txtApprovalComments      ← Multi-line text input
     ├── lblApprovalCommentsLabel ← "Additional Comments:"
     ├── lblApprovalCostValue     ← Auto-calculated cost display
+    ├── chkApprovalOwnMaterial   ← "Student provided own material (70% discount)"
     ├── lblApprovalCostLabel     ← "Estimated Cost:"
     ├── txtEstimatedTime         ← Time input field
     ├── lblApprovalTimeLabel     ← "Estimated Print Time (hours):"
@@ -3520,9 +3523,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 725) / 2` |
+| Y | `(Parent.Height - 751) / 2` |
 | Width | `600` |
-| Height | `644` |
+| Height | `670` |
 | Fill | `varColorBgCard` |
 
 > 💡 **Layout:** Side-by-side design with weight/time/cost on left, computer/plates on right.
@@ -3592,7 +3595,8 @@ Reset(txtEstimatedWeight);
 Reset(txtEstimatedTime);
 Reset(txtApprovalComments);
 Reset(ddApprovalStaff);
-Reset(ddSlicedOnComputer)
+Reset(ddSlicedOnComputer);
+Reset(chkApprovalOwnMaterial)
 ```
 
 ---
@@ -3856,22 +3860,52 @@ Reset(ddSlicedOnComputer)
 ```powerfx
 If(
     IsNumeric(txtEstimatedWeight.Text) && Value(txtEstimatedWeight.Text) > 0,
-    "$" & Text(
-        Max(
-            varMinimumCost,
-            Value(txtEstimatedWeight.Text) * If(
-                varSelectedItem.Method.Value = "Resin",
-                varResinRate,
-                varFilamentRate
+    With(
+        {
+            baseCost: Max(
+                varMinimumCost,
+                Value(txtEstimatedWeight.Text) * If(
+                    varSelectedItem.Method.Value = "Resin",
+                    varResinRate,
+                    varFilamentRate
+                )
             )
-        ),
-        "[$-en-US]#,##0.00"
+        },
+        "$" & Text(
+            If(chkApprovalOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+            "[$-en-US]#,##0.00"
+        ) & If(chkApprovalOwnMaterial.Value, " (70% off)", "")
     ),
     "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
 )
 ```
 
 > 💰 **Pricing:** Uses `varFilamentRate` ($/g), `varResinRate` ($/mL), and `varMinimumCost` from App.OnStart
+
+---
+
+### Own Material Checkbox (chkApprovalOwnMaterial)
+
+47A. Click **+ Insert** ? **Checkbox** (**Classic**).
+47B. **Rename it:** `chkApprovalOwnMaterial`
+47C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student provided own material (70% discount)"` |
+| X | `recApprovalModal.X + 20` |
+| Y | `recApprovalModal.Y + 383` |
+| Width | `420` |
+| Height | `32` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `varColorNeutral` |
+| CheckboxBorderColor | `varInputBorderColor` |
+| CheckmarkFill | `RGBA(0, 0, 0, 1)` |
+| HoverColor | `RGBA(0, 18, 107, 1)` |
+| Default | `false` |
+
+> ?? **Discount Logic:** When checked, the estimated cost display above updates in real time to reflect the 70% discount (`varOwnMaterialDiscount`). The value is saved to `StudentOwnMaterial` on the `PrintRequests` record so the details modal and payment modal can pre-populate from it.
 
 ---
 
@@ -4062,7 +4096,8 @@ Reset(txtEstimatedWeight);
 Reset(txtEstimatedTime);
 Reset(txtApprovalComments);
 Reset(ddApprovalStaff);
-Reset(ddSlicedOnComputer)
+Reset(ddSlicedOnComputer);
+Reset(chkApprovalOwnMaterial)
 ```
 
 ---
@@ -4158,6 +4193,7 @@ Set(
                 EstimatedWeight: Value(txtEstimatedWeight.Text),
                 EstimatedTime: Value(txtEstimatedTime.Text),
                 EstimatedCost: varCalculatedCost,
+                StudentOwnMaterial: chkApprovalOwnMaterial.Value,
                 SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
                 ApprovalComment: txtApprovalComments.Text,
                 StaffNotes: Concatenate(
@@ -4253,7 +4289,8 @@ If(
     Reset(txtEstimatedTime);
     Reset(txtApprovalComments);
     Reset(ddApprovalStaff);
-    Reset(ddSlicedOnComputer)
+    Reset(ddSlicedOnComputer);
+    Reset(chkApprovalOwnMaterial)
 );
 
 // === HIDE LOADING ===
@@ -5120,6 +5157,7 @@ scrDashboard
     ├── txtDetailsTransaction  ← Transaction number input (only shows for paid items)
     ├── lblDetailsTransLabel   ← "Transaction #:"
     ├── lblDetailsCostValue    ← Auto-calculated cost display
+    ├── chkDetailsOwnMaterial  ← "Student provided own material (70% discount)"
     ├── lblDetailsCostLabel    ← "Calculated Cost:"
     ├── txtDetailsHours        ← Hours number input
     ├── lblDetailsHoursLabel   ← "Est. Hours:"
@@ -5266,7 +5304,9 @@ Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
 Reset(txtDetailsHours);
-Reset(txtDetailsTransaction)
+Reset(txtDetailsTransaction);
+Reset(chkDetailsOwnMaterial);
+Set(varDetailsComputerChanged, false)
 ```
 
 ---
@@ -5592,6 +5632,8 @@ With(
 | Height | `36` |
 | DisplayFields | `["Name"]` |
 | SearchFields | `["Name"]` |
+| SelectMultiple | `false` |
+| IsSearchable | `false` |
 | DefaultSelectedItems | `If(IsBlank(varSelectedItem.SlicedOnComputer.Value), Blank(), [LookUp(colSlicingComputers, Name = varSelectedItem.SlicedOnComputer.Value)])` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
@@ -5609,8 +5651,9 @@ With(
 | PressedColor | `varDropdownPressedColor` |
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
+| OnChange | `Set(varDetailsComputerChanged, ddDetailsSlicedOnComputer.Selected.Name <> Coalesce(varSelectedItem.SlicedOnComputer.Value, ""))` |
 
-> 💡 **Preloaded current computer:** Reuse the same local slicing-computer collection from approval so staff can correct the stored workstation without needing a SharePoint lookup.
+> 💡 **Preloaded current computer:** Reuse the same local slicing-computer collection from approval so staff can correct the stored workstation without needing a SharePoint lookup. The `OnChange` handler sets `varDetailsComputerChanged` so the Save button enables correctly — this is required because Power Apps does not always re-evaluate button `DisplayMode` formulas when a ComboBox selection changes.
 
 ---
 
@@ -5748,13 +5791,41 @@ With(
     If(
         IsBlank(weight) || weight <= 0,
         "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (min)",
-        "$" & Text(
-            Max(varMinimumCost, weight * If(method = "Resin", varResinRate, varFilamentRate)),
-            "[$-en-US]#,##0.00"
+        With(
+            {baseCost: Max(varMinimumCost, weight * If(method = "Resin", varResinRate, varFilamentRate))},
+            "$" & Text(
+                If(chkDetailsOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+                "[$-en-US]#,##0.00"
+            ) & If(chkDetailsOwnMaterial.Value, " (70% off)", "")
         )
     )
 )
 ```
+
+---
+
+### Own Material Checkbox (chkDetailsOwnMaterial)
+
+67A. Click **+ Insert** ? **Checkbox** (**Classic**).
+67B. **Rename it:** `chkDetailsOwnMaterial`
+67C. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Student material (70% discount)"` |
+| X | `recDetailsModal.X + 20` |
+| Y | `recDetailsModal.Y + 462` |
+| Width | `420` |
+| Height | `32` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Color | `varColorNeutral` |
+| CheckboxBorderColor | `varInputBorderColor` |
+| CheckmarkFill | `RGBA(0, 0, 0, 1)` |
+| HoverColor | `RGBA(0, 18, 107, 1)` |
+| Default | `varSelectedItem.StudentOwnMaterial` |
+
+> ?? **Pre-populated from record:** The checkbox defaults to the current `StudentOwnMaterial` value saved on the request (set at approval or by a prior details edit). When toggled, it updates the saved value so downstream modals (payment) can pre-populate correctly. The cost formula above also updates in real time when checked.
 
 ---
 
@@ -5845,7 +5916,9 @@ Reset(ddDetailsPrinter);
 Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
 Reset(txtDetailsHours);
-Reset(txtDetailsTransaction)
+Reset(txtDetailsTransaction);
+Reset(chkDetailsOwnMaterial);
+Set(varDetailsComputerChanged, false)
 ```
 
 ---
@@ -5887,10 +5960,11 @@ If(
         Coalesce(ddDetailsMethod.Selected.Value, "") <> Coalesce(varSelectedItem.Method.Value, "") ||
         Coalesce(ddDetailsPrinter.Selected.Value, "") <> Coalesce(varSelectedItem.Printer.Value, "") ||
         Coalesce(ddDetailsColor.Selected.Value, "") <> Coalesce(varSelectedItem.Color.Value, "") ||
-        Coalesce(ddDetailsSlicedOnComputer.Selected.Name, "") <> Coalesce(varSelectedItem.SlicedOnComputer.Value, "") ||
+        varDetailsComputerChanged ||
         (IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) <> Coalesce(varSelectedItem.EstimatedWeight, 0)) ||
         (IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) <> Coalesce(varSelectedItem.EstimatedTime, 0)) ||
-        (!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""))
+        (!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, "")) ||
+        chkDetailsOwnMaterial.Value <> varSelectedItem.StudentOwnMaterial
     ),
     DisplayMode.Edit,
     DisplayMode.Disabled
@@ -5927,7 +6001,15 @@ Set(
     )
 );
 Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
-Set(varNewCost, If(IsBlank(varNewWeight), varSelectedItem.EstimatedCost, Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate))));
+Set(varNewCost, If(
+    IsBlank(varNewWeight),
+    varSelectedItem.EstimatedCost,
+    If(
+        chkDetailsOwnMaterial.Value,
+        Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate)) * varOwnMaterialDiscount,
+        Max(varMinimumCost, varNewWeight * If(varNewMethod = "Resin", varResinRate, varFilamentRate))
+    )
+));
 
 // Build change description for audit
 Set(varChangeDesc, "");
@@ -5970,6 +6052,7 @@ Patch(
         EstimatedWeight: If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight),
         EstimatedTime: If(IsNumeric(txtDetailsHours.Text) && Value(txtDetailsHours.Text) > 0, Value(txtDetailsHours.Text), varSelectedItem.EstimatedTime),
         EstimatedCost: varNewCost,
+        StudentOwnMaterial: chkDetailsOwnMaterial.Value,
         TransactionNumber: If(!IsBlank(txtDetailsTransaction.Text) && txtDetailsTransaction.Text <> Coalesce(varSelectedItem.TransactionNumber, ""), txtDetailsTransaction.Text, varSelectedItem.TransactionNumber),
         LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Updated"),
         LastActionBy: {
@@ -6015,6 +6098,8 @@ Reset(ddDetailsColor);
 Reset(txtDetailsWeight);
 Reset(txtDetailsHours);
 Reset(txtDetailsTransaction);
+Reset(chkDetailsOwnMaterial);
+Set(varDetailsComputerChanged, false);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
@@ -6658,6 +6743,9 @@ If(
 | CheckboxBorderColor | `varInputBorderColor` |
 | CheckmarkFill | `RGBA(0, 0, 0, 1)` |
 | HoverColor | `RGBA(0, 18, 107, 1)` |
+| Default | `varSelectedItem.StudentOwnMaterial` |
+
+> 💡 **Pre-populated from record:** Defaults to the StudentOwnMaterial value saved at approval or via the Change Print Details modal. Staff can still toggle it here — this value is what gets written to the Payments ledger via Flow H.
 
 ---
 
