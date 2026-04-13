@@ -43,7 +43,9 @@ This flow runs automatically when a new item is created in the PrintRequests lis
 
 **Configure retry policies on all actions for resilience:**
 - **Retry Policy Type:** Exponential interval
-- **Apply to:** Get item, Update item, Create item (AuditLog), Send email actions
+- **Apply to:** Every **SharePoint** action that reads or writes list items (`Get item`, `Get attachments`, **Update item**, `Create item` on `AuditLog`), plus **Send email** actions.
+- **Critical for rejection paths:** The step-by-step sections below (for example Step 5a **Reject Request - No Files**) already specify the same exponential retry on each **Update item**. If you still see **Save Conflict** / **BadRequest**, open the action in the **published** flow and confirm it is not still on **Default**—easy to miss when copying actions or editing an older version. Concurrent updates (for example **Flow B** on *item created or modified*, or a user editing the item) cause that error; retries usually clear it within a few attempts.
+- **Run history can look misleading:** If **Reject Request - No Files** fails, the parent **Check for No Attachments** condition may show a generic failure even though the branch logic was correct—the failing step is the **Update item**, not “no attachments” detection.
 
 **How to set retry policy on any action:**
 1. Click the **three dots (…)** on the action card
@@ -203,7 +205,7 @@ toLower(triggerOutputs()?['body/Author']?['Email'])
 2. Search for and select **Update item** (SharePoint)
 3. Rename the action to: `Reject Request - No Files`
    - Click the **three dots (…)** → **Rename** → type `Reject Request - No Files`
-4. **Configure retry policy:**
+4. **Configure retry policy** (same as [Error Handling Configuration](#error-handling-configuration); avoids **Save Conflict** on concurrent updates):
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
    - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
@@ -402,7 +404,7 @@ equals(length(split(first(split(outputs('Get_First_Filename'), '.')), '_')), 3)
 2. Search for and select **Update item** (SharePoint)
 3. Rename the action to: `Reject Request - Invalid Filename`
    - Click the **three dots (…)** → **Rename** → type `Reject Request - Invalid Filename`
-4. **Configure retry policy:**
+4. **Configure retry policy** (same **Save Conflict** protection as **Reject Request - No Files**):
    - Click **three dots (…)** → **Settings** → scroll to **Networking**
    - **Retry policy:** Select `Exponential interval`
    - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
@@ -816,6 +818,14 @@ concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))
 | Valid files rejected | Extension check | Verify extensions are lowercase in check |
 | Invalid files accepted | Format check | Verify split by underscore produces 3 parts |
 | Attachments not found | Get Attachments action | Check Site Address and List Name match exactly |
+
+### Save Conflict / BadRequest on Reject or Update
+
+| Symptom | Check | Solution |
+|---------|-------|----------|
+| **Reject Request - No Files** fails with **Save Conflict** or **BadRequest** | Action **Settings** → **Networking** → **Retry policy** | Set **Exponential interval** with the four fields filled (same values as [Error Handling Configuration](#error-handling-configuration)). Re-save the flow. |
+| Same error on **Reject Request - Invalid Filename** or **Update Request - Valid File** | Concurrent edits | Another flow or user updated the item between read and write; retries normally succeed. If it persists, check whether **Flow B** is firing on the same create event and narrowing its trigger conditions if needed. |
+| Condition shows failure but “no attachments” was correct | Child action failed | Open the failed **Update item** run details—not only the condition card. |
 
 ### Common Expression Errors
 
