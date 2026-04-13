@@ -4831,7 +4831,7 @@ scrDashboard As screen:
             Width: =1
             X: =recPaymentModal.X + 555
             Y: =125
-            ZIndex: =26
+            ZIndex: =25
 
         chkPayerSameAsStudent As checkbox:
             BorderColor: =varColorText
@@ -4846,7 +4846,7 @@ scrDashboard As screen:
             Width: =420
             X: =153
             Y: =381
-            ZIndex: =27
+            ZIndex: =26
 
         lblPayerNameLabel As label:
             Font: =varAppFont
@@ -4857,7 +4857,7 @@ scrDashboard As screen:
             Width: =200
             X: =153
             Y: =469
-            ZIndex: =28
+            ZIndex: =27
 
         lblPaymentHistoryHeader As label:
             Font: =varAppFont
@@ -4869,7 +4869,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =recPaymentModal.Y + 110
-            ZIndex: =29
+            ZIndex: =28
 
         lblPayerTigerCardLabel As label:
             Font: =varAppFont
@@ -4879,7 +4879,7 @@ scrDashboard As screen:
             Width: =180
             X: =425
             Y: =463
-            ZIndex: =30
+            ZIndex: =29
 
         txtPayerTigerCard As text:
             BorderColor: =varInputBorderColor
@@ -4893,7 +4893,7 @@ scrDashboard As screen:
             Width: =180
             X: =425
             Y: =503
-            ZIndex: =31
+            ZIndex: =30
 
         txtPayerName As text:
             BorderColor: =varInputBorderColor
@@ -4907,7 +4907,7 @@ scrDashboard As screen:
             Width: =219
             X: =153
             Y: =503
-            ZIndex: =32
+            ZIndex: =31
 
         "galPaymentHistory As gallery.'BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0'":
             DelayItemLoading: =true
@@ -4922,7 +4922,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =lblPaymentHistoryHeader.Y + lblPaymentHistoryHeader.Height + 4
-            ZIndex: =33
+            ZIndex: =32
 
             recHistRowBg As rectangle:
                 Fill: =RGBA(219, 219, 219, 1)
@@ -5010,7 +5010,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =If(galPaymentHistory.Visible, galPaymentHistory.Y + galPaymentHistory.Height + 8, recPaymentModal.Y + 110)
-            ZIndex: =34
+            ZIndex: =33
 
         lblRemainingEst As label:
             Color: =varColorTextMuted
@@ -5041,7 +5041,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =lblPaidSoFar.Y + lblPaidSoFar.Height + 4
-            ZIndex: =35
+            ZIndex: =34
 
         recPlatesDivider As rectangle:
             Fill: =varColorText
@@ -5050,7 +5050,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =lblRemainingEst.Y + lblRemainingEst.Height + 12
-            ZIndex: =36
+            ZIndex: =35
 
         lblPlatesPickupHeader As label:
             Color: =varColorText
@@ -5062,7 +5062,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =recPlatesDivider.Y + recPlatesDivider.Height + 12
-            ZIndex: =37
+            ZIndex: =36
 
         "galPlatesPickup As gallery.'BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0'":
             DelayItemLoading: =true
@@ -5076,7 +5076,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =lblPlatesPickupHeader.Y + lblPlatesPickupHeader.Height + 4
-            ZIndex: =38
+            ZIndex: =37
 
             chkPlate As checkbox:
                 CheckboxSize: =30
@@ -5124,7 +5124,7 @@ scrDashboard As screen:
             Width: =460
             X: =recPaymentModal.X + 590
             Y: =galPlatesPickup.Y + galPlatesPickup.Height + 4
-            ZIndex: =39
+            ZIndex: =38
 
     conBuildPlatesModal As groupContainer.manualLayoutContainer:
         Height: =Parent.Height
@@ -5290,10 +5290,6 @@ scrDashboard As screen:
                 Height: =36
                 HoverFill: =varDropdownHoverFill
                 Items: =AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))
-                PressedColor: =varDropdownPressedColor
-                PressedFill: =varDropdownPressedFill
-                SelectionColor: =varDropdownSelectionColor
-                SelectionFill: =varDropdownSelectionFill
                 OnChange: |-
                     =Set(varIsLoading, true);
                     Set(varLoadingMessage, "Updating machine...");
@@ -5373,6 +5369,10 @@ scrDashboard As screen:
                     
                     Set(varIsLoading, false);
                     Set(varLoadingMessage, "")
+                PressedColor: =varDropdownPressedColor
+                PressedFill: =varDropdownPressedFill
+                SelectionColor: =varDropdownSelectionColor
+                SelectionFill: =varDropdownSelectionFill
                 Size: =10
                 Width: =145
                 X: =88

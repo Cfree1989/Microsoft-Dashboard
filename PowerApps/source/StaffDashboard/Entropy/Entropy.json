@@ -358,7 +358,7 @@
   },
   "FunctionParamsInvariantScripts": {},
   "FunctionParamsInvariantScriptsOnInstances": {},
-  "HeaderLastSavedDateTimeUTC": "04/13/2026 15:54:30",
+  "HeaderLastSavedDateTimeUTC": "04/13/2026 17:28:01",
   "IsLegacyComponentAllowGlobalScopeCase": false,
   "LocalConnectionIDReferences": {
     "1e83d320-97ba-4a98-a142-504c06c32207": "\"/providers/microsoft.powerapps/apis/shared_excelonlinebusiness/connections/shared-excelonlinebu-fd28d6c9-9d9e-424c-85cc-666b759c53fe\"",
@@ -373,7 +373,7 @@
     "notification_chime": "8d0284a3-091a-4915-bfa4-1d407f3a1550.mp3"
   },
   "LocalResourceRootPaths": {
-    "notification_chime": "https://dsprdil106wus.blob.core.windows.net/2e79dc02-81f0-4df3-aa13-77f767297a91-1/resource/OGQwMjg0YTMtMDkxYS00OTE1LWJmYTQtMWQ0MDdmM2ExNTUw.mp3?skoid=58690ece-ec83-4ce2-9ce8-883d4d6a54ee&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-04-13T15%3A53%3A02Z&ske=2026-04-14T16%3A08%3A02Z&sks=b&skv=2023-01-03&sv=2023-01-03&spr=https&se=2026-04-14T16%3A08%3A02Z&sr=b&sp=r&sig=mQLZ0TCCvo0noXra18S7J0rPCRZmkcmA9Es6kbo%2F%2FJA%3D"
+    "notification_chime": "https://dsprdil106eus.blob.core.windows.net/04fe6862-6b21-4d64-baf3-0a7b7c329b50-1/resource/OGQwMjg0YTMtMDkxYS00OTE1LWJmYTQtMWQ0MDdmM2ExNTUw.mp3?skoid=58690ece-ec83-4ce2-9ce8-883d4d6a54ee&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-04-13T16%3A54%3A23Z&ske=2026-04-14T17%3A09%3A23Z&sks=b&skv=2023-01-03&sv=2023-01-03&spr=https&se=2026-04-14T17%3A09%3A23Z&sr=b&sp=r&sig=UmdNyh%2FRFsVt7KFkM2uaErmYL5bw%2Fziuf2aXjlFvTi4%3D"
   },
   "OldLogoFileName": "530um5s1.jpg",
   "OrderComponentMetadata": {},
@@ -1156,7 +1156,7 @@
   "RuleScreenIdWithoutScreen": {},
   "TemplateVersions": {},
   "VolatileProperties": {
-    "AnalysisLoadTime": 3.8309573000000001,
+    "AnalysisLoadTime": 4.2402863000000002,
     "ControlCount": {
       "attachments": 1,
       "audioPlayback": 1,
@@ -1179,7 +1179,7 @@
       "timer": 1,
       "typedDataCard": 1
     },
-    "DeserializationLoadTime": 1.495384
+    "DeserializationLoadTime": 1.9489063
   },
   "WasLocalDatabaseReferencesEmpty": true
 }

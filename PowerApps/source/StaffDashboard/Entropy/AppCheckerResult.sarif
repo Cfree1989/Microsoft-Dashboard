@@ -24,7 +24,7 @@
                 },
                 "region": {
                   "charLength": 62,
-                  "charOffset": 31,
+                  "charOffset": 29,
                   "snippet": {
                     "text": "CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))"
                   }
@@ -64,7 +64,7 @@
                 },
                 "region": {
                   "charLength": 62,
-                  "charOffset": 109,
+                  "charOffset": 106,
                   "snippet": {
                     "text": "CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))"
                   }
@@ -225,7 +225,7 @@
                 },
                 "region": {
                   "charLength": 1,
-                  "charOffset": 1140,
+                  "charOffset": 1111,
                   "snippet": {
                     "text": "="
                   }
@@ -8476,36 +8476,6 @@
             {
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "App.varColorHeader"
-                }
-              ],
-              "physicalLocation": {
-                "address": {
-                  "fullyQualifiedName": "App.varColorHeader",
-                  "relativeAddress": 0
-                }
-              },
-              "properties": {
-                "member": "varColorHeader",
-                "module": "App",
-                "type": "App"
-              }
-            }
-          ],
-          "message": {
-            "id": "issue"
-          },
-          "properties": {
-            "level": "Medium"
-          },
-          "ruleId": "app-UnusedVariables",
-          "ruleIndex": 7
-        },
-        {
-          "locations": [
-            {
-              "logicalLocations": [
-                {
                   "fullyQualifiedName": "App.varNavBtnInactiveFill"
                 }
               ],
@@ -8566,66 +8536,6 @@
             {
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "App.varColorBg"
-                }
-              ],
-              "physicalLocation": {
-                "address": {
-                  "fullyQualifiedName": "App.varColorBg",
-                  "relativeAddress": 0
-                }
-              },
-              "properties": {
-                "member": "varColorBg",
-                "module": "App",
-                "type": "App"
-              }
-            }
-          ],
-          "message": {
-            "id": "issue"
-          },
-          "properties": {
-            "level": "Medium"
-          },
-          "ruleId": "app-UnusedVariables",
-          "ruleIndex": 7
-        },
-        {
-          "locations": [
-            {
-              "logicalLocations": [
-                {
-                  "fullyQualifiedName": "App.varRadiusLarge"
-                }
-              ],
-              "physicalLocation": {
-                "address": {
-                  "fullyQualifiedName": "App.varRadiusLarge",
-                  "relativeAddress": 0
-                }
-              },
-              "properties": {
-                "member": "varRadiusLarge",
-                "module": "App",
-                "type": "App"
-              }
-            }
-          ],
-          "message": {
-            "id": "issue"
-          },
-          "properties": {
-            "level": "Medium"
-          },
-          "ruleId": "app-UnusedVariables",
-          "ruleIndex": 7
-        },
-        {
-          "locations": [
-            {
-              "logicalLocations": [
-                {
                   "fullyQualifiedName": "App.varRadiusMedium"
                 }
               ],
@@ -8656,36 +8566,6 @@
             {
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "App.varRadiusSmall"
-                }
-              ],
-              "physicalLocation": {
-                "address": {
-                  "fullyQualifiedName": "App.varRadiusSmall",
-                  "relativeAddress": 0
-                }
-              },
-              "properties": {
-                "member": "varRadiusSmall",
-                "module": "App",
-                "type": "App"
-              }
-            }
-          ],
-          "message": {
-            "id": "issue"
-          },
-          "properties": {
-            "level": "Medium"
-          },
-          "ruleId": "app-UnusedVariables",
-          "ruleIndex": 7
-        },
-        {
-          "locations": [
-            {
-              "logicalLocations": [
-                {
                   "fullyQualifiedName": "App.varRadiusXSmall"
                 }
               ],
@@ -8697,36 +8577,6 @@
               },
               "properties": {
                 "member": "varRadiusXSmall",
-                "module": "App",
-                "type": "App"
-              }
-            }
-          ],
-          "message": {
-            "id": "issue"
-          },
-          "properties": {
-            "level": "Medium"
-          },
-          "ruleId": "app-UnusedVariables",
-          "ruleIndex": 7
-        },
-        {
-          "locations": [
-            {
-              "logicalLocations": [
-                {
-                  "fullyQualifiedName": "App.varRadiusPill"
-                }
-              ],
-              "physicalLocation": {
-                "address": {
-                  "fullyQualifiedName": "App.varRadiusPill",
-                  "relativeAddress": 0
-                }
-              },
-              "properties": {
-                "member": "varRadiusPill",
                 "module": "App",
                 "type": "App"
               }

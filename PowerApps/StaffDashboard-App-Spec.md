@@ -12,40 +12,42 @@
 1. [Prerequisites](#prerequisites)
 2. [Design Standards](#design-standards) ← **Font & Color Reference**
 3. [Creating the Canvas App](#step-1-creating-the-canvas-app)
-3. [Adding Data Connections](#step-2-adding-data-connections)
-4. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
-5. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
-6. [Building the Top Navigation Bar](#step-4-building-the-top-navigation-bar)
-7. [Creating Status Tabs](#step-5-creating-status-tabs)
-8. [Building the Job Cards Gallery](#step-6-building-the-job-cards-gallery)
-9. [Creating the Job Card Template](#step-7-creating-the-job-card-template)
-10. [Adding Expandable Details](#step-8-adding-expandable-details)
-11. [Implementing Action Buttons](#step-9-implementing-action-buttons)
-12. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
-13. [Building the Approval Modal](#step-11-building-the-approval-modal)
-14. [Building the Archive Modal](#step-12-building-the-archive-modal)
-15. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
-16. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
-17. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
-18. [Building the Build Plates Modal](#step-12f-building-the-build-plates-modal)
-18b. [Building the Export Modal](#step-12g-building-the-export-modal) ← **Monthly Transaction Export**
-19. [Building the Notes Modal](#step-13-building-the-notes-modal)
-19. [Building the Student Note Modal](#step-13b-building-the-student-note-modal)
-20. [Adding Search and Filters](#step-14-adding-search-and-filters)
-18. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
-19. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
-20. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
+4. [Adding Data Connections](#step-2-adding-data-connections)
+5. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
+6. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
+7. [Building the Top Navigation Bar](#step-4-building-the-top-navigation-bar)
+8. [Creating Status Tabs](#step-5-creating-status-tabs)
+9. [Building the Job Cards Gallery](#step-6-building-the-job-cards-gallery)
+10. [Creating the Job Card Template](#step-7-creating-the-job-card-template)
+11. [Adding Expandable Details](#step-8-adding-expandable-details)
+12. [Implementing Action Buttons](#step-9-implementing-action-buttons)
+13. [Building the Rejection Modal](#step-10-building-the-rejection-modal)
+14. [Building the Approval Modal](#step-11-building-the-approval-modal)
+15. [Building the Archive Modal](#step-12-building-the-archive-modal)
+16. [Building the Complete Modal](#step-12a-building-the-complete-modal)
+17. [Building the Change Print Details Modal](#step-12b-building-the-change-print-details-modal)
+18. [Building the Payment Recording Modal](#step-12c-building-the-payment-recording-modal)
+19. [Building the Revert Status Modal](#step-12d-building-the-revert-status-modal)
+20. [Building the Build Plates Modal](#step-12f-building-the-build-plates-modal)
+21. [Building the Export Modal](#step-12g-building-the-export-modal) ← **Monthly Transaction Export**
+22. [Building the Batch Payment Modal](#step-12e-building-the-batch-payment-modal)
+23. [Building the Notes Modal](#step-13-building-the-notes-modal)
+24. [Building the Student Note Modal](#step-13b-building-the-student-note-modal)
+25. [Adding Search and Filters](#step-14-adding-search-and-filters)
+26. [Adding the Lightbulb Attention System](#step-15-adding-the-lightbulb-attention-system)
+27. [Adding the Attachments Modal](#step-16-adding-the-attachments-modal)
+28. [Adding the Messaging System](#step-17-adding-the-messaging-system) ← **⏸️ STOP: Create RequestComments list first**
     - [Step 17A: Adding the Data Connection](#step-17a-adding-the-data-connection)
     - [Step 17B: Adding Messages Display to Job Cards](#step-17b-adding-messages-display-to-job-cards)
     - [Step 17C: Adding the Message Button to Job Cards](#step-17c-adding-the-message-button-to-job-cards)
     - [Step 17D: Unified Messages Modal](#step-17d-unified-messages-modal)
     - [Step 17E: Adding the Loading Overlay](#step-17e-adding-the-loading-overlay) ← **UX Enhancement**
     - [Step 17F: Adding the Audio Notification System](#step-17f-adding-the-audio-notification-system) ← **NEW**
-21. [Publishing the App](#step-18-publishing-the-app)
-22. [Testing the App](#step-19-testing-the-app)
-23. [Troubleshooting](#troubleshooting)
-24. [Quick Reference Card](#quick-reference-card)
-25. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
+29. [Publishing the App](#step-18-publishing-the-app)
+30. [Testing the App](#step-19-testing-the-app)
+31. [Troubleshooting](#troubleshooting)
+32. [Quick Reference Card](#quick-reference-card)
+33. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
 
 ---
 
@@ -53,8 +55,8 @@
 
 Before you start, make sure you have:
 
-- [ ] **SharePoint lists created**: `PrintRequests`, `AuditLog`, `Staff`, `BuildPlates`, `Payments`
-- [ ] **Power Automate flows working**: Flow A (PR-Create), Flow B (PR-Audit), Flow C (PR-Action)
+- [ ] **SharePoint lists created**: `PrintRequests`, `Staff`, `BuildPlates`, `Payments`, `RequestComments`
+- [ ] **Power Automate flows working**: Flow A (PR-Create), Flow B (PR-Audit), Flow C (PR-Action), Flow G (Export), Flow H (Payment-SaveSingle), Flow I (Payment-SaveBatch)
 - [ ] **Staff list populated**: At least one staff member with `Active = Yes`
 - [ ] **Power Apps license**: Standard license included with Microsoft 365
 - [ ] **PrintRequests.ActualPrinter**: Configured as multi-select Choice column (supports jobs spanning multiple printers)
@@ -329,52 +331,51 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 8. Click **Connect**.
 9. Check the boxes for these lists:
    - [x] **PrintRequests**
-   - [x] **AuditLog**
    - [x] **Staff**
    - [x] **BuildPlates**
    - [x] **Payments**
+   - [x] **RequestComments**
 10. Click **Connect**.
 
-### Adding the Office365Users Connector
+> 💡 **AuditLog note:** Do **not** add AuditLog as a direct data connection. Audit writes are handled automatically by Flow C — the app never reads from AuditLog directly.
 
-> 💡 **Why this connector?** The Office365Users connector lets us display the signed-in user's profile photo in the header.
-
-11. Click **+ Add data**.
-12. In the search box, type `Office 365 Users`.
-13. Click **Office 365 Users** from the list.
-14. If prompted, sign in with your Microsoft 365 account.
-
-### Adding the Power Automate Flow
+### Adding the Power Automate Flows
 
 > ⚠️ **IMPORTANT:** Adding a flow is DIFFERENT from adding a data source. Don't search for "Power Automate" in the data panel — those are admin connectors, not your flow!
 
-15. Look in the **left sidebar** for a **Power Automate icon** (lightning bolt ⚡).
+11. Look in the **left sidebar** for a **Power Automate icon** (lightning bolt ⚡).
     - OR: In the top menu, click the **three dots (...)** → **Power Automate**
-16. Click **+ Add flow**.
-17. You'll see "Add a flow from this environment" with your flows listed.
-18. Under **Instant**, find and click **Flow C (PR-Action)** (or whatever you named Flow C).
-19. The flow is now added to your app.
+12. Click **+ Add flow**.
+13. You'll see "Add a flow from this environment" with your flows listed.
+14. Under **Instant**, add each of the following flows one at a time:
+    - **Flow C (PR-Action)**
+    - **Flow G (Export-MonthlyTransactions)**
+    - **Flow H (Payment-SaveSingle)**
+    - **Flow I (Payment-SaveBatch)**
 
-> 💡 **Why only Flow C?** Flows A and B are automatic SharePoint triggers — they run on their own when items are created/modified. Only Flow C (instant trigger) is called from Power Apps buttons.
+> 💡 **Why only C, G, H, I?** Flows A and B are automatic SharePoint triggers — they run on their own when items are created/modified. Only the instant flows are called from Power Apps buttons.
 
 | Flow | Trigger Type | Add to Power Apps? |
 |------|-------------|-------------------|
 | Flow A (PR-Create) | Automatic (SharePoint) | ❌ No |
 | Flow B (PR-Audit) | Automatic (SharePoint) | ❌ No |
 | **Flow C (PR-Action)** | **Instant (Power Apps)** | ✅ **Yes** |
+| **Flow G (Export-MonthlyTransactions)** | **Instant (Power Apps)** | ✅ **Yes** |
+| **Flow H (Payment-SaveSingle)** | **Instant (Power Apps)** | ✅ **Yes** |
+| **Flow I (Payment-SaveBatch)** | **Instant (Power Apps)** | ✅ **Yes** |
 
 ### Verification
 
 **In the Data panel**, you should see:
 - ✅ PrintRequests
-- ✅ AuditLog  
 - ✅ Staff
 - ✅ BuildPlates
 - ✅ Payments
-- ✅ Office365Users
+- ✅ RequestComments
 
 **In the Power Automate panel**, you should see:
 - ✅ Flow-(C)-Action-LogAction
+- ✅ Flow-(G)-Export-MonthlyTransactions
 - ✅ Flow-(H)-Payment-SaveSingle
 - ✅ Flow-(I)-Payment-SaveBatch
 
