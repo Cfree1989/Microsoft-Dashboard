@@ -6,13 +6,69 @@ Use this when you want to **fix or optimize** something: refresh the exports her
 
 ---
 
+## SharePoint list “schema” without IT / without a new Entra app
+
+If you **cannot** get admin consent for a custom app registration (common at LSU), skip PnP sign-in entirely and use one of these. They rely on access you **already have** as a maker (SharePoint site, Power Apps, or Power Automate).
+
+### Option A — Use the unpacked Power Apps (usually enough)
+
+After you unpack the staff and student apps, each SharePoint-backed list already appears as structured JSON:
+
+- [`PowerApps/source/StaffDashboard/pkgs/TableDefinitions/`](PowerApps/source/StaffDashboard/pkgs/TableDefinitions/) — column metadata the app uses  
+- [`PowerApps/source/StaffDashboard/DataSources/`](PowerApps/source/StaffDashboard/DataSources/) — connection + table wiring
+
+That is often **sufficient for debugging formulas and flow logic** with the AI, without a separate `*-schema.json` export.
+
+### Option B — One-off Power Automate (SharePoint connector, no new app)
+
+You already use the **SharePoint** connector in flows. Add a **personal** instant or test flow that uses **Send an HTTP request to SharePoint**:
+
+1. **Site address:** your lab site.  
+2. **Method:** `GET`.  
+3. **URI** (repeat per list), for example:
+
+   `/_api/web/lists/getbytitle('PrintRequests')/fields?$select=Title,InternalName,TypeAsString,Required,Hidden,Choices`
+
+4. Put the response in a **Compose** action, run the flow, copy the JSON into a file under [`SharePoint/schemas/`](SharePoint/schemas/) (for example `PrintRequests-schema.json`).
+
+No Entra app registration is required beyond what Power Platform already uses for that connector.
+
+### Option C — Try [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer)
+
+Sign in with your LSU account and call Microsoft Graph for list columns (for example [`GET /sites/{site-id}/lists/{list-id}/columns`](https://learn.microsoft.com/graph/api/resources/columnDefinition)). Some tenants allow Graph Explorer’s first-party app; **some block it**. If it works, paste the JSON into `SharePoint/schemas/`. If it fails, use A or B.
+
+### Option D — PnP PowerShell (only if you ever get a client ID)
+
+[`SharePoint/Export-Schemas.ps1`](SharePoint/Export-Schemas.ps1) needs **PowerShell 7** and, at LSU, almost always **`-ClientId`** from an **admin-consented** app in your tenant. If IT will not register or consent one, treat this script as **optional** and use A–C above.
+
+---
+
 ## Prerequisites (one-time)
 
-### 1. PnP PowerShell (SharePoint schema export)
+### 1. PnP PowerShell (optional — SharePoint schema export script)
+
+Only needed if you use `Export-Schemas.ps1` with a consented `-ClientId`.
+
+PnP.PowerShell **3.x requires [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)** (`pwsh`), not Windows PowerShell 5.1.
 
 ```powershell
-Install-Module PnP.PowerShell -Scope CurrentUser -Force -AllowClobber
+winget install Microsoft.PowerShell
 ```
+
+```powershell
+pwsh -NoProfile -Command "Install-Module PnP.PowerShell -Scope CurrentUser -Force -AllowClobber"
+```
+
+#### Locked-down tenants (`AADSTS700016`)
+
+If sign-in fails with **AADSTS700016** and client ID `31359c7f-bd7e-475c-86db-fdb8c937548e`, the tenant does **not** allow Microsoft’s default PnP app. You need your own Entra app registration **with admin consent** and:
+
+```powershell
+cd SharePoint
+pwsh -File .\Export-Schemas.ps1 -ClientId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+
+Optional env var: `PNP_CLIENT_ID`. Device code: add `-DeviceLogin`.
 
 ### 2. Power Platform CLI — `pac` (unpack Power Apps)
 
@@ -31,19 +87,18 @@ After installing or updating `pac`, **restart Cursor** (or open a new terminal) 
 
 ---
 
-## 1. SharePoint — list schemas (automated)
+## 1. SharePoint — list schemas
 
-From the repo root:
+**Recommended without IT:** use [Option A](#option-a--use-the-unpacked-power-apps-usually-enough) and/or [Option B](#option-b--one-off-power-automate-sharepoint-connector-no-new-app) above.
+
+**Optional script** (needs consented `-ClientId` at LSU):
 
 ```powershell
 cd SharePoint
-.\Export-Schemas.ps1
+pwsh -File .\Export-Schemas.ps1 -ClientId "your-tenant-app-id"
 ```
 
-- Signs you in with a **browser** (interactive).
-- Writes JSON files under [`SharePoint/schemas/`](SharePoint/schemas/) (one per list).
-
-Re-run whenever you change columns, choices, or lookups.
+Writes JSON under [`SharePoint/schemas/`](SharePoint/schemas/). Re-run when lists change (or refresh Option A/B outputs).
 
 ---
 
@@ -94,7 +149,8 @@ Output goes to:
 
 | Component   | Command / action |
 |------------|------------------|
-| SharePoint | `SharePoint\Export-Schemas.ps1` |
+| SharePoint (no IT) | Unpack apps → use `PowerApps\source\...\pkgs\TableDefinitions\` (+ optional HTTP flow → `SharePoint\schemas\`) |
+| SharePoint (PnP) | `pwsh -File SharePoint\Export-Schemas.ps1 -ClientId …` only if you have a consented app |
 | Flows      | Export ZIP → unzip into `PowerAutomate\exports\...\` |
 | Power Apps | Save `.msapp` → `PowerApps\Unpack-Apps.ps1` |
 

@@ -1,0 +1,192 @@
+App As appinfo:
+    BackEnabled: =true
+    OnStart: |-
+        =// === USER IDENTIFICATION ===
+        // CRITICAL: Resolve user identity correctly for reliable "My Requests" filtering
+        // 
+        // WHY THIS MATTERS:
+        // - User().Email returns the User Principal Name (UPN), e.g., "jsmith3@lsu.edu"
+        // - SharePoint may store the primary SMTP email, e.g., "john.smith@lsu.edu"
+        // - These can differ at universities with multiple email aliases per user
+        // - Using the wrong one causes student requests to "disappear" from My Requests
+        //
+        // SOLUTION: Use Office365Users.MyProfileV2().mail for the actual SMTP address
+        
+        // Cache user profile from Office 365 Users connector (call once for performance)
+        Set(varUserProfile, IfError(Office365Users.MyProfileV2(), Blank()));
+        
+        // Primary email: SMTP address from profile, fallback to UPN if unavailable
+        Set(varMeEmail, Lower(Coalesce(varUserProfile.mail, User().Email)));
+        
+        // Display name: Profile name with fallback
+        Set(varMeName, Coalesce(varUserProfile.displayName, User().FullName));
+        
+        // Entra Object ID: Immutable GUID - the most reliable long-term identifier
+        // (Survives email changes, name changes, and domain migrations)
+        Set(varMeEntraId, User().EntraObjectId);
+        
+        // UPN (for SharePoint Person field Claims - must use sign-in identifier)
+        Set(varMeUPN, Lower(User().Email));
+        
+        // === UI STATE VARIABLES ===
+        // Current screen/page
+        Set(varCurrentScreen, "Home");
+        
+        // === MODAL CONTROLS ===
+        // These control which modal is visible (0 = hidden, ID = visible for that item)
+        Set(varShowConfirmModal, 0);
+        Set(varShowCancelModal, 0);
+        
+        // Currently selected item for modals (typed blank so Power Apps knows the schema)
+        Set(varSelectedItem, LookUp(PrintRequests, false));
+        
+        // === FORM STATE ===
+        // Track if form has been submitted successfully
+        Set(varFormSubmitted, false);
+        // Track if user attempted to submit (for showing validation errors)
+        Set(varSubmitAttempted, false);
+        // Track files with invalid names (populated by Attachments OnAddFile/OnRemoveFile)
+        Set(varInvalidFiles, Table());
+        Set(varHasInvalidFile, false);
+        
+        // === LOADING STATE ===
+        Set(varIsLoading, false);
+        
+        // === PRICING CONFIGURATION ===
+        // For display purposes (estimates shown to students)
+        Set(varFilamentRate, 0.10);
+        Set(varResinRate, 0.30);
+        Set(varMinimumCost, 3.00);
+        
+        // ============================================
+        // === STYLING / THEMING (Centralized) ===
+        // ============================================
+        // Matches Staff Dashboard styling - change these once to update the entire app!
+        
+        // --- FONT ---
+        Set(varAppFont, Font.'Open Sans');
+        
+        // === BUTTON COLOR PALETTE ===
+        Set(varColorPrimary, RGBA(70, 130, 220, 1));       // Blue - primary actions
+        Set(varColorSuccess, RGBA(46, 125, 50, 1));        // Green #2e7d32 - Resources
+        Set(varColorDanger, RGBA(219, 3, 3, 1));           // Red #DB0303 - Subtractive, Safety
+        Set(varColorWarning, RGBA(255, 140, 0, 1));        // Orange - archive/caution
+        Set(varColorNeutral, RGBA(150, 150, 150, 1));      // Gray - cancel
+        Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
+        
+        // === COLOR HOVER/PRESSED STATES ===
+        Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
+        Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
+        Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
+        Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
+        
+        // === UI NEUTRAL COLORS ===
+        Set(varColorHeader, Color.Transparent);            // Header background
+        Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
+        Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
+        Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
+        Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
+        Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
+        Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
+        Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
+        Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
+        Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
+        Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
+        Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
+        Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
+        
+        // --- BORDER RADIUS ---
+        Set(varRadiusLarge, 12);    // Modals
+        Set(varRadiusMedium, 8);    // Cards, large buttons
+        Set(varRadiusSmall, 6);     // Standard buttons
+        Set(varRadiusXSmall, 4);    // Inputs, small buttons
+        Set(varRadiusPill, 14);     // Status badges (pill shape)
+        
+        // --- BUTTON STYLING (Unified with Staff Dashboard) ---
+        Set(varBtnBorderRadius, 4);                        // Standard corner radius
+        Set(varBtnBorderRadiusPill, 20);                   // Pill shape for tabs
+        Set(varBtnFontSize, 12);
+        Set(varBtnHeight, 36);
+        Set(varBtnHeightLarge, 50);                        // Large buttons (CTAs)
+        Set(varBtnHeightSmall, 40);                        // Navigation buttons
+        Set(varSecondaryFade, 70%);                        // Secondary button fill lightness
+        
+        // --- FOCUS STYLING ---
+        // Consistent focus indicator for all interactive controls (buttons, inputs, dropdowns)
+        Set(varFocusedBorderThickness, 2);
+        
+        // --- INPUT FIELD STYLING ---
+        // Cleaner borders than Power Apps defaults - gray instead of themed colors
+        Set(varInputBorderColor, RGBA(128, 128, 128, 1));  // Gray border
+        Set(varInputBorderThickness, 1);                   // Thin border
+        Set(varInputHoverFill, RGBA(255, 255, 255, 1));    // White on hover
+        Set(varInputBorderRadius, 4);                      // Match button radius
+        Set(varInputFontSize, 12);                         // Standard input text size
+        
+        // --- DROPDOWN/COMBOBOX STYLING ---
+        // Custom chevron and selection colors for a polished look
+        Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron background
+        Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
+        Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
+        Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
+        Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
+        Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
+        Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
+        Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
+        Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
+        
+        // --- SIZING (Tablet Layout) ---
+        Set(varHeaderHeight, 60);   // Top header bar
+        Set(varNavHeight, 60);      // Bottom navigation bar
+        Set(varInputHeight, 45);    // Standard input field height
+        Set(varButtonHeight, 50);   // Primary button height (legacy alias)
+        Set(varButtonHeightSmall, 40); // Secondary button height (legacy alias)
+        
+        // --- SPACING ---
+        Set(varSpacingXL, 20);      // Large padding (screen edges)
+        Set(varSpacingLG, 16);      // Card padding
+        Set(varSpacingMD, 12);      // Form field gaps
+        Set(varSpacingSM, 8);       // Small gaps
+        Set(varSpacingXS, 4);       // Tiny gaps
+        
+        // === GALLERY DIMENSIONS ===
+        Set(varRequestCardHeight, 280);                    // My Requests gallery template size
+        
+        // === CONTACT INFORMATION ===
+        // Update these when location or contact details change
+        Set(varSupportEmail, "coad-fablab@lsu.edu");
+        Set(varPickupLocation, "Room 145 Atkinson Hall");
+        Set(varPaymentMethod, "TigerCASH only");
+        
+        // === DATE/TIME FORMATS ===
+        // Consistent date formatting across the app
+        Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
+        Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
+        
+        // === NAVIGATION ===
+        // Screen transition effect - change to customize navigation feel
+        Set(varScreenTransition, ScreenTransition.Fade);
+        
+        // === STATUS COLORS ===
+        // Consistent with Staff Dashboard
+        Set(varStatusColors, Table(
+            {Status: "Uploaded", Color: varColorPrimary},
+            {Status: "Pending", Color: RGBA(255, 185, 0, 1)},
+            {Status: "Ready to Print", Color: varColorSuccess},
+            {Status: "Printing", Color: varColorWarning},
+            {Status: "Completed", Color: varColorPrimary},
+            {Status: "Paid & Picked Up", Color: varColorSuccess},
+            {Status: "Rejected", Color: varColorDanger},
+            {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
+            {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
+        ))
+    StartScreen: =scrHome
+    Theme: =PowerAppsTheme
+
+    Host As hostControl.DefaultHostControlVariant:
+        OnCancel: =false
+        OnEdit: =false
+        OnNew: =false
+        OnSave: =false
+        OnView: =false
+

@@ -1,0 +1,51 @@
+{
+  "1daf1760-d2c4-4dbd-b72a-6169cf6b2b3a": {
+    "appActions": [
+      "providers/PowerPlatform.Governance/Operations/Read",
+      "providers/PowerPlatform.Governance/Operations/Write"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "SharePoint",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1769/1.0.1769.4361/sharepointonline/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
+      "parameterHints": {},
+      "parameterHintsV2": {}
+    },
+    "datasets": {
+      "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab": {
+        "dataSources": {
+          "PrintRequests": {
+            "tableName": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2"
+          }
+        }
+      }
+    },
+    "dataSources": [
+      "PrintRequests"
+    ],
+    "dependencies": {},
+    "dependents": [],
+    "id": "1daf1760-d2c4-4dbd-b72a-6169cf6b2b3a"
+  },
+  "fe74612e-4945-4ac5-9aab-ed55515a90b3": {
+    "appActions": [
+      "MyProfile_V2"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Office 365 Users",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1788/1.0.1788.4544/office365users/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_office365users",
+      "parameterHints": {},
+      "parameterHintsV2": {}
+    },
+    "datasets": {},
+    "dataSources": [
+      "Office365Users"
+    ],
+    "dependencies": {},
+    "dependents": [],
+    "id": "fe74612e-4945-4ac5-9aab-ed55515a90b3"
+  }
+}

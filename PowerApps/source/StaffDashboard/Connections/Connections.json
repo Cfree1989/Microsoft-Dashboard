@@ -1,0 +1,258 @@
+{
+  "1e83d320-97ba-4a98-a142-504c06c32207": {
+    "appActions": [],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Excel Online (Business)",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1800/1.0.1800.4672/excelonlinebusiness/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_excelonlinebusiness",
+      "parameterHints": {},
+      "parameterHintsV2": {}
+    },
+    "datasets": {},
+    "dataSources": [],
+    "dependencies": {},
+    "dependents": [
+      "663eff73-bc28-4370-b2b2-d3ef3f32d3a5"
+    ],
+    "id": "1e83d320-97ba-4a98-a142-504c06c32207"
+  },
+  "280aaea1-251d-422d-9419-2b11ee3468dc": {
+    "appActions": [
+      "providers/PowerPlatform.Governance/Operations/Read",
+      "providers/PowerPlatform.Governance/Operations/Write",
+      "providers/PowerPlatform.Governance/Operations/Delete"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "SharePoint",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1769/1.0.1769.4361/sharepointonline/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
+      "parameterHints": {},
+      "parameterHintsV2": {}
+    },
+    "datasets": {
+      "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab": {
+        "dataSources": {
+          "BuildPlates": {
+            "tableName": "c8585b4c-7e4d-4a56-977b-a4e2c2438e47"
+          },
+          "Payments": {
+            "tableName": "81de8c92-fd8d-47a6-9649-2cb6035d1502"
+          },
+          "PrintRequests": {
+            "tableName": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2"
+          },
+          "RequestComments": {
+            "tableName": "836f1cea-c4ce-4f61-bcdb-c5b1b1c566fe"
+          },
+          "Staff": {
+            "tableName": "cd206e6d-9348-4d31-a0ef-20f0361808e3"
+          }
+        }
+      }
+    },
+    "dataSources": [
+      "Staff",
+      "RequestComments",
+      "PrintRequests",
+      "Payments",
+      "BuildPlates"
+    ],
+    "dependencies": {},
+    "dependents": [
+      "663eff73-bc28-4370-b2b2-d3ef3f32d3a5",
+      "addc31e5-dcef-4627-bb50-759def4ce022",
+      "6367f2da-0ab8-4cdb-9bc7-d0f7efda097d",
+      "d3a00ed1-96af-4e8e-ac1d-f750d128980d"
+    ],
+    "id": "280aaea1-251d-422d-9419-2b11ee3468dc"
+  },
+  "6367f2da-0ab8-4cdb-9bc7-d0f7efda097d": {
+    "appActions": [
+      "Run"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Logic flows",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/logicflows/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_logicflows",
+      "parameterHints": {
+        "280aaea1-251d-422d-9419-2b11ee3468dc": {
+          "value": "shared_sharepointonline"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(H)-Payment-SaveSingle"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "f8606bd2-3882-45c2-bcd6-5d17fd2f4633"
+        }
+      },
+      "parameterHintsV2": {
+        "shared_sharepointonline": {
+          "value": "280aaea1-251d-422d-9419-2b11ee3468dc"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(H)-Payment-SaveSingle"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "f8606bd2-3882-45c2-bcd6-5d17fd2f4633"
+        }
+      }
+    },
+    "datasets": {},
+    "dataSources": [
+      "Flow-(H)-Payment-SaveSingle"
+    ],
+    "dependencies": {
+      "shared_sharepointonline": "280aaea1-251d-422d-9419-2b11ee3468dc"
+    },
+    "dependents": [],
+    "id": "6367f2da-0ab8-4cdb-9bc7-d0f7efda097d"
+  },
+  "663eff73-bc28-4370-b2b2-d3ef3f32d3a5": {
+    "appActions": [
+      "Run"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Logic flows",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/logicflows/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_logicflows",
+      "parameterHints": {
+        "1e83d320-97ba-4a98-a142-504c06c32207": {
+          "value": "shared_excelonlinebusiness"
+        },
+        "280aaea1-251d-422d-9419-2b11ee3468dc": {
+          "value": "shared_sharepointonline"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(G)-Export-MonthlyTransactions"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "62c457d7-e903-4033-b289-8ab484e26bb1"
+        }
+      },
+      "parameterHintsV2": {
+        "shared_excelonlinebusiness": {
+          "value": "1e83d320-97ba-4a98-a142-504c06c32207"
+        },
+        "shared_sharepointonline": {
+          "value": "280aaea1-251d-422d-9419-2b11ee3468dc"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(G)-Export-MonthlyTransactions"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "62c457d7-e903-4033-b289-8ab484e26bb1"
+        }
+      }
+    },
+    "datasets": {},
+    "dataSources": [
+      "Flow-(G)-Export-MonthlyTransactions"
+    ],
+    "dependencies": {
+      "shared_excelonlinebusiness": "1e83d320-97ba-4a98-a142-504c06c32207",
+      "shared_sharepointonline": "280aaea1-251d-422d-9419-2b11ee3468dc"
+    },
+    "dependents": [],
+    "id": "663eff73-bc28-4370-b2b2-d3ef3f32d3a5"
+  },
+  "addc31e5-dcef-4627-bb50-759def4ce022": {
+    "appActions": [
+      "Run"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Logic flows",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/logicflows/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_logicflows",
+      "parameterHints": {
+        "280aaea1-251d-422d-9419-2b11ee3468dc": {
+          "value": "shared_sharepointonline"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(C)-Action-LogAction"
+        },
+        "workflowEntityId": {
+          "value": "aa6aa24f-f3d5-f011-8544-00224805fcd3"
+        },
+        "workflowName": {
+          "value": "ef76406c-7dc5-457c-aef7-1bb8a860d1fe"
+        }
+      },
+      "parameterHintsV2": {
+        "shared_sharepointonline": {
+          "value": "280aaea1-251d-422d-9419-2b11ee3468dc"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(C)-Action-LogAction"
+        },
+        "workflowEntityId": {
+          "value": "aa6aa24f-f3d5-f011-8544-00224805fcd3"
+        },
+        "workflowName": {
+          "value": "ef76406c-7dc5-457c-aef7-1bb8a860d1fe"
+        }
+      }
+    },
+    "datasets": {},
+    "dataSources": [
+      "Flow-(C)-Action-LogAction"
+    ],
+    "dependencies": {
+      "shared_sharepointonline": "280aaea1-251d-422d-9419-2b11ee3468dc"
+    },
+    "dependents": [],
+    "id": "addc31e5-dcef-4627-bb50-759def4ce022"
+  },
+  "d3a00ed1-96af-4e8e-ac1d-f750d128980d": {
+    "appActions": [
+      "Run"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Logic flows",
+      "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/logicflows/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_logicflows",
+      "parameterHints": {
+        "280aaea1-251d-422d-9419-2b11ee3468dc": {
+          "value": "shared_sharepointonline"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(I)-Payment-SaveBatch"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "a8236d15-88ee-41f4-bbad-220909a12e1f"
+        }
+      },
+      "parameterHintsV2": {
+        "shared_sharepointonline": {
+          "value": "280aaea1-251d-422d-9419-2b11ee3468dc"
+        },
+        "workflowDisplayName": {
+          "value": "Flow-(I)-Payment-SaveBatch"
+        },
+        "workflowEntityId": {},
+        "workflowName": {
+          "value": "a8236d15-88ee-41f4-bbad-220909a12e1f"
+        }
+      }
+    },
+    "datasets": {},
+    "dataSources": [
+      "Flow-(I)-Payment-SaveBatch"
+    ],
+    "dependencies": {
+      "shared_sharepointonline": "280aaea1-251d-422d-9419-2b11ee3468dc"
+    },
+    "dependents": [],
+    "id": "d3a00ed1-96af-4e8e-ac1d-f750d128980d"
+  }
+}

@@ -1,0 +1,678 @@
+scrMyRequests As screen:
+
+    conHeader2 As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =varHeaderHeight
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width
+        ZIndex: =1
+
+        recHeaderBg2 As rectangle:
+            Fill: =varColorHeader
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =Parent.Height
+            Width: =Parent.Width
+            ZIndex: =1
+
+        lblHeaderTitle2 As label:
+            Color: =RGBA(51, 51, 51, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =45
+            Size: =24
+            Text: ="My Print Requests"
+            Width: =Parent.Width - 100
+            X: =varSpacingXL
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =2
+
+        btnRefresh As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorPrimary
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =42
+            OnSelect: |-
+                =Refresh(PrintRequests);
+                Notify("Requests refreshed!", NotificationType.Information)
+            RadiusBottomLeft: =varRadiusMedium
+            RadiusBottomRight: =varRadiusMedium
+            RadiusTopLeft: =varRadiusMedium
+            RadiusTopRight: =varRadiusMedium
+            Size: =14
+            Text: ="Refresh"
+            Width: =95
+            X: =1253
+            Y: =8
+            ZIndex: =3
+
+    conNavBar2 As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =varNavHeight
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width
+        Y: =Parent.Height - varNavHeight
+        ZIndex: =2
+
+        recNavBg2 As rectangle:
+            Fill: =varColorHeader
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =Parent.Height
+            Width: =Parent.Width
+            ZIndex: =4
+
+        btnNavHome2 As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varNavBtnInactiveFill
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =varNavBtnHoverFill
+            OnSelect: =Navigate(scrHome, ScreenTransition.Fade)
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="Home"
+            Width: =(Parent.Width - 80) / 3
+            X: =varSpacingXL
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =5
+
+        btnNavSubmit2 As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varNavBtnInactiveFill
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =varNavBtnHoverFill
+            OnSelect: =Navigate(scrSubmit, varScreenTransition)
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="New Request"
+            Width: =(Parent.Width - 80) / 3
+            X: =(Parent.Width - Self.Width) / 2
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =6
+
+        btnNavMyRequests2 As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorInfo
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =ColorFade(varColorPrimary, -15%)
+            OnSelect: =// Already on this screen
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="My Requests"
+            Width: =(Parent.Width - 80) / 3
+            X: =Parent.Width - Self.Width - varSpacingXL
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =7
+
+    conGalleryArea As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =Parent.Height - varHeaderHeight - varNavHeight
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width
+        Y: =varHeaderHeight
+        ZIndex: =3
+
+        galMyRequests As gallery.galleryVertical:
+            DelayItemLoading: =true
+            Height: =Parent.Height - 170
+            Items: |-
+                =SortByColumns(
+                    Filter(
+                        PrintRequests,
+                        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+                    ),
+                    "Created",
+                    SortOrder.Descending
+                )
+            Layout: =Layout.Vertical
+            LoadingSpinner: =LoadingSpinner.Data
+            TemplatePadding: =8
+            TemplateSize: =varRequestCardHeight
+            Width: =Parent.Width
+            WrapCount: =3
+            Y: =90
+            ZIndex: =2
+
+            recCardBg As rectangle:
+                BorderColor: =RGBA(128, 128, 128, 1)
+                BorderThickness: =1
+                Fill: =varColorBgCard
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Height: =Parent.TemplateHeight - varSpacingSM
+                Width: =Parent.TemplateWidth - 32
+                X: =varSpacingLG
+                ZIndex: =1
+
+            lblReqKey As label:
+                Color: =RGBA(50, 50, 50, 1)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                FontWeight: =FontWeight.Semibold
+                Height: =24
+                OnSelect: =Select(Parent)
+                Text: =ThisItem.ReqKey
+                X: =28
+                Y: =12
+                ZIndex: =2
+
+            btnStatusBadge As button:
+                BorderThickness: =0
+                Color: =If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
+                DisplayMode: =DisplayMode.View
+                Fill: =LookUp(varStatusColors, Status = ThisItem.Status.Value, Color)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                OnSelect: =Select(Parent)
+                RadiusBottomLeft: =varRadiusMedium
+                RadiusBottomRight: =varRadiusMedium
+                RadiusTopLeft: =varRadiusMedium
+                RadiusTopRight: =varRadiusMedium
+                Size: =12
+                Text: =ThisItem.Status.Value
+                Width: =150
+                X: =Parent.TemplateWidth - 175
+                Y: =10
+                ZIndex: =3
+
+            lblSubmitDate As label:
+                Color: =RGBA(100, 100, 100, 1)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                Height: =20
+                OnSelect: =Select(Parent)
+                Size: =11
+                Text: |-
+                    ="Submitted: " & Text(ThisItem.Created, varDateFormatShort)
+                Width: =200
+                X: =28
+                Y: =45
+                ZIndex: =4
+
+            lblPrintDetails As label:
+                Color: =RGBA(80, 80, 80, 1)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                Height: =20
+                OnSelect: =Select(Parent)
+                Size: =11
+                Text: |-
+                    =ThisItem.Color.Value & " • " &
+                    ThisItem.Method.Value & " • " &
+                    Trim(
+                        If(
+                            Find("(", ThisItem.Printer.Value) > 0,
+                            Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1),
+                            ThisItem.Printer.Value
+                        )
+                    )
+                Width: =Parent.TemplateWidth - 132
+                X: =58
+                Y: =74
+                ZIndex: =5
+
+            lblEstimate As label:
+                Color: =varColorPrimary
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                FontWeight: =FontWeight.Semibold
+                Height: =24
+                OnSelect: =Select(Parent)
+                Text: |-
+                    ="Estimated Cost: " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00")
+                Visible: =!IsBlank(ThisItem.EstimatedCost)
+                Width: =Parent.TemplateWidth - 60
+                X: =28
+                Y: =104
+                ZIndex: =6
+
+            btnConfirmEstimate As button:
+                BorderColor: =Color.Transparent
+                BorderThickness: =0
+                Color: =Color.White
+                Fill: =varColorSuccess
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                FontWeight: =FontWeight.Bold
+                Height: =45
+                HoverFill: =ColorFade(varColorSuccess, -15%)
+                OnSelect: |-
+                    =Set(varSelectedItem, ThisItem);
+                    Set(varShowConfirmModal, ThisItem.ID)
+                PressedFill: =ColorFade(varColorSuccess, -25%)
+                RadiusBottomLeft: =varBtnBorderRadius
+                RadiusBottomRight: =varBtnBorderRadius
+                RadiusTopLeft: =varBtnBorderRadius
+                RadiusTopRight: =varBtnBorderRadius
+                Size: =13
+                Text: ="✓ CONFIRM ESTIMATE"
+                Visible: =ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
+                Width: =Parent.TemplateWidth - 60
+                X: =28
+                Y: =156
+                ZIndex: =7
+
+            btnCancelRequest As button:
+                BorderColor: =Color.Transparent
+                BorderThickness: =0
+                Color: =varColorDanger
+                Fill: =ColorFade(varColorDanger, varSecondaryFade)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                FontWeight: =FontWeight.Bold
+                Height: =28
+                HoverFill: =ColorFade(varColorDanger, 55%)
+                OnSelect: |-
+                    =Set(varSelectedItem, ThisItem);
+                    Set(varShowCancelModal, ThisItem.ID)
+                PressedFill: =ColorFade(varColorDanger, 45%)
+                RadiusBottomLeft: =varBtnBorderRadius
+                RadiusBottomRight: =varBtnBorderRadius
+                RadiusTopLeft: =varBtnBorderRadius
+                RadiusTopRight: =varBtnBorderRadius
+                Size: =varBtnFontSize
+                Text: ="Cancel Request"
+                Visible: =ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]
+                Width: =150
+                X: =28
+                Y: =230
+                ZIndex: =8
+
+            lblStatusMessage As label:
+                Color: =RGBA(100, 100, 100, 1)
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                Height: =60
+                OnSelect: =Select(Parent)
+                Size: =11
+                Text: |-
+                    =Switch(
+                        ThisItem.Status.Value,
+                        "Printing", "Your print is currently in progress!",
+                        "Completed", "Your print is ready for pickup!" & Char(10) & "📍 " & varPickupLocation & Char(10) & "💳 Payment: " & varPaymentMethod,
+                        "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, varDateFormatShort),
+                        "Rejected", "❌ Request rejected",
+                        "Canceled", "Request canceled by you",
+                        ""
+                    )
+                Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
+                Width: =Parent.TemplateWidth - 60
+                X: =28
+                Y: =117
+                ZIndex: =9
+
+            cirPrintColorBackdrop As circle:
+                Fill: =RGBA(45, 45, 48, 1)
+                Height: =30
+                OnSelect: =Select(Parent)
+                Visible: =ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"
+                Width: =30
+                X: =28
+                Y: =69
+                ZIndex: =10
+
+            cirPrintColorDot As circle:
+                Fill: |-
+                    =Switch(
+                        ThisItem.Color.Value,
+                        "Black", RGBA(26, 26, 26, 1),
+                        "Matte Black", RGBA(26, 26, 26, 1),
+                        "White", RGBA(255, 255, 255, 1),
+                        "Matte White", RGBA(255, 255, 255, 1),
+                        "Gray", RGBA(128, 128, 128, 1),
+                        "Light Gray", RGBA(211, 211, 211, 1),
+                        "Matte Light Gray", RGBA(211, 211, 211, 1),
+                        "Red", RGBA(204, 0, 0, 1),
+                        "Matte Red", RGBA(204, 0, 0, 1),
+                        "Orange", RGBA(255, 102, 0, 1),
+                        "Matte Orange", RGBA(255, 102, 0, 1),
+                        "Yellow", RGBA(255, 215, 0, 1),
+                        "Matte Yellow", RGBA(255, 215, 0, 1),
+                        "Gold", RGBA(255, 215, 0, 1),
+                        "Green", RGBA(76, 175, 80, 1),
+                        "Matte Green", RGBA(76, 175, 80, 1),
+                        "Forest Green", RGBA(34, 139, 34, 1),
+                        "Blue", RGBA(0, 71, 171, 1),
+                        "Matte Blue", RGBA(0, 71, 171, 1),
+                        "Cobalt Blue", RGBA(0, 102, 204, 1),
+                        "Purple", RGBA(107, 63, 160, 1),
+                        "Matte Purple", RGBA(107, 63, 160, 1),
+                        "Brown", RGBA(93, 64, 55, 1),
+                        "Light Brown", RGBA(196, 164, 132, 1),
+                        "Chocolate Brown", RGBA(123, 63, 0, 1),
+                        "Matte Chocolate", RGBA(123, 63, 0, 1),
+                        "Copper", RGBA(184, 115, 51, 1),
+                        "Bronze", RGBA(205, 127, 50, 1),
+                        "Silver", RGBA(192, 192, 192, 1),
+                        "Clear", RGBA(245, 245, 245, 1),
+                        "Any", RGBA(224, 224, 224, 1),
+                        RGBA(153, 153, 153, 1)
+                    )
+                Height: =26
+                OnSelect: =Select(Parent)
+                Width: =26
+                X: =cirPrintColorBackdrop.X + 2
+                Y: =71
+                ZIndex: =11
+
+    lblEmptyState As label:
+        Align: =Align.Center
+        Color: =RGBA(100, 100, 100, 1)
+        Font: =varAppFont
+        Height: =200
+        Size: =14
+        Text: ="You haven't submitted any print requests yet. Tap 'Submit' to create your first request!"
+        Visible: =CountRows(galMyRequests.AllItems) = 0
+        Width: =Parent.Width - 40
+        X: =20
+        Y: =Parent.Height / 2 - 100
+        ZIndex: =4
+
+    conConfirmModal As groupContainer.manualLayoutContainer:
+        Height: =Parent.Height
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Visible: =varShowConfirmModal > 0
+        Width: =Parent.Width
+        ZIndex: =5
+
+        recConfirmOverlay As rectangle:
+            Fill: =RGBA(0, 0, 0, 0.7)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =Parent.Height
+            Width: =Parent.Width
+            ZIndex: =1
+
+        recConfirmModal As rectangle:
+            Fill: =Color.White
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =450
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =(Parent.Height - 450) / 2
+            ZIndex: =2
+
+        lblConfirmTitle As label:
+            Color: =varColorSuccess
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =35
+            Size: =18
+            Text: ="Confirm Your Print Estimate"
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 20
+            ZIndex: =3
+
+        lblConfirmReqKey As label:
+            Color: =RGBA(100, 100, 100, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =25
+            Size: =14
+            Text: =varSelectedItem.ReqKey
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 60
+            ZIndex: =4
+
+        lblConfirmCost As label:
+            Align: =Align.Center
+            Color: =varColorPrimary
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =50
+            Size: =28
+            Text: |-
+                =If(
+                    IsBlank(varSelectedItem.EstimatedCost),
+                    "Cost: TBD",
+                    Text(varSelectedItem.EstimatedCost, "[$-en-US]$#,##0.00")
+                )
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 100
+            ZIndex: =5
+
+        lblConfirmDetails As label:
+            Align: =Align.Center
+            Color: =RGBA(80, 80, 80, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =80
+            Size: =12
+            Text: |-
+                ="Method: " & varSelectedItem.Method.Value & "  •  Color: " & varSelectedItem.Color.Value &
+                Char(10) &
+                If(!IsBlank(varSelectedItem.EstimatedTime), "Print Time: ~" & Text(varSelectedItem.EstimatedTime) & " hours", "") &
+                Char(10) &
+                If(!IsBlank(varSelectedItem.EstimatedWeight), "Material: ~" & Text(varSelectedItem.EstimatedWeight) & "g", "")
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 160
+            ZIndex: =6
+
+        lblConfirmWarning As label:
+            Align: =Align.Center
+            Color: =RGBA(150, 150, 150, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =50
+            Size: =11
+            Text: ="By confirming, you agree to pay this amount at pickup. Printing will begin after confirmation."
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 250
+            ZIndex: =7
+
+        btnConfirmCancel As button:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorNeutral
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverFill: =ColorFade(varColorNeutral, -15%)
+            OnSelect: |-
+                =Set(varShowConfirmModal, 0);
+                Set(varSelectedItem, Blank())
+            PressedFill: =ColorFade(varColorNeutral, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="Cancel"
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + 20
+            Y: =recConfirmModal.Y + 320 + varBtnHeightLarge + varSpacingMD
+            ZIndex: =8
+
+        btnConfirmYes As button:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorSuccess
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =varBtnHeightLarge
+            HoverFill: =ColorFade(varColorSuccess, -15%)
+            OnSelect: |-
+                =// Update the StudentConfirmed field
+                Patch(
+                    PrintRequests,
+                    LookUp(PrintRequests, ID = varShowConfirmModal),
+                    {StudentConfirmed: true}
+                );
+                
+                // Close modal
+                Set(varShowConfirmModal, 0);
+                Set(varSelectedItem, Blank());
+                
+                // Show success
+                Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
+                
+                // Refresh the gallery
+                Refresh(PrintRequests)
+            PressedFill: =ColorFade(varColorSuccess, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =14
+            Text: ="I CONFIRM THIS ESTIMATE"
+            Width: =recConfirmModal.Width - 40
+            X: =recConfirmModal.X + varSpacingXL
+            Y: =recConfirmModal.Y + 320
+            ZIndex: =9
+
+    conCancelModal As groupContainer.manualLayoutContainer:
+        Height: =Parent.Height
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Visible: =varShowCancelModal > 0
+        Width: =Parent.Width
+        ZIndex: =6
+
+        recCancelOverlay As rectangle:
+            Fill: =RGBA(0, 0, 0, 0.7)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =Parent.Height
+            Width: =Parent.Width
+            ZIndex: =1
+
+        recCancelModal As rectangle:
+            Fill: =Color.White
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =300
+            Width: =Parent.Width - 60
+            X: =30
+            Y: =(Parent.Height - 300) / 2
+            ZIndex: =2
+
+        lblCancelTitle As label:
+            Align: =Align.Center
+            Color: =varColorDanger
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =30
+            Size: =18
+            Text: ="Cancel Request?"
+            Width: =recCancelModal.Width - 40
+            X: =recCancelModal.X + 20
+            Y: =recCancelModal.Y + 20
+            ZIndex: =3
+
+        lblCancelMessage As label:
+            Align: =Align.Center
+            Color: =RGBA(80, 80, 80, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =80
+            Size: =12
+            Text: |-
+                ="Are you sure you want to cancel request " & varSelectedItem.ReqKey & "?" & Char(10) & Char(10) &
+                "This action cannot be undone. You'll need to submit a new request if you change your mind."
+            Width: =recCancelModal.Width - 40
+            X: =recCancelModal.X + 20
+            Y: =recCancelModal.Y + 60
+            ZIndex: =4
+
+        btnCancelYes As button:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorDanger
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverFill: =ColorFade(varColorDanger, -15%)
+            OnSelect: |-
+                =// Update status to Canceled (student-initiated cancellation)
+                Patch(
+                    PrintRequests,
+                    LookUp(PrintRequests, ID = varShowCancelModal),
+                    {
+                        Status: {Value: "Canceled"},
+                        LastAction: {Value: "Canceled by Student"},
+                        Notes: "Canceled by student before printing."
+                    }
+                );
+                
+                // Close modal
+                Set(varShowCancelModal, 0);
+                Set(varSelectedItem, Blank());
+                
+                // Show confirmation
+                Notify("Request canceled successfully.", NotificationType.Information);
+                
+                // Refresh
+                Refresh(PrintRequests)
+            PressedFill: =ColorFade(varColorDanger, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =13
+            Text: ="Yes, Cancel Request"
+            Width: =recCancelModal.Width - 40
+            X: =recCancelModal.X + varSpacingXL
+            Y: =recCancelModal.Y + 160
+            ZIndex: =5
+
+        btnCancelNo As button:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =RGBA(240, 240, 240, 1)
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varBtnHeight
+            HoverFill: =ColorFade(varColorNeutral, -15%)
+            OnSelect: |-
+                =Set(varShowCancelModal, 0);
+                Set(varSelectedItem, Blank())
+            PressedFill: =ColorFade(varColorNeutral, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
+            Text: ="No, Keep Request"
+            Width: =recCancelModal.Width - 40
+            X: =recCancelModal.X + 20
+            Y: =recCancelModal.Y + 160 + varBtnHeight + varSpacingXL
+            ZIndex: =6
+

@@ -1,0 +1,769 @@
+# ************************************************************************************************
+# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
+# Use the maker portal to create and edit your Power Apps.
+# 
+# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
+# 
+# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
+# ************************************************************************************************
+Screens:
+  scrMyRequests:
+    Properties:
+      LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
+    Children:
+      - conHeader2:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =Color.Transparent
+            Height: =varHeaderHeight
+            Width: =Parent.Width
+          Children:
+            - recHeaderBg2:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =varColorHeader
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - lblHeaderTitle2:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =RGBA(51, 51, 51, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Bold
+                  Height: =45
+                  Size: =24
+                  Text: ="My Print Requests"
+                  Width: =Parent.Width - 100
+                  X: =varSpacingXL
+                  Y: =(Parent.Height - Self.Height) / 2
+            - btnRefresh:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varColorPrimary
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =42
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                  OnSelect: |-
+                    =Refresh(PrintRequests);
+                    Notify("Requests refreshed!", NotificationType.Information)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =Self.Color
+                  RadiusBottomLeft: =varRadiusMedium
+                  RadiusBottomRight: =varRadiusMedium
+                  RadiusTopLeft: =varRadiusMedium
+                  RadiusTopRight: =varRadiusMedium
+                  Size: =14
+                  Text: ="Refresh"
+                  Width: =95
+                  X: =1253
+                  Y: =8
+      - conNavBar2:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =Color.Transparent
+            Height: =varNavHeight
+            Width: =Parent.Width
+            Y: =Parent.Height - varNavHeight
+          Children:
+            - recNavBg2:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =varColorHeader
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - btnNavHome2:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varNavBtnInactiveFill
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varButtonHeightSmall
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =varNavBtnHoverFill
+                  OnSelect: =Navigate(scrHome, ScreenTransition.Fade)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =Self.Color
+                  RadiusBottomLeft: =varRadiusSmall
+                  RadiusBottomRight: =varRadiusSmall
+                  RadiusTopLeft: =varRadiusSmall
+                  RadiusTopRight: =varRadiusSmall
+                  Text: ="Home"
+                  Width: =(Parent.Width - 80) / 3
+                  X: =varSpacingXL
+                  Y: =(Parent.Height - Self.Height) / 2
+            - btnNavSubmit2:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varNavBtnInactiveFill
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varButtonHeightSmall
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =varNavBtnHoverFill
+                  OnSelect: =Navigate(scrSubmit, varScreenTransition)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =Self.Color
+                  RadiusBottomLeft: =varRadiusSmall
+                  RadiusBottomRight: =varRadiusSmall
+                  RadiusTopLeft: =varRadiusSmall
+                  RadiusTopRight: =varRadiusSmall
+                  Text: ="New Request"
+                  Width: =(Parent.Width - 80) / 3
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2
+            - btnNavMyRequests2:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varColorInfo
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varButtonHeightSmall
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorPrimary, -15%)
+                  OnSelect: =// Already on this screen
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =Self.Color
+                  RadiusBottomLeft: =varRadiusSmall
+                  RadiusBottomRight: =varRadiusSmall
+                  RadiusTopLeft: =varRadiusSmall
+                  RadiusTopRight: =varRadiusSmall
+                  Text: ="My Requests"
+                  Width: =(Parent.Width - 80) / 3
+                  X: =Parent.Width - Self.Width - varSpacingXL
+                  Y: =(Parent.Height - Self.Height) / 2
+      - conGalleryArea:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =Color.Transparent
+            Height: =Parent.Height - varHeaderHeight - varNavHeight
+            Width: =Parent.Width
+            Y: =varHeaderHeight
+          Children:
+            - galMyRequests:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Height: =Parent.Height - 170
+                  Items: |-
+                    =SortByColumns(
+                        Filter(
+                            PrintRequests,
+                            Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+                        ),
+                        "Created",
+                        SortOrder.Descending
+                    )
+                  TemplatePadding: =8
+                  TemplateSize: =varRequestCardHeight
+                  Width: =Parent.Width
+                  WrapCount: =3
+                  Y: =90
+                Children:
+                  - recCardBg:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(128, 128, 128, 1)
+                        BorderThickness: =1
+                        Fill: =varColorBgCard
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Height: =Parent.TemplateHeight - varSpacingSM
+                        Width: =Parent.TemplateWidth - 32
+                        X: =varSpacingLG
+                  - lblReqKey:
+                      Control: Label@2.5.1
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =RGBA(50, 50, 50, 1)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        FontWeight: =FontWeight.Semibold
+                        Height: =24
+                        OnSelect: =Select(Parent)
+                        Text: =ThisItem.ReqKey
+                        X: =28
+                        Y: =12
+                  - btnStatusBadge:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ColorFade(Self.Fill, -15%)
+                        BorderThickness: =0
+                        Color: =If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
+                        DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                        DisplayMode: =DisplayMode.View
+                        Fill: =LookUp(varStatusColors, Status = ThisItem.Status.Value, Color)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+                        OnSelect: =Select(Parent)
+                        PressedBorderColor: =Self.Fill
+                        PressedColor: =Self.Fill
+                        PressedFill: =Self.Color
+                        RadiusBottomLeft: =varRadiusMedium
+                        RadiusBottomRight: =varRadiusMedium
+                        RadiusTopLeft: =varRadiusMedium
+                        RadiusTopRight: =varRadiusMedium
+                        Size: =12
+                        Text: =ThisItem.Status.Value
+                        Width: =150
+                        X: =Parent.TemplateWidth - 175
+                        Y: =10
+                  - lblSubmitDate:
+                      Control: Label@2.5.1
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =RGBA(100, 100, 100, 1)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        Height: =20
+                        OnSelect: =Select(Parent)
+                        Size: =11
+                        Text: |-
+                          ="Submitted: " & Text(ThisItem.Created, varDateFormatShort)
+                        Width: =200
+                        X: =28
+                        Y: =45
+                  - lblPrintDetails:
+                      Control: Label@2.5.1
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =RGBA(80, 80, 80, 1)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        Height: =20
+                        OnSelect: =Select(Parent)
+                        Size: =11
+                        Text: |-
+                          =ThisItem.Color.Value & " • " &
+                          ThisItem.Method.Value & " • " &
+                          Trim(
+                              If(
+                                  Find("(", ThisItem.Printer.Value) > 0,
+                                  Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1),
+                                  ThisItem.Printer.Value
+                              )
+                          )
+                        Width: =Parent.TemplateWidth - 132
+                        X: =58
+                        Y: =74
+                  - lblEstimate:
+                      Control: Label@2.5.1
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =varColorPrimary
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        FontWeight: =FontWeight.Semibold
+                        Height: =24
+                        OnSelect: =Select(Parent)
+                        Text: |-
+                          ="Estimated Cost: " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00")
+                        Visible: =!IsBlank(ThisItem.EstimatedCost)
+                        Width: =Parent.TemplateWidth - 60
+                        X: =28
+                        Y: =104
+                  - btnConfirmEstimate:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =Color.White
+                        DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                        Fill: =varColorSuccess
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        FontWeight: =FontWeight.Bold
+                        Height: =45
+                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =ColorFade(varColorSuccess, -15%)
+                        OnSelect: |-
+                          =Set(varSelectedItem, ThisItem);
+                          Set(varShowConfirmModal, ThisItem.ID)
+                        PressedBorderColor: =Self.Fill
+                        PressedColor: =Self.Fill
+                        PressedFill: =ColorFade(varColorSuccess, -25%)
+                        RadiusBottomLeft: =varBtnBorderRadius
+                        RadiusBottomRight: =varBtnBorderRadius
+                        RadiusTopLeft: =varBtnBorderRadius
+                        RadiusTopRight: =varBtnBorderRadius
+                        Size: =13
+                        Text: ="✓ CONFIRM ESTIMATE"
+                        Visible: =ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
+                        Width: =Parent.TemplateWidth - 60
+                        X: =28
+                        Y: =156
+                  - btnCancelRequest:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =varColorDanger
+                        DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                        Fill: =ColorFade(varColorDanger, varSecondaryFade)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =Font.'Open Sans'
+                        FontWeight: =FontWeight.Bold
+                        Height: =28
+                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =ColorFade(varColorDanger, 55%)
+                        OnSelect: |-
+                          =Set(varSelectedItem, ThisItem);
+                          Set(varShowCancelModal, ThisItem.ID)
+                        PressedBorderColor: =Self.Fill
+                        PressedColor: =Self.Fill
+                        PressedFill: =ColorFade(varColorDanger, 45%)
+                        RadiusBottomLeft: =varBtnBorderRadius
+                        RadiusBottomRight: =varBtnBorderRadius
+                        RadiusTopLeft: =varBtnBorderRadius
+                        RadiusTopRight: =varBtnBorderRadius
+                        Size: =varBtnFontSize
+                        Text: ="Cancel Request"
+                        Visible: =ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]
+                        Width: =150
+                        X: =28
+                        Y: =230
+                  - lblStatusMessage:
+                      Control: Label@2.5.1
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =RGBA(100, 100, 100, 1)
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        Height: =60
+                        OnSelect: =Select(Parent)
+                        Size: =11
+                        Text: |-
+                          =Switch(
+                              ThisItem.Status.Value,
+                              "Printing", "Your print is currently in progress!",
+                              "Completed", "Your print is ready for pickup!" & Char(10) & "📍 " & varPickupLocation & Char(10) & "💳 Payment: " & varPaymentMethod,
+                              "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, varDateFormatShort),
+                              "Rejected", "❌ Request rejected",
+                              "Canceled", "Request canceled by you",
+                              ""
+                          )
+                        Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
+                        Width: =Parent.TemplateWidth - 60
+                        X: =28
+                        Y: =117
+                  - cirPrintColorBackdrop:
+                      Control: Circle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Fill: =RGBA(45, 45, 48, 1)
+                        Height: =30
+                        OnSelect: =Select(Parent)
+                        Visible: =ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"
+                        Width: =30
+                        X: =28
+                        Y: =69
+                  - cirPrintColorDot:
+                      Control: Circle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Fill: |-
+                          =Switch(
+                              ThisItem.Color.Value,
+                              "Black", RGBA(26, 26, 26, 1),
+                              "Matte Black", RGBA(26, 26, 26, 1),
+                              "White", RGBA(255, 255, 255, 1),
+                              "Matte White", RGBA(255, 255, 255, 1),
+                              "Gray", RGBA(128, 128, 128, 1),
+                              "Light Gray", RGBA(211, 211, 211, 1),
+                              "Matte Light Gray", RGBA(211, 211, 211, 1),
+                              "Red", RGBA(204, 0, 0, 1),
+                              "Matte Red", RGBA(204, 0, 0, 1),
+                              "Orange", RGBA(255, 102, 0, 1),
+                              "Matte Orange", RGBA(255, 102, 0, 1),
+                              "Yellow", RGBA(255, 215, 0, 1),
+                              "Matte Yellow", RGBA(255, 215, 0, 1),
+                              "Gold", RGBA(255, 215, 0, 1),
+                              "Green", RGBA(76, 175, 80, 1),
+                              "Matte Green", RGBA(76, 175, 80, 1),
+                              "Forest Green", RGBA(34, 139, 34, 1),
+                              "Blue", RGBA(0, 71, 171, 1),
+                              "Matte Blue", RGBA(0, 71, 171, 1),
+                              "Cobalt Blue", RGBA(0, 102, 204, 1),
+                              "Purple", RGBA(107, 63, 160, 1),
+                              "Matte Purple", RGBA(107, 63, 160, 1),
+                              "Brown", RGBA(93, 64, 55, 1),
+                              "Light Brown", RGBA(196, 164, 132, 1),
+                              "Chocolate Brown", RGBA(123, 63, 0, 1),
+                              "Matte Chocolate", RGBA(123, 63, 0, 1),
+                              "Copper", RGBA(184, 115, 51, 1),
+                              "Bronze", RGBA(205, 127, 50, 1),
+                              "Silver", RGBA(192, 192, 192, 1),
+                              "Clear", RGBA(245, 245, 245, 1),
+                              "Any", RGBA(224, 224, 224, 1),
+                              RGBA(153, 153, 153, 1)
+                          )
+                        Height: =26
+                        OnSelect: =Select(Parent)
+                        Width: =26
+                        X: =cirPrintColorBackdrop.X + 2
+                        Y: =71
+      - lblEmptyState:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =RGBA(100, 100, 100, 1)
+            Font: =varAppFont
+            Height: =200
+            Size: =14
+            Text: ="You haven't submitted any print requests yet. Tap 'Submit' to create your first request!"
+            Visible: =CountRows(galMyRequests.AllItems) = 0
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =Parent.Height / 2 - 100
+      - conConfirmModal:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Height: =Parent.Height
+            Visible: =varShowConfirmModal > 0
+            Width: =Parent.Width
+          Children:
+            - recConfirmOverlay:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =RGBA(0, 0, 0, 0.7)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recConfirmModal:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =Color.White
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =450
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =(Parent.Height - 450) / 2
+            - lblConfirmTitle:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorSuccess
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Bold
+                  Height: =35
+                  Size: =18
+                  Text: ="Confirm Your Print Estimate"
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 20
+            - lblConfirmReqKey:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =RGBA(100, 100, 100, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =25
+                  Size: =14
+                  Text: =varSelectedItem.ReqKey
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 60
+            - lblConfirmCost:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorPrimary
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Bold
+                  Height: =50
+                  Size: =28
+                  Text: |-
+                    =If(
+                        IsBlank(varSelectedItem.EstimatedCost),
+                        "Cost: TBD",
+                        Text(varSelectedItem.EstimatedCost, "[$-en-US]$#,##0.00")
+                    )
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 100
+            - lblConfirmDetails:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =RGBA(80, 80, 80, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =80
+                  Size: =12
+                  Text: |-
+                    ="Method: " & varSelectedItem.Method.Value & "  •  Color: " & varSelectedItem.Color.Value &
+                    Char(10) &
+                    If(!IsBlank(varSelectedItem.EstimatedTime), "Print Time: ~" & Text(varSelectedItem.EstimatedTime) & " hours", "") &
+                    Char(10) &
+                    If(!IsBlank(varSelectedItem.EstimatedWeight), "Material: ~" & Text(varSelectedItem.EstimatedWeight) & "g", "")
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 160
+            - lblConfirmWarning:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =RGBA(150, 150, 150, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =50
+                  Size: =11
+                  Text: ="By confirming, you agree to pay this amount at pickup. Printing will begin after confirmation."
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 250
+            - btnConfirmCancel:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varColorNeutral
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varBtnHeight
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorNeutral, -15%)
+                  OnSelect: |-
+                    =Set(varShowConfirmModal, 0);
+                    Set(varSelectedItem, Blank())
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =ColorFade(varColorNeutral, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =varBtnFontSize
+                  Text: ="Cancel"
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + 20
+                  Y: =recConfirmModal.Y + 320 + varBtnHeightLarge + varSpacingMD
+            - btnConfirmYes:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varColorSuccess
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Bold
+                  Height: =varBtnHeightLarge
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorSuccess, -15%)
+                  OnSelect: |-
+                    =// Update the StudentConfirmed field
+                    Patch(
+                        PrintRequests,
+                        LookUp(PrintRequests, ID = varShowConfirmModal),
+                        {StudentConfirmed: true}
+                    );
+
+                    // Close modal
+                    Set(varShowConfirmModal, 0);
+                    Set(varSelectedItem, Blank());
+
+                    // Show success
+                    Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
+
+                    // Refresh the gallery
+                    Refresh(PrintRequests)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =ColorFade(varColorSuccess, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =14
+                  Text: ="I CONFIRM THIS ESTIMATE"
+                  Width: =recConfirmModal.Width - 40
+                  X: =recConfirmModal.X + varSpacingXL
+                  Y: =recConfirmModal.Y + 320
+      - conCancelModal:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Height: =Parent.Height
+            Visible: =varShowCancelModal > 0
+            Width: =Parent.Width
+          Children:
+            - recCancelOverlay:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =RGBA(0, 0, 0, 0.7)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recCancelModal:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =Color.White
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =300
+                  Width: =Parent.Width - 60
+                  X: =30
+                  Y: =(Parent.Height - 300) / 2
+            - lblCancelTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorDanger
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Bold
+                  Height: =30
+                  Size: =18
+                  Text: ="Cancel Request?"
+                  Width: =recCancelModal.Width - 40
+                  X: =recCancelModal.X + 20
+                  Y: =recCancelModal.Y + 20
+            - lblCancelMessage:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =RGBA(80, 80, 80, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =80
+                  Size: =12
+                  Text: |-
+                    ="Are you sure you want to cancel request " & varSelectedItem.ReqKey & "?" & Char(10) & Char(10) &
+                    "This action cannot be undone. You'll need to submit a new request if you change your mind."
+                  Width: =recCancelModal.Width - 40
+                  X: =recCancelModal.X + 20
+                  Y: =recCancelModal.Y + 60
+            - btnCancelYes:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =varColorDanger
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varBtnHeight
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorDanger, -15%)
+                  OnSelect: |-
+                    =// Update status to Canceled (student-initiated cancellation)
+                    Patch(
+                        PrintRequests,
+                        LookUp(PrintRequests, ID = varShowCancelModal),
+                        {
+                            Status: {Value: "Canceled"},
+                            LastAction: {Value: "Canceled by Student"},
+                            Notes: "Canceled by student before printing."
+                        }
+                    );
+
+                    // Close modal
+                    Set(varShowCancelModal, 0);
+                    Set(varSelectedItem, Blank());
+
+                    // Show confirmation
+                    Notify("Request canceled successfully.", NotificationType.Information);
+
+                    // Refresh
+                    Refresh(PrintRequests)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =ColorFade(varColorDanger, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =13
+                  Text: ="Yes, Cancel Request"
+                  Width: =recCancelModal.Width - 40
+                  X: =recCancelModal.X + varSpacingXL
+                  Y: =recCancelModal.Y + 160
+            - btnCancelNo:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =RGBA(240, 240, 240, 1)
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =varBtnHeight
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorNeutral, -15%)
+                  OnSelect: |-
+                    =Set(varShowCancelModal, 0);
+                    Set(varSelectedItem, Blank())
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =ColorFade(varColorNeutral, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =varBtnFontSize
+                  Text: ="No, Keep Request"
+                  Width: =recCancelModal.Width - 40
+                  X: =recCancelModal.X + 20
+                  Y: =recCancelModal.Y + 160 + varBtnHeight + varSpacingXL

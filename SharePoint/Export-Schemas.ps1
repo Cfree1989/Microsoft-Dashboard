@@ -1,18 +1,29 @@
+#Requires -Version 7.4
 #Requires -Modules PnP.PowerShell
 <#
 .SYNOPSIS
   Exports SharePoint list column definitions to JSON under SharePoint/schemas/.
 
 .DESCRIPTION
-  Connects to the Digital Fabrication Lab site (interactive browser sign-in) and writes one JSON file per list.
+  Connects to the Digital Fabrication Lab site and writes one JSON file per list.
   Re-run after you change columns so the repo matches production.
 
+  Many universities (including LSU) block the default multi-tenant PnP client ID and return
+  AADSTS700016. Use -ClientId with an Entra app registration in YOUR tenant (admin-consented),
+  or set environment variable PNP_CLIENT_ID to that app's Application (client) ID.
+
 .NOTES
+  Run with PowerShell 7: pwsh
   Prerequisite: Install-Module PnP.PowerShell -Scope CurrentUser
   Site: https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
+  Registration guide: https://pnp.github.io/powershell/articles/registerapplication.html
 #>
 [CmdletBinding()]
-param()
+param(
+  [string] $ClientId = $env:PNP_CLIENT_ID,
+  [string] $Tenant,
+  [switch] $DeviceLogin
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -30,8 +41,22 @@ $scriptDir = $PSScriptRoot
 $outDir = Join-Path $scriptDir 'schemas'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-Write-Host "Connecting to $SiteUrl (browser sign-in)..." -ForegroundColor Cyan
-Connect-PnPOnline -Url $SiteUrl -Interactive
+$connectParams = @{ Url = $SiteUrl }
+if ($ClientId) {
+  $connectParams.ClientId = $ClientId
+}
+if ($Tenant) {
+  $connectParams.Tenant = $Tenant
+}
+
+if ($DeviceLogin) {
+  Write-Host "Connecting to $SiteUrl (device code — open the URL and enter the code)..." -ForegroundColor Cyan
+  Connect-PnPOnline @connectParams -DeviceLogin
+}
+else {
+  Write-Host "Connecting to $SiteUrl (browser sign-in)..." -ForegroundColor Cyan
+  Connect-PnPOnline @connectParams -Interactive
+}
 
 foreach ($listName in $ListNames) {
   Write-Host "Exporting list: $listName" -ForegroundColor Cyan

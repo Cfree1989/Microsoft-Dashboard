@@ -1,0 +1,307 @@
+scrHome As screen:
+    Fill: =varColorBg
+
+    conHeaderHome As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =varHeaderHeight
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width
+        ZIndex: =1
+
+        recHeaderBgHome As rectangle:
+            Fill: =varColorHeader
+            Height: =Parent.Height
+            Width: =Parent.Width
+            ZIndex: =3
+
+        lblHeaderTitleHome As label:
+            Color: =RGBA(51, 51, 51, 1)
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =30
+            Size: =24
+            Text: ="Student Portal"
+            Width: =300
+            X: =20
+            Y: =15
+            ZIndex: =4
+
+    conWelcome As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =80
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width    
+        Y: =varHeaderHeight + 30
+        ZIndex: =2
+
+        lblWelcome As label:
+            Align: =Align.Center
+            Color: =varColorText
+            Font: =varAppFont
+            FontWeight: =FontWeight.Bold
+            Height: =70
+            Size: =24
+            Text: ="Welcome, " & First(Split(varMeName, " ")).Value & "!"
+            Width: =Parent.Width
+            ZIndex: =1
+
+        lblSubtitle As label:
+            Align: =Align.Center
+            Color: =varColorTextMuted
+            Font: =varAppFont
+            Height: =30
+            Size: =14
+            Text: ="What would you like to do today?"
+            Visible: =false
+            Width: =Parent.Width
+            Y: =lblWelcome.Y + lblWelcome.Height
+            ZIndex: =2
+
+    conActionCards As groupContainer.manualLayoutContainer:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Fill: =RGBA(255, 255, 255, 1)
+        Height: =350
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width - (varSpacingXL * 2)
+        X: =varSpacingXL
+        Y: =conWelcome.Y + conWelcome.Height + 30
+        ZIndex: =3
+
+        conSubmitCard As groupContainer.manualLayoutContainer:
+            BorderColor: =varColorBorderLight
+            BorderThickness: =1
+            Fill: =Color.White
+            Height: =Parent.Height
+            LayoutGridColumnMinWidth: =0
+            LayoutGridColumns: =6
+            LayoutGridRowMinHeight: =0
+            LayoutGridRows: =6
+            RadiusBottomLeft: =varRadiusMedium
+            RadiusBottomRight: =varRadiusMedium
+            RadiusTopLeft: =varRadiusMedium
+            RadiusTopRight: =varRadiusMedium
+            Width: =(Parent.Width - 80) / 2
+            ZIndex: =1
+
+            "icnSubmit As icon.'3DPrinting'":
+                Color: =varColorPrimary
+                Height: =80
+                Icon: =Icon.Add
+                Width: =80
+                X: =(Parent.Width - 80) / 2
+                Y: =40
+                ZIndex: =1
+
+            lblSubmitTitle As label:
+                Align: =Align.Center
+                Color: =varColorText
+                Font: =varAppFont
+                FontWeight: =FontWeight.Semibold
+                Height: =30
+                Size: =16
+                Text: ="Submit New Request"
+                Width: =Parent.Width    
+                Y: =icnSubmit.Y + icnSubmit.Height + 20
+                ZIndex: =2
+
+            lblSubmitDesc As label:
+                Align: =Align.Center
+                Color: =varColorTextMuted
+                Font: =varAppFont
+                Height: =50
+                Size: =12
+                Text: ="Upload your 3D model file and submit a new print request"
+                Width: =Parent.Width - (varSpacingLG * 2)
+                X: =varSpacingLG
+                Y: =lblSubmitTitle.Y + lblSubmitTitle.Height + 8
+                ZIndex: =3
+
+            btnGetStarted As button:
+                BorderColor: =Color.Transparent
+                BorderThickness: =0
+                Color: =Color.White
+                Fill: =varColorPrimary
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                FontWeight: =FontWeight.Bold
+                Height: =varBtnHeightLarge
+                HoverFill: =ColorFade(varColorPrimary, -15%)
+                OnSelect: =Navigate(scrSubmit, ScreenTransition.Fade)
+                PressedFill: =ColorFade(varColorPrimary, -25%)
+                RadiusBottomLeft: =varRadiusSmall
+                RadiusBottomRight: =varRadiusSmall
+                RadiusTopLeft: =varBtnBorderRadius
+                RadiusTopRight: =varRadiusSmall
+                Size: =14
+                Text: ="GET STARTED"
+                Width: =Parent.Width - (varSpacingLG * 2)
+                X: =varSpacingLG
+                Y: =Parent.Height - 70
+                ZIndex: =4
+
+        conRequestsCard As groupContainer.manualLayoutContainer:
+            BorderColor: =varColorBorderLight
+            BorderThickness: =1
+            Fill: =Color.White
+            Height: =Parent.Height
+            LayoutGridColumnMinWidth: =0
+            LayoutGridColumns: =6
+            LayoutGridRowMinHeight: =0
+            LayoutGridRows: =6
+            RadiusBottomLeft: =varRadiusMedium
+            RadiusBottomRight: =varRadiusMedium
+            RadiusTopLeft: =varRadiusMedium
+            RadiusTopRight: =varRadiusMedium
+            Width: =(Parent.Width - 80) / 2
+            X: =Parent.Width - conSubmitCard.Width
+            ZIndex: =3
+
+            "icnRequests As icon.'3DPrinting'":
+                Color: =varColorSuccess
+                Height: =80
+                Icon: =Icon.DetailList
+                Width: =80
+                X: =(Parent.Width - 80) / 2
+                Y: =40
+                ZIndex: =1
+
+            lblRequestsTitle As label:
+                Align: =Align.Center
+                Color: =varColorText
+                Font: =varAppFont
+                FontWeight: =FontWeight.Semibold
+                Height: =30
+                Size: =16
+                Text: ="My Requests"
+                Width: =Parent.Width
+                Y: =icnRequests.Y + icnRequests.Height + 20
+                ZIndex: =2
+
+            lblRequestsDesc As label:
+                Align: =Align.Center
+                Color: =varColorTextMuted
+                Font: =varAppFont
+                Height: =50
+                Text: ="View status, confirm estimates, or manage your existing requests"
+                Width: =Parent.Width - (varSpacingLG * 2)
+                X: =varSpacingLG
+                Y: =lblRequestsTitle.Y + lblRequestsTitle.Height + 8
+                ZIndex: =3
+
+            btnViewRequests As button:
+                BorderColor: =Color.Transparent
+                BorderThickness: =0
+                Color: =Color.White
+                Fill: =varColorSuccess
+                FocusedBorderThickness: =varFocusedBorderThickness
+                Font: =varAppFont
+                FontWeight: =FontWeight.Bold
+                Height: =varButtonHeight
+                HoverFill: =ColorFade(varColorSuccess, -15%)
+                OnSelect: =Navigate(scrMyRequests, varScreenTransition)
+                PressedFill: =ColorFade(varColorSuccess, -25%)
+                RadiusBottomLeft: =varBtnBorderRadius
+                RadiusBottomRight: =varBtnBorderRadius
+                RadiusTopLeft: =varBtnBorderRadius
+                RadiusTopRight: =varBtnBorderRadius
+                Size: =14
+                Text: ="VIEW REQUESTS"
+                Width: =Parent.Width - (varSpacingLG * 2)
+                X: =varSpacingLG
+                Y: =Parent.Height - 70
+                ZIndex: =4
+
+    lblHelpText As label:
+        Align: =Align.Center
+        Font: =varAppFont
+        Height: =30
+        Size: =11
+        Text: ="Need help? Visit " & varPickupLocation & " or email " & varSupportEmail
+        Width: =Parent.Width
+        Y: =Parent.Height - varNavHeight - 50
+        ZIndex: =4
+
+    conNavBarHome As groupContainer.manualLayoutContainer:
+        Fill: =Color.Transparent
+        Height: =varNavHeight
+        LayoutGridColumnMinWidth: =0
+        LayoutGridColumns: =6
+        LayoutGridRowMinHeight: =0
+        LayoutGridRows: =6
+        Width: =Parent.Width
+        Y: =Parent.Height - varNavHeight
+        ZIndex: =5
+
+        recNavBgHome As rectangle:
+            Fill: =varColorHeader
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =Parent.Height
+            Width: =Parent.Width    
+            ZIndex: =1
+
+        btnNavHomeActive As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorInfo
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =ColorFade(varColorPrimary, -15%)
+            OnSelect: =// Already on this screen
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="Home"
+            Width: =(Parent.Width - 80) / 3
+            X: =varSpacingXL
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =2
+
+        btnNavSubmitHome As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varNavBtnInactiveFill
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =varNavBtnHoverFill
+            OnSelect: =Navigate(scrSubmit, varScreenTransition)
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="New Request"
+            Width: =(Parent.Width - 80) / 3
+            X: =(Parent.Width - Self.Width) / 2
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =3
+
+        btnNavMyRequestsHome As button:
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varNavBtnInactiveFill
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =varButtonHeightSmall
+            HoverFill: =varNavBtnHoverFill
+            OnSelect: =Navigate(scrMyRequests, varScreenTransition)
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
+            Text: ="My Requests"
+            Width: =(Parent.Width - 80) / 3
+            X: =Parent.Width - Self.Width - varSpacingXL
+            Y: =(Parent.Height - Self.Height) / 2
+            ZIndex: =4
+
