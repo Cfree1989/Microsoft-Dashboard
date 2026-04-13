@@ -7559,9 +7559,11 @@ If(
     ),
 
     // === SUCCESS PATH ===
-    Refresh(PrintRequests);
-    Refresh(BuildPlates);
-    Refresh(Payments);
+    Concurrent(
+        Refresh(PrintRequests),
+        Refresh(BuildPlates),
+        Refresh(Payments)
+    );
     ClearCollect(colAllBuildPlates, BuildPlates);
     ClearCollect(colAllPayments, Payments);
     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
@@ -9029,9 +9031,11 @@ If(
     ),
 
     // === SUCCESS PATH ===
-    Refresh(PrintRequests);
-    Refresh(BuildPlates);
-    Refresh(Payments);
+    Concurrent(
+        Refresh(PrintRequests),
+        Refresh(BuildPlates),
+        Refresh(Payments)
+    );
     ClearCollect(colAllBuildPlates, BuildPlates);
     ClearCollect(colAllPayments, Payments);
 
@@ -11736,14 +11740,16 @@ Reset(chkNeedsAttention)
 25. Set **OnSelect:**
 
 ```powerfx
-Refresh(PrintRequests);
-Refresh(BuildPlates);
-Refresh(Payments);
+Concurrent(
+    Refresh(PrintRequests),
+    Refresh(BuildPlates),
+    Refresh(Payments)
+);
 ClearCollect(colAllBuildPlates, BuildPlates);
 ClearCollect(colAllPayments, Payments)
 ```
 
-> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted or payments/plates are updated elsewhere, the tab counts, job-card summaries, and payment indicators won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts.
+> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted or payments/plates are updated elsewhere, the tab counts, job-card summaries, and payment indicators won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts. The three `Refresh` calls run inside `Concurrent` so the app waits only for the slowest list, not the sum of all three.
 
 ---
 
@@ -13686,10 +13692,12 @@ The Timer control automatically refreshes data and checks for new NeedsAttention
 **⬇️ FORMULA: Paste into tmrAutoRefresh.OnTimerEnd**
 
 ```powerfx
-// Refresh data from SharePoint
-Refresh(PrintRequests);
-Refresh(BuildPlates);
-Refresh(Payments);
+// Refresh data from SharePoint concurrently
+Concurrent(
+    Refresh(PrintRequests),
+    Refresh(BuildPlates),
+    Refresh(Payments)
+);
 
 // Reload local collections used by job-card summaries
 ClearCollect(colAllBuildPlates, BuildPlates);
@@ -13719,7 +13727,7 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 | Step | What Happens |
 |------|--------------|
 | 1 | Timer fires every 30 seconds |
-| 2 | `Refresh(PrintRequests)`, `Refresh(BuildPlates)`, and `Refresh(Payments)` fetch the latest SharePoint data |
+| 2 | `Concurrent(Refresh(PrintRequests), Refresh(BuildPlates), Refresh(Payments))` fetches all three SharePoint lists in parallel |
 | 3 | `colAllBuildPlates` and `colAllPayments` are reloaded for job-card summaries |
 | 4 | Count current NeedsAttention items |
 | 5 | Compare to previous count stored in `varPrevAttentionCount` |

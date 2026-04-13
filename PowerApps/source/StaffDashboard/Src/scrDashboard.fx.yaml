@@ -1291,9 +1291,11 @@ scrDashboard As screen:
         Height: =26
         HoverFill: =ColorFade(varColorPrimary, -15%)
         OnSelect: |-
-            =Refresh(PrintRequests);
-            Refresh(BuildPlates);
-            Refresh(Payments);
+            =Concurrent(
+                Refresh(PrintRequests),
+                Refresh(BuildPlates),
+                Refresh(Payments)
+            );
             ClearCollect(colAllBuildPlates, BuildPlates);
             ClearCollect(colAllPayments, Payments)
         PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -2772,10 +2774,12 @@ scrDashboard As screen:
             AutoStart: =true
             Duration: =varRefreshInterval
             OnTimerEnd: |-
-                =// Refresh data from SharePoint
-                Refresh(PrintRequests);
-                Refresh(BuildPlates);
-                Refresh(Payments);
+                =// Refresh data from SharePoint concurrently
+                Concurrent(
+                    Refresh(PrintRequests),
+                    Refresh(BuildPlates),
+                    Refresh(Payments)
+                );
                 
                 // Reload local collections used by job-card summaries
                 ClearCollect(colAllBuildPlates, BuildPlates);
@@ -4747,9 +4751,11 @@ scrDashboard As screen:
                     ),
                 
                     // === SUCCESS PATH ===
-                    Refresh(PrintRequests);
-                    Refresh(BuildPlates);
-                    Refresh(Payments);
+                    Concurrent(
+                        Refresh(PrintRequests),
+                        Refresh(BuildPlates),
+                        Refresh(Payments)
+                    );
                     ClearCollect(colAllBuildPlates, BuildPlates);
                     ClearCollect(colAllPayments, Payments);
                     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
@@ -6342,9 +6348,11 @@ scrDashboard As screen:
                     ),
                 
                     // === SUCCESS PATH ===
-                    Refresh(PrintRequests);
-                    Refresh(BuildPlates);
-                    Refresh(Payments);
+                    Concurrent(
+                        Refresh(PrintRequests),
+                        Refresh(BuildPlates),
+                        Refresh(Payments)
+                    );
                     ClearCollect(colAllBuildPlates, BuildPlates);
                     ClearCollect(colAllPayments, Payments);
                 
