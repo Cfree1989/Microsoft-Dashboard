@@ -105,6 +105,16 @@ This app follows consistent design patterns for a professional appearance:
 | Labels/Hints | `Font.'Open Sans'` | 8-10 | Normal |
 | Buttons | `Font.'Open Sans'` | 10-13 | Normal |
 
+**Button font size tiers (implemented in the app):** Standard card actions use `varBtnFontSize` (12). The app also uses intentional fixed sizes for density and touch targets:
+
+| Tier | Size | Typical controls |
+|------|------|------------------|
+| Standard | `varBtnFontSize` (12) | Primary card actions (`btnApprove`, `btnReject`, …) |
+| Compact card actions | `9` | `btnViewNotes`, `btnViewMessages` |
+| Header / tight card chrome | `8` | `btnNavAnalytics`, `btnBuildPlates` |
+| Ultra-compact | `5` | `btnStudentNote` |
+| Modal chrome | `14` | Modal ✕ close buttons (`btnRejectClose`, …), `btnBuildPlatesDone` |
+
 > ⚠️ **Consistency Rule:** Always use `Font.'Open Sans'` throughout the app. Avoid mixing fonts like `Font.'Open Sans'` — stick to the Microsoft design language.
 
 ### Color Palette
@@ -120,8 +130,8 @@ This app follows consistent design patterns for a professional appearance:
 | Info | Blue | `RGBA(70, 130, 220, 1)` | #4682DC |
 | Gold (Pending) | Gold | `RGBA(255, 185, 0, 1)` | #FFB900 |
 | Orange (Printing) | Orange | `RGBA(255, 140, 0, 1)` | #FF8C00 |
-| Header Background | Dark Gray | `RGBA(45, 45, 48, 1)` | — |
-| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | — |
+| Header Background | Dark Gray | `RGBA(77, 77, 77, 1)` | — |
+| Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` — use `varColorOverlay` in the app | — |
 | Card Background | Warm Cream | `RGBA(247, 237, 223, 1)` | — |
 | Muted Text | Gray | `RGBA(100, 100, 100, 1)` | — |
 | Secondary Btn Border | Gray | `RGBA(166, 166, 166, 1)` | #A6A6A6 |
@@ -144,6 +154,8 @@ This app follows consistent design patterns for a professional appearance:
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
 | Size | `varBtnFontSize` (12) |
+
+**Compact toolbar (filter bar):** Controls in the row under the status tabs (`txtSearch`, `ddSortOrder`, `btnClearFilters`, `btnRefresh`, `chkNeedsAttention`) intentionally use **Height `26`** and often **Size `10`** so the bar stays dense. This is separate from standard `varBtnHeight` (36) buttons.
 
 **Secondary buttons (light fill) should also include:**
 | Property | Value |
@@ -195,6 +207,18 @@ All text inputs and dropdowns use centralized styling variables for a clean, con
 | Selection Text | `varDropdownSelectionColor` | `RGBA(50, 50, 50, 1)` |
 
 > 💡 **Consistency Rule:** All dropdowns and combo boxes should use the shared `varDropdown*` and `varChevron*` variables for hover, pressed, and selection states. Do not hardcode row state colors on individual controls.
+
+### Job card semantic backgrounds (`recCardBackground`)
+
+These are **not** global theme tokens—they are conditional fills and borders on each job card:
+
+| State | Fill | Border |
+|-------|------|--------|
+| Default | `varColorBgCard` | `varColorBorderLight` |
+| Needs attention | `RGBA(255, 235, 180, 1)` | `RGBA(102, 102, 102, 1)`, **BorderThickness** `2` |
+| Batch selection (selected completed job) | `RGBA(220, 240, 220, 1)` | `varColorSuccess` |
+
+Default **BorderThickness** when not needing attention is **1.5** in the shipped app (slightly heavier than a single pixel for card separation).
 
 ### Layout Dimensions (Dynamic Sizing)
 
@@ -516,7 +540,7 @@ Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
 Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
 // === UI NEUTRAL COLORS ===
-Set(varColorHeader, Color.Transparent);            // Header background
+Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (recHeader Fill)
 Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
 Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
@@ -698,7 +722,7 @@ Set(varLoadingMessage, "")
 | `varColorPrimaryPressed` | Primary color pressed state | Color |
 | `varColorSuccessHover` | Success color hover state | Color |
 | `varColorDangerHover` | Danger color hover state | Color |
-| `varColorHeader` | Header background color | Color |
+| `varColorHeader` | Header background (`recHeader`); `RGBA(77, 77, 77, 1)` | Color |
 | `varNavBtnInactiveFill` | Nav button inactive state | Color |
 | `varNavBtnHoverFill` | Nav button hover state | Color |
 | `varColorText` | Primary text color | Color |
@@ -1196,9 +1220,9 @@ Collapsed version (containers closed) for quick reference:
 | Y | `0` |
 | Width | `Parent.Width` |
 | Height | `60` |
-| Fill | `RGBA(45, 45, 48, 1)` |
+| Fill | `varColorHeader` |
 
-> This creates a dark gray header bar.
+> This creates a dark gray header bar. `varColorHeader` is set in **App.OnStart** to `RGBA(77, 77, 77, 1)` (see Color Palette).
 
 ### Adding the App Title (lblAppTitle)
 
@@ -1475,10 +1499,10 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 | X | `0` |
 | Y | `0` |
 | Width | `Parent.TemplateWidth` |
-| Height | `Parent.TemplateHeight - 8` |
+| Height | `Parent.TemplateHeight` |
 | Fill | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, RGBA(220, 240, 220, 1), If(ThisItem.NeedsAttention, RGBA(255, 235, 180, 1), varColorBgCard))` |
 | BorderColor | `If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorBorderLight))` |
-| BorderThickness | `If(ThisItem.NeedsAttention, 2, 1)` |
+| BorderThickness | `If(ThisItem.NeedsAttention, 2, 1.5)` |
 | RadiusTopLeft | `8` |
 | RadiusTopRight | `8` |
 | RadiusBottomLeft | `8` |
@@ -1511,7 +1535,7 @@ If(
 )
 ```
 
-> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with an orange border `RGBA(255, 180, 0, 1)` and thicker border (2px vs 1px). In batch select mode, selected cards show a light green background with green border.
+> 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with a gray border `RGBA(102, 102, 102, 1)` and thicker border (2px vs 1.5px). In batch select mode, selected cards show a light green background with green border.
 
 > **Note:** These formulas reference `varBatchSelectMode`, `colBatchItems`, and `NeedsAttention` which are used in later steps (batch payment in Step 12C/12E, lightbulb in Step 15). The variables are initialized in App.OnStart (Step 3).
 
@@ -1954,7 +1978,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 | HoverFill | `varColorPrimaryHover` |
 | HoverColor | `Color.White` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -2399,7 +2423,7 @@ Go back inside `galJobCards` gallery template. We'll place buttons at the **bott
 | Color | `White` |
 | HoverFill | `varColorSuccessHover` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -2435,7 +2459,7 @@ Set(varSelectedItem, ThisItem)
 | Color | `White` |
 | HoverFill | `varColorDangerHover` |
 | PressedFill | `ColorFade(varColorDanger, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -2470,7 +2494,7 @@ Set(varSelectedItem, ThisItem)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -2505,7 +2529,7 @@ Set(varSelectedItem, ThisItem)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -2580,7 +2604,7 @@ Set(varLoadingMessage, "")
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -2675,7 +2699,7 @@ CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in
 | Color | `Color.White` |
 | HoverFill | `varColorSuccessHover` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -2856,7 +2880,7 @@ Set(varDetailsComputerChanged, false)
 | Y | `6` |
 | Width | `28` |
 | Height | `28` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `RGBA(120, 120, 120, 1)` |
 | HoverFill | `RGBA(0, 0, 0, 0.05)` |
 | PressedFill | `RGBA(0, 0, 0, 0.1)` |
@@ -3052,19 +3076,19 @@ scrDashboard
 | Y | `recRejectModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -3263,7 +3287,7 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -3308,7 +3332,7 @@ Reset(chkNotJoined)
 | Color | `Color.White` |
 | HoverFill | `varColorDangerHover` |
 | PressedFill | `ColorFade(varColorDanger, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -3565,19 +3589,19 @@ scrDashboard
 | Y | `recApprovalModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -4077,7 +4101,7 @@ ClearCollect(colPrintersUsed,
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -4420,19 +4444,19 @@ scrDashboard
 | Y | `recArchiveModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -4581,7 +4605,7 @@ Reset(ddArchiveStaff)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -4619,7 +4643,7 @@ Reset(ddArchiveStaff)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorWarning, -15%)` |
 | PressedFill | `ColorFade(varColorWarning, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -4829,19 +4853,19 @@ scrDashboard
 | Y | `recCompleteModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -4988,7 +5012,7 @@ If(
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -5025,7 +5049,7 @@ Reset(ddCompleteStaff)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -5271,19 +5295,19 @@ scrDashboard
 | Y | `recDetailsModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -5894,7 +5918,7 @@ With(
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -5940,7 +5964,7 @@ Set(varDetailsComputerChanged, false)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -6265,19 +6289,19 @@ scrDashboard
 | Y | `recPaymentModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -7277,7 +7301,7 @@ Trim(
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -7348,7 +7372,7 @@ Notify("Batch mode enabled. Select more Completed items, then click 'Process Bat
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -7754,19 +7778,19 @@ scrDashboard
 | Y | `recRevertModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -7989,7 +8013,7 @@ If(
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -8028,7 +8052,7 @@ Reset(txtRevertReason)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorWarning, -15%)` |
 | PressedFill | `ColorFade(varColorWarning, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -8287,19 +8311,19 @@ scrDashboard
 | Y | `recBatchPaymentModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -8851,7 +8875,7 @@ With(
 | Y | `(Parent.TemplateHeight - 24) / 2` |
 | Width | `24` |
 | Height | `24` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `RGBA(180, 0, 0, 1)` |
 | HoverFill | `RGBA(255, 220, 220, 1)` |
 | PressedFill | `RGBA(255, 200, 200, 1)` |
@@ -8899,7 +8923,7 @@ If(
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -8941,7 +8965,7 @@ Reset(ddBatchPaymentType)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorSuccess, -15%)` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -9344,11 +9368,11 @@ scrDashboard
 | Y | `recBuildPlatesModal.Y + 16` |
 | Width | `24` |
 | Height | `24` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
 | HoverFill | `RGBA(200, 200, 200, 0.3)` |
 | HoverColor | `varColorText` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | Size | `14` |
 | Font | `varAppFont` |
@@ -9637,7 +9661,7 @@ Set(varLoadingMessage, "")
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorPrimary, -15%)` |
 | PressedFill | `ColorFade(varColorPrimary, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -9753,7 +9777,7 @@ Same properties as `btnMarkPrinting` with:
 | Color | `Color.White` |
 | HoverFill | `varColorSuccessHover` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -9904,11 +9928,11 @@ ClearCollect(colAllBuildPlates, BuildPlates)
 | Y | `14` |
 | Width | `24` |
 | Height | `24` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
 | HoverFill | `RGBA(220, 50, 50, 0.15)` |
 | HoverColor | `varColorDanger` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | Size | `12` |
 | Font | `varAppFont` |
@@ -10015,7 +10039,7 @@ If(
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -10171,7 +10195,7 @@ Set(varLoadingMessage, "")
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -10357,7 +10381,7 @@ Before moving on, verify:
 | Y | `recExportBox.Y + 10` |
 | Width | `36` |
 | Height | `36` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
 | HoverFill | `RGBA(0, 0, 0, 0.05)` |
 | BorderThickness | `0` |
@@ -10401,7 +10425,7 @@ Before moving on, verify:
 | Size | `12` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
-| ChevronBackground | `Transparent` |
+| ChevronBackground | `Color.Transparent` |
 | RadiusTopLeft | `varInputBorderRadius` |
 | RadiusTopRight | `varInputBorderRadius` |
 | RadiusBottomLeft | `varInputBorderRadius` |
@@ -10469,7 +10493,7 @@ LookUp(Self.Items, Value = Month(Today()))
 | Size | `12` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
-| ChevronBackground | `Transparent` |
+| ChevronBackground | `Color.Transparent` |
 | RadiusTopLeft | `varInputBorderRadius` |
 | RadiusTopRight | `varInputBorderRadius` |
 | RadiusBottomLeft | `varInputBorderRadius` |
@@ -10754,19 +10778,19 @@ scrDashboard
 | Y | `recNotesModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -11097,7 +11121,7 @@ If(
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -11366,19 +11390,19 @@ Set(varSelectedItem, Blank())
 | Y | `recStudentNoteModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -11445,7 +11469,7 @@ Set(varSelectedItem, Blank())
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -11699,7 +11723,7 @@ Reset(chkNeedsAttention)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12000,7 +12024,7 @@ Concat(Distinct(colBatchItems, Student.DisplayName), Value, ", ")
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12036,7 +12060,7 @@ Notify("Batch selection cancelled.", NotificationType.Information)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorSuccess, -15%)` |
 | PressedFill | `ColorFade(varColorSuccess, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12216,19 +12240,19 @@ Set(varShowAddFileModal, ThisItem.ID)
 | Y | `recFileModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12414,7 +12438,7 @@ SubmitForm(frmAttachmentsEdit)
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -12794,19 +12818,19 @@ scrDashboard
 | Y | `recViewMsgModal.Y + 10` |
 | Width | `30` |
 | Height | `30` |
-| Fill | `Transparent` |
+| Fill | `Color.Transparent` |
 | Color | `varColorTextMuted` |
-| HoverBorderColor | `Transparent` |
+| HoverBorderColor | `Color.Transparent` |
 | HoverColor | `RGBA(255, 255, 255, 1)` |
 | HoverFill | `RGBA(255, 46, 46, 1)` |
 | PaddingBottom | `0` |
 | PaddingLeft | `0` |
 | PaddingRight | `0` |
 | PaddingTop | `0` |
-| PressedBorderColor | `Transparent` |
+| PressedBorderColor | `Color.Transparent` |
 | PressedColor | `RGBA(245, 245, 245, 1)` |
 | PressedFill | `RGBA(220, 32, 32, 1)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -13173,7 +13197,7 @@ varColorTextMuted
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorNeutral, -15%)` |
 | PressedFill | `ColorFade(varColorNeutral, -25%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -13212,7 +13236,7 @@ Reset(ddViewMsgStaff)
 | Color | `Color.White` |
 | HoverFill | `varColorPrimaryHover` |
 | PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
@@ -13322,7 +13346,7 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 | Color | `varColorDanger` |
 | HoverFill | `ColorFade(varColorDanger, 55%)` |
 | PressedFill | `ColorFade(varColorDanger, 45%)` |
-| BorderColor | `Transparent` |
+| BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |

@@ -11,7 +11,7 @@ scrDashboard As screen:
         })
 
     recHeader As rectangle:
-        Fill: =RGBA(77, 77, 77, 1)
+        Fill: =varColorHeader
         Height: =55
         Width: =Parent.Width
         ZIndex: =3
@@ -871,10 +871,10 @@ scrDashboard As screen:
             PaddingRight: =0
             PaddingTop: =0
             PressedFill: =RGBA(0, 0, 0, 0.1)
-            RadiusBottomLeft: =14
-            RadiusBottomRight: =14
-            RadiusTopLeft: =14
-            RadiusTopRight: =14
+            RadiusBottomLeft: =varRadiusPill
+            RadiusBottomRight: =varRadiusPill
+            RadiusTopLeft: =varRadiusPill
+            RadiusTopRight: =varRadiusPill
             Size: =12
             Text: ="↩️"
             Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up"] && !varBatchSelectMode
@@ -895,10 +895,10 @@ scrDashboard As screen:
                 =Set(varShowStudentNoteModal, ThisItem.ID);
                 Set(varSelectedItem, ThisItem)
             PressedFill: =RGBA(200, 35, 35, 1)
-            RadiusBottomLeft: =4
-            RadiusBottomRight: =4
-            RadiusTopLeft: =4
-            RadiusTopRight: =4
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
             Size: =5
             Text: ="Student Notes"
             Visible: =!IsBlank(ThisItem.Notes)
@@ -1176,7 +1176,7 @@ scrDashboard As screen:
     recFilterBar As rectangle:
         BorderColor: =varColorBorderLight
         BorderThickness: =varInputBorderThickness
-        Fill: =RGBA(248, 248, 248, 1)
+        Fill: =varColorBg
         Height: =45
         Width: =Parent.Width
         Y: =110
@@ -1243,7 +1243,7 @@ scrDashboard As screen:
         Items: =["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Computer A-Z", "Printer A-Z"]
         OnChange: =Set(varSortOrder, Self.Selected.Value)
         PressedColor: =varDropdownPressedColor
-        PressedFill: =RGBA(202, 202, 202, 1)
+        PressedFill: =varDropdownPressedFill
         SelectionColor: =varDropdownSelectionColor
         SelectionFill: =varDropdownSelectionFill
         Size: =10
@@ -1364,7 +1364,7 @@ scrDashboard As screen:
         ZIndex: =15
 
         recRejectOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -1397,7 +1397,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowRejectModal, 0);
                 Set(varSelectedItem, Blank());
@@ -1416,8 +1416,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -1782,7 +1781,7 @@ scrDashboard As screen:
         ZIndex: =16
 
         recApprovalOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -1815,7 +1814,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowApprovalModal, 0);
                 Set(varSelectedItem, Blank());
@@ -1831,8 +1830,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -2382,7 +2380,7 @@ scrDashboard As screen:
         ZIndex: =17
 
         recArchiveOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -2415,7 +2413,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowArchiveModal, 0);
                 Set(varSelectedItem, Blank());
@@ -2427,8 +2425,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -3054,7 +3051,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowCompleteModal, 0);
                 Set(varSelectedItem, Blank());
@@ -3065,8 +3062,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -3111,7 +3107,7 @@ scrDashboard As screen:
         ZIndex: =21
 
         recRevertOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -3143,7 +3139,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowRevertModal, 0);
                 Set(varSelectedItem, Blank());
@@ -3156,8 +3152,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -3440,7 +3435,7 @@ scrDashboard As screen:
         ZIndex: =22
 
         recDetailsOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -3473,7 +3468,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowDetailsModal, 0);
                 Set(varSelectedItem, Blank());
@@ -3493,8 +3488,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -4166,7 +4160,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowPaymentModal, 0);
                 Set(varSelectedItem, Blank());
@@ -4189,8 +4183,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -5177,7 +5170,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =24
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowBuildPlatesModal, 0);
                 If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
@@ -5192,8 +5185,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -5284,12 +5276,24 @@ scrDashboard As screen:
 
             drpPlateMachine As dropdown:
                 BorderColor: =If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)
-                ChevronBackground: =If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Color.Transparent)
+                BorderThickness: =varInputBorderThickness
+                ChevronBackground: =If(Self.DisplayMode = DisplayMode.Edit, varChevronBackground, Color.Transparent)
+                ChevronDisabledBackground: =varChevronBackground
+                ChevronDisabledFill: =varChevronFill
+                ChevronFill: =varChevronFill
+                ChevronHoverBackground: =varChevronHoverBackground
+                ChevronHoverFill: =varChevronHoverFill
                 Default: =Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))
                 DisplayMode: =If(varIsLoading, DisplayMode.Disabled, If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled))
+                FocusedBorderThickness: =varFocusedBorderThickness
                 Font: =varAppFont
                 Height: =36
+                HoverFill: =varDropdownHoverFill
                 Items: =AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))
+                PressedColor: =varDropdownPressedColor
+                PressedFill: =varDropdownPressedFill
+                SelectionColor: =varDropdownSelectionColor
+                SelectionFill: =varDropdownSelectionFill
                 OnChange: |-
                     =Set(varIsLoading, true);
                     Set(varLoadingMessage, "Updating machine...");
@@ -5817,10 +5821,10 @@ scrDashboard As screen:
                 
                 Set(varIsLoading, false);
                 Set(varLoadingMessage, "")
-            RadiusBottomLeft: =4
-            RadiusBottomRight: =4
-            RadiusTopLeft: =4
-            RadiusTopRight: =4
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
             Size: =varBtnFontSize
             Text: =If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Add Reprint", "Add Plate")
             Width: =110
@@ -5906,7 +5910,7 @@ scrDashboard As screen:
         lblBatchSummary As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorTextMuted
-            Font: =App.Theme.Font
+            Font: =varAppFont
             Height: =20
             Size: =11
             Text: |-
@@ -5923,7 +5927,7 @@ scrDashboard As screen:
         lblBatchStaffLabel As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorText
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =10
@@ -5936,7 +5940,7 @@ scrDashboard As screen:
         lblBatchPaymentTypeLabel As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorText
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =10
@@ -5982,7 +5986,7 @@ scrDashboard As screen:
         lblBatchTransLabel As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorText
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             PaddingBottom: =0
@@ -6055,7 +6059,7 @@ scrDashboard As screen:
                         )
                     )
                 )
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =10
@@ -6105,7 +6109,7 @@ scrDashboard As screen:
         lblBatchCostLabel As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorText
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =10
@@ -6119,7 +6123,7 @@ scrDashboard As screen:
         lblBatchCostValue As label:
             BorderColor: =App.Theme.Colors.Darker40
             Color: =varColorText
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =36
             Size: =16
@@ -6180,7 +6184,7 @@ scrDashboard As screen:
 
         lblBatchItemsHeader As label:
             BorderColor: =App.Theme.Colors.Darker40
-            Font: =App.Theme.Font
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =12
@@ -6210,7 +6214,7 @@ scrDashboard As screen:
             lblBatchItemRow As label:
                 BorderColor: =App.Theme.Colors.Darker40
                 Color: =varColorText
-                Font: =App.Theme.Font
+                Font: =varAppFont
                 Height: =Parent.TemplateHeight
                 Size: =11
                 Text: |-
@@ -6242,10 +6246,10 @@ scrDashboard As screen:
                         Notify("All items removed. Batch mode cancelled.", NotificationType.Information)
                     )
                 PressedFill: =RGBA(255, 200, 200, 1)
-                RadiusBottomLeft: =12
-                RadiusBottomRight: =12
-                RadiusTopLeft: =12
-                RadiusTopRight: =12
+                RadiusBottomLeft: =varRadiusLarge
+                RadiusBottomRight: =varRadiusLarge
+                RadiusTopLeft: =varRadiusLarge
+                RadiusTopRight: =varRadiusLarge
                 Size: =10
                 Text: ="✕"
                 Width: =24
@@ -6445,7 +6449,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowBatchPaymentModal, 0);
                 // Don't clear colBatchItems - let user continue selecting
@@ -6462,8 +6466,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -6523,7 +6526,7 @@ scrDashboard As screen:
         ZIndex: =26
 
         recStudentNoteOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             OnSelect: |-
                 =Set(varShowStudentNoteModal, 0);
@@ -6602,7 +6605,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowStudentNoteModal, 0);
                 Set(varSelectedItem, Blank())
@@ -6612,8 +6615,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -6669,7 +6671,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowNotesModal, 0);
                 Set(varSelectedItem, Blank());
@@ -6681,8 +6683,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -6992,7 +6993,7 @@ scrDashboard As screen:
         ZIndex: =28
 
         recFileOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -7025,7 +7026,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =ResetForm(frmAttachmentsEdit);
                 Set(varShowAddFileModal, 0);
@@ -7037,8 +7038,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -7290,7 +7290,7 @@ scrDashboard As screen:
         ZIndex: =29
 
         recViewMsgOverlay As rectangle:
-            Fill: =RGBA(0, 0, 0, 0.7)
+            Fill: =varColorOverlay
             Height: =Parent.Height
             Width: =Parent.Width
             ZIndex: =1
@@ -7395,7 +7395,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =Color.Transparent
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: |-
                 =Set(varShowViewMessagesModal, 0);
                 Set(varSelectedItem, Blank());
@@ -7408,8 +7408,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =Color.Transparent
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: |
-                =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
@@ -7432,6 +7431,7 @@ scrDashboard As screen:
 
         lblViewMsgStaffLabel As label:
             Color: =varColorText
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =12
@@ -7474,6 +7474,7 @@ scrDashboard As screen:
 
         lblViewMsgSubjectLabel As label:
             Color: =varColorText
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =12
@@ -7503,6 +7504,7 @@ scrDashboard As screen:
 
         lblViewMsgBodyLabel As label:
             Color: =varColorText
+            Font: =varAppFont
             FontWeight: =FontWeight.Semibold
             Height: =20
             Size: =12
@@ -7583,10 +7585,10 @@ scrDashboard As screen:
                 Set(varIsLoading, false);
                 Set(varLoadingMessage, "")
             PressedFill: =ColorFade(varColorDanger, -15%)
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
+            RadiusBottomLeft: =varRadiusSmall
+            RadiusBottomRight: =varRadiusSmall
+            RadiusTopLeft: =varRadiusSmall
+            RadiusTopRight: =varRadiusSmall
             Size: =10
             Text: ="Mark All Read"
             Visible: =!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
@@ -7825,7 +7827,7 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =30
             HoverBorderColor: =RGBA(0, 0, 0, 0)
-            HoverFill: =RGBA(255, 46, 46, 1)
+            HoverFill: =varColorDangerHover
             OnSelect: =Set(varShowExportModal, false)
             PaddingBottom: =0
             PaddingLeft: =0
@@ -7833,7 +7835,7 @@ scrDashboard As screen:
             PaddingTop: =0
             PressedBorderColor: =RGBA(0, 0, 0, 0)
             PressedColor: =RGBA(245, 245, 245, 1)
-            PressedFill: =RGBA(220, 32, 32, 1)
+            PressedFill: =ColorFade(varColorDanger, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius

@@ -143,6 +143,25 @@ Output goes to:
 - [`PowerApps/source/StaffDashboard/`](PowerApps/source/StaffDashboard/)
 - [`PowerApps/source/StudentPortal/`](PowerApps/source/StudentPortal/)
 
+### Repack (sources → `.msapp`)
+
+After editing unpacked YAML under `PowerApps/source/…`, rebuild `.msapp` files:
+
+```powershell
+cd PowerApps
+.\Pack-Apps.ps1
+```
+
+Writes (by default) `StaffDashboard.msapp` and `StudentPortal.msapp` next to the script. Then open each file in **Power Apps Studio**, save to the cloud, and publish.
+
+Optional:
+
+```powershell
+.\Pack-Apps.ps1 -StaffMsapp "C:\Out\StaffDashboard.msapp"
+.\Pack-Apps.ps1 -StaffOnly
+.\Pack-Apps.ps1 -StudentOnly
+```
+
 ---
 
 ## Quick checklist before a “fix this” chat
@@ -152,7 +171,7 @@ Output goes to:
 | SharePoint (no IT) | Unpack apps → use `PowerApps\source\...\pkgs\TableDefinitions\` (+ optional HTTP flow → `SharePoint\schemas\`) |
 | SharePoint (PnP) | `pwsh -File SharePoint\Export-Schemas.ps1 -ClientId …` only if you have a consented app |
 | Flows      | Export ZIP → unzip into `PowerAutomate\exports\...\` |
-| Power Apps | Save `.msapp` → `PowerApps\Unpack-Apps.ps1` |
+| Power Apps | Save `.msapp` → `PowerApps\Unpack-Apps.ps1` · edit source → `PowerApps\Pack-Apps.ps1` → open `.msapp` in Studio |
 
 Commit the updated files if you use Git, so history matches production.
 

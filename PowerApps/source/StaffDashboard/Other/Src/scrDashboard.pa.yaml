@@ -84,7 +84,7 @@ Screens:
           Control: Rectangle@2.3.0
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
-            Fill: =RGBA(77, 77, 77, 1)
+            Fill: =varColorHeader
             Height: =55
             Width: =Parent.Width
       - lblAppTitle:
@@ -1233,10 +1233,10 @@ Screens:
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =RGBA(0, 0, 0, 0.1)
-                  RadiusBottomLeft: =14
-                  RadiusBottomRight: =14
-                  RadiusTopLeft: =14
-                  RadiusTopRight: =14
+                  RadiusBottomLeft: =varRadiusPill
+                  RadiusBottomRight: =varRadiusPill
+                  RadiusTopLeft: =varRadiusPill
+                  RadiusTopRight: =varRadiusPill
                   Size: =12
                   Text: ="↩️"
                   Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up"] && !varBatchSelectMode
@@ -1311,10 +1311,10 @@ Screens:
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =RGBA(200, 35, 35, 1)
-                  RadiusBottomLeft: =4
-                  RadiusBottomRight: =4
-                  RadiusTopLeft: =4
-                  RadiusTopRight: =4
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
                   Size: =5
                   Text: ="Student Notes"
                   Visible: =!IsBlank(ThisItem.Notes)
@@ -1356,7 +1356,7 @@ Screens:
           Properties:
             BorderColor: =varColorBorderLight
             BorderThickness: =varInputBorderThickness
-            Fill: =RGBA(248, 248, 248, 1)
+            Fill: =varColorBg
             Height: =45
             Width: =Parent.Width
             Y: =110
@@ -1424,7 +1424,7 @@ Screens:
             Items.Value: =Value
             OnChange: =Set(varSortOrder, Self.Selected.Value)
             PressedColor: =varDropdownPressedColor
-            PressedFill: =RGBA(202, 202, 202, 1)
+            PressedFill: =varDropdownPressedFill
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             Size: =10
@@ -1556,7 +1556,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRejectModal:
@@ -1593,7 +1593,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowRejectModal, 0);
                     Set(varSelectedItem, Blank());
@@ -1612,8 +1612,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |+
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1996,7 +1995,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recApprovalModal:
@@ -2033,7 +2032,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowApprovalModal, 0);
                     Set(varSelectedItem, Blank());
@@ -2049,8 +2048,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -2475,7 +2473,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recArchiveModal:
@@ -2512,7 +2510,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowArchiveModal, 0);
                     Set(varSelectedItem, Blank());
@@ -2524,8 +2522,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -3134,7 +3131,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowCompleteModal, 0);
                     Set(varSelectedItem, Blank());
@@ -3145,8 +3142,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -3191,7 +3187,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRevertModal:
@@ -3228,7 +3224,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowRevertModal, 0);
                     Set(varSelectedItem, Blank());
@@ -3241,8 +3237,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -3541,7 +3536,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recDetailsModal:
@@ -3578,7 +3573,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowDetailsModal, 0);
                     Set(varSelectedItem, Blank());
@@ -3598,8 +3593,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -4289,7 +4283,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowPaymentModal, 0);
                     Set(varSelectedItem, Blank());
@@ -4312,8 +4306,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -5350,7 +5343,7 @@ Screens:
                   Height: =24
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: "=Set(varShowBuildPlatesModal, 0);\nIf(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));\nClearCollect(colBuildPlates, Blank());\nClear(colBuildPlates);\nClearCollect(colBuildPlatesIndexed, Blank());\nClear(colBuildPlatesIndexed);\nSet(varBuildPlatesOpenedFromApproval, false)    "
                   PaddingBottom: =0
                   PaddingLeft: =0
@@ -5358,8 +5351,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -5455,16 +5447,24 @@ Screens:
                       Control: Classic/DropDown@2.3.1
                       Properties:
                         BorderColor: =If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)
-                        ChevronBackground: =If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Color.Transparent)
-                        ChevronFill: =RGBA(255, 255, 255, 1)
-                        ChevronHoverBackground: =ColorFade(RGBA(56, 96, 178, 1), -20%)
-                        ChevronHoverFill: =RGBA(255, 255, 255, 1)
+                        BorderThickness: =varInputBorderThickness
+                        ChevronBackground: =If(Self.DisplayMode = DisplayMode.Edit, varChevronBackground, Color.Transparent)
+                        ChevronDisabledBackground: =varChevronBackground
+                        ChevronDisabledFill: =varChevronFill
+                        ChevronFill: =varChevronFill
+                        ChevronHoverBackground: =varChevronHoverBackground
+                        ChevronHoverFill: =varChevronHoverFill
                         Default: =Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))
                         DisplayMode: =If(varIsLoading, DisplayMode.Disabled, If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled))
+                        FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
                         Height: =36
-                        HoverFill: =RGBA(186, 202, 226, 1)
+                        HoverFill: =varDropdownHoverFill
                         Items: =AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))
+                        PressedColor: =varDropdownPressedColor
+                        PressedFill: =varDropdownPressedFill
+                        SelectionColor: =varDropdownSelectionColor
+                        SelectionFill: =varDropdownSelectionFill
                         Items.Value: =DisplayValue
                         OnChange: |-
                           =Set(varIsLoading, true);
@@ -5838,10 +5838,10 @@ Screens:
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =Self.Color
-                  RadiusBottomLeft: =4
-                  RadiusBottomRight: =4
-                  RadiusTopLeft: =4
-                  RadiusTopRight: =4
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
                   Size: =varBtnFontSize
                   Text: =If(Coalesce(varSelectedItem.BuildPlateLabelsLocked, false), "Add Reprint", "Add Plate")
                   Width: =110
@@ -6247,10 +6247,10 @@ Screens:
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =RGBA(255, 200, 200, 1)
-                        RadiusBottomLeft: =12
-                        RadiusBottomRight: =12
-                        RadiusTopLeft: =12
-                        RadiusTopRight: =12
+                        RadiusBottomLeft: =varRadiusLarge
+                        RadiusBottomRight: =varRadiusLarge
+                        RadiusTopLeft: =varRadiusLarge
+                        RadiusTopRight: =varRadiusLarge
                         Size: =10
                         Text: ="✕"
                         Width: =24
@@ -6462,7 +6462,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowBatchPaymentModal, 0);
                     // Don't clear colBatchItems - let user continue selecting
@@ -6479,8 +6479,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -6551,7 +6550,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   OnSelect: |-
                     =Set(varShowStudentNoteModal, 0);
@@ -6641,7 +6640,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowStudentNoteModal, 0);
                     Set(varSelectedItem, Blank())
@@ -6651,8 +6650,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -6711,7 +6709,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowNotesModal, 0);
                     Set(varSelectedItem, Blank());
@@ -6723,8 +6721,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -7047,7 +7044,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recFileModal:
@@ -7084,7 +7081,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =ResetForm(frmAttachmentsEdit);
                     Set(varShowAddFileModal, 0);
@@ -7096,8 +7093,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -7345,7 +7341,7 @@ Screens:
                 Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =RGBA(0, 0, 0, 0.7)
+                  Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recViewMsgModal:
@@ -7462,7 +7458,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, 0);
                     Set(varSelectedItem, Blank());
@@ -7475,8 +7471,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =Color.Transparent
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: |
-                    =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -7500,7 +7495,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -7543,7 +7538,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -7574,7 +7569,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
@@ -7658,10 +7653,10 @@ Screens:
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorDanger, -15%)
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
+                  RadiusBottomLeft: =varRadiusSmall
+                  RadiusBottomRight: =varRadiusSmall
+                  RadiusTopLeft: =varRadiusSmall
+                  RadiusTopRight: =varRadiusSmall
                   Size: =10
                   Text: ="Mark All Read"
                   Visible: =!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
@@ -7906,7 +7901,7 @@ Screens:
                   Height: =30
                   HoverBorderColor: =RGBA(0, 0, 0, 0)
                   HoverColor: =RGBA(255, 255, 255, 1)
-                  HoverFill: =RGBA(255, 46, 46, 1)
+                  HoverFill: =varColorDangerHover
                   OnSelect: =Set(varShowExportModal, false)
                   PaddingBottom: =0
                   PaddingLeft: =0
@@ -7914,7 +7909,7 @@ Screens:
                   PaddingTop: =0
                   PressedBorderColor: =RGBA(0, 0, 0, 0)
                   PressedColor: =RGBA(245, 245, 245, 1)
-                  PressedFill: =RGBA(220, 32, 32, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
