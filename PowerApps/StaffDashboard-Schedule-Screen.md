@@ -1,9 +1,9 @@
 # Schedule Screen — Staff Dashboard Canvas App
 
-**⏱️ Time Required:** 3–4 hours  
+**⏱️ Time Required:** 2–3 hours  
 **🎯 Goal:** A live color-coded semester schedule showing all active student workers, with inline editing so each person can enter their own hours
 
-> 📚 **This is a screen addition to the existing Staff Dashboard app.** Complete the two SharePoint setup docs before starting here.
+> 📚 **This is a screen addition to the existing Staff Dashboard app.** Complete the SharePoint update before starting here.
 
 ---
 
@@ -11,11 +11,12 @@
 
 Before starting, confirm all of the following:
 
-- [ ] `Staff` list has the `AidType` column added → `SharePoint/Staff-List-AidType-Update.md`
-- [ ] `StaffSchedule` list created with all 6 columns → `SharePoint/StaffSchedule-List-Setup.md`
-- [ ] `AidType` populated for all active student workers in the Staff list
+- [ ] All 12 new columns added to the `Staff` list → `SharePoint/Staff-List-AidType-Update.md`
+- [ ] `AidType` populated for all active student workers
 - [ ] You can open the Staff Dashboard app in **Power Apps Studio** (go to make.powerapps.com → Apps → open StaffDashboard in Edit mode)
 - [ ] The existing app is working (print requests dashboard is functional)
+
+> **No new SharePoint list or data connection needed.** Everything reads from and writes to the existing `Staff` list that the app already uses.
 
 ---
 
@@ -29,7 +30,7 @@ When copying formulas from this guide, curly/smart quotes (`"text"`) will cause 
 
 ## Design Standards
 
-This screen uses the same variables already defined in `App.OnStart`. You do not need to redefine them. Key variables you will use:
+This screen reuses the same variables already defined in `App.OnStart`. Key variables you will use:
 
 | Variable | Value | Use |
 |----------|-------|-----|
@@ -40,17 +41,14 @@ This screen uses the same variables already defined in `App.OnStart`. You do not
 | `varColorBgCard` | Warm cream `RGBA(247,237,223,1)` | Card backgrounds |
 | `varColorBorder` | `RGBA(200,200,200,1)` | Borders |
 | `varBtnBorderRadius` | `4` | Standard button corners |
-| `varRadiusLarge` | `12` | Panel corners |
 
 ---
 
 ## Overview: How the Schedule Screen Works
 
-Before building, here is a mental model of all the pieces:
-
 ```
 ┌──────────────────────────────────────────────────────┐
-│  HEADER BAR  ← Dashboard  │  Spring 2026 Schedule    │
+│  HEADER BAR  ← Dashboard  │  Schedule                │
 ├──────────────────────────────────────────────────────┤
 │  EDIT BAR  [Select your name ▼]  (hidden until name  │
 │  selected: [Mon 9AM-1PM] [Tue Off] ... [Save] [×])   │
@@ -59,65 +57,74 @@ Before building, here is a mental model of all the pieces:
 │  HTML TEXT GRID (read-only colored block schedule)   │
 │                                                      │
 │  [Time] ║ Mon: JAKE SARA TOM ║ Tue: JAKE SARA ... ║  │
-│  8:30   ║  ██   ░░   ░░   ║  ██   ██   ░░   ║      │
-│  9:00   ║  ██   ██   ░░   ║  ░░   ██   ██   ║      │
+│  8:30   ║  ██   ░░   ░░    ║  ██   ██   ░░    ║     │
+│  9:00   ║  ██   ██   ░░    ║  ░░   ██   ██    ║     │
 │  ...                                                 │
 └──────────────────────────────────────────────────────┘
 ```
 
-- The **HTML Text grid** is always visible — it renders the live schedule from SharePoint
+- The **HTML Text grid** always shows the live schedule pulled from `colStaff`
 - The **Edit Bar** appears when someone picks their name from the dropdown
-- **Up/Down reorder arrows** appear next to each person's column header inside the grid (rendered as clickable-looking labels — actual clicks are handled by buttons layered over the HTML control)
+- Saving writes directly to the `Staff` list — one `Patch()` call, no separate list needed
 
 ---
 
-## Step 1: Add the StaffSchedule Data Connection
+## Step 1: Update App.OnStart
 
-The app needs to be connected to the new SharePoint list before you can reference it in formulas.
+`App.OnStart` already loads the `Staff` list into `colStaff`. You need to:
 
-1. In Power Apps Studio, click **Data** (cylinder icon in the left sidebar)
-2. Click **+ Add data**
-3. Search for **SharePoint**
-4. Select your SharePoint site: `lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-5. Check the box next to **StaffSchedule**
-6. Click **Connect**
+1. Add the new schedule columns to the `colStaff` projection
+2. Add helper collections for the time slots and color palette
+3. Add schedule state variables
 
-You should now see `StaffSchedule` appear in your Data panel alongside `PrintRequests`, `Staff`, etc.
-
----
-
-## Step 2: Update App.OnStart
-
-`App.OnStart` runs once when the app loads. You need to add four things:
-
-1. Include `AidType` and `ID` in the `colStaff` collection
-2. Add the `colTimeSlots` helper collection (time slot labels + numeric values)
-3. Add the `colSchedColors` color palette collection
-4. Add new schedule state variables
-
-### 2A — Update the colStaff load
+### 1A — Update the colStaff load
 
 Find this existing line in `App.OnStart`:
 
 ```
-ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
 ```
+
+> **Note:** Your existing line may not have `StaffID` yet. Add it along with the schedule fields below.
 
 Replace it with:
 
 ```
-ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active, AidType: AidType.Value})),
+ClearCollect(colStaff,
+    ForAll(
+        Filter(Staff, Active = true),
+        {
+            StaffID:       ID,
+            MemberName:    Member.DisplayName,
+            MemberEmail:   Member.Email,
+            Role:          Role,
+            Active:        Active,
+            AidType:       AidType.Value,
+            MonStart:      MonStart.Value,
+            MonEnd:        MonEnd.Value,
+            TueStart:      TueStart.Value,
+            TueEnd:        TueEnd.Value,
+            WedStart:      WedStart.Value,
+            WedEnd:        WedEnd.Value,
+            ThuStart:      ThuStart.Value,
+            ThuEnd:        ThuEnd.Value,
+            FriStart:      FriStart.Value,
+            FriEnd:        FriEnd.Value,
+            SchedSortOrder: Coalesce(SchedSortOrder, 10)
+        }
+    )
+),
 ```
 
-> **What changed:** Added `StaffID: ID` (the SharePoint item ID — used to assign colors) and `AidType: AidType.Value` (used to calculate max hours in the edit bar).
+> **What changed:** Added `StaffID`, `AidType`, all 10 day time fields, and `SchedSortOrder`. The `.Value` suffix is needed because Choice columns in SharePoint are complex objects — `.Value` gives you the text string.
 
-### 2B — Add the colTimeSlots collection
+### 1B — Add the colTimeSlots collection
 
-This is a helper table the schedule formulas use to convert between time labels ("9:00 AM") and slot index numbers (1, 2, 3...). Add this anywhere inside the `Concurrent()` block — or after it:
+This helper table converts time labels like `"9:00 AM"` into slot index numbers used by the HTML grid formula. Add this anywhere inside the `Concurrent()` block — or after it:
 
 ```
 // === SCHEDULE: TIME SLOTS ===
-// 16 slots: index 0 = 8:30 AM start, index 15 = 4:00 AM start (4:30 PM end)
+// 16 slots: index 0 = 8:30 AM, index 15 = 4:00 PM (last start before 4:30 close)
 ClearCollect(colTimeSlots,
     {Idx: 0,  Label: "8:30 AM",  Minutes: 510},
     {Idx: 1,  Label: "9:00 AM",  Minutes: 540},
@@ -138,16 +145,14 @@ ClearCollect(colTimeSlots,
 );
 ```
 
-> **Why Minutes?** Power Apps can't do time math with time values directly. Storing minutes since midnight (510 = 8 hours 30 minutes = 8:30 AM) lets us calculate shift duration with simple subtraction: `(EndMinutes - StartMinutes) / 60 = hours worked`.
+> **Why store Minutes?** Power Apps can't do time math directly. Storing minutes since midnight (510 = 8h30m) lets us calculate shift duration with subtraction: `(EndMinutes - StartMinutes) / 60 = hours`.
 
-### 2C — Add the colSchedColors collection
+### 1C — Add the colSchedColors collection
 
-This defines the 12-color palette used to assign each staff member a unique color. Add this after `colTimeSlots`:
+A 12-color palette. Each staff member's color is assigned by `StaffID mod 12` — automatic, no manual assignment needed.
 
 ```
 // === SCHEDULE: COLOR PALETTE ===
-// 12 distinct colors for staff member columns
-// Assigned by: StaffID mod 12 = color index
 ClearCollect(colSchedColors,
     {Idx: 0,  Hex: "#4E79A7", Light: "#C8D9ED"},
     {Idx: 1,  Hex: "#F28E2B", Light: "#FCDCB3"},
@@ -164,17 +169,14 @@ ClearCollect(colSchedColors,
 );
 ```
 
-> **How colors are assigned:** Each staff member's color = their SharePoint Item ID mod 12. Example: if Jake's Staff list item ID is 7, his color index is `7 mod 12 = 7` → `#FF9DA7`. This is automatic — no manual color assignment needed. Colors stay consistent as long as the item IDs don't change.
+### 1D — Add schedule state variables
 
-### 2D — Add schedule state variables
-
-Find the `// === MODAL CONTROLS ===` section in `App.OnStart` and add these lines alongside the other `Set()` calls:
+Find the `// === MODAL CONTROLS ===` section and add these alongside the other `Set()` calls:
 
 ```
 // === SCHEDULE SCREEN STATE ===
-Set(varSchedSemester, "Spring 2026");       // Update this at the start of each semester
-Set(varSchedSelectedEmail, "");             // Email of the person currently being edited ("" = no one)
-Set(varSchedEditMon_Start, "");             // Monday start time selection during editing
+Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
+Set(varSchedEditMon_Start, "");
 Set(varSchedEditMon_End, "");
 Set(varSchedEditTue_Start, "");
 Set(varSchedEditTue_End, "");
@@ -184,26 +186,19 @@ Set(varSchedEditThu_Start, "");
 Set(varSchedEditThu_End, "");
 Set(varSchedEditFri_Start, "");
 Set(varSchedEditFri_End, "");
-Set(varSchedEditSaving, false);             // True while save is in progress
+Set(varSchedEditSaving, false);
+Set(varSchedShowReorder, false);
 ```
 
-> **varSchedSemester:** This is the most important one to update each semester. Change `"Spring 2026"` to match whatever semester is currently active.
-
-After adding all four sections, click the **Save** icon (or press `Ctrl+S`) to save your changes to `App.OnStart`. Then click the **Run** button (▶) at the top to test that the app still starts without errors.
+After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to confirm the app starts without errors.
 
 ---
 
-## Step 3: Add the Schedule Nav Button to scrDashboard
+## Step 2: Add the Schedule Nav Button to scrDashboard
 
-Add a button to the existing dashboard header bar so staff can navigate to the schedule screen. The schedule screen doesn't exist yet — you'll create it in the next step — but add the button now so you can wire the navigation.
-
-1. In Power Apps Studio, make sure you're on **scrDashboard**
-2. In the header bar area, find `btnNavAnalytics` (the "Report" button, near the top right)
-3. Add a new **Button** control near it:
-   - Click **Insert** → **Button**
-   - Drag it into the header bar area, to the left of `btnNavAnalytics`
-
-4. Set these properties on the new button:
+1. In Power Apps Studio, go to **scrDashboard**
+2. Find `btnNavAnalytics` (the "Report" button in the top-right of the header bar)
+3. Insert a new **Button** control to the left of it
 
 | Property | Value |
 |----------|-------|
@@ -223,49 +218,52 @@ Add a button to the existing dashboard header bar so staff can navigate to the s
 | RadiusBottomRight | `=varBtnBorderRadius` |
 | Width | `64` |
 | Height | `22` |
-| X | *(position it to the left of btnNavAnalytics)* |
+| X | *(position left of btnNavAnalytics)* |
 | Y | `15` |
 | OnSelect | `=Navigate(scrSchedule, varScreenTransition)` |
 
-> The `Navigate(scrSchedule, ...)` formula will show a red error until you create `scrSchedule` in the next step — that's normal.
+> The formula will show a red error until `scrSchedule` is created in the next step — that's normal.
 
 ---
 
-## Step 4: Create the scrSchedule Screen
+## Step 3: Create the scrSchedule Screen
 
-1. In the left panel, click the **Screens** tab (monitor icon)
+1. In the left panel, click **Screens** (monitor icon)
 2. Click **+ New screen** → **Blank**
-3. Rename the new screen:
-   - Right-click on "Screen2" (or whatever it was named) in the screens list
-   - Select **Rename**
-   - Type `scrSchedule`
-4. With `scrSchedule` selected, set these screen properties:
+3. Right-click the new screen → **Rename** → type `scrSchedule`
+4. Set these screen properties:
 
 | Property | Value |
 |----------|-------|
 | Fill | `=varColorBg` |
-| OnVisible | *(add the formula below)* |
+| OnVisible | *(formula below)* |
 
 **OnVisible formula:**
 
 ```
-// Load schedule data for the current semester
-ClearCollect(colStaffSchedule,
-    Filter(StaffSchedule, Semester.Value = varSchedSemester)
-);
-
-// Build a flat lookup table: one row per person per day with slot indices
-// This is what the HTML grid formula uses to determine which cells to color
+// Build a flat lookup table used by the HTML grid formula.
+// One row per person per day — pre-computes slot indices and colors so
+// the HTML formula stays fast and readable.
 ClearCollect(colSchedLookup,
     ForAll(
-        colStaff As s,
+        Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As s,
         ForAll(
             ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
             With(
                 {
-                    entry: LookUp(
-                        colStaffSchedule,
-                        StaffMember.Email = s.MemberEmail && Day.Value = d.Value
+                    startLabel: Switch(d.Value,
+                        "Monday",    s.MonStart,
+                        "Tuesday",   s.TueStart,
+                        "Wednesday", s.WedStart,
+                        "Thursday",  s.ThuStart,
+                        "Friday",    s.FriStart
+                    ),
+                    endLabel: Switch(d.Value,
+                        "Monday",    s.MonEnd,
+                        "Tuesday",   s.TueEnd,
+                        "Wednesday", s.WedEnd,
+                        "Thursday",  s.ThuEnd,
+                        "Friday",    s.FriEnd
                     ),
                     colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
                 },
@@ -273,42 +271,39 @@ ClearCollect(colSchedLookup,
                     Email:      s.MemberEmail,
                     Name:       s.MemberName,
                     Day:        d.Value,
-                    StartSlot:  If(IsBlank(entry), -1, Coalesce(LookUp(colTimeSlots, Label = entry.StartTime.Value).Idx, -1)),
-                    EndSlot:    If(IsBlank(entry), -1, Coalesce(LookUp(colTimeSlots, Label = entry.EndTime.Value).Idx, -1)),
+                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx, -1),
+                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx, -1),
                     ColorHex:   colorRec.Hex,
                     ColorLight: colorRec.Light,
-                    SortOrder:  Coalesce(entry.SortOrder, 10)
+                    SortOrder:  s.SchedSortOrder
                 }
             )
         )
     )
 );
 
-// Reset editing state when screen becomes visible
+// Reset editing state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "")
 ```
 
-> **What colSchedLookup does:** Instead of running complex nested lookups inside the HTML formula, we pre-compute everything here once. The HTML formula then does a simple `LookUp(colSchedLookup, Email = ... && Day = ...)` to get the start slot, end slot, and color for each cell. This keeps the HTML formula readable and the app fast.
+> **What colSchedLookup does:** Instead of running complex lookups inside the HTML formula itself, we pre-compute everything once here. The HTML formula then does a simple `LookUp(colSchedLookup, Email = ... && Day = ...)` per cell. This keeps the grid fast and the formula readable.
 
 ---
 
-## Step 5: Build the Header Bar
+## Step 4: Build the Header Bar
 
-The header bar is a thin strip at the top of the screen, identical in style to the dashboard header.
-
-1. On `scrSchedule`, insert a **Rectangle** control:
+### Header background
 
 | Property | Value |
 |----------|-------|
 | Name | `recSchedHeader` |
 | Fill | `=varColorHeader` |
-| X | `0` |
-| Y | `0` |
+| X | `0`, Y | `0` |
 | Width | `=Parent.Width` |
 | Height | `52` |
 | BorderThickness | `0` |
 
-2. Insert a **Button** for the back navigation:
+### Back button
 
 | Property | Value |
 |----------|-------|
@@ -319,37 +314,31 @@ The header bar is a thin strip at the top of the screen, identical in style to t
 | Color | `=Color.White` |
 | Fill | `=Color.Transparent` |
 | HoverFill | `=RGBA(255,255,255,0.1)` |
-| PressedFill | `=RGBA(255,255,255,0.2)` |
 | BorderThickness | `0` |
-| X | `8` |
-| Y | `14` |
-| Width | `120` |
-| Height | `24` |
+| X | `8`, Y | `14`, Width | `120`, Height | `24` |
 | OnSelect | `=Navigate(scrDashboard, varScreenTransition)` |
 
-3. Insert a **Label** for the screen title:
+### Title label
 
 | Property | Value |
 |----------|-------|
 | Name | `lblSchedTitle` |
-| Text | `="📅 " & varSchedSemester & " Schedule"` |
+| Text | `"Schedule"` |
 | Font | `=varAppFont` |
 | Size | `14` |
 | FontWeight | `=FontWeight.Semibold` |
 | Color | `=Color.White` |
 | Align | `=Align.Center` |
-| X | `=(Parent.Width - 300) / 2` |
-| Y | `13` |
-| Width | `300` |
-| Height | `26` |
+| X | `=(Parent.Width - 300) / 2`, Y | `13` |
+| Width | `300`, Height | `26` |
 
 ---
 
-## Step 6: Build the Edit Bar
+## Step 5: Build the Edit Bar
 
-The Edit Bar is a panel just below the header that lets a staff member identify themselves and enter their schedule. It is always visible but its content changes based on whether someone is selected.
+The Edit Bar sits below the header. It's always visible, but most of it only appears once a name is selected.
 
-### 6A — Edit Bar background rectangle
+### Edit bar background
 
 | Property | Value |
 |----------|-------|
@@ -357,95 +346,66 @@ The Edit Bar is a panel just below the header that lets a staff member identify 
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder` |
 | BorderThickness | `1` |
-| X | `0` |
-| Y | `52` |
-| Width | `=Parent.Width` |
-| Height | `90` |
+| X | `0`, Y | `52` |
+| Width | `=Parent.Width`, Height | `90` |
 
-### 6B — "Who are you?" label
+### "Who are you?" label
 
 | Property | Value |
 |----------|-------|
 | Name | `lblSchedWho` |
 | Text | `"Who are you?"` |
-| Font | `=varAppFont` |
-| Size | `11` |
+| Font | `=varAppFont`, Size | `11` |
 | Color | `=varColorTextMuted` |
-| X | `16` |
-| Y | `66` |
-| Width | `100` |
-| Height | `20` |
+| X | `16`, Y | `66`, Width | `100`, Height | `20` |
 
-### 6C — Name dropdown
+### Name dropdown
 
 | Property | Value |
 |----------|-------|
 | Name | `drpSchedName` |
 | Items | `=Sort(colStaff, MemberName, SortOrder.Ascending)` |
 | Value | `MemberName` |
-| Font | `=varAppFont` |
-| Size | `=varInputFontSize` |
+| Font | `=varAppFont`, Size | `=varInputFontSize` |
 | BorderColor | `=varInputBorderColor` |
-| BorderThickness | `=varInputBorderThickness` |
-| SelectionFill | `=varDropdownSelectionFill` |
-| HoverFill | `=varDropdownHoverFill` |
-| X | `16` |
-| Y | `88` |
-| Width | `180` |
-| Height | `32` |
-| OnChange | *(add formula below)* |
+| X | `16`, Y | `88`, Width | `180`, Height | `32` |
+| OnChange | *(formula below)* |
 
-**OnChange formula for drpSchedName:**
+**OnChange formula:**
 
 ```
-// When a name is selected, set the selected email and pre-fill their existing schedule
 If(
     IsBlank(drpSchedName.Selected) || drpSchedName.Selected.MemberName = "Select...",
-
-    // No selection — clear editing state
     Set(varSchedSelectedEmail, ""),
 
-    // Load their existing schedule into the edit variables
+    // Load this person's existing schedule into the edit variables
     With(
-        {
-            mon: LookUp(colStaffSchedule, StaffMember.Email = drpSchedName.Selected.MemberEmail && Day.Value = "Monday"),
-            tue: LookUp(colStaffSchedule, StaffMember.Email = drpSchedName.Selected.MemberEmail && Day.Value = "Tuesday"),
-            wed: LookUp(colStaffSchedule, StaffMember.Email = drpSchedName.Selected.MemberEmail && Day.Value = "Wednesday"),
-            thu: LookUp(colStaffSchedule, StaffMember.Email = drpSchedName.Selected.MemberEmail && Day.Value = "Thursday"),
-            fri: LookUp(colStaffSchedule, StaffMember.Email = drpSchedName.Selected.MemberEmail && Day.Value = "Friday")
-        },
-        Set(varSchedSelectedEmail, drpSchedName.Selected.MemberEmail);
-        Set(varSchedEditMon_Start, Coalesce(mon.StartTime.Value, ""));
-        Set(varSchedEditMon_End,   Coalesce(mon.EndTime.Value, ""));
-        Set(varSchedEditTue_Start, Coalesce(tue.StartTime.Value, ""));
-        Set(varSchedEditTue_End,   Coalesce(tue.EndTime.Value, ""));
-        Set(varSchedEditWed_Start, Coalesce(wed.StartTime.Value, ""));
-        Set(varSchedEditWed_End,   Coalesce(wed.EndTime.Value, ""));
-        Set(varSchedEditThu_Start, Coalesce(thu.StartTime.Value, ""));
-        Set(varSchedEditThu_End,   Coalesce(thu.EndTime.Value, ""));
-        Set(varSchedEditFri_Start, Coalesce(fri.StartTime.Value, ""));
-        Set(varSchedEditFri_End,   Coalesce(fri.EndTime.Value, ""))
+        {p: drpSchedName.Selected},
+        Set(varSchedSelectedEmail, p.MemberEmail);
+        Set(varSchedEditMon_Start, Coalesce(p.MonStart, ""));
+        Set(varSchedEditMon_End,   Coalesce(p.MonEnd, ""));
+        Set(varSchedEditTue_Start, Coalesce(p.TueStart, ""));
+        Set(varSchedEditTue_End,   Coalesce(p.TueEnd, ""));
+        Set(varSchedEditWed_Start, Coalesce(p.WedStart, ""));
+        Set(varSchedEditWed_End,   Coalesce(p.WedEnd, ""));
+        Set(varSchedEditThu_Start, Coalesce(p.ThuStart, ""));
+        Set(varSchedEditThu_End,   Coalesce(p.ThuEnd, ""));
+        Set(varSchedEditFri_Start, Coalesce(p.FriStart, ""));
+        Set(varSchedEditFri_End,   Coalesce(p.FriEnd, ""))
     )
 )
 ```
 
-### 6D — Aid type + hours display (visible only when selected)
-
-When a name is chosen, show their aid type and how many hours they've used vs. their maximum.
-
-Insert a **Label**:
+### Aid type + hour counter label
 
 | Property | Value |
 |----------|-------|
 | Name | `lblSchedAidInfo` |
 | Visible | `=varSchedSelectedEmail <> ""` |
+| Font | `=varAppFont`, Size | `10` |
+| X | `208`, Y | `88`, Width | `200`, Height | `32` |
 | Text | *(formula below)* |
-| Font | `=varAppFont` |
-| Size | `10` |
-| X | `208` |
-| Y | `88` |
-| Width | `200` |
-| Height | `32` |
+| Color | *(formula below)* |
 
 **Text formula:**
 
@@ -454,38 +414,62 @@ Insert a **Label**:
     {
         aidType: drpSchedName.Selected.AidType,
         maxHrs:  If(drpSchedName.Selected.AidType = "Work Study", 12, 6),
-        usedMins: Sum(
-            Filter(
-                colTimeSlots,
+        usedSlots: Sum(
+            Filter(colTimeSlots,
                 Or(
-                    And(varSchedEditMon_Start <> "", varSchedEditMon_End <> "", Idx >= LookUp(colTimeSlots, Label = varSchedEditMon_Start).Idx, Idx < LookUp(colTimeSlots, Label = varSchedEditMon_End).Idx),
-                    And(varSchedEditTue_Start <> "", varSchedEditTue_End <> "", Idx >= LookUp(colTimeSlots, Label = varSchedEditTue_Start).Idx, Idx < LookUp(colTimeSlots, Label = varSchedEditTue_End).Idx),
-                    And(varSchedEditWed_Start <> "", varSchedEditWed_End <> "", Idx >= LookUp(colTimeSlots, Label = varSchedEditWed_Start).Idx, Idx < LookUp(colTimeSlots, Label = varSchedEditWed_End).Idx),
-                    And(varSchedEditThu_Start <> "", varSchedEditThu_End <> "", Idx >= LookUp(colTimeSlots, Label = varSchedEditThu_Start).Idx, Idx < LookUp(colTimeSlots, Label = varSchedEditThu_End).Idx),
-                    And(varSchedEditFri_Start <> "", varSchedEditFri_End <> "", Idx >= LookUp(colTimeSlots, Label = varSchedEditFri_Start).Idx, Idx < LookUp(colTimeSlots, Label = varSchedEditFri_End).Idx)
+                    And(varSchedEditMon_Start <> "", varSchedEditMon_End <> "",
+                        Idx >= LookUp(colTimeSlots, Label = varSchedEditMon_Start).Idx,
+                        Idx <  LookUp(colTimeSlots, Label = varSchedEditMon_End).Idx),
+                    And(varSchedEditTue_Start <> "", varSchedEditTue_End <> "",
+                        Idx >= LookUp(colTimeSlots, Label = varSchedEditTue_Start).Idx,
+                        Idx <  LookUp(colTimeSlots, Label = varSchedEditTue_End).Idx),
+                    And(varSchedEditWed_Start <> "", varSchedEditWed_End <> "",
+                        Idx >= LookUp(colTimeSlots, Label = varSchedEditWed_Start).Idx,
+                        Idx <  LookUp(colTimeSlots, Label = varSchedEditWed_End).Idx),
+                    And(varSchedEditThu_Start <> "", varSchedEditThu_End <> "",
+                        Idx >= LookUp(colTimeSlots, Label = varSchedEditThu_Start).Idx,
+                        Idx <  LookUp(colTimeSlots, Label = varSchedEditThu_End).Idx),
+                    And(varSchedEditFri_Start <> "", varSchedEditFri_End <> "",
+                        Idx >= LookUp(colTimeSlots, Label = varSchedEditFri_Start).Idx,
+                        Idx <  LookUp(colTimeSlots, Label = varSchedEditFri_End).Idx)
                 )
             ),
             30
         )
     },
-    aidType & " · " & Text(usedMins / 60, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
+    aidType & " · " & Text(usedSlots / 60, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
 )
 ```
 
-> **How the hour counter works:** For each day, if both a start and end time are chosen, count the number of 30-minute slots between them. Multiply by 30 to get minutes. Sum across all 5 days. Divide by 60 to get hours. Display as "Work Study · 8 / 12 hrs".
+**Color formula** (turns red when over the limit):
 
-> **Warning color:** To add a red warning when over the limit, set the `Color` property of `lblSchedAidInfo` to:
-> ```
-> =With({maxHrs: If(drpSchedName.Selected.AidType = "Work Study", 12, 6), usedHrs: /* same usedMins calc */ / 60}, If(usedHrs > maxHrs, varColorDanger, varColorText))
-> ```
+```
+=With(
+    {maxHrs: If(drpSchedName.Selected.AidType = "Work Study", 12, 6)},
+    If(
+        Value(Mid(lblSchedAidInfo.Text, Find("·", lblSchedAidInfo.Text) + 2, 4)) > maxHrs,
+        varColorDanger,
+        varColorText
+    )
+)
+```
 
-### 6E — Per-day dropdowns (visible only when selected)
+### Per-day dropdowns
 
-For each of the 5 days, add two Dropdown controls: one for start time, one for end time. These appear in a row across the edit bar when a name is selected.
+For each of the 5 days, add a day label and two dropdowns (start, end). Below is the full spec for **Monday** — repeat for Tuesday–Friday changing only the names, variables, and X positions.
 
-Below are the settings for **Monday**. Repeat the pattern for Tuesday through Friday, changing the variable names and X positions.
+**Day header label (Mon):**
 
-**Monday Start Time dropdown:**
+| Property | Value |
+|----------|-------|
+| Name | `lblSchedMonHdr` |
+| Text | `"Mon"` |
+| Visible | `=varSchedSelectedEmail <> ""` |
+| Font | `=varAppFont`, Size | `9`, FontWeight | `=FontWeight.Semibold` |
+| Align | `=Align.Center` |
+| X | `420`, Y | `56`, Width | `88`, Height | `16` |
+
+**Monday Start dropdown:**
 
 | Property | Value |
 |----------|-------|
@@ -493,15 +477,11 @@ Below are the settings for **Monday**. Repeat the pattern for Tuesday through Fr
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Items | `=["Off","8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]` |
 | Default | `=If(varSchedEditMon_Start = "", "Off", varSchedEditMon_Start)` |
-| Font | `=varAppFont` |
-| Size | `9` |
-| X | `420` |
-| Y | `58` |
-| Width | `88` |
-| Height | `28` |
+| Font | `=varAppFont`, Size | `9` |
+| X | `420`, Y | `74`, Width | `88`, Height | `28` |
 | OnChange | `=Set(varSchedEditMon_Start, If(drpSchedMonStart.Selected.Value = "Off", "", drpSchedMonStart.Selected.Value))` |
 
-**Monday End Time dropdown:**
+**Monday End dropdown:**
 
 | Property | Value |
 |----------|-------|
@@ -509,160 +489,100 @@ Below are the settings for **Monday**. Repeat the pattern for Tuesday through Fr
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Items | `=["Off","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]` |
 | Default | `=If(varSchedEditMon_End = "", "Off", varSchedEditMon_End)` |
-| Font | `=varAppFont` |
-| Size | `9` |
-| X | `420` |
-| Y | `90` |
-| Width | `88` |
-| Height | `28` |
+| Font | `=varAppFont`, Size | `9` |
+| X | `420`, Y | `104`, Width | `88`, Height | `28` |
 | OnChange | `=Set(varSchedEditMon_End, If(drpSchedMonEnd.Selected.Value = "Off", "", drpSchedMonEnd.Selected.Value))` |
 
-**Add a "Mon" label above each pair:**
+**Repeat for Tuesday–Friday** with these X positions (92px gap per day):
 
-| Property | Value |
-|----------|-------|
-| Name | `lblSchedMonHeader` |
-| Text | `"Mon"` |
-| Visible | `=varSchedSelectedEmail <> ""` |
-| Font | `=varAppFont` |
-| Size | `9` |
-| FontWeight | `=FontWeight.Semibold` |
-| Align | `=Align.Center` |
-| X | `420` |
-| Y | `44` |
-| Width | `88` |
-| Height | `16` |
-
-**Repeat for Tuesday–Friday** with these X positions (88px per day + 4px gap):
-
-| Day | X Position | Start Var | End Var |
-|-----|-----------|-----------|---------|
+| Day | X | Start Var | End Var |
+|-----|---|-----------|---------|
 | Monday | `420` | `varSchedEditMon_Start` | `varSchedEditMon_End` |
 | Tuesday | `512` | `varSchedEditTue_Start` | `varSchedEditTue_End` |
 | Wednesday | `604` | `varSchedEditWed_Start` | `varSchedEditWed_End` |
 | Thursday | `696` | `varSchedEditThu_Start` | `varSchedEditThu_End` |
 | Friday | `788` | `varSchedEditFri_Start` | `varSchedEditFri_End` |
 
-### 6F — Save button
+### Save button
 
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedSave` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Text | `=If(varSchedEditSaving, "Saving...", "Save Schedule")` |
-| Font | `=varAppFont` |
-| Size | `11` |
+| Font | `=varAppFont`, Size | `11` |
 | Color | `=Color.White` |
 | Fill | `=varColorSuccess` |
 | HoverFill | `=varColorSuccessHover` |
 | BorderThickness | `0` |
-| RadiusTopLeft | `=varBtnBorderRadius` |
-| RadiusTopRight | `=varBtnBorderRadius` |
-| RadiusBottomLeft | `=varBtnBorderRadius` |
-| RadiusBottomRight | `=varBtnBorderRadius` |
-| X | `890` |
-| Y | `68` |
-| Width | `130` |
-| Height | `36` |
+| RadiusTopLeft/Right/Bottom | `=varBtnBorderRadius` |
+| X | `890`, Y | `68`, Width | `130`, Height | `36` |
 | DisplayMode | `=If(varSchedEditSaving, DisplayMode.Disabled, DisplayMode.Edit)` |
-| OnSelect | *(add in Step 10)* |
+| OnSelect | *(add in Step 7)* |
 
-### 6G — Clear/Cancel button
+### Cancel button
 
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedClear` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Text | `"✕ Cancel"` |
-| Font | `=varAppFont` |
-| Size | `11` |
+| Font | `=varAppFont`, Size | `11` |
 | Color | `=varColorText` |
 | Fill | `=RGBA(0,0,0,0)` |
-| BorderColor | `=varColorBorder` |
-| BorderThickness | `1` |
-| X | `1032` |
-| Y | `68` |
-| Width | `80` |
-| Height | `36` |
+| BorderColor | `=varColorBorder`, BorderThickness | `1` |
+| X | `1032`, Y | `68`, Width | `80`, Height | `36` |
 | OnSelect | `=Set(varSchedSelectedEmail, ""); Reset(drpSchedName)` |
 
 ---
 
-## Step 7: Build the HTML Text Grid Control
+## Step 6: Build the HTML Text Grid
 
-This is the main visual of the screen — a color-coded grid rendered as HTML. The `HTML Text` control in Power Apps can render arbitrary HTML and CSS, which gives us a pixel-accurate replication of the existing HTML schedule app's grid.
+### Add the control
 
-### 7A — Add the HTML Text control
-
-1. Click **Insert** → search for **HTML Text** (it's under "Text")
-2. Place it below the edit bar:
+Insert an **HTML Text** control:
 
 | Property | Value |
 |----------|-------|
 | Name | `htmlSchedGrid` |
-| X | `0` |
-| Y | `144` |
+| X | `0`, Y | `144` |
 | Width | `=Parent.Width` |
 | Height | `=Parent.Height - 144` |
-| PaddingLeft | `0` |
-| PaddingTop | `0` |
-| HtmlText | *(add the formula in Step 8)* |
+| PaddingLeft | `0`, PaddingTop | `0` |
+| HtmlText | *(formula below)* |
 
-> **Important:** The HTML Text control is read-only. Users cannot click inside it to interact with the schedule. All editing is handled by the Edit Bar controls above.
+### The HTML formula
 
----
-
-## Step 8: The HTML Grid Formula
-
-This formula builds the entire schedule grid as an HTML string. It combines:
-- CSS styles (colors, borders, font)
-- A table header (time gutter + day group headers + staff column headers)
-- 16 time slot rows with colored cells per staff member per day
-- A totals row at the bottom
-
-The formula is long but built from repeating parts. Read through it in sections before pasting.
-
-**Paste this entire formula into the `HtmlText` property of `htmlSchedGrid`:**
+This formula builds the entire grid as a string. It uses `colSchedLookup` (built in `OnVisible`) to determine which cells to color.
 
 ```
 =With(
     {
-        // Sorted list of unique staff members (by SortOrder from their Monday entry — consistent across days)
-        sortedStaff: Sort(
-            GroupBy(Filter(colSchedLookup, Day = "Monday"), "Email", "rows"),
-            First(rows).SortOrder,
-            SortOrder.Ascending
-        ),
-        days: ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        sortedStaff: Distinct(Sort(colSchedLookup, SortOrder, SortOrder.Ascending), Email),
         slotH: 28,
         colW:  64,
-        gutterW: 52,
-        headerH: 28
+        gutterW: 56
     },
 
     // ---- CSS ----
     "<style>
-    .sg { border-collapse:collapse; font-family:'Segoe UI',Arial,sans-serif; font-size:11px; }
-    .sg td, .sg th { padding:0; margin:0; }
-    .sg .tg { width:" & Text(gutterW) & "px; text-align:right; padding-right:6px; color:#666; font-size:10px; height:" & Text(slotH) & "px; vertical-align:middle; background:#f8f8f8; border-right:1px solid #ddd; }
-    .sg .dh { font-weight:700; text-align:center; background:#4d4d4d; color:#fff; height:" & Text(headerH) & "px; font-size:11px; border-right:2px solid #999; }
-    .sg .sh { text-align:center; height:" & Text(headerH) & "px; font-weight:600; font-size:10px; border-right:1px solid #ccc; border-bottom:1px solid #aaa; overflow:hidden; }
-    .sg .sc { width:" & Text(colW) & "px; height:" & Text(slotH) & "px; border-right:1px solid #e0e0e0; border-bottom:1px solid #e8e8e8; }
-    .sg .sc.on { border-right:1px solid rgba(0,0,0,0.1); }
-    .sg .day-sep { border-right:2px solid #999 !important; }
-    .sg .tot { text-align:center; font-size:10px; font-weight:600; height:24px; vertical-align:middle; border-top:2px solid #aaa; border-right:1px solid #ccc; }
-    .sg .tot-gutter { background:#f8f8f8; border-top:2px solid #aaa; border-right:1px solid #ddd; }
+    .sg{border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;}
+    .sg td,.sg th{padding:0;margin:0;}
+    .sg .tg{width:" & Text(gutterW) & "px;text-align:right;padding-right:6px;color:#666;font-size:10px;height:" & Text(slotH) & "px;vertical-align:middle;background:#f8f8f8;border-right:1px solid #ddd;}
+    .sg .dh{font-weight:700;text-align:center;background:#4d4d4d;color:#fff;height:28px;font-size:11px;border-right:2px solid #999;}
+    .sg .sh{text-align:center;height:28px;font-weight:600;font-size:10px;border-right:1px solid #ccc;border-bottom:1px solid #aaa;overflow:hidden;}
+    .sg .sc{width:" & Text(colW) & "px;height:" & Text(slotH) & "px;border-right:1px solid #e0e0e0;border-bottom:1px solid #e8e8e8;}
+    .sg .ds{border-right:2px solid #999!important;}
+    .sg .tot{text-align:center;font-size:10px;font-weight:600;height:22px;vertical-align:middle;border-top:2px solid #aaa;border-right:1px solid #ccc;}
     </style>" &
 
-    // ---- TABLE START ----
     "<table class='sg'>" &
 
     // ---- ROW 1: Day group headers ----
-    "<tr>" &
-    "<th class='tg' rowspan='2'></th>" &  // Top-left corner spans 2 header rows
+    "<tr><th class='tg' rowspan='2'></th>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-        "<th class='dh" & If(dayName.Value = "Friday", "", " day-sep") & "' colspan='" &
+        "<th class='dh" & If(dayName.Value = "Friday", " ds", "") & "' colspan='" &
         Text(CountRows(sortedStaff)) & "'>" & Left(dayName.Value, 3) & "</th>"
     ) &
     "</tr>" &
@@ -674,46 +594,33 @@ The formula is long but built from repeating parts. Read through it in sections 
         Concat(
             sortedStaff As s,
             With(
-                {colorRec: LookUp(colSchedLookup, Email = s.Email && Day = dayName.Value)},
-                "<th class='sh" & If(dayName.Value = "Friday" && s.Email = Last(sortedStaff).Email, "", If(s.Email = Last(sortedStaff).Email, " day-sep", "")) & "' style='background:" & Coalesce(colorRec.ColorLight, "#eee") & ";width:" & Text(colW) & "px'>" &
-                // First name only (truncated to ~8 chars for column width)
-                Left(First(Split(s.Email, "@")).Result, 8) &
+                {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                "<th class='sh" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
+                "' style='background:" & Coalesce(c.ColorLight, "#eeeeee") & ";width:" & Text(colW) & "px'>" &
+                Left(LookUp(colSchedLookup, Email = s.Value).Name, 8) &
                 "</th>"
             )
         )
     ) &
     "</tr>" &
 
-    // ---- ROWS 3–18: Time slot rows ----
+    // ---- TIME SLOT ROWS ----
     Concat(
         colTimeSlots As slot,
-        "<tr>" &
-        // Left time gutter label
-        "<td class='tg'>" & slot.Label & "</td>" &
-        // 5 day groups × N staff columns
+        "<tr><td class='tg'>" & slot.Label & "</td>" &
         Concat(
             ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
             Concat(
                 sortedStaff As s,
                 With(
-                    {lookup: LookUp(colSchedLookup, Email = s.Email && Day = dayName.Value)},
-                    "<td class='sc" &
-                    // "on" class if this slot is within this person's shift
-                    If(
-                        !IsBlank(lookup) && lookup.StartSlot >= 0 && slot.Idx >= lookup.StartSlot && slot.Idx < lookup.EndSlot,
-                        " on",
-                        ""
-                    ) &
-                    // Day separator on last column of each day group
-                    If(dayName.Value = "Friday" && s.Email = Last(sortedStaff).Email, "", If(s.Email = Last(sortedStaff).Email, " day-sep", "")) &
-                    // Background color: use the person's color if working, white if not
+                    {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                    "<td class='sc" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
                     "' style='background:" &
                     If(
-                        !IsBlank(lookup) && lookup.StartSlot >= 0 && slot.Idx >= lookup.StartSlot && slot.Idx < lookup.EndSlot,
-                        lookup.ColorHex,
+                        !IsBlank(c) && c.StartSlot >= 0 && slot.Idx >= c.StartSlot && slot.Idx < c.EndSlot,
+                        c.ColorHex,
                         "#ffffff"
-                    ) &
-                    "'></td>"
+                    ) & "'></td>"
                 )
             )
         ) &
@@ -721,53 +628,42 @@ The formula is long but built from repeating parts. Read through it in sections 
     ) &
 
     // ---- TOTALS ROW ----
-    "<tr>" &
-    "<td class='tg tot-gutter'></td>" &
+    "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Hrs/Day</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
         Concat(
             sortedStaff As s,
             With(
-                {
-                    lookup: LookUp(colSchedLookup, Email = s.Email && Day = dayName.Value),
-                    staffRec: LookUp(colStaff, MemberEmail = s.Email)
-                },
-                "<td class='tot" & If(s.Email = Last(sortedStaff).Email, " day-sep", "") & "' style='background:" & Coalesce(LookUp(colSchedLookup, Email = s.Email && Day = dayName.Value).ColorLight, "#f0f0f0") & "'>" &
-                If(
-                    !IsBlank(lookup) && lookup.StartSlot >= 0,
-                    Text((lookup.EndSlot - lookup.StartSlot) / 2, "0.#") & "h",
+                {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
+                "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & "'>" &
+                If(!IsBlank(c) && c.StartSlot >= 0,
+                    Text((c.EndSlot - c.StartSlot) / 2, "0.#") & "h",
                     "—"
-                ) &
-                "</td>"
+                ) & "</td>"
             )
         )
     ) &
     "</tr>" &
 
-    // ---- WEEKLY HOURS ROW ----
-    "<tr>" &
-    "<td class='tg' style='font-weight:700;font-size:9px;'>Wk Hrs</td>" &
+    // ---- WEEKLY TOTAL ROW ----
+    "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Wk / Max</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
         Concat(
             sortedStaff As s,
             With(
                 {
-                    staffRec: LookUp(colStaff, MemberEmail = s.Email),
-                    totalSlots: Sum(
-                        Filter(colSchedLookup, Email = s.Email, StartSlot >= 0),
-                        EndSlot - StartSlot
-                    ),
-                    maxHrs: If(LookUp(colStaff, MemberEmail = s.Email).AidType = "Work Study", 12, 6)
+                    totalSlots: Sum(Filter(colSchedLookup, Email = s.Value, StartSlot >= 0), EndSlot - StartSlot),
+                    maxHrs: If(LookUp(colStaff, MemberEmail = s.Value).AidType = "Work Study", 12, 6),
+                    c: LookUp(colSchedLookup, Email = s.Value && Day = "Monday")
                 },
-                // Only show weekly total once — in the Monday column
-                "<td class='tot" & If(s.Email = Last(sortedStaff).Email, " day-sep", "") & "' style='background:" & Coalesce(LookUp(colSchedLookup, Email = s.Email && Day = "Monday").ColorLight, "#f0f0f0") & ";font-size:9px;'>" &
-                If(
-                    dayName.Value = "Monday",
+                "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
+                "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & ";font-size:9px;'>" &
+                If(dayName.Value = "Monday",
                     Text(totalSlots / 2, "0.#") & "/" & Text(maxHrs, "0"),
                     ""
-                ) &
-                "</td>"
+                ) & "</td>"
             )
         )
     ) &
@@ -777,313 +673,241 @@ The formula is long but built from repeating parts. Read through it in sections 
 )
 ```
 
-> **If the formula looks overwhelming:** Read it in sections — CSS block, then header rows, then the slot rows loop, then totals. Each `Concat()` call just repeats a pattern for each item in a list. The `LookUp(colSchedLookup, ...)` is the key — it checks whether a given person is scheduled during a given slot on a given day, and if so, paints the cell with their color.
+> **Column width:** `colW: 64` gives each staff member 64px. If you have many people and the grid overflows, reduce to `48` or `56`.
 
-> **Column widths:** The `colW: 64` value sets each staff column to 64px wide. If you have many staff and the grid is wider than the screen, reduce this to `48` or `56`.
+> **Name truncation:** `Left(...Name..., 8)` truncates to 8 characters to fit the column. Increase the number or the `colW` if names are getting cut off too aggressively.
 
 ---
 
-## Step 9: Reorder Buttons (Up/Down Arrows)
+## Step 7: Save Logic
 
-Staff can reorder columns by pressing Up/Down buttons. Since the HTML Text control is read-only, the arrows are **separate Button controls** that float over the grid area, positioned over each staff column header.
+Wire the `OnSelect` of `btnSchedSave` with this formula. It patches a single row in the `Staff` list — much simpler than the separate-list approach.
 
-Because the number of staff members can vary, the simplest approach is a **reorder panel** that slides in from the side, showing a list of staff members with arrow buttons.
+```
+Set(varSchedEditSaving, true);
 
-### 9A — Add the Reorder Panel toggle button
+// Patch the one Staff list row for this person with all their schedule times
+Patch(
+    Staff,
+    LookUp(Staff, Member.Email = varSchedSelectedEmail),
+    {
+        MonStart: If(varSchedEditMon_Start = "", Blank(), {Value: varSchedEditMon_Start}),
+        MonEnd:   If(varSchedEditMon_End   = "", Blank(), {Value: varSchedEditMon_End}),
+        TueStart: If(varSchedEditTue_Start = "", Blank(), {Value: varSchedEditTue_Start}),
+        TueEnd:   If(varSchedEditTue_End   = "", Blank(), {Value: varSchedEditTue_End}),
+        WedStart: If(varSchedEditWed_Start = "", Blank(), {Value: varSchedEditWed_Start}),
+        WedEnd:   If(varSchedEditWed_End   = "", Blank(), {Value: varSchedEditWed_End}),
+        ThuStart: If(varSchedEditThu_Start = "", Blank(), {Value: varSchedEditThu_Start}),
+        ThuEnd:   If(varSchedEditThu_End   = "", Blank(), {Value: varSchedEditThu_End}),
+        FriStart: If(varSchedEditFri_Start = "", Blank(), {Value: varSchedEditFri_Start}),
+        FriEnd:   If(varSchedEditFri_End   = "", Blank(), {Value: varSchedEditFri_End})
+    }
+);
+
+// Refresh colStaff from SharePoint to pick up the saved values
+ClearCollect(colStaff,
+    ForAll(
+        Filter(Staff, Active = true),
+        {
+            StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email,
+            Role: Role, Active: Active, AidType: AidType.Value,
+            MonStart: MonStart.Value, MonEnd: MonEnd.Value,
+            TueStart: TueStart.Value, TueEnd: TueEnd.Value,
+            WedStart: WedStart.Value, WedEnd: WedEnd.Value,
+            ThuStart: ThuStart.Value, ThuEnd: ThuEnd.Value,
+            FriStart: FriStart.Value, FriEnd: FriEnd.Value,
+            SchedSortOrder: Coalesce(SchedSortOrder, 10)
+        }
+    )
+);
+
+// Rebuild the lookup table so the grid refreshes immediately
+ClearCollect(colSchedLookup,
+    ForAll(Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As s,
+        ForAll(["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
+            With({
+                    startLabel: Switch(d.Value,"Monday",s.MonStart,"Tuesday",s.TueStart,"Wednesday",s.WedStart,"Thursday",s.ThuStart,"Friday",s.FriStart),
+                    endLabel:   Switch(d.Value,"Monday",s.MonEnd,  "Tuesday",s.TueEnd,  "Wednesday",s.WedEnd,  "Thursday",s.ThuEnd,  "Friday",s.FriEnd),
+                    colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
+                },
+                {Email: s.MemberEmail, Name: s.MemberName, Day: d.Value,
+                 StartSlot: Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx, -1),
+                 EndSlot:   Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,   -1),
+                 ColorHex: colorRec.Hex, ColorLight: colorRec.Light, SortOrder: s.SchedSortOrder}
+            )
+        )
+    )
+);
+
+// Reset editing state
+Set(varSchedSelectedEmail, "");
+Reset(drpSchedName);
+Set(varSchedEditSaving, false)
+```
+
+> **Why `{Value: varSchedEdit...}`?** Choice columns in SharePoint must be written as a record with a `Value` field, not a plain string. `If(... = "", Blank(), {Value: ...})` clears the field when "Off" is selected and sets it correctly when a time is chosen.
+
+---
+
+## Step 8: Reorder Panel (Up/Down Arrows)
+
+The reorder panel lets a manager adjust the left-to-right column order by changing `SchedSortOrder` in the Staff list.
+
+### Toggle button
 
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedReorderToggle` |
 | Text | `"⇅ Reorder"` |
-| Font | `=varAppFont` |
-| Size | `10` |
+| Font | `=varAppFont`, Size | `10` |
 | Color | `=Color.White` |
 | Fill | `=varColorNeutral` |
 | BorderThickness | `0` |
-| RadiusTopLeft | `=varBtnBorderRadius` |
-| RadiusTopRight | `=varBtnBorderRadius` |
-| RadiusBottomLeft | `=varBtnBorderRadius` |
-| RadiusBottomRight | `=varBtnBorderRadius` |
-| X | `1150` |
-| Y | `68` |
-| Width | `90` |
-| Height | `36` |
+| X | `1150`, Y | `68`, Width | `90`, Height | `36` |
 | OnSelect | `=Set(varSchedShowReorder, !varSchedShowReorder)` |
 
-Add `Set(varSchedShowReorder, false)` to your `App.OnStart` alongside the other schedule state variables.
-
-### 9B — Reorder Panel background
+### Reorder panel background
 
 | Property | Value |
 |----------|-------|
 | Name | `recSchedReorderPanel` |
 | Visible | `=varSchedShowReorder` |
 | Fill | `=varColorBgCard` |
-| BorderColor | `=varColorBorder` |
-| BorderThickness | `1` |
-| X | `=Parent.Width - 220` |
-| Y | `144` |
-| Width | `220` |
-| Height | `=Parent.Height - 144` |
+| BorderColor | `=varColorBorder`, BorderThickness | `1` |
+| X | `=Parent.Width - 220`, Y | `144` |
+| Width | `220`, Height | `=Parent.Height - 144` |
 
-### 9C — Reorder list gallery
+### Reorder gallery
 
 | Property | Value |
 |----------|-------|
 | Name | `galSchedReorder` |
 | Visible | `=varSchedShowReorder` |
-| Items | `=Sort(colStaff, LookUp(colSchedLookup, Email = MemberEmail && Day = "Monday").SortOrder, SortOrder.Ascending)` |
+| Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
 | TemplateSize | `40` |
-| X | `=Parent.Width - 218` |
-| Y | `148` |
-| Width | `216` |
-| Height | `=Parent.Height - 152` |
+| X | `=Parent.Width - 218`, Y | `148` |
+| Width | `216`, Height | `=Parent.Height - 152` |
 
 **Inside the gallery template, add:**
 
-1. A **Label** for the staff name:
-   - `Text`: `=ThisItem.MemberName`
-   - `Font`: `=varAppFont`, `Size`: `11`
-   - `X`: `8`, `Y`: `10`, `Width`: `130`, `Height`: `20`
+1. **Name label** — `Text`: `=ThisItem.MemberName`, X `8`, Y `10`, Width `130`, Height `20`
 
-2. A **Button** for Up (↑):
-   - `Name`: `btnReorderUp`
-   - `Text`: `"↑"`
-   - `X`: `148`, `Y`: `8`, `Width`: `28`, `Height`: `24`
-   - `OnSelect`:
-     ```
-     // Find this person's current Monday entry to get their SortOrder
-     With(
-         {
-             curEntry: LookUp(colStaffSchedule, StaffMember.Email = ThisItem.MemberEmail && Day.Value = "Monday"),
-             prevEntry: LookUp(
-                 Sort(colStaffSchedule, SortOrder, SortOrder.Ascending),
-                 SortOrder < LookUp(colStaffSchedule, StaffMember.Email = ThisItem.MemberEmail && Day.Value = "Monday").SortOrder && Day.Value = "Monday"
-             )
-         },
-         If(!IsBlank(curEntry) && !IsBlank(prevEntry),
-             // Swap SortOrder values between current and previous
-             Patch(StaffSchedule, curEntry, {SortOrder: prevEntry.SortOrder});
-             Patch(StaffSchedule, prevEntry, {SortOrder: curEntry.SortOrder});
-             // Refresh the local collection
-             ClearCollect(colStaffSchedule, Filter(StaffSchedule, Semester.Value = varSchedSemester));
-             // Rebuild the lookup table
-             ClearCollect(colSchedLookup, /* same formula as OnVisible — see note below */)
-         )
-     )
-     ```
+2. **Up button (↑)** — X `148`, Y `8`, Width `28`, Height `24`
 
-   > **Note on refreshing:** After saving reorder changes, re-run the same `ClearCollect(colSchedLookup, ...)` formula from Step 4's `OnVisible`. Because the formula is long, the easiest approach in Power Apps is to create a named formula or to navigate away and back to refresh `OnVisible`. Alternatively, call `Navigate(scrSchedule, ScreenTransition.None)` from the Up/Down `OnSelect` — this triggers `OnVisible` which rebuilds everything fresh.
+   **OnSelect:**
+   ```
+   // Find this person's Staff list row and the row above them (lower SortOrder)
+   With(
+       {
+           myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
+           prevRow: Last(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder < ThisItem.SchedSortOrder && Active = true))
+       },
+       If(!IsBlank(myRow) && !IsBlank(prevRow),
+           Patch(Staff, myRow,   {SchedSortOrder: prevRow.SchedSortOrder});
+           Patch(Staff, prevRow, {SchedSortOrder: myRow.SchedSortOrder})
+       )
+   );
+   // Navigate to self to re-trigger OnVisible (rebuilds colStaff + colSchedLookup cleanly)
+   Navigate(scrSchedule, ScreenTransition.None)
+   ```
 
-3. A **Button** for Down (↓): Same as Up button but with `SortOrder` swap logic reversed (swap with the next entry instead of the previous).
+3. **Down button (↓)** — Same as Up but swap `<` for `>` and use `First(Filter(...))` instead of `Last`:
 
----
+   **OnSelect:**
+   ```
+   With(
+       {
+           myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
+           nextRow: First(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder > ThisItem.SchedSortOrder && Active = true))
+       },
+       If(!IsBlank(myRow) && !IsBlank(nextRow),
+           Patch(Staff, myRow,   {SchedSortOrder: nextRow.SchedSortOrder});
+           Patch(Staff, nextRow, {SchedSortOrder: myRow.SchedSortOrder})
+       )
+   );
+   Navigate(scrSchedule, ScreenTransition.None)
+   ```
 
-## Step 10: Save Logic
-
-Wire the `btnSchedSave` button's `OnSelect` property with this formula. It:
-1. Sets a "saving" flag to disable the button and show "Saving..."
-2. Deletes any existing schedule rows for this person + semester
-3. Writes a fresh row for each day that has a start and end time
-4. Refreshes the screen data
-
-```
-// Start saving
-Set(varSchedEditSaving, true);
-
-// Step 1: Remove existing schedule entries for this person + semester
-RemoveIf(
-    StaffSchedule,
-    StaffMember.Email = varSchedSelectedEmail && Semester.Value = varSchedSemester
-);
-
-// Step 2: Build the person record for the StaffMember field
-With(
-    {
-        staffRec: LookUp(colStaff, MemberEmail = varSchedSelectedEmail),
-        personField: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & varSchedSelectedEmail,
-            Discipline: "",
-            DisplayName: LookUp(colStaff, MemberEmail = varSchedSelectedEmail).MemberName,
-            Email: varSchedSelectedEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        // Get or initialize SortOrder for this person
-        // Use their existing SortOrder if any rows existed, or assign based on staff count
-        existingSortOrder: Coalesce(
-            First(Filter(colSchedLookup, Email = varSchedSelectedEmail)).SortOrder,
-            CountRows(colStaff) * 10
-        )
-    },
-
-    // Step 3: Patch a row for each day that has a shift assigned
-    If(varSchedEditMon_Start <> "" && varSchedEditMon_End <> "",
-        Patch(StaffSchedule, Defaults(StaffSchedule), {
-            Title: varSchedSelectedEmail & "-Mon-" & varSchedSemester,
-            StaffMember: personField,
-            Semester: {Value: varSchedSemester},
-            Day: {Value: "Monday"},
-            StartTime: {Value: varSchedEditMon_Start},
-            EndTime: {Value: varSchedEditMon_End},
-            SortOrder: existingSortOrder
-        })
-    );
-    If(varSchedEditTue_Start <> "" && varSchedEditTue_End <> "",
-        Patch(StaffSchedule, Defaults(StaffSchedule), {
-            Title: varSchedSelectedEmail & "-Tue-" & varSchedSemester,
-            StaffMember: personField,
-            Semester: {Value: varSchedSemester},
-            Day: {Value: "Tuesday"},
-            StartTime: {Value: varSchedEditTue_Start},
-            EndTime: {Value: varSchedEditTue_End},
-            SortOrder: existingSortOrder
-        })
-    );
-    If(varSchedEditWed_Start <> "" && varSchedEditWed_End <> "",
-        Patch(StaffSchedule, Defaults(StaffSchedule), {
-            Title: varSchedSelectedEmail & "-Wed-" & varSchedSemester,
-            StaffMember: personField,
-            Semester: {Value: varSchedSemester},
-            Day: {Value: "Wednesday"},
-            StartTime: {Value: varSchedEditWed_Start},
-            EndTime: {Value: varSchedEditWed_End},
-            SortOrder: existingSortOrder
-        })
-    );
-    If(varSchedEditThu_Start <> "" && varSchedEditThu_End <> "",
-        Patch(StaffSchedule, Defaults(StaffSchedule), {
-            Title: varSchedSelectedEmail & "-Thu-" & varSchedSemester,
-            StaffMember: personField,
-            Semester: {Value: varSchedSemester},
-            Day: {Value: "Thursday"},
-            StartTime: {Value: varSchedEditThu_Start},
-            EndTime: {Value: varSchedEditThu_End},
-            SortOrder: existingSortOrder
-        })
-    );
-    If(varSchedEditFri_Start <> "" && varSchedEditFri_End <> "",
-        Patch(StaffSchedule, Defaults(StaffSchedule), {
-            Title: varSchedSelectedEmail & "-Fri-" & varSchedSemester,
-            StaffMember: personField,
-            Semester: {Value: varSchedSemester},
-            Day: {Value: "Friday"},
-            StartTime: {Value: varSchedEditFri_Start},
-            EndTime: {Value: varSchedEditFri_End},
-            SortOrder: existingSortOrder
-        })
-    )
-);
-
-// Step 4: Refresh data and reset editing state
-ClearCollect(colStaffSchedule,
-    Filter(StaffSchedule, Semester.Value = varSchedSemester)
-);
-// Rebuild lookup table — paste the same formula from scrSchedule.OnVisible here
-ClearCollect(colSchedLookup, /* same ForAll formula as in OnVisible */);
-
-Set(varSchedSelectedEmail, "");
-Reset(drpSchedName);
-Set(varSchedEditSaving, false)
-```
-
-> **The `personField` object:** SharePoint Person fields require a specific structure when writing from Power Apps. The `'@odata.type'` and `Claims` fields are required — without them, `Patch()` will fail with an error about the person field. This pattern matches how other person fields are written in the existing app (see `varActor` in `scrDashboard.OnVisible`).
-
-> **Duplicate check:** The `RemoveIf` at the start ensures there are never two rows for the same person + day + semester. This is safer than checking and updating because `Patch` on a blank `Defaults(StaffSchedule)` always creates a new row.
+> **Why `Navigate(scrSchedule, ScreenTransition.None)`?** This re-triggers `OnVisible`, which rebuilds `colStaff` and `colSchedLookup` with the updated sort order. It's the cleanest way to refresh everything without duplicating the load formula.
 
 ---
 
-## Testing the Screen
+## Testing
 
-After completing all steps, test the following scenarios:
+### Test 1: Grid displays with no data
+- Navigate to the Schedule screen
+- The HTML grid should show time labels (8:30 AM – 4:00 PM), day headers, and blank white cells
+- No errors in the app checker
 
-### Test 1: Grid displays correctly with no data
-1. Navigate to the Schedule screen
-2. The HTML grid should show the correct time labels (8:30 AM – 4:00 PM) and day headers
-3. All cells should be white (no schedule entered yet)
-4. No errors should appear in the app checker
+### Test 2: Enter a schedule
+- Select your name from the dropdown
+- Set Monday: 9:00 AM – 1:00 PM
+- Set Wednesday: 10:00 AM – 2:00 PM
+- Hour counter should show "4 / 12 hrs" (or "4 / 6 hrs" for President's Aid)
+- Click **Save Schedule**
+- Grid should update with your colored blocks
 
-### Test 2: Entering a schedule
-1. Select your name from the dropdown
-2. Set Monday: 9:00 AM – 1:00 PM
-3. Set Wednesday: 10:00 AM – 2:00 PM
-4. Confirm the hour counter shows "4 / 12 hrs" (or "4 / 6 hrs" for President's Aid)
-5. Click **Save Schedule**
-6. The edit bar should clear and the grid should update showing your color blocks on Monday and Wednesday
+### Test 3: Re-edit
+- Select the same name again
+- Dropdowns should pre-fill with your saved times
+- Change one day and save — grid should reflect the change
 
-### Test 3: Re-editing a saved schedule
-1. Select the same name again
-2. Confirm the dropdowns pre-fill with your saved times (9:00 AM / 1:00 PM for Monday, etc.)
-3. Change one day and save again
-4. Confirm the grid reflects the change
+### Test 4: Reorder
+- Click **Reorder**
+- Press ↑ on a staff member — their column should move left in the grid
+- Navigate away and back — order should be preserved
 
-### Test 4: Reorder panel
-1. Click **Reorder**
-2. Confirm the panel slides in with all active staff listed
-3. Press the ↑ button on a staff member — confirm their column moves left in the grid
-4. Navigate away and back — confirm the new order is preserved
-
-### Test 5: Return to Dashboard
-1. Press **← Dashboard** in the header
-2. Confirm you return to `scrDashboard` without errors
+### Test 5: Return to dashboard
+- Press **← Dashboard** — returns to `scrDashboard` without errors
 
 ---
 
 ## Verification Checklist
 
 **App.OnStart:**
-- [ ] `colStaff` now includes `StaffID` and `AidType` fields
-- [ ] `colTimeSlots` created with 16 rows, correct `Label` and `Minutes` values
-- [ ] `colSchedColors` created with 12 color entries
+- [ ] `colStaff` includes `StaffID`, `AidType`, all 10 time fields, and `SchedSortOrder`
+- [ ] `colTimeSlots` has 16 rows, correct labels and minute values
+- [ ] `colSchedColors` has 12 color entries
 - [ ] All `varSched*` state variables initialized
-- [ ] App starts without errors after changes
+- [ ] App starts without errors
 
 **scrDashboard:**
-- [ ] `btnNavSchedule` added to header bar
-- [ ] Button navigates to `scrSchedule`
+- [ ] `btnNavSchedule` navigates to `scrSchedule`
 
 **scrSchedule:**
-- [ ] Screen created, named `scrSchedule`
-- [ ] `OnVisible` loads `colStaffSchedule` and builds `colSchedLookup`
-- [ ] Header bar has back button and title showing `varSchedSemester`
-- [ ] Edit bar is visible; dropdown shows active staff names
-- [ ] Selecting a name pre-fills day dropdowns with existing data
-- [ ] Hour counter updates as day times are selected
-- [ ] HTML Text grid renders with correct time labels
-- [ ] Grid cells show person colors after schedule is saved
-- [ ] Save button writes to SharePoint and refreshes grid
-- [ ] Cancel button clears selection without saving
-- [ ] Reorder panel appears and Up/Down buttons affect column order
-- [ ] Screen is published and accessible from the lab computer
+- [ ] `OnVisible` builds `colSchedLookup` from `colStaff`
+- [ ] Header bar has back button + title
+- [ ] Selecting a name pre-fills day dropdowns
+- [ ] Hour counter updates as times are set
+- [ ] HTML grid renders with time labels and day groups
+- [ ] Grid cells color correctly after a schedule is saved
+- [ ] Save patches `Staff` list and refreshes grid
+- [ ] Cancel clears selection without saving
+- [ ] Reorder panel Up/Down buttons update column order
 
 ---
 
 ## Troubleshooting
 
-**"The formula contains an error" on the HTML Text control**
-- The formula is very long — Power Apps may time out building it in the formula bar. Try saving the app and reopening it. If the error persists, check for any curly quotes introduced when pasting.
+**Grid is all white after saving**
+- Check that `colSchedLookup` is being rebuilt in the save formula. Add a temporary label with `Text: =CountRows(colSchedLookup)` to verify it has rows.
 
-**Grid shows but cells are all white after saving**
-- Check that `colSchedLookup` is being rebuilt after the save. Add `Set(varDebugLookupCount, CountRows(colSchedLookup))` and inspect the value — if it's 0, `OnVisible` didn't run or the `ForAll` formula has an error.
+**"Invalid argument type" on the Patch choice field**
+- Choice fields must be written as `{Value: "some text"}`, not as plain strings. Double-check that the save formula wraps each time value in `{Value: ...}`.
 
-**Person field error when saving ("Invalid person field value")**
-- The `personField` object in the save formula needs exact formatting. Double-check the `Claims` value format: `"i:0#.f|membership|" & email`. If the email is uppercase, the `Lower()` function might be needed: `Lower(varSchedSelectedEmail)`.
+**Dropdown doesn't pre-fill when selecting a name**
+- The `Default` property on each dropdown references `varSchedEditMon_Start` etc. Make sure the `OnChange` of `drpSchedName` runs and sets those variables before the dropdowns render. If needed, add `Reset(drpSchedMonStart)` after each `Set()` in the OnChange formula.
 
-**"Delegation warning" yellow squiggly on the Filter in OnVisible**
-- This is expected — `Filter(StaffSchedule, Semester.Value = varSchedSemester)` may show a delegation warning because it's filtering on a Choice field. The warning means the filter runs client-side after loading the first 500 rows. As long as your `StaffSchedule` list has fewer than 500 rows (it will, since you have at most 5 rows × ~15 staff = 75 rows), this is fine.
+**"Delegation warning" on colStaff load**
+- Expected. `Filter(Staff, Active = true)` may show a delegation warning. Since your Staff list has well under 500 rows, this is fine.
 
-**Reorder buttons don't update the grid**
-- After patching `SortOrder`, the quickest fix is `Navigate(scrSchedule, ScreenTransition.None)` which re-triggers `OnVisible` and fully refreshes the data and grid. Add this at the end of the Up/Down `OnSelect` formulas.
+**Reorder doesn't persist after navigating away**
+- The `Navigate(scrSchedule, ScreenTransition.None)` approach re-runs `OnVisible` which reloads from SharePoint. If the order still doesn't stick, verify that `Patch(Staff, myRow, {SchedSortOrder: ...})` is succeeding — check for errors using `IfError(Patch(...), Notify("Save failed: " & FirstError.Message, NotificationType.Error))`.
 
 ---
 
-## Seasonal Maintenance Reminder
+## Seasonal Maintenance
 
-At the start of each new semester:
+At the start of each new semester, staff update their own schedule using the app — old values are simply overwritten. No archiving, no list changes needed.
 
-1. In `App.OnStart`, update `Set(varSchedSemester, "Spring 2026")` to the new semester string
-2. Add the new semester to the `Semester` choices in the `StaffSchedule` SharePoint list
-3. Update the default filter on the `By Person` SharePoint view
-4. Publish the updated app
-5. Staff will enter their new semester schedules — old ones are automatically archived
+To clear all schedules at once (e.g., start of a new year before staff re-enter their times), use **Edit in grid view** in the `Staff` SharePoint list and bulk-clear the 10 time columns.
