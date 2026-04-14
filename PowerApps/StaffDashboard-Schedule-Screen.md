@@ -94,22 +94,32 @@ ClearCollect(colStaff,
     ForAll(
         Filter(Staff, Active = true),
         {
-            StaffID:       ID,
-            MemberName:    Member.DisplayName,
-            MemberEmail:   Member.Email,
-            Role:          Role,
-            Active:        Active,
-            AidType:       AidType.Value,
-            MonStart:      MonStart.Value,
-            MonEnd:        MonEnd.Value,
-            TueStart:      TueStart.Value,
-            TueEnd:        TueEnd.Value,
-            WedStart:      WedStart.Value,
-            WedEnd:        WedEnd.Value,
-            ThuStart:      ThuStart.Value,
-            ThuEnd:        ThuEnd.Value,
-            FriStart:      FriStart.Value,
-            FriEnd:        FriEnd.Value,
+            StaffID:        ID,
+            MemberName:     Member.DisplayName,
+            MemberEmail:    Member.Email,
+            Role:           Role,
+            Active:         Active,
+            AidType:        AidType.Value,
+            MonStart:       MonStart.Value,
+            MonEnd:         MonEnd.Value,
+            TueStart:       TueStart.Value,
+            TueEnd:         TueEnd.Value,
+            WedStart:       WedStart.Value,
+            WedEnd:         WedEnd.Value,
+            ThuStart:       ThuStart.Value,
+            ThuEnd:         ThuEnd.Value,
+            FriStart:       FriStart.Value,
+            FriEnd:         FriEnd.Value,
+            MonStart2:      MonStart2.Value,
+            MonEnd2:        MonEnd2.Value,
+            TueStart2:      TueStart2.Value,
+            TueEnd2:        TueEnd2.Value,
+            WedStart2:      WedStart2.Value,
+            WedEnd2:        WedEnd2.Value,
+            ThuStart2:      ThuStart2.Value,
+            ThuEnd2:        ThuEnd2.Value,
+            FriStart2:      FriStart2.Value,
+            FriEnd2:        FriEnd2.Value,
             SchedSortOrder: Coalesce(SchedSortOrder, 10)
         }
     )
@@ -176,16 +186,26 @@ Find the `// === MODAL CONTROLS ===` section and add these alongside the other `
 ```
 // === SCHEDULE SCREEN STATE ===
 Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
-Set(varSchedEditMon_Start, "");
-Set(varSchedEditMon_End, "");
-Set(varSchedEditTue_Start, "");
-Set(varSchedEditTue_End, "");
-Set(varSchedEditWed_Start, "");
-Set(varSchedEditWed_End, "");
-Set(varSchedEditThu_Start, "");
-Set(varSchedEditThu_End, "");
-Set(varSchedEditFri_Start, "");
-Set(varSchedEditFri_End, "");
+Set(varSchedEditMon_Start,  "");    // Shift 1
+Set(varSchedEditMon_End,    "");
+Set(varSchedEditTue_Start,  "");
+Set(varSchedEditTue_End,    "");
+Set(varSchedEditWed_Start,  "");
+Set(varSchedEditWed_End,    "");
+Set(varSchedEditThu_Start,  "");
+Set(varSchedEditThu_End,    "");
+Set(varSchedEditFri_Start,  "");
+Set(varSchedEditFri_End,    "");
+Set(varSchedEditMon_Start2, "");    // Shift 2 (split shift)
+Set(varSchedEditMon_End2,   "");
+Set(varSchedEditTue_Start2, "");
+Set(varSchedEditTue_End2,   "");
+Set(varSchedEditWed_Start2, "");
+Set(varSchedEditWed_End2,   "");
+Set(varSchedEditThu_Start2, "");
+Set(varSchedEditThu_End2,   "");
+Set(varSchedEditFri_Start2, "");
+Set(varSchedEditFri_End2,   "");
 Set(varSchedEditSaving, false);
 Set(varSchedShowReorder, false);
 ```
@@ -251,28 +271,45 @@ ClearCollect(colSchedLookup,
             ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
             With(
                 {
-                    startLabel: Switch(d.Value,
+                    startLabel:  Switch(d.Value,
                         "Monday",    s.MonStart,
                         "Tuesday",   s.TueStart,
                         "Wednesday", s.WedStart,
                         "Thursday",  s.ThuStart,
                         "Friday",    s.FriStart
                     ),
-                    endLabel: Switch(d.Value,
+                    endLabel:    Switch(d.Value,
                         "Monday",    s.MonEnd,
                         "Tuesday",   s.TueEnd,
                         "Wednesday", s.WedEnd,
                         "Thursday",  s.ThuEnd,
                         "Friday",    s.FriEnd
                     ),
+                    startLabel2: Switch(d.Value,
+                        "Monday",    s.MonStart2,
+                        "Tuesday",   s.TueStart2,
+                        "Wednesday", s.WedStart2,
+                        "Thursday",  s.ThuStart2,
+                        "Friday",    s.FriStart2
+                    ),
+                    endLabel2:   Switch(d.Value,
+                        "Monday",    s.MonEnd2,
+                        "Tuesday",   s.TueEnd2,
+                        "Wednesday", s.WedEnd2,
+                        "Thursday",  s.ThuEnd2,
+                        "Friday",    s.FriEnd2
+                    ),
                     colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
                 },
                 {
                     Email:      s.MemberEmail,
                     Name:       s.MemberName,
+                    Initials:   Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1),
                     Day:        d.Value,
-                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx, -1),
-                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx, -1),
+                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx,  -1),
+                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,    -1),
+                    StartSlot2: Coalesce(LookUp(colTimeSlots, Label = startLabel2).Idx, -1),
+                    EndSlot2:   Coalesce(LookUp(colTimeSlots, Label = endLabel2).Idx,   -1),
                     ColorHex:   colorRec.Hex,
                     ColorLight: colorRec.Light,
                     SortOrder:  s.SchedSortOrder
@@ -381,17 +418,27 @@ If(
     // Load this person's existing schedule into the edit variables
     With(
         {p: drpSchedName.Selected},
-        Set(varSchedSelectedEmail, p.MemberEmail);
-        Set(varSchedEditMon_Start, Coalesce(p.MonStart, ""));
-        Set(varSchedEditMon_End,   Coalesce(p.MonEnd, ""));
-        Set(varSchedEditTue_Start, Coalesce(p.TueStart, ""));
-        Set(varSchedEditTue_End,   Coalesce(p.TueEnd, ""));
-        Set(varSchedEditWed_Start, Coalesce(p.WedStart, ""));
-        Set(varSchedEditWed_End,   Coalesce(p.WedEnd, ""));
-        Set(varSchedEditThu_Start, Coalesce(p.ThuStart, ""));
-        Set(varSchedEditThu_End,   Coalesce(p.ThuEnd, ""));
-        Set(varSchedEditFri_Start, Coalesce(p.FriStart, ""));
-        Set(varSchedEditFri_End,   Coalesce(p.FriEnd, ""))
+        Set(varSchedSelectedEmail,  p.MemberEmail);
+        Set(varSchedEditMon_Start,  Coalesce(p.MonStart,  ""));
+        Set(varSchedEditMon_End,    Coalesce(p.MonEnd,    ""));
+        Set(varSchedEditTue_Start,  Coalesce(p.TueStart,  ""));
+        Set(varSchedEditTue_End,    Coalesce(p.TueEnd,    ""));
+        Set(varSchedEditWed_Start,  Coalesce(p.WedStart,  ""));
+        Set(varSchedEditWed_End,    Coalesce(p.WedEnd,    ""));
+        Set(varSchedEditThu_Start,  Coalesce(p.ThuStart,  ""));
+        Set(varSchedEditThu_End,    Coalesce(p.ThuEnd,    ""));
+        Set(varSchedEditFri_Start,  Coalesce(p.FriStart,  ""));
+        Set(varSchedEditFri_End,    Coalesce(p.FriEnd,    ""));
+        Set(varSchedEditMon_Start2, Coalesce(p.MonStart2, ""));
+        Set(varSchedEditMon_End2,   Coalesce(p.MonEnd2,   ""));
+        Set(varSchedEditTue_Start2, Coalesce(p.TueStart2, ""));
+        Set(varSchedEditTue_End2,   Coalesce(p.TueEnd2,   ""));
+        Set(varSchedEditWed_Start2, Coalesce(p.WedStart2, ""));
+        Set(varSchedEditWed_End2,   Coalesce(p.WedEnd2,   ""));
+        Set(varSchedEditThu_Start2, Coalesce(p.ThuStart2, ""));
+        Set(varSchedEditThu_End2,   Coalesce(p.ThuEnd2,   ""));
+        Set(varSchedEditFri_Start2, Coalesce(p.FriStart2, ""));
+        Set(varSchedEditFri_End2,   Coalesce(p.FriEnd2,   ""))
     )
 )
 ```
@@ -413,7 +460,11 @@ If(
 =With(
     {
         aidType: drpSchedName.Selected.AidType,
-        maxHrs:  If(drpSchedName.Selected.AidType = "Work Study", 12, 6),
+        maxHrs:  Switch(drpSchedName.Selected.AidType,
+                     "Work Study",        12,
+                     "Graduate Assistant", 20,
+                     6   // President's Aid default
+                 ),
         usedSlots: Sum(
             Filter(colTimeSlots,
                 Or(
@@ -445,7 +496,11 @@ If(
 
 ```
 =With(
-    {maxHrs: If(drpSchedName.Selected.AidType = "Work Study", 12, 6)},
+    {maxHrs: Switch(drpSchedName.Selected.AidType,
+                 "Work Study",        12,
+                 "Graduate Assistant", 20,
+                 6
+             )},
     If(
         Value(Mid(lblSchedAidInfo.Text, Find("·", lblSchedAidInfo.Text) + 2, 4)) > maxHrs,
         varColorDanger,
@@ -456,7 +511,9 @@ If(
 
 ### Per-day dropdowns
 
-For each of the 5 days, add a day label and two dropdowns (start, end). Below is the full spec for **Monday** — repeat for Tuesday–Friday changing only the names, variables, and X positions.
+For each of the 5 days, add a day label and **four** dropdowns — two rows of (start, end) for shift 1 and shift 2. Below is the full spec for **Monday** — repeat for Tuesday–Friday changing only the names, variables, and X positions.
+
+The edit bar background height should be **`130`** (increased from 90) to fit both shift rows.
 
 **Day header label (Mon):**
 
@@ -469,7 +526,7 @@ For each of the 5 days, add a day label and two dropdowns (start, end). Below is
 | Align | `=Align.Center` |
 | X | `420`, Y | `56`, Width | `88`, Height | `16` |
 
-**Monday Start dropdown:**
+**Monday Shift 1 Start dropdown:**
 
 | Property | Value |
 |----------|-------|
@@ -481,7 +538,7 @@ For each of the 5 days, add a day label and two dropdowns (start, end). Below is
 | X | `420`, Y | `74`, Width | `88`, Height | `28` |
 | OnChange | `=Set(varSchedEditMon_Start, If(drpSchedMonStart.Selected.Value = "Off", "", drpSchedMonStart.Selected.Value))` |
 
-**Monday End dropdown:**
+**Monday Shift 1 End dropdown:**
 
 | Property | Value |
 |----------|-------|
@@ -493,15 +550,39 @@ For each of the 5 days, add a day label and two dropdowns (start, end). Below is
 | X | `420`, Y | `104`, Width | `88`, Height | `28` |
 | OnChange | `=Set(varSchedEditMon_End, If(drpSchedMonEnd.Selected.Value = "Off", "", drpSchedMonEnd.Selected.Value))` |
 
+**Monday Shift 2 Start dropdown** *(split shift — leave "Off" if only one shift)*:
+
+| Property | Value |
+|----------|-------|
+| Name | `drpSchedMonStart2` |
+| Visible | `=varSchedSelectedEmail <> ""` |
+| Items | *(same as Shift 1 start)* |
+| Default | `=If(varSchedEditMon_Start2 = "", "Off", varSchedEditMon_Start2)` |
+| Font | `=varAppFont`, Size | `9` |
+| X | `420`, Y | `134`, Width | `88`, Height | `28` |
+| OnChange | `=Set(varSchedEditMon_Start2, If(drpSchedMonStart2.Selected.Value = "Off", "", drpSchedMonStart2.Selected.Value))` |
+
+**Monday Shift 2 End dropdown:**
+
+| Property | Value |
+|----------|-------|
+| Name | `drpSchedMonEnd2` |
+| Visible | `=varSchedSelectedEmail <> ""` |
+| Items | *(same as Shift 1 end)* |
+| Default | `=If(varSchedEditMon_End2 = "", "Off", varSchedEditMon_End2)` |
+| Font | `=varAppFont`, Size | `9` |
+| X | `420`, Y | `164`, Width | `88`, Height | `28` |
+| OnChange | `=Set(varSchedEditMon_End2, If(drpSchedMonEnd2.Selected.Value = "Off", "", drpSchedMonEnd2.Selected.Value))` |
+
 **Repeat for Tuesday–Friday** with these X positions (92px gap per day):
 
-| Day | X | Start Var | End Var |
-|-----|---|-----------|---------|
-| Monday | `420` | `varSchedEditMon_Start` | `varSchedEditMon_End` |
-| Tuesday | `512` | `varSchedEditTue_Start` | `varSchedEditTue_End` |
-| Wednesday | `604` | `varSchedEditWed_Start` | `varSchedEditWed_End` |
-| Thursday | `696` | `varSchedEditThu_Start` | `varSchedEditThu_End` |
-| Friday | `788` | `varSchedEditFri_Start` | `varSchedEditFri_End` |
+| Day | X | Shift 1 Start Var | Shift 1 End Var | Shift 2 Start Var | Shift 2 End Var |
+|-----|---|-------------------|-----------------|-------------------|-----------------|
+| Monday | `420` | `varSchedEditMon_Start` | `varSchedEditMon_End` | `varSchedEditMon_Start2` | `varSchedEditMon_End2` |
+| Tuesday | `512` | `varSchedEditTue_Start` | `varSchedEditTue_End` | `varSchedEditTue_Start2` | `varSchedEditTue_End2` |
+| Wednesday | `604` | `varSchedEditWed_Start` | `varSchedEditWed_End` | `varSchedEditWed_Start2` | `varSchedEditWed_End2` |
+| Thursday | `696` | `varSchedEditThu_Start` | `varSchedEditThu_End` | `varSchedEditThu_Start2` | `varSchedEditThu_End2` |
+| Friday | `788` | `varSchedEditFri_Start` | `varSchedEditFri_End` | `varSchedEditFri_Start2` | `varSchedEditFri_End2` |
 
 ### Save button
 
@@ -551,6 +632,8 @@ Insert an **HTML Text** control:
 | PaddingLeft | `0`, PaddingTop | `0` |
 | HtmlText | *(formula below)* |
 
+> **Scrolling:** The HTML formula wraps everything in `<div style="overflow:auto; height:100%">`. This gives you horizontal scroll for the wide staff grid and vertical scroll to reveal the totals summary table below it — all within the single control, no extra setup needed.
+
 ### The HTML formula
 
 This formula builds the entire grid as a string. It uses `colSchedLookup` (built in `OnVisible`) to determine which cells to color.
@@ -559,12 +642,15 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
 =With(
     {
         sortedStaff: Distinct(Sort(colSchedLookup, SortOrder, SortOrder.Ascending), Email),
-        slotH: 28,
-        colW:  64,
-        gutterW: 56
+        slotH: 24,
+        colW:  28,
+        gutterW: 60
     },
 
-    // ---- CSS ----
+    // ---- OUTER SCROLL WRAPPER + CSS ----
+    // overflow:auto lets the content scroll both horizontally (17 columns) and
+    // vertically (grid + totals table) within the single HTML control.
+    "<div style='overflow:auto;width:100%;height:100%;box-sizing:border-box;'>" &
     "<style>
     .sg{border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;}
     .sg td,.sg th{padding:0;margin:0;}
@@ -574,6 +660,13 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
     .sg .sc{width:" & Text(colW) & "px;height:" & Text(slotH) & "px;border-right:1px solid #e0e0e0;border-bottom:1px solid #e8e8e8;}
     .sg .ds{border-right:2px solid #999!important;}
     .sg .tot{text-align:center;font-size:10px;font-weight:600;height:22px;vertical-align:middle;border-top:2px solid #aaa;border-right:1px solid #ccc;}
+    .ts{border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;margin-top:24px;min-width:500px;}
+    .ts th{background:#4d4d4d;color:#fff;padding:6px 12px;text-align:center;white-space:nowrap;}
+    .ts th.ts-n{text-align:left;min-width:160px;}
+    .ts td{padding:5px 12px;text-align:center;border-bottom:1px solid #ddd;white-space:nowrap;}
+    .ts td.ts-n{text-align:left;}
+    .ts .over{color:#c0392b;font-weight:700;}
+    .ts-foot td{background:#6b6b6b;color:#fff;font-weight:700;padding:6px 12px;}
     </style>" &
 
     "<table class='sg'>" &
@@ -597,7 +690,7 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
                 {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
                 "<th class='sh" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
                 "' style='background:" & Coalesce(c.ColorLight, "#eeeeee") & ";width:" & Text(colW) & "px'>" &
-                Left(LookUp(colSchedLookup, Email = s.Value).Name, 8) &
+                LookUp(colSchedLookup, Email = s.Value).Initials &
                 "</th>"
             )
         )
@@ -617,7 +710,10 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
                     "<td class='sc" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
                     "' style='background:" &
                     If(
-                        !IsBlank(c) && c.StartSlot >= 0 && slot.Idx >= c.StartSlot && slot.Idx < c.EndSlot,
+                        !IsBlank(c) && (
+                            (c.StartSlot  >= 0 && slot.Idx >= c.StartSlot  && slot.Idx < c.EndSlot)  ||
+                            (c.StartSlot2 >= 0 && slot.Idx >= c.StartSlot2 && slot.Idx < c.EndSlot2)
+                        ),
                         c.ColorHex,
                         "#ffffff"
                     ) & "'></td>"
@@ -627,7 +723,7 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
         "</tr>"
     ) &
 
-    // ---- TOTALS ROW ----
+    // ---- TOTALS ROW (includes both shifts) ----
     "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Hrs/Day</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
@@ -638,7 +734,11 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
                 "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
                 "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & "'>" &
                 If(!IsBlank(c) && c.StartSlot >= 0,
-                    Text((c.EndSlot - c.StartSlot) / 2, "0.#") & "h",
+                    Text(
+                        ((c.EndSlot - c.StartSlot) +
+                         If(c.StartSlot2 >= 0, c.EndSlot2 - c.StartSlot2, 0)) / 2,
+                        "0.#"
+                    ) & "h",
                     "—"
                 ) & "</td>"
             )
@@ -646,7 +746,7 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
     ) &
     "</tr>" &
 
-    // ---- WEEKLY TOTAL ROW ----
+    // ---- WEEKLY TOTAL ROW (includes both shifts, GA-aware) ----
     "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Wk / Max</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
@@ -654,14 +754,19 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
             sortedStaff As s,
             With(
                 {
-                    totalSlots: Sum(Filter(colSchedLookup, Email = s.Value, StartSlot >= 0), EndSlot - StartSlot),
-                    maxHrs: If(LookUp(colStaff, MemberEmail = s.Value).AidType = "Work Study", 12, 6),
+                    totalHrs: Sum(
+                        Filter(colSchedLookup, Email = s.Value),
+                        (If(StartSlot >= 0, EndSlot - StartSlot, 0) +
+                         If(StartSlot2 >= 0, EndSlot2 - StartSlot2, 0)) / 2
+                    ),
+                    maxHrs: Switch(LookUp(colStaff, MemberEmail = s.Value).AidType,
+                                "Work Study", 12, "Graduate Assistant", 20, 6),
                     c: LookUp(colSchedLookup, Email = s.Value && Day = "Monday")
                 },
                 "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
                 "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & ";font-size:9px;'>" &
                 If(dayName.Value = "Monday",
-                    Text(totalSlots / 2, "0.#") & "/" & Text(maxHrs, "0"),
+                    Text(totalHrs, "0.#") & "/" & Text(maxHrs, "0"),
                     ""
                 ) & "</td>"
             )
@@ -669,13 +774,84 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
     ) &
     "</tr>" &
 
-    "</table>"
+    "</table>" &
+
+    // ---- TOTALS SUMMARY TABLE ----
+    "<table class='ts'>" &
+    "<thead><tr>" &
+    "<th class='ts-n'>Student</th><th>Type</th>" &
+    "<th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th>" &
+    "<th>Total</th><th>Max</th>" &
+    "</tr></thead><tbody>" &
+    Concat(
+        Distinct(Sort(colSchedLookup, SortOrder, SortOrder.Ascending), Email) As p,
+        With(
+            {
+                cMon: LookUp(colSchedLookup, Email = p.Value && Day = "Monday"),
+                cTue: LookUp(colSchedLookup, Email = p.Value && Day = "Tuesday"),
+                cWed: LookUp(colSchedLookup, Email = p.Value && Day = "Wednesday"),
+                cThu: LookUp(colSchedLookup, Email = p.Value && Day = "Thursday"),
+                cFri: LookUp(colSchedLookup, Email = p.Value && Day = "Friday"),
+                sr:   LookUp(colStaff, MemberEmail = p.Value)
+            },
+            With(
+                {
+                    mH:  (If(!IsBlank(cMon)&&cMon.EndSlot>=0, cMon.EndSlot-cMon.StartSlot, 0) + If(!IsBlank(cMon)&&cMon.EndSlot2>=0, cMon.EndSlot2-cMon.StartSlot2, 0)) / 2,
+                    tuH: (If(!IsBlank(cTue)&&cTue.EndSlot>=0, cTue.EndSlot-cTue.StartSlot, 0) + If(!IsBlank(cTue)&&cTue.EndSlot2>=0, cTue.EndSlot2-cTue.StartSlot2, 0)) / 2,
+                    wH:  (If(!IsBlank(cWed)&&cWed.EndSlot>=0, cWed.EndSlot-cWed.StartSlot, 0) + If(!IsBlank(cWed)&&cWed.EndSlot2>=0, cWed.EndSlot2-cWed.StartSlot2, 0)) / 2,
+                    thH: (If(!IsBlank(cThu)&&cThu.EndSlot>=0, cThu.EndSlot-cThu.StartSlot, 0) + If(!IsBlank(cThu)&&cThu.EndSlot2>=0, cThu.EndSlot2-cThu.StartSlot2, 0)) / 2,
+                    fH:  (If(!IsBlank(cFri)&&cFri.EndSlot>=0, cFri.EndSlot-cFri.StartSlot, 0) + If(!IsBlank(cFri)&&cFri.EndSlot2>=0, cFri.EndSlot2-cFri.StartSlot2, 0)) / 2,
+                    maxH:   Switch(sr.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                    abbrev: Switch(sr.AidType, "Work Study", "WS", "Graduate Assistant", "GA", "President's Aid", "PA", "—"),
+                    bgColor: Coalesce(LookUp(colSchedLookup, Email = p.Value).ColorLight, "#f5f5f5")
+                },
+                With(
+                    {totH: mH + tuH + wH + thH + fH},
+                    "<tr style='background:" & bgColor & "'>" &
+                    "<td class='ts-n'>" & Coalesce(LookUp(colSchedLookup, Email = p.Value).Name, p.Value) & "</td>" &
+                    "<td>" & abbrev & "</td>" &
+                    "<td>" & Text(mH,  "0.#") & "</td>" &
+                    "<td>" & Text(tuH, "0.#") & "</td>" &
+                    "<td>" & Text(wH,  "0.#") & "</td>" &
+                    "<td>" & Text(thH, "0.#") & "</td>" &
+                    "<td>" & Text(fH,  "0.#") & "</td>" &
+                    "<td class='" & If(totH > maxH, "over", "") & "'>" & Text(totH, "0.#") & "</td>" &
+                    "<td>" & Text(maxH, "0") & "</td>" &
+                    "</tr>"
+                )
+            )
+        )
+    ) &
+    "</tbody><tfoot>" &
+
+    // Footer: daily totals across all staff
+    "<tr class='ts-foot'><td class='ts-n'>DAILY TOTALS</td><td></td>" &
+    Concat(
+        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
+        "<td>" &
+        Text(
+            Sum(Filter(colSchedLookup, Day = d.Value),
+                (If(StartSlot>=0, EndSlot-StartSlot, 0) +
+                 If(StartSlot2>=0, EndSlot2-StartSlot2, 0)) / 2
+            ), "0.#"
+        ) & "</td>"
+    ) &
+    With(
+        {grandTotal: Sum(colSchedLookup,
+            (If(StartSlot>=0, EndSlot-StartSlot, 0) +
+             If(StartSlot2>=0, EndSlot2-StartSlot2, 0)) / 2
+        )},
+        "<td>" & Text(grandTotal, "0.#") & "</td><td></td>"
+    ) &
+    "</tr></tfoot></table>" &
+
+    "</div>"
 )
 ```
 
-> **Column width:** `colW: 64` gives each staff member 64px. If you have many people and the grid overflows, reduce to `48` or `56`.
+> **Column width:** `colW: 28` is sized for 2-letter initials. Widen to `32`–`36` if you want a bit more breathing room per column.
 
-> **Name truncation:** `Left(...Name..., 8)` truncates to 8 characters to fit the column. Increase the number or the `colW` if names are getting cut off too aggressively.
+> **Totals summary table:** Appears below the grid after scrolling down. Rows match staff sort order, colored with each person's pastel. The `Total` column turns red if a person exceeds their AidType cap. `DAILY TOTALS` footer sums all staff hours per day plus a grand weekly total.
 
 ---
 
@@ -691,16 +867,26 @@ Patch(
     Staff,
     LookUp(Staff, Member.Email = varSchedSelectedEmail),
     {
-        MonStart: If(varSchedEditMon_Start = "", Blank(), {Value: varSchedEditMon_Start}),
-        MonEnd:   If(varSchedEditMon_End   = "", Blank(), {Value: varSchedEditMon_End}),
-        TueStart: If(varSchedEditTue_Start = "", Blank(), {Value: varSchedEditTue_Start}),
-        TueEnd:   If(varSchedEditTue_End   = "", Blank(), {Value: varSchedEditTue_End}),
-        WedStart: If(varSchedEditWed_Start = "", Blank(), {Value: varSchedEditWed_Start}),
-        WedEnd:   If(varSchedEditWed_End   = "", Blank(), {Value: varSchedEditWed_End}),
-        ThuStart: If(varSchedEditThu_Start = "", Blank(), {Value: varSchedEditThu_Start}),
-        ThuEnd:   If(varSchedEditThu_End   = "", Blank(), {Value: varSchedEditThu_End}),
-        FriStart: If(varSchedEditFri_Start = "", Blank(), {Value: varSchedEditFri_Start}),
-        FriEnd:   If(varSchedEditFri_End   = "", Blank(), {Value: varSchedEditFri_End})
+        MonStart:  If(varSchedEditMon_Start  = "", Blank(), {Value: varSchedEditMon_Start}),
+        MonEnd:    If(varSchedEditMon_End    = "", Blank(), {Value: varSchedEditMon_End}),
+        TueStart:  If(varSchedEditTue_Start  = "", Blank(), {Value: varSchedEditTue_Start}),
+        TueEnd:    If(varSchedEditTue_End    = "", Blank(), {Value: varSchedEditTue_End}),
+        WedStart:  If(varSchedEditWed_Start  = "", Blank(), {Value: varSchedEditWed_Start}),
+        WedEnd:    If(varSchedEditWed_End    = "", Blank(), {Value: varSchedEditWed_End}),
+        ThuStart:  If(varSchedEditThu_Start  = "", Blank(), {Value: varSchedEditThu_Start}),
+        ThuEnd:    If(varSchedEditThu_End    = "", Blank(), {Value: varSchedEditThu_End}),
+        FriStart:  If(varSchedEditFri_Start  = "", Blank(), {Value: varSchedEditFri_Start}),
+        FriEnd:    If(varSchedEditFri_End    = "", Blank(), {Value: varSchedEditFri_End}),
+        MonStart2: If(varSchedEditMon_Start2 = "", Blank(), {Value: varSchedEditMon_Start2}),
+        MonEnd2:   If(varSchedEditMon_End2   = "", Blank(), {Value: varSchedEditMon_End2}),
+        TueStart2: If(varSchedEditTue_Start2 = "", Blank(), {Value: varSchedEditTue_Start2}),
+        TueEnd2:   If(varSchedEditTue_End2   = "", Blank(), {Value: varSchedEditTue_End2}),
+        WedStart2: If(varSchedEditWed_Start2 = "", Blank(), {Value: varSchedEditWed_Start2}),
+        WedEnd2:   If(varSchedEditWed_End2   = "", Blank(), {Value: varSchedEditWed_End2}),
+        ThuStart2: If(varSchedEditThu_Start2 = "", Blank(), {Value: varSchedEditThu_Start2}),
+        ThuEnd2:   If(varSchedEditThu_End2   = "", Blank(), {Value: varSchedEditThu_End2}),
+        FriStart2: If(varSchedEditFri_Start2 = "", Blank(), {Value: varSchedEditFri_Start2}),
+        FriEnd2:   If(varSchedEditFri_End2   = "", Blank(), {Value: varSchedEditFri_End2})
     }
 );
 
@@ -711,11 +897,16 @@ ClearCollect(colStaff,
         {
             StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email,
             Role: Role, Active: Active, AidType: AidType.Value,
-            MonStart: MonStart.Value, MonEnd: MonEnd.Value,
-            TueStart: TueStart.Value, TueEnd: TueEnd.Value,
-            WedStart: WedStart.Value, WedEnd: WedEnd.Value,
-            ThuStart: ThuStart.Value, ThuEnd: ThuEnd.Value,
-            FriStart: FriStart.Value, FriEnd: FriEnd.Value,
+            MonStart:  MonStart.Value,  MonEnd:  MonEnd.Value,
+            TueStart:  TueStart.Value,  TueEnd:  TueEnd.Value,
+            WedStart:  WedStart.Value,  WedEnd:  WedEnd.Value,
+            ThuStart:  ThuStart.Value,  ThuEnd:  ThuEnd.Value,
+            FriStart:  FriStart.Value,  FriEnd:  FriEnd.Value,
+            MonStart2: MonStart2.Value, MonEnd2: MonEnd2.Value,
+            TueStart2: TueStart2.Value, TueEnd2: TueEnd2.Value,
+            WedStart2: WedStart2.Value, WedEnd2: WedEnd2.Value,
+            ThuStart2: ThuStart2.Value, ThuEnd2: ThuEnd2.Value,
+            FriStart2: FriStart2.Value, FriEnd2: FriEnd2.Value,
             SchedSortOrder: Coalesce(SchedSortOrder, 10)
         }
     )
@@ -726,13 +917,19 @@ ClearCollect(colSchedLookup,
     ForAll(Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As s,
         ForAll(["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
             With({
-                    startLabel: Switch(d.Value,"Monday",s.MonStart,"Tuesday",s.TueStart,"Wednesday",s.WedStart,"Thursday",s.ThuStart,"Friday",s.FriStart),
-                    endLabel:   Switch(d.Value,"Monday",s.MonEnd,  "Tuesday",s.TueEnd,  "Wednesday",s.WedEnd,  "Thursday",s.ThuEnd,  "Friday",s.FriEnd),
+                    startLabel:  Switch(d.Value,"Monday",s.MonStart, "Tuesday",s.TueStart, "Wednesday",s.WedStart, "Thursday",s.ThuStart, "Friday",s.FriStart),
+                    endLabel:    Switch(d.Value,"Monday",s.MonEnd,   "Tuesday",s.TueEnd,   "Wednesday",s.WedEnd,   "Thursday",s.ThuEnd,   "Friday",s.FriEnd),
+                    startLabel2: Switch(d.Value,"Monday",s.MonStart2,"Tuesday",s.TueStart2,"Wednesday",s.WedStart2,"Thursday",s.ThuStart2,"Friday",s.FriStart2),
+                    endLabel2:   Switch(d.Value,"Monday",s.MonEnd2,  "Tuesday",s.TueEnd2,  "Wednesday",s.WedEnd2,  "Thursday",s.ThuEnd2,  "Friday",s.FriEnd2),
                     colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
                 },
-                {Email: s.MemberEmail, Name: s.MemberName, Day: d.Value,
-                 StartSlot: Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx, -1),
-                 EndSlot:   Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,   -1),
+                {Email: s.MemberEmail, Name: s.MemberName,
+                 Initials: Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1),
+                 Day: d.Value,
+                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx,  -1),
+                 EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,    -1),
+                 StartSlot2: Coalesce(LookUp(colTimeSlots, Label = startLabel2).Idx, -1),
+                 EndSlot2:   Coalesce(LookUp(colTimeSlots, Label = endLabel2).Idx,   -1),
                  ColorHex: colorRec.Hex, ColorLight: colorRec.Light, SortOrder: s.SchedSortOrder}
             )
         )

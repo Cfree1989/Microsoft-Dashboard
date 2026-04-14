@@ -1,7 +1,7 @@
 # Staff SharePoint List Setup
 
 **Purpose:** Team member management, role assignment, financial aid type, and semester schedule  
-**Time Required:** 30 minutes
+**Time Required:** 45 minutes
 
 ---
 
@@ -10,12 +10,12 @@
 The Staff list manages team member information and role assignments. Power Apps staff console checks this list to determine if a user has staff access, enforces weekly hour limits based on financial aid type, and drives the schedule grid.
 
 **Key Features:**
-- 16 total fields — one row per person, no separate schedule list needed
+- 26 total fields — one row per person, no separate schedule list needed
 - Person field integration with LSU accounts
 - Role designation (Manager, Technician, Student Worker)
 - Active/inactive status management
 - Financial aid type for automatic weekly hour limit enforcement
-- Per-person Monday–Friday shift schedule
+- Per-person Monday–Friday schedule with support for **two shifts per day**
 
 ---
 
@@ -70,38 +70,38 @@ The Staff list manages team member information and role assignments. Power Apps 
 4. **Choices:**
    - `President's Aid`
    - `Work Study`
+   - `Graduate Assistant`
 5. **Default value:** Leave blank
 6. **Require that this column contains information:** No
 7. Click **Save**
 
 The app uses `AidType` to enforce weekly hour limits:
 
-| Aid Type | Max Hours/Week | Fund (Annual) |
-|----------|----------------|---------------|
-| President's Aid | 6 hrs | $1,550 |
-| Work Study | 12 hrs | $3,000 |
+| Aid Type | Abbrev | Max Hours/Week | Fund (Annual) |
+|----------|--------|----------------|---------------|
+| President's Aid | PA | 6 hrs | $1,550 |
+| Work Study | WS | 12 hrs | $3,000 |
+| Graduate Assistant | GA | 20 hrs | — |
 
-> **How the limit is calculated:** Annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr = max weekly hours. The app enforces this — no manual math needed.
+> **How WS/PA limits are calculated:** Annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr = max weekly hours. The app enforces this automatically.
 
-### Columns 5–9: Start Time Columns (Mon–Fri)
+### Columns 5–9: Shift 1 Start Time Columns (Mon–Fri)
 
-Each day needs a **StartTime** column. Choices are 30-minute increments from when the lab opens (8:30 AM) to the latest possible start for a 30-minute shift (4:00 PM).
-
-Repeat these steps for all 5 days — the only thing that changes is the **Name**:
+Each day needs a **first shift start** column. Choices are 30-minute increments from when the lab opens (8:30 AM) to the latest possible start for a 30-minute shift (4:00 PM).
 
 | Column Name | Description |
 |-------------|-------------|
-| `MonStart` | Monday shift start time |
-| `TueStart` | Tuesday shift start time |
-| `WedStart` | Wednesday shift start time |
-| `ThuStart` | Thursday shift start time |
-| `FriStart` | Friday shift start time |
+| `MonStart` | Monday shift 1 start time |
+| `TueStart` | Tuesday shift 1 start time |
+| `WedStart` | Wednesday shift 1 start time |
+| `ThuStart` | Thursday shift 1 start time |
+| `FriStart` | Friday shift 1 start time |
 
 For each:
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** *(see table above)*
-3. **Description:** *(day) shift start time*
+3. **Description:** *(day) shift 1 start time*
 4. **Choices** (in this exact order):
    - `8:30 AM`
    - `9:00 AM`
@@ -123,26 +123,23 @@ For each:
 6. **Require that this column contains information:** No
 7. Click **Save**
 
-> **Tip:** After saving `MonStart`, you can copy-paste the choices when creating the remaining 4 columns rather than retyping them.
+> **Tip:** After saving `MonStart`, copy-paste the choices when creating the remaining 4 columns.
 
-### Columns 10–14: End Time Columns (Mon–Fri)
-
-Each day also needs an **EndTime** column. Choices are 30-minute increments from the earliest possible end (9:00 AM) to when the lab closes (4:30 PM).
+### Columns 10–14: Shift 1 End Time Columns (Mon–Fri)
 
 | Column Name | Description |
 |-------------|-------------|
-| `MonEnd` | Monday shift end time |
-| `TueEnd` | Tuesday shift end time |
-| `WedEnd` | Wednesday shift end time |
-| `ThuEnd` | Thursday shift end time |
-| `FriEnd` | Friday shift end time |
+| `MonEnd` | Monday shift 1 end time |
+| `TueEnd` | Tuesday shift 1 end time |
+| `WedEnd` | Wednesday shift 1 end time |
+| `ThuEnd` | Thursday shift 1 end time |
+| `FriEnd` | Friday shift 1 end time |
 
 For each:
 
 1. Click **+ Add column** → **Choice**
 2. **Name:** *(see table above)*
-3. **Description:** *(day) shift end time*
-4. **Choices** (in this exact order):
+3. **Choices** (in this exact order):
    - `9:00 AM`
    - `9:30 AM`
    - `10:00 AM`
@@ -159,20 +156,45 @@ For each:
    - `3:30 PM`
    - `4:00 PM`
    - `4:30 PM`
-5. **Default value:** Leave blank
-6. **Require that this column contains information:** No
-7. Click **Save**
+4. **Default value:** Leave blank
+5. **Require that this column contains information:** No
+6. Click **Save**
 
-### Column 15: SchedSortOrder (Number)
+### Columns 15–19: Shift 2 Start Time Columns (Mon–Fri)
 
-Controls the left-to-right column order each staff member appears in the schedule grid. The app's reorder arrows update this value automatically — you don't need to manage it by hand.
+For staff who work a split shift (e.g., morning and then back in the afternoon), add a second start column per day. Use the **exact same choices** as the Shift 1 start columns.
+
+| Column Name | Description |
+|-------------|-------------|
+| `MonStart2` | Monday shift 2 start time |
+| `TueStart2` | Tuesday shift 2 start time |
+| `WedStart2` | Wednesday shift 2 start time |
+| `ThuStart2` | Thursday shift 2 start time |
+| `FriStart2` | Friday shift 2 start time |
+
+Same choices as the Shift 1 start columns (8:30 AM → 4:00 PM). Leave blank if no second shift.
+
+### Columns 20–24: Shift 2 End Time Columns (Mon–Fri)
+
+| Column Name | Description |
+|-------------|-------------|
+| `MonEnd2` | Monday shift 2 end time |
+| `TueEnd2` | Tuesday shift 2 end time |
+| `WedEnd2` | Wednesday shift 2 end time |
+| `ThuEnd2` | Thursday shift 2 end time |
+| `FriEnd2` | Friday shift 2 end time |
+
+Same choices as the Shift 1 end columns (9:00 AM → 4:30 PM). Leave blank if no second shift.
+
+### Column 25: SchedSortOrder (Number)
+
+Controls the left-to-right column order in the schedule grid. The app's reorder arrows update this automatically.
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `SchedSortOrder`
 3. **Description:** `Controls column order in the schedule grid (lower number = further left)`
 4. **Number of decimal places:** 0
 5. **Default value:** `10`
-   > Starting at 10 instead of 1 leaves room to insert people between existing entries later.
 6. **Require that this column contains information:** No
 7. Click **Save**
 
@@ -183,28 +205,20 @@ Controls the left-to-right column order each staff member appears in the schedul
 ### View 1: Active Staff
 
 1. Click **Settings** (gear icon) → **List settings**
-2. Scroll down to **Views** section → Click **Create view**
-3. Select **Standard View**
-4. **View Name:** `Active Staff`
-5. **Columns:** Check these columns:
-   - Member
-   - Role
-   - Active
-6. **Filter:** Active **is equal to** Yes
-7. **Sort:** Member (Ascending)
-8. Click **OK**
+2. Scroll to **Views** → Click **Create view** → **Standard View**
+3. **View Name:** `Active Staff`
+4. **Columns:** Member, Role, Active
+5. **Filter:** Active **is equal to** Yes
+6. **Sort:** Member (Ascending)
+7. Click **OK**
 
 ### View 2: All Staff
 
-1. Click **Create view** again
-2. Select **Standard View**
-3. **View Name:** `All Staff`
-4. **Columns:** Check these columns:
-   - Member
-   - Role
-   - Active
-5. **Sort:** Member (Ascending)
-6. Click **OK**
+1. Click **Create view** → **Standard View**
+2. **View Name:** `All Staff`
+3. **Columns:** Member, Role, Active
+4. **Sort:** Member (Ascending)
+5. Click **OK**
 
 ---
 
@@ -212,24 +226,23 @@ Controls the left-to-right column order each staff member appears in the schedul
 
 ### Adding a new staff member
 
-1. Go to the Staff list
-2. Click **+ New**
-3. **Member:** Search for and select the LSU account
-4. **Role:** Select appropriate role
-5. **Active:** Leave as Yes (default)
-6. Click **Save**
+1. Go to the Staff list → Click **+ New**
+2. **Member:** Search for and select the LSU account
+3. **Role:** Select appropriate role
+4. **Active:** Leave as Yes
+5. Click **Save**
 
 ### Populating AidType for existing staff
 
-1. Click **Edit in grid view** (pencil icon in the toolbar)
-   > Grid view lets you fill in all values at once without opening each record individually.
+1. Click **Edit in grid view** in the toolbar
 2. For each active staff member, click their `AidType` cell and select:
-   - **President's Aid** — for staff on the Presidential Aid program (~6 hrs/week)
-   - **Work Study** — for staff on the Federal/LSU Work Study program (~12 hrs/week)
-   - Leave blank if not on either program
+   - **President's Aid (PA)** — ~6 hrs/week cap
+   - **Work Study (WS)** — ~12 hrs/week cap
+   - **Graduate Assistant (GA)** — ~20 hrs/week cap
+   - Leave blank if not on a financial aid program
 3. Click **Exit grid view** when done
 
-> **Schedule times:** Leave all the `MonStart`/`MonEnd` etc. columns blank for now. Staff members will fill in their own schedule using the app.
+> **Schedule times:** Leave all time columns blank initially. Staff fill in their own schedule using the app.
 
 ---
 
@@ -237,10 +250,8 @@ Controls the left-to-right column order each staff member appears in the schedul
 
 To deactivate a staff member (recommended over deletion):
 
-1. Find the staff member in the list
-2. Click to edit the item
-3. Change **Active** to **No**
-4. Click **Save**
+1. Find the staff member → click to edit
+2. Change **Active** to **No** → Save
 
 This preserves historical records while removing access.
 
@@ -254,17 +265,27 @@ This preserves historical records while removing access.
 | Member | Person | Yes | — | Staff member's LSU account |
 | Role | Choice | Yes | — | Manager; Technician; Student Worker |
 | Active | Yes/No | No | Yes | Employment status |
-| AidType | Choice | No | — | President's Aid; Work Study |
-| MonStart | Choice | No | — | Monday shift start (blank = Off) |
-| MonEnd | Choice | No | — | Monday shift end (blank = Off) |
-| TueStart | Choice | No | — | Tuesday shift start |
-| TueEnd | Choice | No | — | Tuesday shift end |
-| WedStart | Choice | No | — | Wednesday shift start |
-| WedEnd | Choice | No | — | Wednesday shift end |
-| ThuStart | Choice | No | — | Thursday shift start |
-| ThuEnd | Choice | No | — | Thursday shift end |
-| FriStart | Choice | No | — | Friday shift start |
-| FriEnd | Choice | No | — | Friday shift end |
+| AidType | Choice | No | — | President's Aid; Work Study; Graduate Assistant |
+| MonStart | Choice | No | — | Monday shift 1 start (blank = Off) |
+| MonEnd | Choice | No | — | Monday shift 1 end |
+| TueStart | Choice | No | — | Tuesday shift 1 start |
+| TueEnd | Choice | No | — | Tuesday shift 1 end |
+| WedStart | Choice | No | — | Wednesday shift 1 start |
+| WedEnd | Choice | No | — | Wednesday shift 1 end |
+| ThuStart | Choice | No | — | Thursday shift 1 start |
+| ThuEnd | Choice | No | — | Thursday shift 1 end |
+| FriStart | Choice | No | — | Friday shift 1 start |
+| FriEnd | Choice | No | — | Friday shift 1 end |
+| MonStart2 | Choice | No | — | Monday shift 2 start (blank = no second shift) |
+| MonEnd2 | Choice | No | — | Monday shift 2 end |
+| TueStart2 | Choice | No | — | Tuesday shift 2 start |
+| TueEnd2 | Choice | No | — | Tuesday shift 2 end |
+| WedStart2 | Choice | No | — | Wednesday shift 2 start |
+| WedEnd2 | Choice | No | — | Wednesday shift 2 end |
+| ThuStart2 | Choice | No | — | Thursday shift 2 start |
+| ThuEnd2 | Choice | No | — | Thursday shift 2 end |
+| FriStart2 | Choice | No | — | Friday shift 2 start |
+| FriEnd2 | Choice | No | — | Friday shift 2 end |
 | SchedSortOrder | Number | No | 10 | Left-to-right grid column order |
 
 ---
@@ -281,15 +302,13 @@ LookUp(
 )
 ```
 
-If no match is found, the user is not granted staff access to the dashboard.
-
 ---
 
 ## Seasonal Maintenance
 
-At the start of each new semester, staff simply update their own schedule using the app — the old values get overwritten by the new ones. There is no archiving of previous schedules, which keeps things simple.
+At the start of each new semester, staff update their own schedule using the app — old values are overwritten. No archiving or list changes needed.
 
-If you ever need to clear everyone's schedule at once (e.g., at the end of the year), use **Edit in grid view** in SharePoint to bulk-clear all the time columns.
+To clear all schedules at once, use **Edit in grid view** and bulk-clear all the time columns.
 
 ---
 
@@ -299,13 +318,14 @@ If you ever need to clear everyone's schedule at once (e.g., at the end of the y
 - [ ] Member column is Person type (required)
 - [ ] Role has choices: Manager, Technician, Student Worker
 - [ ] Active defaults to Yes
-- [ ] AidType column added with choices: `President's Aid`, `Work Study`
-- [ ] `MonStart` through `FriStart` — 5 columns, each with 16 choices (8:30 AM → 4:00 PM)
-- [ ] `MonEnd` through `FriEnd` — 5 columns, each with 16 choices (9:00 AM → 4:30 PM)
-- [ ] All 10 time columns have no default value and are not required
-- [ ] `SchedSortOrder` added as Number type, default 10, not required
-- [ ] Active Staff view created with filter
-- [ ] All Staff view created
+- [ ] AidType has choices: `President's Aid`, `Work Study`, `Graduate Assistant`
+- [ ] `MonStart` through `FriStart` — 5 columns, 16 choices (8:30 AM → 4:00 PM)
+- [ ] `MonEnd` through `FriEnd` — 5 columns, 16 choices (9:00 AM → 4:30 PM)
+- [ ] `MonStart2` through `FriStart2` — 5 columns, same choices as Shift 1 start
+- [ ] `MonEnd2` through `FriEnd2` — 5 columns, same choices as Shift 1 end
+- [ ] All 20 time columns: no default value, not required
+- [ ] `SchedSortOrder` added as Number, default 10, not required
+- [ ] Active Staff and All Staff views created
 - [ ] At least one staff member added for testing
 - [ ] `AidType` populated for all active student workers
 
