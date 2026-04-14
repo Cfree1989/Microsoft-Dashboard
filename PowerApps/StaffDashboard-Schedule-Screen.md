@@ -50,10 +50,10 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  HEADER BAR  ← Dashboard  │  Schedule                │
+│  HEADER BAR  Schedule          [← Dashboard]         │
 ├──────────────────────────────────────────────────────┤
-│  EDIT BAR  [Select your name ▼]  (hidden until name  │
-│  selected: [Mon 9AM-1PM] [Tue Off] ... [Save] [×])   │
+│  EDIT BAR  [ComboBox: Select Your Name ▼] … [Save] … │
+│  (gallery + Save/Cancel when a name is selected)     │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
 │  HTML TEXT GRID (read-only colored block schedule)   │
@@ -227,10 +227,11 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 
 ```
 // Refresh active staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
+// Excludes Role = Manager — they never appear on this schedule UI.
 ClearCollect(
     colStaff,
     ForAll(
-        Filter(Staff, Active = true),
+        Filter(Staff, Active = true && Role.Value <> "Manager"),
         {
             StaffID:        ID,
             MemberName:     Member.DisplayName,
@@ -289,7 +290,8 @@ ClearCollect(
 
 // Reset editing state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "");
-Clear(colEditShifts)
+Clear(colEditShifts);
+Reset(drpSchedName)
 ```
 
 > **What `colSchedLookup` does:** One record per row in `StaffShifts`. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.

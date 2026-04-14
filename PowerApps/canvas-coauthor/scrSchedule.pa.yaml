@@ -315,7 +315,7 @@ Screens:
               ClearCollect(
                   colStaff,
                   ForAll(
-                      Filter(Staff, Active = true),
+                      Filter(Staff, Active = true && Role.Value <> "Manager"),
                       {
                           StaffID:        ID,
                           MemberName:     Member.DisplayName,
