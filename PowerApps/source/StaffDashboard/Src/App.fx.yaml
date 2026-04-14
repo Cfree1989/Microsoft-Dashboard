@@ -94,11 +94,39 @@ App As appinfo:
         // Load all SharePoint data in parallel to reduce startup time and avoid 429 throttling.
         // Concurrent() fires these as a single batched request instead of sequential calls.
         Concurrent(
-            ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+            ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active, AidType: AidType.Value, SchedSortOrder: Coalesce(SchedSortOrder, 10)})),
             ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
             ClearCollect(colAllBuildPlates, BuildPlates),
             ClearCollect(colAllPayments, Payments)
         );
+        ClearCollect(colTimeSlots, {Idx: 0, Label: "8:30 AM", Minutes: 510});
+        Collect(colTimeSlots, {Idx: 1, Label: "9:00 AM", Minutes: 540});
+        Collect(colTimeSlots, {Idx: 2, Label: "9:30 AM", Minutes: 570});
+        Collect(colTimeSlots, {Idx: 3, Label: "10:00 AM", Minutes: 600});
+        Collect(colTimeSlots, {Idx: 4, Label: "10:30 AM", Minutes: 630});
+        Collect(colTimeSlots, {Idx: 5, Label: "11:00 AM", Minutes: 660});
+        Collect(colTimeSlots, {Idx: 6, Label: "11:30 AM", Minutes: 690});
+        Collect(colTimeSlots, {Idx: 7, Label: "12:00 PM", Minutes: 720});
+        Collect(colTimeSlots, {Idx: 8, Label: "12:30 PM", Minutes: 750});
+        Collect(colTimeSlots, {Idx: 9, Label: "1:00 PM", Minutes: 780});
+        Collect(colTimeSlots, {Idx: 10, Label: "1:30 PM", Minutes: 810});
+        Collect(colTimeSlots, {Idx: 11, Label: "2:00 PM", Minutes: 840});
+        Collect(colTimeSlots, {Idx: 12, Label: "2:30 PM", Minutes: 870});
+        Collect(colTimeSlots, {Idx: 13, Label: "3:00 PM", Minutes: 900});
+        Collect(colTimeSlots, {Idx: 14, Label: "3:30 PM", Minutes: 930});
+        Collect(colTimeSlots, {Idx: 15, Label: "4:00 PM", Minutes: 960});
+        ClearCollect(colSchedColors, {Idx: 0, Hex: "#4E79A7", Light: "#C8D9ED"});
+        Collect(colSchedColors, {Idx: 1, Hex: "#F28E2B", Light: "#FCDCB3"});
+        Collect(colSchedColors, {Idx: 2, Hex: "#59A14F", Light: "#C2E0BF"});
+        Collect(colSchedColors, {Idx: 3, Hex: "#E15759", Light: "#F5C2C3"});
+        Collect(colSchedColors, {Idx: 4, Hex: "#76B7B2", Light: "#C8E4E2"});
+        Collect(colSchedColors, {Idx: 5, Hex: "#EDC948", Light: "#F9EDBB"});
+        Collect(colSchedColors, {Idx: 6, Hex: "#B07AA1", Light: "#DEC8D9"});
+        Collect(colSchedColors, {Idx: 7, Hex: "#FF9DA7", Light: "#FFD8DC"});
+        Collect(colSchedColors, {Idx: 8, Hex: "#9C755F", Light: "#DACFCA"});
+        Collect(colSchedColors, {Idx: 9, Hex: "#BAB0AC", Light: "#E5E2E1"});
+        Collect(colSchedColors, {Idx: 10, Hex: "#D37295", Light: "#F0C8D6"});
+        Collect(colSchedColors, {Idx: 11, Hex: "#A0CBE8", Light: "#D9EDF7"});
         
         // Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
         ClearCollect(colBuildPlateSummary,
@@ -247,6 +275,11 @@ App As appinfo:
         // === TIMER CONFIGURATION ===
         // Auto-refresh interval for dashboard data (milliseconds)
         Set(varRefreshInterval, 30000);                    // 30 seconds
+        Set(varSchedSelectedEmail, "");
+        Set(varSchedEditSaving, false);
+        Set(varSchedShowReorder, false);
+        ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
+        Clear(colEditShifts);
         
         Set(varLoadingMessage, "")
     Theme: =PowerAppsTheme

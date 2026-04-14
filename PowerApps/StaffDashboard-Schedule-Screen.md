@@ -1067,6 +1067,99 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 
 ---
 
+## HtmlViewer: What Actually Works (Hard-Won Notes)
+
+This section documents exactly what CSS and HTML techniques the Power Apps Canvas **HtmlViewer** control supports, based on direct testing during development of this screen. Save yourself the debugging time.
+
+### The single most important rule
+
+> **`<style>` blocks are silently stripped.** The HtmlViewer sanitizes its input and discards any `<style>...</style>` element without warning. Your HTML renders, but completely unstyled. CSS classes you define in a style block simply do not exist.
+
+This means **every style must be an inline `style="..."` attribute** on the element itself. There are no exceptions.
+
+### What works
+
+| Technique | Status | Notes |
+|-----------|--------|-------|
+| Inline `style="..."` on any element | ✅ Works | The only way to apply styles |
+| `<table>`, `<tr>`, `<td>`, `<th>` | ✅ Works | Most reliable layout method |
+| `border-collapse:collapse` on `<table>` | ✅ Works | Inline on the table element |
+| `border-spacing` on `<table>` | ✅ Works | Use for gap between day columns |
+| `table-layout:fixed` | ✅ Works | Forces equal-width columns |
+| `vertical-align:bottom` on `<td>` | ✅ Works | Used to bottom-align time gutters with schedule grid |
+| `height:Npx` on `<tr>` | ✅ Works | Sets row height; empty cells don't collapse |
+| `overflow:hidden` on `<div>` | ✅ Works | Used to clip `border-radius` on day block wrappers |
+| `border-radius` on `<div>` | ✅ Works | Must be on a `<div>`, not directly on `<table>` |
+| `position:sticky; left:0` | ✅ Works | Left time gutter stays visible on horizontal scroll |
+| `background:#hexcolor` inline | ✅ Works | How shift colors are applied to cells |
+
+### What does NOT work
+
+| Technique | Status | Why it fails |
+|-----------|--------|--------------|
+| `<style>...</style>` block | ❌ Stripped | Sanitized out entirely, no error shown |
+| CSS classes (`.myClass`) | ❌ Stripped | No style block = no class definitions |
+| `display:grid` | ❌ Does not render | Even inline; grid layout is not applied |
+| `display:flex` via `<style>` block | ❌ Stripped | The class is gone so flex never applies |
+| CSS pseudo-selectors (`:first-child`, `:hover`) | ❌ Stripped | No style block to hold them |
+| `<script>` tags | ❌ Blocked | No JavaScript in HtmlViewer |
+| `column-count` | ❌ Not supported | Reported broken across community |
+| `border-radius` directly on `<table>` | ❌ Inconsistent | Wrap the table in a `<div>` instead |
+
+### The layout pattern that works
+
+Use a **3-cell outer table** (left gutter | content | right gutter), with **a second inner table** for the 5 day columns, and **a third per-day table** for the day header, legend row, and slot rows. All styles inline.
+
+```html
+<!-- Outer 3-column layout -->
+<table style="border-collapse:separate; border-spacing:8px 0;">
+  <tr>
+    <!-- Left time gutter — sticky, aligns to bottom of day blocks -->
+    <td style="vertical-align:bottom; width:80px; padding:0;">
+      <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
+        <div style="height:28px; line-height:28px; text-align:center; ...">8:30-9:00</div>
+        <!-- repeat for each time slot -->
+      </div>
+    </td>
+
+    <!-- Week grid — 5 equal day columns -->
+    <td style="vertical-align:top; padding:0;">
+      <table style="border-collapse:separate; border-spacing:4px 0; table-layout:fixed; width:100%;">
+        <tr>
+          <td style="vertical-align:top; padding:0;">
+            <!-- Day block wrapper: border-radius MUST be on the div, not the table -->
+            <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
+              <table style="border-collapse:collapse; width:100%; table-layout:fixed;">
+                <tr><th colspan="N" style="background:#d7ccc8; height:28px; ...">MONDAY</th></tr>
+                <tr><!-- legend chips: one <td> per person, inline background color --></tr>
+                <tr style="height:28px;"><!-- slot cells --></tr>
+                <!-- repeat for 16 time slots -->
+              </table>
+            </div>
+          </td>
+          <!-- repeat for Tuesday–Friday -->
+        </tr>
+      </table>
+    </td>
+
+    <!-- Right time gutter — NOT sticky, stays in its column (prevents overlap on zoom) -->
+    <td style="vertical-align:bottom; width:80px; padding:0;">
+      <!-- same structure as left gutter -->
+    </td>
+  </tr>
+</table>
+```
+
+### Gutter alignment trick
+
+The left and right time gutters only have 16 rows (one per time slot). The day blocks have 18 rows (day header + legend row + 16 slots). Setting **`vertical-align:bottom`** on the gutter `<td>` makes the browser push the gutter content to the bottom of the table row — leaving exactly 56px (2 × 28px) of empty space at the top. This aligns the first time label perfectly with the first slot row, without any manual offset calculation.
+
+### Right gutter overlap fix
+
+`position:sticky; right:0` causes the right gutter to paint **on top of** the last day column when the browser is zoomed in (the middle column narrows but the gutter stays fixed). Fix: **do not make the right gutter sticky**. Keep it in normal table flow as the third column. Only the left gutter needs sticky positioning.
+
+---
+
 ## Troubleshooting
 
 **Grid is all white after saving**

@@ -1,0 +1,633 @@
+Screens:
+  scrSchedule:
+    Properties:
+      Fill: =varColorBg
+      OnVisible: |-
+        =ClearCollect(
+            colStaff,
+            ForAll(
+                Filter(Staff, Active = true),
+                {
+                    StaffID:        ID,
+                    MemberName:     Member.DisplayName,
+                    MemberEmail:    Member.Email,
+                    Role:           Role,
+                    Active:         Active,
+                    AidType:        AidType.Value,
+                    SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                }
+            )
+        );
+        ClearCollect(
+            colShifts,
+            ForAll(
+                Filter(StaffShifts, StaffEmail <> ""),
+                {
+                    ShiftID:    ID,
+                    Email:      StaffEmail,
+                    Day:        Day.Value,
+                    ShiftStart: ShiftStart.Value,
+                    ShiftEnd:   ShiftEnd.Value
+                }
+            )
+        );
+        ClearCollect(
+            colSchedLookup,
+            ForAll(
+                colShifts As sh,
+                With(
+                    {
+                        sr: LookUp(colStaff, MemberEmail = sh.Email),
+                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12))
+                    },
+                    {
+                        ShiftID:    sh.ShiftID,
+                        Email:      sh.Email,
+                        Name:       sr.MemberName,
+                        Initials:   Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                        Day:        sh.Day,
+                        StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                        EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                        ColorHex:   cr.Hex,
+                        ColorLight: cr.Light,
+                        SortOrder:  sr.SchedSortOrder
+                    }
+                )
+            )
+        );
+        Set(varSchedSelectedEmail, "");
+        Clear(colEditShifts)
+    Children:
+      - recSchedHeader:
+          Control: Rectangle
+          Properties:
+            Fill: =varColorHeader
+            Height: =52
+            Width: =Parent.Width
+      - btnSchedBack:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =Color.Transparent
+            Font: =varAppFont
+            Height: =24
+            HoverBorderColor: =Color.Transparent
+            HoverColor: =Color.White
+            HoverFill: =RGBA(255, 255, 255, 0.1)
+            OnSelect: =Navigate(scrDashboard, varScreenTransition)
+            PressedBorderColor: =Color.Transparent
+            PressedColor: =Color.White
+            PressedFill: =RGBA(255, 255, 255, 0.2)
+            Size: =11
+            Text: ="← Dashboard"
+            Width: =120
+            X: =8
+            Y: =14
+      - lblSchedTitle:
+          Control: Label
+          Properties:
+            Align: =Align.Center
+            Color: =Color.White
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =26
+            Size: =14
+            Text: ="Schedule"
+            Width: =300
+            X: =(Parent.Width - 300) / 2
+            Y: =13
+      - recSchedEditBar:
+          Control: Rectangle
+          Properties:
+            BorderColor: =varColorBorder
+            BorderThickness: =1
+            Fill: =varColorBgCard
+            Height: =If(varSchedSelectedEmail <> "", 200, 56)
+            Width: =Parent.Width
+            Y: =52
+      - lblSchedWho:
+          Control: Label
+          Properties:
+            Color: =varColorTextMuted
+            Font: =varAppFont
+            Height: =22
+            Size: =10
+            Text: ="Who are you?"
+            Width: =160
+            X: =16
+            Y: =60
+      - drpSchedName:
+          Control: Classic/DropDown
+          Properties:
+            BorderColor: =varInputBorderColor
+            Font: =varAppFont
+            Height: =32
+            Items: =Sort(colStaff, MemberName, SortOrder.Ascending)
+            Items.Value: =AidType
+            OnChange: |-
+              =If(
+                  IsBlank(drpSchedName.Selected) || drpSchedName.Selected.MemberName = "Select...",
+                  Set(varSchedSelectedEmail, "");
+                  Clear(colEditShifts),
+                  With(
+                      {em: drpSchedName.Selected.MemberEmail},
+                      Set(varSchedSelectedEmail, em);
+                      ClearCollect(
+                          colEditShifts,
+                          ForAll(
+                              Filter(colShifts, Email = em),
+                              {
+                                  RowKey:     Text(GUID()),
+                                  Day:        Day,
+                                  ShiftStart: ShiftStart,
+                                  ShiftEnd:   ShiftEnd
+                              }
+                          )
+                      );
+                      If(
+                          CountRows(colEditShifts) = 0,
+                          Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+                      )
+                  )
+              )
+            Size: =varInputFontSize
+            Width: =180
+            X: =16
+            Y: =82
+      - lblSchedAidInfo:
+          Control: Label
+          Properties:
+            Color: |-
+              =With(
+                  {
+                      maxHrs: Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                      hrs:    Sum(
+                          Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                          (LookUp(colTimeSlots, Label = ShiftEnd).Idx - LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30 / 60
+                      )
+                  },
+                  If(hrs > maxHrs, varColorDanger, varColorText)
+              )
+            Font: =varAppFont
+            Height: =32
+            Size: =10
+            Text: |-
+              =With(
+                  {
+                      aidType: drpSchedName.Selected.AidType,
+                      maxHrs:  Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                      hrs:     Sum(
+                          Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                          (LookUp(colTimeSlots, Label = ShiftEnd).Idx - LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30 / 60
+                      )
+                  },
+                  aidType & " · " & Text(hrs, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
+              )
+            Visible: =varSchedSelectedEmail <> ""
+            Width: =220
+            X: =208
+            Y: =82
+      - galEditShifts:
+          Control: Gallery
+          Variant: Vertical
+          Properties:
+            Height: =92
+            Items: =colEditShifts
+            TemplatePadding: =0
+            TemplateSize: =36
+            Visible: =varSchedSelectedEmail <> ""
+            Width: =Parent.Width - 260
+            X: =16
+            Y: =118
+          Children:
+            - drpGalShiftDay:
+                Control: Classic/DropDown
+                Properties:
+                  Default: =ThisItem.Day
+                  Height: =28
+                  Items: =["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+                  Items.Value: =Value
+                  OnChange: |-
+                    =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})
+                  Width: =110
+                  Y: =4
+            - drpGalShiftStart:
+                Control: Classic/DropDown
+                Properties:
+                  Default: =ThisItem.ShiftStart
+                  Height: =28
+                  Items: =["8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM"]
+                  Items.Value: =Value
+                  OnChange: |-
+                    =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})
+                  Width: =100
+                  X: =116
+                  Y: =4
+            - drpGalShiftEnd:
+                Control: Classic/DropDown
+                Properties:
+                  Default: =ThisItem.ShiftEnd
+                  Height: =28
+                  Items: =["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM"]
+                  Items.Value: =Value
+                  OnChange: |-
+                    =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})
+                  Width: =100
+                  X: =222
+                  Y: =4
+            - btnGalShiftRemove:
+                Control: Classic/Button
+                Properties:
+                  BorderThickness: =0
+                  Color: =varColorDanger
+                  Fill: =Color.Transparent
+                  Height: =28
+                  HoverColor: =Color.White
+                  HoverFill: =varColorDanger
+                  OnSelect: =Remove(colEditShifts, ThisItem)
+                  PressedFill: =ColorFade(varColorDanger, -20%)
+                  Size: =12
+                  Text: ="✕"
+                  Width: =32
+                  X: =328
+                  Y: =4
+      - btnSchedAddShift:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =varColorPrimary
+            BorderThickness: =1
+            Color: =varColorPrimary
+            Fill: =Color.Transparent
+            Font: =varAppFont
+            Height: =28
+            HoverColor: =Color.White
+            HoverFill: =varColorPrimary
+            OnSelect: |-
+              =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+            PressedFill: =varColorPrimaryPressed
+            Size: =10
+            Text: ="+ Add shift"
+            Visible: =varSchedSelectedEmail <> ""
+            Width: =100
+            X: =16
+            Y: =186
+      - btnSchedSave:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            DisplayMode: =If(varSchedEditSaving, DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =varColorSuccess
+            Font: =varAppFont
+            Height: =36
+            HoverBorderColor: =Color.Transparent
+            HoverColor: =Color.White
+            HoverFill: =varColorSuccessHover
+            OnSelect: |-
+              =Set(varSchedEditSaving, true);
+              RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+              ForAll(
+                  Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                  Patch(
+                      StaffShifts,
+                      Defaults(StaffShifts),
+                      {
+                          StaffEmail: varSchedSelectedEmail,
+                          Day:        {Value: Day},
+                          ShiftStart: {Value: ShiftStart},
+                          ShiftEnd:   {Value: ShiftEnd}
+                      }
+                  )
+              );
+              ClearCollect(
+                  colStaff,
+                  ForAll(
+                      Filter(Staff, Active = true),
+                      {
+                          StaffID:        ID,
+                          MemberName:     Member.DisplayName,
+                          MemberEmail:    Member.Email,
+                          Role:           Role,
+                          Active:         Active,
+                          AidType:        AidType.Value,
+                          SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                      }
+                  )
+              );
+              ClearCollect(
+                  colShifts,
+                  ForAll(
+                      Filter(StaffShifts, StaffEmail <> ""),
+                      {
+                          ShiftID:    ID,
+                          Email:      StaffEmail,
+                          Day:        Day.Value,
+                          ShiftStart: ShiftStart.Value,
+                          ShiftEnd:   ShiftEnd.Value
+                      }
+                  )
+              );
+              ClearCollect(
+                  colSchedLookup,
+                  ForAll(
+                      colShifts As sh,
+                      With(
+                          {
+                              sr: LookUp(colStaff, MemberEmail = sh.Email),
+                              cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12))
+                          },
+                          {
+                              ShiftID:    sh.ShiftID,
+                              Email:      sh.Email,
+                              Name:       sr.MemberName,
+                              Initials:   Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                              Day:        sh.Day,
+                              StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                              EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                              ColorHex:   cr.Hex,
+                              ColorLight: cr.Light,
+                              SortOrder:  sr.SchedSortOrder
+                          }
+                      )
+                  )
+              );
+              Set(varSchedSelectedEmail, "");
+              Clear(colEditShifts);
+              Reset(drpSchedName);
+              Set(varSchedEditSaving, false)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =ColorFade(varColorSuccess, -25%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =11
+            Text: =If(varSchedEditSaving, "Saving...", "Save Schedule")
+            Visible: =varSchedSelectedEmail <> ""
+            Width: =130
+            X: =Parent.Width - 330
+            Y: =62
+      - btnSchedClear:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =varColorBorder
+            BorderThickness: =1
+            Color: =varColorText
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =varAppFont
+            Height: =36
+            HoverFill: =RGBA(220, 220, 220, 1)
+            OnSelect: =Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Reset(drpSchedName)
+            PressedBorderColor: =Self.BorderColor
+            PressedFill: =RGBA(200, 200, 200, 1)
+            Size: =11
+            Text: ="✕ Cancel"
+            Visible: =varSchedSelectedEmail <> ""
+            Width: =80
+            X: =Parent.Width - 190
+            Y: =62
+      - btnSchedReorderToggle:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorNeutral
+            Font: =varAppFont
+            Height: =36
+            HoverFill: =ColorFade(varColorNeutral, -15%)
+            OnSelect: =Set(varSchedShowReorder, !varSchedShowReorder)
+            PressedFill: =ColorFade(varColorNeutral, -25%)
+            Size: =10
+            Text: ="⇅ Reorder"
+            Width: =90
+            X: =Parent.Width - 100
+            Y: =62
+      - htmlSchedGrid:
+          Control: HtmlViewer
+          Properties:
+            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)
+            HtmlText: |-
+              =With(
+                  {
+                      st: Sort(colStaff, SchedSortOrder, SortOrder.Ascending),
+                      H:  28,
+                      nc: Text(CountRows(colStaff))
+                  },
+                  "<div style='overflow:auto;width:100%;height:100%;box-sizing:border-box;background:#f5f1eb;padding:8px;font-family:Segoe UI,Arial,sans-serif;font-size:11px;'>" &
+                  "<table style='border-collapse:separate;border-spacing:8px 0;'><tr>" &
+                  "<td style='vertical-align:bottom;width:80px;padding:0;'>" &
+                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                  Concat(
+                      colTimeSlots As slot,
+                      With(
+                          {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
+                          "</div>"
+                      )
+                  ) &
+                  "</div></td>" &
+                  "<td style='vertical-align:top;padding:0;'>" &
+                  "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;table-layout:fixed;'><tr>" &
+                  Concat(
+                      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
+                      "<td style='vertical-align:top;padding:0;'>" &
+                      "<div style='border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                      "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'>" &
+                      "<tr><th colspan='" & nc & "' style='height:" & Text(H) & "px;background:#d7ccc8;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;padding:0;white-space:nowrap;'>" & Upper(dn.Value) & "</th></tr>" &
+                      "<tr>" &
+                      Concat(
+                          st As s,
+                          With(
+                              {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
+                              "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;padding:0;overflow:hidden;white-space:nowrap;border-top:2px solid #d7ccc8;'>" &
+                              Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1) &
+                              "</td>"
+                          )
+                      ) &
+                      "</tr>" &
+                      Concat(
+                          colTimeSlots As slot,
+                          "<tr style='height:" & Text(H) & "px;'>" &
+                          Concat(
+                              st As s,
+                              With(
+                                  {
+                                      cr:  LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
+                                      on:  CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && slot.Idx >= StartSlot && slot.Idx < EndSlot)) > 0
+                                  },
+                                  If(on,
+                                      "<td style='background:" & Coalesce(cr.Hex, "#8B4513") & ";padding:0;'></td>",
+                                      "<td style='background:#fdfaf6;padding:0;'></td>"
+                                  )
+                              ) &
+                              "</tr>"
+                          )
+                      ) &
+                      "</table></div></td>"
+                  ) &
+                  "</tr></table></td>" &
+                  "<td style='vertical-align:bottom;width:80px;padding:0;'>" &
+                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                  Concat(
+                      colTimeSlots As slot,
+                      With(
+                          {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
+                          "</div>"
+                      )
+                  ) &
+                  "</div></td>" &
+                  "</tr></table>" &
+                  "<table style='border-collapse:collapse;font-size:12px;margin-top:20px;width:100%;'>" &
+                  "<thead><tr>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:left;white-space:nowrap;'>Student</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Role</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Mon</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Tue</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Wed</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Thu</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Fri</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Total</th>" &
+                  "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Max</th>" &
+                  "</tr></thead><tbody>" &
+                  Concat(
+                      st As p,
+                      With(
+                          {
+                              mH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Monday"    && StartSlot >= 0), (EndSlot - StartSlot) / 2),
+                              tuH:  Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Tuesday"   && StartSlot >= 0), (EndSlot - StartSlot) / 2),
+                              wH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Wednesday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
+                              thH:  Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Thursday"  && StartSlot >= 0), (EndSlot - StartSlot) / 2),
+                              fH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Friday"    && StartSlot >= 0), (EndSlot - StartSlot) / 2),
+                              maxH: Switch(p.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                              abbr: Switch(p.AidType, "Work Study", "WS", "Graduate Assistant", "GA", "President's Aid", "PA", "—"),
+                              bg:   Coalesce(LookUp(colSchedColors, Idx = Mod(p.StaffID, 12)).Light, "#f5f0ea")
+                          },
+                          With(
+                              {totH: mH + tuH + wH + thH + fH},
+                              "<tr style='background:" & bg & ";'>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;font-weight:600;text-align:left;white-space:nowrap;'>" & p.MemberName & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & abbr & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(mH,  "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(tuH, "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(wH,  "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(thH, "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(fH,  "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;" & If(totH > maxH, "color:#c0392b;font-weight:800;", "") & "'>" & Text(totH, "0.0") & "</td>" &
+                              "<td style='padding:5px 10px;border-bottom:1px solid #e8ddd0;text-align:center;'>" & Text(maxH, "0") & "</td>" &
+                              "</tr>"
+                          )
+                      )
+                  ) &
+                  "</tbody><tfoot><tr style='background:#4a3020;color:#f5ede3;'>" &
+                  "<td style='padding:6px 10px;font-weight:800;text-align:left;'>DAILY TOTALS</td><td style='padding:6px 10px;'></td>" &
+                  Concat(
+                      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As d,
+                      "<td style='padding:6px 10px;font-weight:800;text-align:center;'>" & Text(Sum(Filter(colSchedLookup, Day = d.Value && StartSlot >= 0), (EndSlot - StartSlot) / 2), "0.0") & "</td>"
+                  ) &
+                  With(
+                      {gt: Sum(Filter(colSchedLookup, StartSlot >= 0), (EndSlot - StartSlot) / 2)},
+                      "<td style='padding:6px 10px;font-weight:800;text-align:center;'>" & Text(gt, "0.0") & "</td><td style='padding:6px 10px;'></td>"
+                  ) &
+                  "</tr></tfoot></table>" &
+                  "</div>"
+              )
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Width: =Parent.Width
+            Y: =If(varSchedSelectedEmail <> "", 252, 108)
+      - recSchedReorderPanel:
+          Control: Rectangle
+          Properties:
+            BorderColor: =varColorBorder
+            BorderThickness: =1
+            Fill: =varColorBgCard
+            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)
+            Visible: =varSchedShowReorder
+            Width: =220
+            X: =Parent.Width - 220
+            Y: =If(varSchedSelectedEmail <> "", 252, 108)
+      - galSchedReorder:
+          Control: Gallery
+          Variant: Vertical
+          Properties:
+            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 258, 114)
+            Items: =Sort(colStaff, SchedSortOrder, SortOrder.Ascending)
+            TemplatePadding: =0
+            TemplateSize: =40
+            Visible: =varSchedShowReorder
+            Width: =216
+            X: =Parent.Width - 218
+            Y: =If(varSchedSelectedEmail <> "", 256, 112)
+          Children:
+            - lblReorderName:
+                Control: Label
+                Properties:
+                  Font: =varAppFont
+                  Height: =20
+                  Size: =11
+                  Text: =ThisItem.MemberName
+                  Width: =130
+                  X: =8
+                  Y: =10
+            - btnReorderUp:
+                Control: Classic/Button
+                Properties:
+                  BorderThickness: =0
+                  Color: =Color.White
+                  Fill: =varColorPrimary
+                  Height: =24
+                  HoverFill: =varColorPrimaryHover
+                  OnSelect: |-
+                    =With(
+                        {
+                            myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
+                            prevRow: Last(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder < ThisItem.SchedSortOrder && Active = true))
+                        },
+                        If(!IsBlank(myRow) && !IsBlank(prevRow),
+                            Patch(Staff, myRow,   {SchedSortOrder: prevRow.SchedSortOrder});
+                            Patch(Staff, prevRow, {SchedSortOrder: myRow.SchedSortOrder})
+                        )
+                    );
+                    Navigate(scrSchedule, ScreenTransition.None)
+                  PressedFill: =varColorPrimaryPressed
+                  Size: =12
+                  Text: ="↑"
+                  Width: =28
+                  X: =148
+                  Y: =8
+            - btnReorderDown:
+                Control: Classic/Button
+                Properties:
+                  BorderThickness: =0
+                  Color: =Color.White
+                  Fill: =varColorPrimary
+                  Height: =24
+                  HoverFill: =varColorPrimaryHover
+                  OnSelect: |-
+                    =With(
+                        {
+                            myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
+                            nextRow: First(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder > ThisItem.SchedSortOrder && Active = true))
+                        },
+                        If(!IsBlank(myRow) && !IsBlank(nextRow),
+                            Patch(Staff, myRow,   {SchedSortOrder: nextRow.SchedSortOrder});
+                            Patch(Staff, nextRow, {SchedSortOrder: myRow.SchedSortOrder})
+                        )
+                    );
+                    Navigate(scrSchedule, ScreenTransition.None)
+                  PressedFill: =varColorPrimaryPressed
+                  Size: =12
+                  Text: ="↓"
+                  Width: =28
+                  X: =180
+                  Y: =8

@@ -1,4 +1,0 @@
-,Title,StaffEmail,Day,ShiftStart,ShiftEnd
-Type,Single line,Single line,Choice,Choice,Choice
-Required,No,Yes,Yes,Yes,Yes
-Purpose,SharePoint default; optional,Links shift to Staff.Member.Email,Monday … Friday,Start label (must exist in app's colTimeSlots),End label

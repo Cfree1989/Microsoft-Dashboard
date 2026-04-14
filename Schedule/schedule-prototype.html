@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Worker Schedule | Spring 2026</title>
+  <style>
+    /* ── Exact CSS from student_schedule_2026-01-23.html ─────── */
+    :root {
+      --bg: #f5f1eb;
+      --surface: #fdf6f0;
+      --text: #3e2723;
+      --muted-text: #5d4037;
+      --border: #d7ccc8;
+      --header-bg: #8d6e63;
+      --header-text: #ffffff;
+      --danger: #d32f2f;
+      --chip-bg: #efebe9;
+      --day-header-bg: #d7ccc8;
+      --legend-bg: #f3e5f5;
+      --grid-bg: #fdf6f0;
+      --slot-h: 28px;
+      --corner-r: 10px;
+      --grid-line: 2px;
+      --min-col-w: 20px;
+      --gutter-min-w: 80px;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .app { display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh; }
+    .app-main { display: grid; grid-template-rows: auto auto; gap: 8px; padding: 8px 16px; }
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: var(--header-bg); color: var(--header-text);
+      border-bottom: 1px solid #5f4f3f; position: sticky; top: 0; z-index: 10;
+    }
+    .header-title { font-weight: 700; letter-spacing: 0.06em; }
+    .header-date  { font-size: 13px; opacity: 0.85; }
+    .schedule-shell {
+      display: grid;
+      grid-template-columns: minmax(var(--gutter-min-w,80px), var(--gutter-min-w,80px)) 1fr minmax(var(--gutter-min-w,80px), var(--gutter-min-w,80px));
+      gap: 8px; align-items: end;
+      overflow-x: auto; overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+    }
+    .time-gutter, .time-gutter-right {
+      background: var(--surface);
+      border: var(--grid-line) solid var(--border);
+      border-radius: var(--corner-r);
+      padding: 0; position: relative;
+      display: grid;
+      grid-template-rows: repeat(16, var(--slot-h));
+      grid-auto-rows: var(--slot-h);
+      align-content: start; gap: 0;
+    }
+    /* Left gutter: sticky so time labels stay visible when scrolling wide schedule horizontally */
+    .time-gutter { position: sticky; left: 0; z-index: 2; }
+    /*
+      Right gutter: MUST NOT use position:sticky + right:0 — at high browser zoom the middle
+      column shrinks and the gutter paints on top of the last day columns. Keep it in normal
+      flow as the third grid column so it always sits after the week grid.
+    */
+    .time-gutter-right { position: relative; left: auto; right: auto; z-index: 0; }
+    .time-gutter .time, .time-gutter-right .time {
+      font-size: 12px; color: var(--muted-text);
+      display: flex; align-items: center; justify-content: center;
+      height: var(--slot-h); white-space: nowrap;
+      box-sizing: border-box;
+      border-top: var(--grid-line) solid var(--border); border-bottom: 0;
+    }
+    .time-gutter .time:first-child, .time-gutter-right .time:first-child { border-top: none; }
+    .week-grid {
+      position: relative; z-index: 1;
+      background: var(--grid-bg); border-radius: var(--corner-r);
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 4px; overflow: visible; min-width: 0;
+    }
+    .day-block {
+      display: grid; grid-template-rows: var(--slot-h) var(--slot-h) auto;
+      border: var(--grid-line) solid var(--border);
+      border-radius: var(--corner-r); overflow: hidden;
+      background: var(--surface);
+    }
+    .day-header {
+      background: var(--day-header-bg); padding: 0 10px;
+      font-weight: 600; border-bottom: var(--grid-line) solid var(--border);
+      letter-spacing: 0.03em; height: var(--slot-h);
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; box-sizing: border-box;
+    }
+    .legend-row {
+      background: var(--legend-bg); padding: 0; border-bottom: 0;
+      display: grid; grid-auto-flow: column;
+      grid-auto-columns: minmax(var(--min-col-w), 1fr);
+      gap: 0; height: var(--slot-h); align-items: center;
+    }
+    .legend-chip {
+      background: var(--chip-bg); color: #ffffff; font-weight: 600;
+      font-size: 11px; border-radius: 6px; padding: 2px 4px;
+      text-align: center; border: var(--grid-line) solid var(--border);
+      overflow: hidden; white-space: nowrap;
+    }
+    .legend-row .legend-chip { border-left: none; }
+    .legend-row .legend-chip:first-child { border-left: 1px solid var(--border); }
+    .schedule-rows {
+      padding: 0; display: grid;
+      grid-template-rows: repeat(16, var(--slot-h)); gap: 0;
+    }
+    .slot-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(var(--min-col-w), 1fr); gap: 0; align-items: stretch; }
+    .slot-cell { border: 0; border-top: var(--grid-line) solid var(--border); border-right: var(--grid-line) solid var(--border); background: #fff; }
+    .slot-row .slot-cell:last-child { border-right: none; }
+    .schedule-rows .slot-row:last-child .slot-cell { border-bottom: none; }
+    .schedule-rows .slot-row:first-child .slot-cell { border-top: var(--grid-line) solid var(--border); }
+    .schedule-rows .slot-row:last-child .slot-cell:first-child { border-bottom-left-radius: var(--corner-r); }
+    .schedule-rows .slot-row:last-child .slot-cell:last-child  { border-bottom-right-radius: var(--corner-r); }
+
+    /* Earth-tone swatches — exact match */
+    .swatch-0  { background: #8B4513; }
+    .swatch-1  { background: #556B2F; }
+    .swatch-2  { background: #CD853F; }
+    .swatch-3  { background: #6B8E23; }
+    .swatch-4  { background: #A0522D; }
+    .swatch-5  { background: #2F4F4F; }
+    .swatch-6  { background: #D2691E; }
+    .swatch-7  { background: #708238; }
+    .swatch-8  { background: #8B0000; }
+    .swatch-9  { background: #B8860B; }
+    .swatch-10 { background: #5F9EA0; }
+    .swatch-11 { background: #704214; }
+    .swatch-12 { background: #CC5500; }
+    .swatch-13 { background: #4A5D23; }
+    .swatch-14 { background: #8B7355; }
+    .swatch-15 { background: #6B4423; }
+    .swatch-16 { background: #DAA520; }
+    .swatch-17 { background: #355E3B; }
+    .swatch-18 { background: #C04000; }
+    .swatch-19 { background: #36454F; }
+    .swatch-20 { background: #9A7B4F; }
+    .swatch-21 { background: #7B3F00; }
+
+    /* Totals */
+    .totals-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .totals-title { font-weight: 700; margin-bottom: 8px; }
+    table#totalsTable { width: 100%; border-collapse: collapse; }
+    table#totalsTable th, table#totalsTable td { border: 1px solid var(--border); padding: 8px 10px; font-size: 14px; text-align: center; }
+    table#totalsTable th { background: var(--legend-bg); }
+    table#totalsTable th:first-child, table#totalsTable td:first-child { text-align: left; }
+    table#totalsTable tfoot td { background: #e0d6c8; font-weight: 700; text-align: center; }
+    table#totalsTable tfoot td:first-child { text-align: left; }
+    .over { color: var(--danger); font-weight: 700; }
+
+    .app-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; font-size: 12px;
+      border-top: 1px solid var(--border);
+      background: var(--surface); color: var(--muted-text);
+    }
+
+    @media print {
+      @page { size: letter landscape; margin: 0.5in; }
+      html, body { background: #fff !important; }
+      .app-header { position: static; }
+      .app-main { padding: 0; }
+      .schedule-shell { overflow: visible !important; grid-template-columns: minmax(45px,55px) 1fr minmax(45px,55px); }
+      .time-gutter, .time-gutter-right { position: static; }
+    }
+  </style>
+</head>
+<body>
+<div class="app" id="appRoot">
+  <header class="app-header">
+    <span class="header-title" id="headerTitle">STUDENT WORKER SCHEDULE | Spring 2026</span>
+    <span class="header-date" id="headerDate"></span>
+  </header>
+
+  <main class="app-main">
+    <div class="schedule-shell" id="scheduleShell">
+      <aside class="time-gutter"       id="leftGutter"  aria-label="Time"></aside>
+      <div  class="week-grid"          id="weekGrid"    role="grid"></div>
+      <aside class="time-gutter-right" id="rightGutter" aria-label="Time"></aside>
+    </div>
+
+    <div class="totals-section">
+      <div class="totals-title">Hours Summary</div>
+      <table id="totalsTable">
+        <thead><tr>
+          <th>Student</th><th>Role</th>
+          <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th>
+          <th>Total</th><th>Max</th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <span>Read-only view · data from Spring 2026</span>
+    <span id="footerDate"></span>
+  </footer>
+</div>
+
+<!-- ── Embedded schedule data (Spring 2026) ─────────────────── -->
+<script id="embedded-data" type="application/json">
+{"version":"1.0.0","metadata":{"exportedAt":"2026-01-23T16:55:17.706Z"},"settings":{"headerTitle":"STUDENT WORKER SCHEDULE | Spring 2026"},"students":[{"id":"stu-1757685553118","name":"Colin Frey","code":"CF","role":"WS","colorIndex":5},{"id":"stu-1757685571487","name":"Calcea Johnson","code":"CJ","role":"WS","colorIndex":2},{"id":"stu-1757685590637","name":"Devin Beltz","code":"DB","role":"PA","colorIndex":4},{"id":"stu-1757685594925","name":"Lauren Vaught","code":"LV","role":"PA","colorIndex":5},{"id":"stu-1757685602979","name":"Michael Vasquez","code":"MV","role":"WS","colorIndex":6},{"id":"stu-1757685610631","name":"Heidi Faustermann","code":"HF","role":"PA","colorIndex":7},{"id":"stu-1757685617974","name":"Ian Robertson","code":"IR","role":"WS","colorIndex":8},{"id":"stu-1757685644178","name":"Jacob Mills","code":"JM","role":"GA","colorIndex":10},{"id":"stu-1757685668058","name":"Sarah Bedel","code":"SBe","role":"PA","colorIndex":11},{"id":"stu-1759326505299","name":"Madison Lumpkin","code":"ML","role":"PA","colorIndex":12},{"id":"stu-1767628700784","name":"Susan Xiao","code":"SX","role":"PA","colorIndex":11},{"id":"stu-1767628720844","name":"Fran Hernandez","code":"FH","role":"PA","colorIndex":12},{"id":"stu-1767904367521","name":"Emiliano Owsly","code":"EO","role":"PA","colorIndex":0},{"id":"stu-1768315193050","name":"Will Milam","code":"WM","role":"GA","colorIndex":1},{"id":"stu-1768324985640","name":"Scottie Burgess","code":"SB","role":"GA","colorIndex":3}],"schedule":{"0|10|stu-1757685668058":true,"0|11|stu-1757685668058":true,"0|12|stu-1757685668058":true,"0|13|stu-1757685668058":true,"0|14|stu-1757685668058":true,"0|15|stu-1757685668058":true,"1|0|stu-1757685668058":true,"1|1|stu-1757685668058":true,"1|2|stu-1757685668058":true,"1|3|stu-1757685668058":true,"1|4|stu-1757685668058":true,"3|4|stu-1757685668058":true,"3|3|stu-1757685668058":true,"3|2|stu-1757685668058":true,"3|1|stu-1757685668058":true,"3|0|stu-1757685668058":true,"0|3|stu-1757685590637":true,"0|4|stu-1757685590637":true,"2|13|stu-1757685590637":true,"2|14|stu-1757685590637":true,"2|15|stu-1757685590637":true,"4|13|stu-1757685590637":true,"4|14|stu-1757685590637":true,"4|15|stu-1757685590637":true,"0|3|stu-1757685602979":true,"0|4|stu-1757685602979":true,"0|5|stu-1757685602979":true,"0|6|stu-1757685602979":true,"0|7|stu-1757685602979":true,"0|8|stu-1757685602979":true,"2|3|stu-1757685602979":true,"2|4|stu-1757685602979":true,"2|5|stu-1757685602979":true,"2|6|stu-1757685602979":true,"2|7|stu-1757685602979":true,"2|8|stu-1757685602979":true,"4|1|stu-1757685602979":true,"4|2|stu-1757685602979":true,"4|3|stu-1757685602979":true,"4|4|stu-1757685602979":true,"4|5|stu-1757685602979":true,"4|6|stu-1757685602979":true,"4|7|stu-1757685602979":true,"4|8|stu-1757685602979":true,"4|12|stu-1757685602979":true,"4|11|stu-1757685602979":true,"4|10|stu-1757685602979":true,"4|9|stu-1757685602979":true,"0|0|stu-1757685553118":true,"0|1|stu-1757685553118":true,"0|2|stu-1757685553118":true,"0|3|stu-1757685553118":true,"0|8|stu-1757685553118":true,"0|9|stu-1757685553118":true,"0|12|stu-1757685553118":true,"0|13|stu-1757685553118":true,"2|0|stu-1757685553118":true,"2|1|stu-1757685553118":true,"2|2|stu-1757685553118":true,"2|3|stu-1757685553118":true,"2|8|stu-1757685553118":true,"2|9|stu-1757685553118":true,"2|12|stu-1757685553118":true,"2|13|stu-1757685553118":true,"4|0|stu-1757685553118":true,"4|1|stu-1757685553118":true,"4|2|stu-1757685553118":true,"4|3|stu-1757685553118":true,"0|10|stu-1757685553118":true,"0|11|stu-1757685553118":true,"2|11|stu-1757685553118":true,"2|10|stu-1757685553118":true,"0|6|stu-1759326505299":true,"0|7|stu-1759326505299":true,"0|11|stu-1759326505299":true,"0|10|stu-1759326505299":true,"0|9|stu-1759326505299":true,"0|8|stu-1759326505299":true,"2|6|stu-1759326505299":true,"2|7|stu-1759326505299":true,"2|11|stu-1759326505299":true,"2|10|stu-1759326505299":true,"2|9|stu-1759326505299":true,"2|8|stu-1759326505299":true,"0|2|stu-1757685610631":true,"0|3|stu-1757685610631":true,"0|4|stu-1757685610631":true,"0|5|stu-1757685610631":true,"1|12|stu-1757685610631":true,"1|13|stu-1757685610631":true,"1|14|stu-1757685610631":true,"1|15|stu-1757685610631":true,"2|2|stu-1757685610631":true,"2|3|stu-1757685610631":true,"2|4|stu-1757685610631":true,"2|5|stu-1757685610631":true,"4|2|stu-1757685610631":true,"4|3|stu-1757685610631":true,"4|4|stu-1757685610631":true,"4|5|stu-1757685610631":true,"0|6|stu-1757685594925":true,"0|7|stu-1757685594925":true,"2|6|stu-1757685594925":true,"2|7|stu-1757685594925":true,"0|14|stu-1757685594925":true,"0|15|stu-1757685594925":true,"2|14|stu-1757685594925":true,"2|15|stu-1757685594925":true,"1|0|stu-1757685594925":true,"3|0|stu-1757685594925":true,"0|2|stu-1767628700784":true,"0|3|stu-1767628700784":true,"0|8|stu-1767628700784":true,"0|9|stu-1767628700784":true,"0|10|stu-1767628700784":true,"0|11|stu-1767628700784":true,"2|2|stu-1767628700784":true,"2|3|stu-1767628700784":true,"2|8|stu-1767628700784":true,"2|9|stu-1767628700784":true,"2|10|stu-1767628700784":true,"2|11|stu-1767628700784":true,"4|2|stu-1767628700784":true,"4|3|stu-1767628700784":true,"4|7|stu-1759326505299":true,"4|8|stu-1759326505299":true,"0|14|stu-1767628720844":true,"0|15|stu-1767628720844":true,"2|14|stu-1767628720844":true,"2|15|stu-1767628720844":true,"3|10|stu-1767628720844":true,"3|11|stu-1767628720844":true,"3|12|stu-1767628720844":true,"3|13|stu-1767628720844":true,"3|14|stu-1767628720844":true,"3|15|stu-1767628720844":true,"4|14|stu-1767628720844":true,"4|15|stu-1767628720844":true,"2|5|stu-1757685571487":true,"2|6|stu-1757685571487":true,"2|7|stu-1757685571487":true,"2|8|stu-1757685571487":true,"2|12|stu-1757685571487":true,"2|13|stu-1757685571487":true,"2|15|stu-1757685571487":true,"2|14|stu-1757685571487":true,"3|10|stu-1757685571487":true,"3|11|stu-1757685571487":true,"3|12|stu-1757685571487":true,"3|13|stu-1757685571487":true,"3|14|stu-1757685571487":true,"3|15|stu-1757685571487":true,"4|8|stu-1757685571487":true,"4|9|stu-1757685571487":true,"3|0|stu-1759326505299":true,"1|0|stu-1759326505299":true,"1|0|stu-1768315193050":true,"1|1|stu-1768315193050":true,"1|2|stu-1768315193050":true,"1|3|stu-1768315193050":true,"1|4|stu-1768315193050":true,"1|5|stu-1768315193050":true,"1|6|stu-1768315193050":true,"1|7|stu-1768315193050":true,"1|8|stu-1768315193050":true,"1|9|stu-1768315193050":true,"1|10|stu-1768315193050":true,"1|11|stu-1768315193050":true,"3|0|stu-1768315193050":true,"3|1|stu-1768315193050":true,"3|2|stu-1768315193050":true,"3|3|stu-1768315193050":true,"3|4|stu-1768315193050":true,"3|5|stu-1768315193050":true,"3|6|stu-1768315193050":true,"3|7|stu-1768315193050":true,"3|8|stu-1768315193050":true,"3|9|stu-1768315193050":true,"3|10|stu-1768315193050":true,"3|11|stu-1768315193050":true,"0|5|stu-1768324985640":true,"0|6|stu-1768324985640":true,"1|9|stu-1757685590637":true,"1|8|stu-1757685590637":true,"1|7|stu-1757685590637":true,"3|9|stu-1757685590637":true,"3|8|stu-1757685590637":true,"3|7|stu-1757685590637":true,"1|12|stu-1757685571487":true,"1|13|stu-1757685571487":true,"1|10|stu-1757685644178":true,"1|11|stu-1757685644178":true,"1|12|stu-1757685644178":true,"1|13|stu-1757685644178":true,"3|10|stu-1757685644178":true,"3|11|stu-1757685644178":true,"3|12|stu-1757685644178":true,"3|13|stu-1757685644178":true,"1|4|stu-1767904367521":true,"1|5|stu-1767904367521":true,"1|6|stu-1767904367521":true,"1|7|stu-1767904367521":true,"1|8|stu-1767904367521":true,"1|9|stu-1767904367521":true,"1|10|stu-1767904367521":true,"1|11|stu-1767904367521":true,"3|1|stu-1767904367521":true,"3|2|stu-1767904367521":true,"3|3|stu-1767904367521":true,"3|4|stu-1767904367521":true,"3|5|stu-1767904367521":true,"3|12|stu-1767904367521":true,"3|13|stu-1767904367521":true,"3|14|stu-1767904367521":true,"3|15|stu-1767904367521":true,"0|0|stu-1768315193050":true,"0|1|stu-1768315193050":true,"0|2|stu-1768315193050":true,"0|3|stu-1768315193050":true,"0|4|stu-1768315193050":true,"0|5|stu-1768315193050":true,"0|6|stu-1768315193050":true,"0|7|stu-1768315193050":true,"2|0|stu-1768315193050":true,"2|1|stu-1768315193050":true,"2|2|stu-1768315193050":true,"2|3|stu-1768315193050":true,"2|4|stu-1768315193050":true,"2|5|stu-1768315193050":true,"2|6|stu-1768315193050":true,"2|7|stu-1768315193050":true,"1|13|stu-1767628720844":true,"1|14|stu-1767628720844":true,"1|15|stu-1767628720844":true,"3|9|stu-1767628720844":true,"1|3|stu-1757685617974":true,"1|4|stu-1757685617974":true,"1|5|stu-1757685617974":true,"1|6|stu-1757685617974":true,"1|7|stu-1757685617974":true,"1|8|stu-1757685617974":true,"1|9|stu-1757685617974":true,"1|10|stu-1757685617974":true,"1|11|stu-1757685617974":true,"1|12|stu-1757685617974":true,"1|13|stu-1757685617974":true,"1|14|stu-1757685617974":true,"4|2|stu-1757685617974":true,"4|3|stu-1757685617974":true,"4|4|stu-1757685617974":true,"4|12|stu-1757685617974":true,"4|13|stu-1757685617974":true,"4|14|stu-1757685617974":true,"4|15|stu-1757685617974":true,"4|3|stu-1757685590637":true,"4|4|stu-1757685590637":true},"orderPerDay":{"0":["stu-1757685553118","stu-1768315193050","stu-1757685602979","stu-1759326505299","stu-1767628700784","stu-1757685610631","stu-1757685668058","stu-1757685590637","stu-1757685594925","stu-1768324985640","stu-1767628720844","stu-1757685644178","stu-1757685571487","stu-1767904367521","stu-1757685617974"],"1":["stu-1768315193050","stu-1757685668058","stu-1757685594925","stu-1759326505299","stu-1757685617974","stu-1767904367521","stu-1757685590637","stu-1757685571487","stu-1757685644178","stu-1757685610631","stu-1767628720844","stu-1757685553118","stu-1757685602979","stu-1767628700784","stu-1768324985640"],"2":["stu-1768315193050","stu-1757685553118","stu-1757685602979","stu-1759326505299","stu-1757685594925","stu-1757685610631","stu-1767628700784","stu-1757685571487","stu-1757685590637","stu-1767628720844","stu-1757685644178","stu-1757685668058","stu-1767904367521","stu-1768324985640","stu-1757685617974"],"3":["stu-1768315193050","stu-1757685668058","stu-1757685594925","stu-1759326505299","stu-1767904367521","stu-1767628720844","stu-1757685571487","stu-1757685644178","stu-1757685590637","stu-1757685553118","stu-1757685602979","stu-1757685610631","stu-1757685617974","stu-1767628700784","stu-1768324985640"],"4":["stu-1757685553118","stu-1757685602979","stu-1757685610631","stu-1767628700784","stu-1757685617974","stu-1757685590637","stu-1767628720844","stu-1759326505299","stu-1757685571487","stu-1757685668058","stu-1757685594925","stu-1757685644178","stu-1767904367521","stu-1768315193050","stu-1768324985640"]}}
+</script>
+
+<script>
+(function () {
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const SLOT_LABELS = [
+    '8:30-9:00','9:00-9:30','9:30-10:00','10:00-10:30','10:30-11:00','11:00-11:30',
+    '11:30-12:00','12:00-12:30','12:30-1:00','1:00-1:30','1:30-2:00','2:00-2:30',
+    '2:30-3:00','3:00-3:30','3:30-4:00','4:00-4:30'
+  ];
+  const MAX_HRS = { GA: 20, WS: 12, PA: 6 };
+
+  // Load embedded data
+  const data     = JSON.parse(document.getElementById('embedded-data').textContent);
+  const students = data.students || [];
+  const schedule = data.schedule || {};
+  const order    = data.orderPerDay || {};
+  const byId     = new Map(students.map(s => [String(s.id), s]));
+
+  // Ordered columns for each day
+  function colsForDay(di) {
+    const ids = (order[String(di)] || []).map(String);
+    const ordered = ids.map(id => byId.get(id)).filter(Boolean);
+    students.forEach(s => { if (!ids.includes(String(s.id))) ordered.push(s); });
+    return ordered;
+  }
+
+  // ── Render gutters ──────────────────────────────────────────
+  const lg = document.getElementById('leftGutter');
+  const rg = document.getElementById('rightGutter');
+  SLOT_LABELS.forEach(lbl => {
+    [lg, rg].forEach(g => {
+      const d = document.createElement('div');
+      d.className = 'time';
+      d.textContent = lbl;
+      g.appendChild(d);
+    });
+  });
+
+  // Measure widest label → set --gutter-min-w so text never wraps
+  requestAnimationFrame(() => {
+    try {
+      const maxW = Math.ceil(Math.max(...Array.from(lg.querySelectorAll('.time')).map(t => t.getBoundingClientRect().width)));
+      const needed = Math.max(80, maxW + 14);
+      document.documentElement.style.setProperty('--gutter-min-w', needed + 'px');
+    } catch(e) {}
+  });
+
+  // ── Render week grid ────────────────────────────────────────
+  const wg = document.getElementById('weekGrid');
+  let maxCols = 0;
+
+  DAYS.forEach((day, di) => {
+    const cols = colsForDay(di);
+    maxCols = Math.max(maxCols, cols.length);
+
+    const block = document.createElement('div');
+    block.className = 'day-block';
+
+    // Day header
+    const dh = document.createElement('div');
+    dh.className = 'day-header';
+    dh.textContent = day.toUpperCase();
+    block.appendChild(dh);
+
+    // Legend row
+    const legend = document.createElement('div');
+    legend.className = 'legend-row';
+    cols.forEach(s => {
+      const chip = document.createElement('div');
+      chip.className = `legend-chip swatch-${s.colorIndex ?? 0}`;
+      chip.title = `${s.name} (${s.role})`;
+      chip.textContent = s.code || '?';
+      legend.appendChild(chip);
+    });
+    block.appendChild(legend);
+
+    // Schedule rows (16 time slots)
+    const rows = document.createElement('div');
+    rows.className = 'schedule-rows';
+    for (let si = 0; si < 16; si++) {
+      const row = document.createElement('div');
+      row.className = 'slot-row';
+      cols.forEach(s => {
+        const cell = document.createElement('div');
+        const key  = `${di}|${si}|${s.id}`;
+        cell.className = schedule[key] ? `slot-cell swatch-${s.colorIndex ?? 0}` : 'slot-cell';
+        row.appendChild(cell);
+      });
+      rows.appendChild(row);
+    }
+    block.appendChild(rows);
+    wg.appendChild(block);
+  });
+
+  // Set week-grid min-width so columns are never crushed (mirrors original app)
+  requestAnimationFrame(() => {
+    try {
+      const root   = document.documentElement;
+      const colW   = parseInt(root.style.getPropertyValue('--min-col-w') || getComputedStyle(root).getPropertyValue('--min-col-w')) || 20;
+      const gutter = parseInt(root.style.getPropertyValue('--gutter-min-w') || getComputedStyle(root).getPropertyValue('--gutter-min-w')) || 80;
+      const minW   = (maxCols * colW * 5) + (4 * 4) + (gutter * 2) + 24;
+      wg.style.minWidth = Math.max(900, minW) + 'px';
+    } catch(e) {}
+  });
+
+  // ── Totals table ────────────────────────────────────────────
+  function computeHours(sid, di) {
+    let h = 0;
+    for (let si = 0; si < 16; si++) if (schedule[`${di}|${si}|${sid}`]) h += 0.5;
+    return h;
+  }
+
+  const tbody = document.querySelector('#totalsTable tbody');
+  const tfoot = document.querySelector('#totalsTable tfoot');
+
+  const dailyTotals = [0,0,0,0,0];
+  let grand = 0;
+
+  const rows = students.map(s => {
+    const days = DAYS.map((_, di) => computeHours(s.id, di));
+    const tot  = days.reduce((a,b)=>a+b,0);
+    days.forEach((h,di) => { dailyTotals[di] += h; });
+    grand += tot;
+    return { s, days, tot };
+  }).sort((a,b) => b.tot - a.tot);
+
+  const fmt = h => h.toFixed(2);
+  rows.forEach(({ s, days, tot }) => {
+    const max  = MAX_HRS[s.role] || 6;
+    const tr   = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.name}</td>
+      <td style="text-align:center">${s.role}</td>
+      ${days.map(h => `<td style="text-align:center">${fmt(h)}</td>`).join('')}
+      <td style="text-align:center" class="${tot > max ? 'over' : ''}">${fmt(tot)}</td>
+      <td style="text-align:center">${max}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const ftd = document.createElement('tr');
+  ftd.innerHTML = `
+    <td>DAILY TOTALS</td><td></td>
+    ${dailyTotals.map(h => `<td style="text-align:center">${fmt(h)}</td>`).join('')}
+    <td style="text-align:center">${fmt(grand)}</td><td></td>`;
+  tfoot.appendChild(ftd);
+
+  // ── Dates ───────────────────────────────────────────────────
+  const today = new Date().toLocaleDateString('en-US', { month:'numeric', day:'numeric', year:'numeric' });
+  document.getElementById('headerDate').textContent = today;
+  document.getElementById('footerDate').textContent = today;
+  const title = data.settings && data.settings.headerTitle;
+  if (title) document.getElementById('headerTitle').textContent = title;
+
+  // ── Fit slot height to viewport ─────────────────────────────
+  function fitHeight() {
+    try {
+      const headerH = document.querySelector('.app-header').getBoundingClientRect().height;
+      const footerH = document.querySelector('.app-footer').getBoundingClientRect().height;
+      const vp = window.innerHeight || 800;
+      const available = vp - headerH - footerH - 16 - 16; // padding
+      let slotH = Math.floor(available / 18); // 18 rows per day block
+      slotH = Math.max(22, Math.min(36, slotH));
+      document.documentElement.style.setProperty('--slot-h', slotH + 'px');
+    } catch(e) {}
+  }
+  fitHeight();
+  window.addEventListener('resize', fitHeight);
+})();
+</script>
+</body>
+</html>
