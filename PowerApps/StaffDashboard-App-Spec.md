@@ -403,11 +403,9 @@ Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
 // === SLICING COMPUTERS ===
-// Collection for slicing computer dropdown in approval modal (local only — no SharePoint call)
-ClearCollect(colSlicingComputers, 
-    {Name: "Computer 1"},
-    {Name: "Computer 2"}
-);
+// Loaded from SharePoint choices — adding/renaming a computer in the SlicedOnComputer column
+// automatically updates this dropdown without any code change.
+ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
 // === STATUS DEFINITIONS ===
 // All possible statuses in the system
@@ -497,6 +495,20 @@ Concurrent(
     ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
     ClearCollect(colAllBuildPlates, BuildPlates),
     ClearCollect(colAllPayments, Payments)
+);
+
+// Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
+ClearCollect(colBuildPlateSummary,
+    ForAll(
+        Distinct(colAllBuildPlates, RequestID) As grp,
+        {
+            RequestID: grp.Value,
+            TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+            CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+            ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+            ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+        }
+    )
 );
 
 // Check if current user is a staff member (uses colStaff loaded above)
@@ -694,6 +706,7 @@ Set(varLoadingMessage, "")
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
+| `colBuildPlateSummary` | Pre-aggregated build plate counts per `RequestID` (`TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`) — rebuilt after every `colAllBuildPlates` refresh | Table |
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
@@ -1947,7 +1960,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 
 | Property | Value |
 |----------|-------|
-| Text | `If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))) > 0, " · R " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint")))), ""), "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done")` |
+| Text | `With({wSummary: LookUp(colBuildPlateSummary, RequestID = ThisItem.ID)}, If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0)) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(Coalesce(wSummary.ReprintTotal, 0) > 0, " · R " & Text(Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.ReprintTotal, 0)), ""), "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0) + Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.TotalCount, 0) + Coalesce(wSummary.ReprintTotal, 0)) & " done"))` |
 | X | `8` |
 | Y | `0` |
 | Width | `100` |
@@ -1957,7 +1970,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 | Color | `varColorTextMuted` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-> 💡 **Formula:** Before labels lock, counts completed/picked-up plates against the live total, such as `🖨 3/5 done`. After labels lock, it preserves the original denominator and shows reprints separately, such as `🖨 3/5 done · R 0/1`.
+> 💡 **Formula:** Uses a single `LookUp` into `colBuildPlateSummary` (pre-aggregated at each data refresh) instead of scanning `colAllBuildPlates` inline per card. Before labels lock, shows completed plates against the live total, such as `🖨 3/5 done`. After labels lock, it preserves the original denominator and shows reprints separately, such as `🖨 3/5 done · R 0/1`.
 >
 > For single-plate jobs, this should read `🖨 0/1 done` while queued/printing and `🖨 1/1 done` once the plate is completed or picked up. This is preferred over hiding the summary for one-plate jobs.
 
@@ -4306,6 +4319,7 @@ If(
     );
     // Refresh plate collections for job cards
     ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
     
     // Close modal and reset
     Set(varShowApprovalModal, 0);
@@ -7565,6 +7579,7 @@ If(
         Refresh(Payments)
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
     ClearCollect(colAllPayments, Payments);
     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
@@ -9037,6 +9052,7 @@ If(
         Refresh(Payments)
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
     ClearCollect(colAllPayments, Payments);
 
     ForAll(
@@ -9614,6 +9630,7 @@ If(
         )
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
     ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
     Notify("Machine updated", NotificationType.Success, 2000)
 );
@@ -9758,7 +9775,8 @@ ClearCollect(colBuildPlatesIndexed,
         )
     )
 );
-ClearCollect(colAllBuildPlates, BuildPlates)
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
 ```
 
 > 💡 **Parent status gate:** Staff should not mark an individual plate as `Printing` until the parent request itself has been moved to `Printing` from the job card. This keeps plate-level progress aligned with the request's overall status.
@@ -9905,7 +9923,8 @@ ClearCollect(colBuildPlatesIndexed,
         )
     )
 );
-ClearCollect(colAllBuildPlates, BuildPlates)
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
 ```
 
 > 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
@@ -9991,7 +10010,8 @@ If(
             )
         )
     );
-    ClearCollect(colAllBuildPlates, BuildPlates)
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
 )
 ```
 
@@ -10176,6 +10196,7 @@ If(
         )
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
     Notify("Plate added", NotificationType.Success, 2000)
 );
 
@@ -11746,6 +11767,7 @@ Concurrent(
     Refresh(Payments)
 );
 ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
 ClearCollect(colAllPayments, Payments)
 ```
 
@@ -13701,6 +13723,7 @@ Concurrent(
 
 // Reload local collections used by job-card summaries
 ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
 ClearCollect(colAllPayments, Payments);
 
 // Reload NeedsAttention items into local collection (avoids delegation)
