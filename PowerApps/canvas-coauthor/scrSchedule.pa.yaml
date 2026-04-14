@@ -6,7 +6,7 @@ Screens:
         =ClearCollect(
             colStaff,
             ForAll(
-                Filter(Staff, Active = true),
+                Filter(Staff, Active = true && Role.Value <> "Manager"),
                 {
                     StaffID:        ID,
                     MemberName:     Member.DisplayName,
@@ -56,7 +56,8 @@ Screens:
             )
         );
         Set(varSchedSelectedEmail, "");
-        Clear(colEditShifts)
+        Clear(colEditShifts);
+        Reset(drpSchedName)
     Children:
       - recSchedHeader:
           Control: Rectangle
@@ -92,16 +93,15 @@ Screens:
       - lblSchedTitle:
           Control: Label
           Properties:
-            Align: =Align.Center
             Color: =Color.White
             Font: =varAppFont
             FontWeight: =FontWeight.Semibold
-            Height: =26
-            Size: =14
+            Height: =30
+            Size: =18
             Text: ="Schedule"
             Width: =300
-            X: =(Parent.Width - 300) / 2
-            Y: =13
+            X: =20
+            Y: =11
       - recSchedEditBar:
           Control: Rectangle
           Properties:
@@ -112,16 +112,28 @@ Screens:
             Width: =Parent.Width
             Y: =52
       - drpSchedName:
-          Control: Classic/DropDown
+          Control: Classic/ComboBox
           Properties:
             BorderColor: =varInputBorderColor
+            BorderThickness: =varInputBorderThickness
+            ChevronBackground: =varChevronBackground
+            ChevronDisabledBackground: =varChevronBackground
+            ChevronDisabledFill: =varChevronBackground
+            ChevronFill: =varChevronFill
+            ChevronHoverBackground: =varChevronHoverBackground
+            ChevronHoverFill: =varChevronHoverFill
+            DefaultSelectedItems: =Blank()
+            DisplayFields: =["MemberName"]
             Font: =varAppFont
-            Height: =32
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Height: =36
+            HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Select Your Name"
+            IsSearchable: =false
             Items: =Sort(colStaff, MemberName, SortOrder.Ascending)
-            Items.Value: =AidType
             OnChange: |-
               =If(
-                  IsBlank(drpSchedName.Selected) || drpSchedName.Selected.MemberName = "Select...",
+                  IsBlank(drpSchedName.Selected),
                   Set(varSchedSelectedEmail, "");
                   Clear(colEditShifts),
                   With(
@@ -145,10 +157,16 @@ Screens:
                       )
                   )
               )
+            PressedColor: =varDropdownPressedColor
+            PressedFill: =varDropdownPressedFill
+            SearchFields: =["MemberName"]
+            SelectMultiple: =false
+            SelectionColor: =varDropdownSelectionColor
+            SelectionFill: =varDropdownSelectionFill
             Size: =varInputFontSize
-            Width: =180
+            Width: =200
             X: =16
-            Y: =64
+            Y: =62
       - lblSchedAidInfo:
           Control: Label
           Properties:
@@ -411,32 +429,33 @@ Screens:
                   },
                   "<div style='overflow:auto;width:100%;height:100%;box-sizing:border-box;background:#f5f1eb;padding:8px;font-family:Segoe UI,Arial,sans-serif;font-size:11px;'>" &
                   "<table style='border-collapse:separate;border-spacing:8px 0;'><tr>" &
-                  "<td style='vertical-align:bottom;width:80px;padding:0;'>" &
+                  "<td style='vertical-align:top;width:80px;padding:0;'>" &
+                  "<div style='height:59px;'></div>" &
                   "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
                   Concat(
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H+1) & "px;line-height:" & Text(H+1) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
                   ) &
                   "</div></td>" &
                   "<td style='vertical-align:top;padding:0;'>" &
-                  "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;table-layout:fixed;'><tr>" &
+                  "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;min-width:1500px;table-layout:fixed;'><tr>" &
                   Concat(
                       ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
                       "<td style='vertical-align:top;padding:0;'>" &
                       "<div style='border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
-                      "<table cellpadding='0' style='border-collapse:collapse;width:100%;table-layout:fixed;'>" &
+                      "<table cellpadding='0' style='border-collapse:separate;border-spacing:1px;background:#e8e0d8;width:100%;table-layout:fixed;'>" &
                       "<tr><th colspan='" & nc & "' style='height:" & Text(H) & "px;background:#d7ccc8;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;'>" & Upper(dn.Value) & "</th></tr>" &
                       "<tr>" &
                       Concat(
                           st As s,
                           With(
                               {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
-                              "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;overflow:hidden;white-space:nowrap;border-top:2px solid #d7ccc8;'>" &
+                              "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;overflow:hidden;white-space:nowrap;'>" &
                               Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1) &
                               "</td>"
                           )
@@ -446,7 +465,7 @@ Screens:
                           colTimeSlots As slot,
                           With(
                               {si: slot.Idx},
-                              "<tr style='height:" & Text(H) & "px;border-top:1px solid " & If(si = 7, "#b8a898", "#e8e0d8") & ";'>" &
+                              "<tr style='height:" & Text(H) & "px;'>" &
                               Concat(
                                   st As s,
                                   With(
@@ -466,13 +485,14 @@ Screens:
                       "</table></div></td>"
                   ) &
                   "</tr></table></td>" &
-                  "<td style='vertical-align:bottom;width:80px;padding:0;'>" &
+                  "<td style='vertical-align:top;width:80px;padding:0;'>" &
+                  "<div style='height:59px;'></div>" &
                   "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
                   Concat(
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H+1) & "px;line-height:" & Text(H+1) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
