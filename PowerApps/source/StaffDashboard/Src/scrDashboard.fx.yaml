@@ -1,4 +1,5 @@
 scrDashboard As screen:
+    ContentLanguage: =""
     OnVisible: |-
         =Set(varActor, {
             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
@@ -10,11 +11,77 @@ scrDashboard As screen:
             Picture: ""
         })
 
+    grpSoundNotification As group:
+        Height: =5
+        minimumHeight: =5
+        minimumWidth: =5
+        Visible: =true
+        Width: =5
+        X: =0
+        Y: =0
+        ZIndex: =1
+
+    tmrAutoRefresh As timer:
+        AutoStart: =true
+        Duration: =varRefreshInterval
+        OnTimerEnd: |-
+            =// Refresh data from SharePoint concurrently
+            Concurrent(
+                Refresh(PrintRequests),
+                Refresh(BuildPlates),
+                Refresh(Payments)
+            );
+            
+            // Reload local collections used by job-card summaries
+            ClearCollect(colAllBuildPlates, BuildPlates);
+            ClearCollect(colAllPayments, Payments);
+            ClearCollect(colBuildPlateSummary,
+                ForAll(
+                    Distinct(colAllBuildPlates, RequestID) As grp,
+                    {
+                        RequestID: grp.Value,
+                        TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                        CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                        ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                        ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                    }
+                )
+            );
+            
+            // Reload NeedsAttention items into local collection (avoids delegation)
+            ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+            
+            // Count from local collection (no delegation warning)
+            Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+            
+            // If count increased, play notification sound
+            If(
+                varCurrentAttentionCount > varPrevAttentionCount,
+                Reset(audNotification);
+                Set(varPlaySound, true)
+            );
+            
+            // Update previous count for next comparison
+            Set(varPrevAttentionCount, varCurrentAttentionCount)
+        Repeat: =true
+        Visible: =false
+        X: =144
+        Y: =652
+        ZIndex: =2
+
+    audNotification As audioPlayback:
+        Media: =notification_chime
+        OnEnd: =Set(varPlaySound, false)
+        Start: =varPlaySound
+        Visible: =false
+        Y: =703
+        ZIndex: =3
+
     recHeader As rectangle:
         Fill: =varColorHeader
         Height: =55
         Width: =Parent.Width
-        ZIndex: =3
+        ZIndex: =4
 
     lblAppTitle As label:
         Color: =Color.White
@@ -26,7 +93,7 @@ scrDashboard As screen:
         Width: =300
         X: =20
         Y: =11
-        ZIndex: =4
+        ZIndex: =5
 
     btnNavAnalytics As button:
         BorderColor: =Color.Transparent
@@ -48,7 +115,7 @@ scrDashboard As screen:
         Width: =58
         X: =1278
         Y: =15
-        ZIndex: =5
+        ZIndex: =6
 
     lblEmptyState As label:
         Align: =Align.Center
@@ -61,9 +128,10 @@ scrDashboard As screen:
         Width: =400
         X: =(Parent.Width - 400) / 2
         Y: =350
-        ZIndex: =6
+        ZIndex: =7
 
     galJobCards As gallery.galleryVertical:
+        '#CopilotOverlayLabel': ="Filtered"
         DelayItemLoading: =true
         Height: =Parent.Height - 160
         Items: |-
@@ -110,7 +178,17 @@ scrDashboard As screen:
         Width: =Parent.Width
         WrapCount: =4
         Y: =160
-        ZIndex: =7
+        ZIndex: =8
+
+        Details As group:
+            Height: =5
+            minimumHeight: =5
+            minimumWidth: =5
+            Visible: =true
+            Width: =5
+            X: =0
+            Y: =0
+            ZIndex: =1
 
         recCardBackground As rectangle:
             BorderColor: =If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorBorderLight))
@@ -327,11 +405,24 @@ scrDashboard As screen:
             FontWeight: =FontWeight.Semibold
             Height: =16
             Size: =10
-            Text: =If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))) > 0, " · R " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint")))), ""), "🖨 " & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Or(Status.Value = "Completed", Status.Value = "Picked Up")))) & "/" & Text(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID))) & " done")
+            Text: |-
+                =With(
+                    {wSummary: LookUp(colBuildPlateSummary, RequestID = ThisItem.ID)},
+                    If(
+                        Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0,
+                        "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0)) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" &
+                        If(
+                            Coalesce(wSummary.ReprintTotal, 0) > 0,
+                            " · R " & Text(Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.ReprintTotal, 0)),
+                            ""
+                        ),
+                        "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0) + Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.TotalCount, 0) + Coalesce(wSummary.ReprintTotal, 0)) & " done"
+                    )
+                )
             Width: =206
             X: =84
             Y: =169
-            ZIndex: =13
+            ZIndex: =12
 
         btnBuildPlates As button:
             BorderColor: =Color.Transparent
@@ -389,7 +480,7 @@ scrDashboard As screen:
             Width: =67
             X: =13
             Y: =167
-            ZIndex: =14
+            ZIndex: =13
 
         btnViewNotes As button:
             BorderColor: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(184, 0, 0, 1), varColorPrimary)
@@ -414,9 +505,143 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =117
             Y: =350
+            ZIndex: =14
+
+        lblJobId As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =ThisItem.ReqKey
+            Width: =120
+            X: =80
+            Y: =231
             ZIndex: =15
 
-        icoLightbulb As icon.Lightbulb:
+        lblcreated As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =28
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =Text(ThisItem.Created, varDateTimeShort)
+            Width: =98
+            X: =220
+            Y: =223
+            ZIndex: =16
+
+        lblDetailsHeader As label:
+            Color: =varColorText
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =11
+            Text: ="Details"
+            X: =12
+            Y: =207
+            ZIndex: =17
+
+        lblJobIdLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: ="Job ID"
+            Width: =65
+            X: =12
+            Y: =231
+            ZIndex: =18
+
+        lblCreatedLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: |-
+                ="Created:"
+            Width: =55
+            X: =165
+            Y: =227
+            ZIndex: =19
+
+        lblDisciplineLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            Size: =8
+            Text: |-
+                ="Discipline:"
+            Width: =65
+            X: =12
+            Y: =255
+            ZIndex: =20
+
+        lblDiscipline As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =25
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =ThisItem.Discipline.Value
+            Width: =120
+            X: =75
+            Y: =252
+            ZIndex: =21
+
+        lblProjectTypeLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: |-
+                ="Project:"
+            Width: =50
+            X: =167
+            Y: =255
+            ZIndex: =22
+
+        lblProjectType As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =ThisItem.ProjectType.Value
+            Width: =99
+            X: =219
+            Y: =255
+            ZIndex: =23
+
+        lblCourseLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: |-
+                ="Course:"
+            Width: =65
+            X: =12
+            Y: =279
+            ZIndex: =24
+
+        lblCourse As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =Coalesce(Text(ThisItem.'Course Number'), "")
+            X: =80
+            Y: =279
+            ZIndex: =25
+
+        icoLightbulb As icon:
             Color: =If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorDisabled)
             DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
             Height: =24
@@ -449,9 +674,9 @@ scrDashboard As screen:
             Width: =24
             X: =Parent.TemplateWidth - 30
             Y: =16
-            ZIndex: =27
+            ZIndex: =26
 
-        "icoBatchCheck As icon.'3DPrinting'":
+        icoBatchCheck As icon:
             Color: =If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))
             Height: =28
             Icon: =If(ThisItem.ID in colBatchItems.ID, Icon.Check, Icon.Add)
@@ -460,7 +685,7 @@ scrDashboard As screen:
             Width: =28
             X: =299
             Y: =14
-            ZIndex: =28
+            ZIndex: =27
 
         btnApprove As button:
             BorderColor: =Color.Transparent
@@ -486,7 +711,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =116
             Y: =402
-            ZIndex: =29
+            ZIndex: =28
 
         btnReject As button:
             BorderColor: =Color.Transparent
@@ -512,7 +737,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =223
             Y: =Parent.TemplateHeight - varBtnHeight - 12
-            ZIndex: =30
+            ZIndex: =29
 
         btnArchive As button:
             BorderColor: =Color.Transparent
@@ -537,7 +762,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =12
             Y: =402
-            ZIndex: =31
+            ZIndex: =30
 
         btnStartPrint As button:
             BorderColor: =Color.Transparent
@@ -598,7 +823,7 @@ scrDashboard As screen:
             Width: =Parent.TemplateWidth - 24
             X: =12
             Y: =Parent.TemplateHeight - varBtnHeight - 12
-            ZIndex: =32
+            ZIndex: =31
 
         btnComplete As button:
             BorderColor: =Color.Transparent
@@ -642,7 +867,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 28) / 2
             X: =12
             Y: =Parent.TemplateHeight - varBtnHeight - 12
-            ZIndex: =33
+            ZIndex: =32
 
         btnPickedUp As button:
             BorderColor: =Color.Transparent
@@ -771,6 +996,32 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 28) / 2
             X: =169
             Y: =Parent.TemplateHeight - varBtnHeight - 12
+            ZIndex: =33
+
+        btnEditDetails As button:
+            BorderColor: =varSecondaryBtnBorderColor
+            BorderThickness: =varInputBorderThickness
+            Color: =varColorPrimary
+            Fill: =Color.White
+            FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
+            Height: =20
+            HoverFill: =ColorFade(varColorPrimary, 55%)
+            OnSelect: |-
+                =Set(varShowDetailsModal, ThisItem.ID);
+                Set(varSelectedItem, ThisItem);
+                Set(varDetailsComputerChanged, false)
+            PressedFill: =ColorFade(varColorPrimary, 45%)
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =8
+            Text: ="✏️ Edit"
+            Visible: =ThisItem.Status.Value <> "Pending" && !varBatchSelectMode
+            Width: =55
+            X: =72
+            Y: =207
             ZIndex: =34
 
         btnFiles As button:
@@ -797,7 +1048,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =222
             Y: =350
-            ZIndex: =36
+            ZIndex: =35
 
         lblMessagesHeader As label:
             Align: =Align.Center
@@ -810,7 +1061,7 @@ scrDashboard As screen:
             Width: =96
             X: =13
             Y: =330
-            ZIndex: =37
+            ZIndex: =36
 
         btnViewMessages As button:
             BorderColor: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(184, 0, 0, 1), varColorPrimary)
@@ -835,7 +1086,7 @@ scrDashboard As screen:
             Width: =(Parent.TemplateWidth - 40) / 3
             X: =12
             Y: =350
-            ZIndex: =38
+            ZIndex: =37
 
         lblUnreadBadge As label:
             Align: =Align.Center
@@ -854,7 +1105,34 @@ scrDashboard As screen:
             Width: =10
             X: =94
             Y: =363
+            ZIndex: =38
+
+        lblTransactionLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            Size: =8
+            Text: |-
+                ="Transaction #:"
+            Visible: =!IsBlank(ThisItem.TransactionNumber)
+            Width: =82
+            X: =137
+            Y: =279
             ZIndex: =39
+
+        lblTransactionValue As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: =ThisItem.TransactionNumber
+            Visible: |
+                =!IsBlank(ThisItem.TransactionNumber)
+            Width: =69
+            X: =221
+            Y: =279
+            ZIndex: =40
 
         btnRevert As button:
             BorderThickness: =0
@@ -881,7 +1159,52 @@ scrDashboard As screen:
             Width: =28
             X: =299
             Y: =43
+            ZIndex: =41
+
+        lblPaymentHistoryLabel As label:
+            Color: =varColorTextLight
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: |-
+                ="Prior Payments:"
+            Visible: =CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)
+            Width: =200
+            X: =12
+            Y: =303
             ZIndex: =42
+
+        lblPaymentHistoryValue As label:
+            Color: =varColorText
+            Font: =varAppFont
+            Height: =20
+            OnSelect: =Select(Parent)
+            Size: =8
+            Text: |-
+                =With(
+                    {
+                        wLegacyNotes: Trim(Coalesce(ThisItem.PaymentNotes, "")),
+                        wPaymentRows: Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)
+                    },
+                    If(
+                        !IsBlank(wLegacyNotes),
+                        With(
+                            {payments: Split(wLegacyNotes, " | ")},
+                            Text(CountRows(payments)) & " payment" & If(CountRows(payments) > 1, "s", "") & " recorded"
+                        ),
+                        If(
+                            CountRows(wPaymentRows) > 0,
+                            Text(CountRows(wPaymentRows)) & " payment" & If(CountRows(wPaymentRows) > 1, "s", "") & " recorded",
+                            "Payment recorded"
+                        )
+                    )
+                )
+            Visible: =CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)
+            Width: =148
+            X: =100
+            Y: =304
+            ZIndex: =43
 
         btnStudentNote As button:
             BorderColor: =RGBA(184, 0, 0, 1)
@@ -905,7 +1228,7 @@ scrDashboard As screen:
             Width: =60
             X: =260
             Y: =71
-            ZIndex: =45
+            ZIndex: =44
 
         lblNotesHeader As label:
             Align: =Align.Center
@@ -918,7 +1241,7 @@ scrDashboard As screen:
             Width: =97
             X: =117
             Y: =330
-            ZIndex: =46
+            ZIndex: =45
 
         lblSlicedOn As label:
             AutoHeight: =true
@@ -932,246 +1255,7 @@ scrDashboard As screen:
             Width: =97
             X: =223
             Y: =328
-            ZIndex: =47
-
-        Details As group:
-            Height: =5
-            Width: =5
-            X: =40
-            Y: =40
-            ZIndex: =49
-
-            lblJobId As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =ThisItem.ReqKey
-                Width: =120
-                X: =80
-                Y: =231
-                ZIndex: =16
-
-            lblcreated As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =28
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =Text(ThisItem.Created, varDateTimeShort)
-                Width: =98
-                X: =220
-                Y: =223
-                ZIndex: =17
-
-            lblDetailsHeader As label:
-                Color: =varColorText
-                Font: =varAppFont
-                FontWeight: =FontWeight.Semibold
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =11
-                Text: ="Details"
-                X: =12
-                Y: =207
-                ZIndex: =18
-
-            lblJobIdLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: ="Job ID"
-                Width: =65
-                X: =12
-                Y: =231
-                ZIndex: =19
-
-            lblCreatedLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: |-
-                    ="Created:"
-                Width: =55
-                X: =165
-                Y: =227
-                ZIndex: =20
-
-            lblDisciplineLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                Size: =8
-                Text: |-
-                    ="Discipline:"
-                Width: =65
-                X: =12
-                Y: =255
-                ZIndex: =21
-
-            lblDiscipline As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =25
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =ThisItem.Discipline.Value
-                Width: =120
-                X: =75
-                Y: =252
-                ZIndex: =22
-
-            lblProjectTypeLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: |-
-                    ="Project:"
-                Width: =50
-                X: =167
-                Y: =255
-                ZIndex: =23
-
-            lblProjectType As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =ThisItem.ProjectType.Value
-                Width: =99
-                X: =219
-                Y: =255
-                ZIndex: =24
-
-            lblCourseLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: |-
-                    ="Course:"
-                Width: =65
-                X: =12
-                Y: =279
-                ZIndex: =25
-
-            lblCourse As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =Coalesce(Text(ThisItem.'Course Number'), "")
-                X: =80
-                Y: =279
-                ZIndex: =26
-
-            btnEditDetails As button:
-                BorderColor: =varSecondaryBtnBorderColor
-                BorderThickness: =varInputBorderThickness
-                Color: =varColorPrimary
-                Fill: =Color.White
-                FocusedBorderThickness: =varFocusedBorderThickness
-                Font: =varAppFont
-                Height: =20
-                HoverFill: =ColorFade(varColorPrimary, 55%)
-                OnSelect: |-
-                    =Set(varShowDetailsModal, ThisItem.ID);
-                    Set(varSelectedItem, ThisItem);
-                    Set(varDetailsComputerChanged, false)
-                PressedFill: =ColorFade(varColorPrimary, 45%)
-                RadiusBottomLeft: =varBtnBorderRadius
-                RadiusBottomRight: =varBtnBorderRadius
-                RadiusTopLeft: =varBtnBorderRadius
-                RadiusTopRight: =varBtnBorderRadius
-                Size: =8
-                Text: ="✏️ Edit"
-                Visible: =ThisItem.Status.Value <> "Pending" && !varBatchSelectMode
-                Width: =55
-                X: =72
-                Y: =207
-                ZIndex: =35
-
-            lblTransactionLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                Size: =8
-                Text: |-
-                    ="Transaction #:"
-                Visible: =!IsBlank(ThisItem.TransactionNumber)
-                Width: =82
-                X: =137
-                Y: =279
-                ZIndex: =40
-
-            lblTransactionValue As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: =ThisItem.TransactionNumber
-                Visible: |
-                    =!IsBlank(ThisItem.TransactionNumber)
-                Width: =69
-                X: =221
-                Y: =279
-                ZIndex: =41
-
-            lblPaymentHistoryLabel As label:
-                Color: =varColorTextLight
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: |-
-                    ="Prior Payments:"
-                Visible: =CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)
-                Width: =200
-                X: =12
-                Y: =303
-                ZIndex: =43
-
-            lblPaymentHistoryValue As label:
-                Color: =varColorText
-                Font: =varAppFont
-                Height: =20
-                OnSelect: =Select(Parent)
-                Size: =8
-                Text: |-
-                    =With(
-                        {
-                            wLegacyNotes: Trim(Coalesce(ThisItem.PaymentNotes, "")),
-                            wPaymentRows: Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)
-                        },
-                        If(
-                            !IsBlank(wLegacyNotes),
-                            With(
-                                {payments: Split(wLegacyNotes, " | ")},
-                                Text(CountRows(payments)) & " payment" & If(CountRows(payments) > 1, "s", "") & " recorded"
-                            ),
-                            If(
-                                CountRows(wPaymentRows) > 0,
-                                Text(CountRows(wPaymentRows)) & " payment" & If(CountRows(wPaymentRows) > 1, "s", "") & " recorded",
-                                "Payment recorded"
-                            )
-                        )
-                    )
-                Visible: =CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)
-                Width: =148
-                X: =100
-                Y: =304
-                ZIndex: =44
+            ZIndex: =46
 
     recFilterBar As rectangle:
         BorderColor: =varColorBorderLight
@@ -1180,7 +1264,7 @@ scrDashboard As screen:
         Height: =45
         Width: =Parent.Width
         Y: =110
-        ZIndex: =8
+        ZIndex: =9
 
     txtSearch As text:
         BorderColor: =varInputBorderColor
@@ -1202,7 +1286,7 @@ scrDashboard As screen:
         Width: =180
         X: =183
         Y: =119
-        ZIndex: =9
+        ZIndex: =10
 
     chkNeedsAttention As checkbox:
         BorderColor: =Color.Transparent
@@ -1221,7 +1305,7 @@ scrDashboard As screen:
         Width: =133
         X: =382
         Y: =116
-        ZIndex: =10
+        ZIndex: =11
 
     ddSortOrder As dropdown:
         AccessibleLabel: ="Sort dashboard jobs"
@@ -1250,7 +1334,7 @@ scrDashboard As screen:
         Width: =163
         X: =8
         Y: =119
-        ZIndex: =11
+        ZIndex: =12
 
     btnClearFilters As button:
         BorderColor: =varInputBorderColor
@@ -1280,7 +1364,7 @@ scrDashboard As screen:
         Width: =70
         X: =535
         Y: =119
-        ZIndex: =12
+        ZIndex: =13
 
     btnRefresh As button:
         BorderColor: =varColorPrimary
@@ -1297,7 +1381,19 @@ scrDashboard As screen:
                 Refresh(Payments)
             );
             ClearCollect(colAllBuildPlates, BuildPlates);
-            ClearCollect(colAllPayments, Payments)
+            ClearCollect(colAllPayments, Payments);
+            ClearCollect(colBuildPlateSummary,
+                ForAll(
+                    Distinct(colAllBuildPlates, RequestID) As grp,
+                    {
+                        RequestID: grp.Value,
+                        TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                        CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                        ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                        ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                    }
+                )
+            )
         PressedFill: =ColorFade(varColorPrimary, -25%)
         RadiusBottomLeft: =varBtnBorderRadius
         RadiusBottomRight: =varBtnBorderRadius
@@ -1308,9 +1404,10 @@ scrDashboard As screen:
         Width: =74
         X: =1262
         Y: =119
-        ZIndex: =13
+        ZIndex: =14
 
     galStatusTabs As gallery.galleryHorizontal:
+        '#CopilotOverlayLabel': ="Filtered"
         DelayItemLoading: =true
         FocusedBorderThickness: =0
         Height: =55
@@ -1332,7 +1429,7 @@ scrDashboard As screen:
         Transition: =Transition.Push
         Width: =Parent.Width
         Y: =55
-        ZIndex: =14
+        ZIndex: =15
 
         btnStatusTab As button:
             BorderColor: =If(varSelectedStatus = ThisItem.Status, Color.Transparent, varInputBorderColor)
@@ -1363,7 +1460,7 @@ scrDashboard As screen:
         LayoutGridRows: =6
         Visible: =varShowRejectModal > 0
         Width: =Parent.Width
-        ZIndex: =15
+        ZIndex: =16
 
         recRejectOverlay As rectangle:
             Fill: =varColorOverlay
@@ -1473,7 +1570,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddRejectStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -1780,7 +1876,7 @@ scrDashboard As screen:
         LayoutGridRows: =6
         Visible: =varShowApprovalModal > 0 && varShowBuildPlatesModal = 0
         Width: =Parent.Width
-        ZIndex: =16
+        ZIndex: =17
 
         recApprovalOverlay As rectangle:
             Fill: =varColorOverlay
@@ -1888,7 +1984,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberEmail"]
-            SearchItems: =Search(colStaff,ddApprovalStaff.SearchText,MemberEmail)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -2279,7 +2374,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Name"]
-            SearchItems: =Search(colSlicingComputers,ddSlicedOnComputer.SearchText,Name)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -2379,7 +2473,7 @@ scrDashboard As screen:
         LayoutGridRows: =6
         Visible: =varShowArchiveModal > 0
         Width: =Parent.Width
-        ZIndex: =17
+        ZIndex: =18
 
         recArchiveOverlay As rectangle:
             Fill: =varColorOverlay
@@ -2482,7 +2576,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddArchiveStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -2551,7 +2644,7 @@ scrDashboard As screen:
             BorderThickness: =varInputBorderThickness
             Color: =Color.White
             DisplayMode: =If(IsBlank(ddArchiveStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
-            Fill: =varColorNeutral
+            Fill: =varColorPrimary
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
             Height: =varBtnHeight
@@ -2657,7 +2750,7 @@ scrDashboard As screen:
         Visible: =varBatchSelectMode
         Width: =Parent.Width
         Y: =Parent.Height - 80
-        ZIndex: =18
+        ZIndex: =19
 
         recBatchFooterBg As rectangle:
             BorderColor: =varColorBorderLight
@@ -2763,57 +2856,6 @@ scrDashboard As screen:
             Y: =(Parent.Height - varBtnHeight) / 2
             ZIndex: =7
 
-    grpSoundNotification As group:
-        Height: =5
-        Width: =5
-        X: =60
-        Y: =60
-        ZIndex: =19
-
-        tmrAutoRefresh As timer:
-            AutoStart: =true
-            Duration: =varRefreshInterval
-            OnTimerEnd: |-
-                =// Refresh data from SharePoint concurrently
-                Concurrent(
-                    Refresh(PrintRequests),
-                    Refresh(BuildPlates),
-                    Refresh(Payments)
-                );
-                
-                // Reload local collections used by job-card summaries
-                ClearCollect(colAllBuildPlates, BuildPlates);
-                ClearCollect(colAllPayments, Payments);
-                
-                // Reload NeedsAttention items into local collection (avoids delegation)
-                ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
-                
-                // Count from local collection (no delegation warning)
-                Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
-                
-                // If count increased, play notification sound
-                If(
-                    varCurrentAttentionCount > varPrevAttentionCount,
-                    Reset(audNotification);
-                    Set(varPlaySound, true)
-                );
-                
-                // Update previous count for next comparison
-                Set(varPrevAttentionCount, varCurrentAttentionCount)
-            Repeat: =true
-            Visible: =false
-            X: =144
-            Y: =652
-            ZIndex: =1
-
-        audNotification As audioPlayback:
-            Media: =notification_chime
-            OnEnd: =Set(varPlaySound, false)
-            Start: =varPlaySound
-            Visible: =false
-            Y: =703
-            ZIndex: =2
-
     conCompleteModal As groupContainer.manualLayoutContainer:
         Height: =Parent.Height
         LayoutGridColumnMinWidth: =0
@@ -2894,12 +2936,12 @@ scrDashboard As screen:
             FocusedBorderThickness: =varFocusedBorderThickness
             Height: =36
             HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Find items"
             IsSearchable: =false
             Items: =colStaff
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddCompleteStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             Width: =300
@@ -3199,7 +3241,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddRevertStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -3572,7 +3613,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberEmail"]
-            SearchItems: =Search(colStaff,ddDetailsStaff.SearchText,MemberEmail)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -3615,7 +3655,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Value"]
-            SearchItems: =Choices(PrintRequests.Method,ddDetailsMethod.SearchText)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -3674,8 +3713,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Value"]
-            SearchItems: |-
-                =Search(Filter(Choices([@PrintRequests].Printer),With({selectedMethod:If(!IsBlank(ddDetailsMethod.Selected),ddDetailsMethod.Selected.Value,varSelectedItem.Method.Value)},If(selectedMethod="Filament",Value in ["Prusa MK4S (9.8×8.3×8.7in)","Prusa XL (14.2×14.2×14.2in)","Raised3D Pro 2 Plus (12.0×12.0×23in)"],selectedMethod="Resin",Value="Form 3 (5.7×5.7×7.3in)", true ))),ddDetailsPrinter.SearchText,Value)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -3717,7 +3754,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Value"]
-            SearchItems: =Choices(PrintRequests.Color,ddDetailsColor.SearchText)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -4093,13 +4129,13 @@ scrDashboard As screen:
             Font: =varAppFont
             Height: =36
             HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Find items"
             IsSearchable: =false
             Items: =colSlicingComputers
             OnChange: =Set(varDetailsComputerChanged, ddDetailsSlicedOnComputer.Selected.Name <> Coalesce(varSelectedItem.SlicedOnComputer.Value, ""))
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Name"]
-            SearchItems: =Search(colSlicingComputers,ddDetailsSlicedOnComputer.SearchText,Name)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -4249,7 +4285,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberEmail"]
-            SearchItems: =Search(colStaff,ddPaymentStaff.SearchText,MemberEmail)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -4758,6 +4793,18 @@ scrDashboard As screen:
                     );
                     ClearCollect(colAllBuildPlates, BuildPlates);
                     ClearCollect(colAllPayments, Payments);
+                    ClearCollect(colBuildPlateSummary,
+                        ForAll(
+                            Distinct(colAllBuildPlates, RequestID) As grp,
+                            {
+                                RequestID: grp.Value,
+                                TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                                ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                            }
+                        )
+                    );
                     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
                 
                     With(
@@ -4916,6 +4963,7 @@ scrDashboard As screen:
             ZIndex: =31
 
         "galPaymentHistory As gallery.'BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0'":
+            '#CopilotOverlayLabel': ="Filtered"
             DelayItemLoading: =true
             Height: =Min(98, CountRows(colPayments) * 32 + 2)
             Items: =colPayments
@@ -4936,7 +4984,7 @@ scrDashboard As screen:
                 OnSelect: =Select(Parent)
                 Width: =448
                 Y: =1
-                ZIndex: =8
+                ZIndex: =1
 
             lblHistSummary As label:
                 Font: =varAppFont
@@ -4996,7 +5044,7 @@ scrDashboard As screen:
                 Wrap: =false
                 X: =10
                 Y: =5
-                ZIndex: =9
+                ZIndex: =2
 
         lblPaidSoFar As label:
             Color: =varColorSuccess
@@ -5071,6 +5119,7 @@ scrDashboard As screen:
             ZIndex: =36
 
         "galPlatesPickup As gallery.'BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0'":
+            '#CopilotOverlayLabel': ="Filtered"
             DelayItemLoading: =true
             Height: =Min(170, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)
             Items: =Filter(colBuildPlatesIndexed, Status.Value = "Completed")
@@ -5099,7 +5148,7 @@ scrDashboard As screen:
                 Width: =30
                 X: =4
                 Y: =2
-                ZIndex: =7
+                ZIndex: =1
 
             lblPlateName As label:
                 Font: =varAppFont
@@ -5118,7 +5167,7 @@ scrDashboard As screen:
                 Width: =272
                 X: =34
                 Y: =5
-                ZIndex: =8
+                ZIndex: =2
 
         lblPlatesHint As label:
             Color: =varColorTextMuted
@@ -5247,6 +5296,7 @@ scrDashboard As screen:
             ZIndex: =8
 
         "galBuildPlates As gallery.'BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0'":
+            '#CopilotOverlayLabel': ="Filtered"
             DelayItemLoading: =true
             Fill: =Color.Transparent
             Height: =320
@@ -5266,7 +5316,7 @@ scrDashboard As screen:
                 Height: =Parent.TemplateHeight
                 OnSelect: =Select(Parent)
                 Width: =Parent.TemplateWidth
-                ZIndex: =7
+                ZIndex: =1
 
             lblPlateLabel As label:
                 Color: =varColorText
@@ -5278,7 +5328,7 @@ scrDashboard As screen:
                 Text: =ThisItem.ResolvedPlateLabel
                 Width: =80
                 X: =8
-                ZIndex: =8
+                ZIndex: =2
 
             drpPlateMachine As dropdown:
                 BorderColor: =If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)
@@ -5369,6 +5419,18 @@ scrDashboard As screen:
                             )
                         );
                         ClearCollect(colAllBuildPlates, BuildPlates);
+                        ClearCollect(colBuildPlateSummary,
+                            ForAll(
+                                Distinct(colAllBuildPlates, RequestID) As grp,
+                                {
+                                    RequestID: grp.Value,
+                                    TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                    CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                                    ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                    ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                                }
+                            )
+                        );
                         ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
                         Notify("Machine updated", NotificationType.Success, 2000)
                     );
@@ -5383,7 +5445,7 @@ scrDashboard As screen:
                 Width: =145
                 X: =88
                 Y: =8
-                ZIndex: =9
+                ZIndex: =3
 
             lblPlateStatus As label:
                 Align: =Align.Center
@@ -5397,7 +5459,7 @@ scrDashboard As screen:
                 Width: =84
                 X: =246
                 Y: =10
-                ZIndex: =10
+                ZIndex: =4
 
             btnMarkPrinting As button:
                 BorderColor: =Color.Transparent
@@ -5497,7 +5559,7 @@ scrDashboard As screen:
                 Width: =113
                 X: =356
                 Y: =10
-                ZIndex: =11
+                ZIndex: =5
 
             btnMarkDone As button:
                 BorderColor: =Color.Transparent
@@ -5629,7 +5691,7 @@ scrDashboard As screen:
                 Width: =90
                 X: =367
                 Y: =10
-                ZIndex: =12
+                ZIndex: =6
 
             btnRemovePlate As button:
                 BorderColor: =Color.Transparent
@@ -5684,7 +5746,19 @@ scrDashboard As screen:
                                 )
                             )
                         );
-                        ClearCollect(colAllBuildPlates, BuildPlates)
+                        ClearCollect(colAllBuildPlates, BuildPlates);
+                        ClearCollect(colBuildPlateSummary,
+                            ForAll(
+                                Distinct(colAllBuildPlates, RequestID) As grp,
+                                {
+                                    RequestID: grp.Value,
+                                    TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                    CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                                    ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                    ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                                }
+                            )
+                        )
                     )
                 Size: =12
                 Text: ="✕"
@@ -5692,7 +5766,7 @@ scrDashboard As screen:
                 Width: =24
                 X: =524
                 Y: =14
-                ZIndex: =13
+                ZIndex: =7
 
         recBuildPlatesDivider3 As rectangle:
             Fill: =varColorBorderLight
@@ -5822,6 +5896,18 @@ scrDashboard As screen:
                         )
                     );
                     ClearCollect(colAllBuildPlates, BuildPlates);
+                    ClearCollect(colBuildPlateSummary,
+                        ForAll(
+                            Distinct(colAllBuildPlates, RequestID) As grp,
+                            {
+                                RequestID: grp.Value,
+                                TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                                ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                            }
+                        )
+                    );
                     Notify("Plate added", NotificationType.Success, 2000)
                 );
                 
@@ -5974,12 +6060,12 @@ scrDashboard As screen:
             Height: =36
             HoverBorderColor: =varInputBorderColor
             HoverFill: =varDropdownHoverFill
+            InputTextPlaceholder: ="Find items"
             IsSearchable: =false
             Items: =["TigerCASH", "Check", "Grant/Program Code"]
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["Value"]
-            SearchItems: =Search(["TigerCASH","Check","Code"],ddBatchPaymentType.SearchText,Value)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -6100,6 +6186,7 @@ scrDashboard As screen:
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
             Height: =36
+            HintText: =""
             HoverBorderColor: =varInputBorderColor
             HoverFill: =varInputHoverFill
             RadiusBottomLeft: =varInputBorderRadius
@@ -6355,6 +6442,18 @@ scrDashboard As screen:
                     );
                     ClearCollect(colAllBuildPlates, BuildPlates);
                     ClearCollect(colAllPayments, Payments);
+                    ClearCollect(colBuildPlateSummary,
+                        ForAll(
+                            Distinct(colAllBuildPlates, RequestID) As grp,
+                            {
+                                RequestID: grp.Value,
+                                TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                                ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                                ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+                            }
+                        )
+                    );
                 
                     ForAll(
                         colBatchItems As BatchItem,
@@ -6439,7 +6538,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddBatchStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -6500,6 +6598,7 @@ scrDashboard As screen:
         txtBatchPayerName As text:
             Default: =""
             Height: =36
+            HintText: =""
             Width: =270
             X: =673
             Y: =134
@@ -6517,7 +6616,10 @@ scrDashboard As screen:
             ZIndex: =115
 
         dpBatchPaymentDate As datepicker:
+            CalendarHeaderFill: =App.Theme.Colors.Primary
             Height: =36
+            HoverDateFill: =App.Theme.Colors.Lighter70
+            SelectedDateFill: =App.Theme.Colors.Primary
             Width: =140
             X: =743
             Y: =209
@@ -6571,6 +6673,7 @@ scrDashboard As screen:
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
             Height: =120
+            HintText: =""
             Mode: =TextMode.MultiLine
             RadiusBottomLeft: =varInputBorderRadius
             RadiusBottomRight: =varInputBorderRadius
@@ -6838,6 +6941,7 @@ scrDashboard As screen:
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
             Height: =recNotesModal.Height - 360
+            HintText: =""
             HoverBorderColor: =varInputBorderColor
             HoverFill: =varInputHoverFill
             Italic: =IsBlank(varSelectedItem.StaffNotes)
@@ -6885,7 +6989,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberEmail"]
-            SearchItems: =[]
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -7089,7 +7192,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddFileActor.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false
@@ -7324,6 +7426,7 @@ scrDashboard As screen:
             ZIndex: =3
 
         galViewMessages As gallery.variableTemplateHeightGallery:
+            '#CopilotOverlayLabel': ="Filtered"
             DelayItemLoading: =true
             Height: =335
             Items: =Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
@@ -7344,7 +7447,7 @@ scrDashboard As screen:
                 X: =If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)
                 ZIndex: =1
 
-            "icoVMsgDirection As icon.'3DPrinting'":
+            icoVMsgDirection As icon:
                 Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))
                 DisplayMode: =DisplayMode.View
                 Height: =16
@@ -7471,7 +7574,6 @@ scrDashboard As screen:
             PressedColor: =varDropdownPressedColor
             PressedFill: =varDropdownPressedFill
             SearchFields: =["MemberName"]
-            SearchItems: =Search(colStaff,ddViewMsgStaff.SearchText,MemberName)
             SelectionColor: =varDropdownSelectionColor
             SelectionFill: =varDropdownSelectionFill
             SelectMultiple: =false

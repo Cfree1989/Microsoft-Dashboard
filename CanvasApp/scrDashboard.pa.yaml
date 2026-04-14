@@ -1,3 +1,11 @@
+# ************************************************************************************************
+# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
+# Use the maker portal to create and edit your Power Apps.
+# 
+# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
+# 
+# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
+# ************************************************************************************************
 Screens:
   scrDashboard:
     Properties:
@@ -14,8 +22,7 @@ Screens:
         })
     Children:
       - tmrAutoRefresh:
-          Control: Timer
-          Group: grpSoundNotification
+          Control: Timer@2.1.0
           Properties:
             AutoStart: =true
             BorderColor: =ColorFade(Self.Fill, -15%)
@@ -76,8 +83,7 @@ Screens:
             X: =144
             Y: =652
       - audNotification:
-          Control: Audio
-          Group: grpSoundNotification
+          Control: Audio@2.3.1
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
             Fill: =RGBA(56, 96, 178, 1)
@@ -87,14 +93,14 @@ Screens:
             Visible: =false
             Y: =703
       - recHeader:
-          Control: Rectangle
+          Control: Rectangle@2.3.0
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
             Fill: =varColorHeader
             Height: =55
             Width: =Parent.Width
       - lblAppTitle:
-          Control: Label
+          Control: Label@2.5.1
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
             Color: =Color.White
@@ -107,7 +113,7 @@ Screens:
             X: =20
             Y: =11
       - btnNavAnalytics:
-          Control: Classic/Button
+          Control: Classic/Button@2.2.0
           Properties:
             BorderColor: =Color.Transparent
             BorderThickness: =0
@@ -134,7 +140,7 @@ Screens:
             X: =1278
             Y: =15
       - lblEmptyState:
-          Control: Label
+          Control: Label@2.5.1
           Properties:
             Align: =Align.Center
             BorderColor: =RGBA(0, 18, 107, 1)
@@ -148,7 +154,7 @@ Screens:
             X: =(Parent.Width - 400) / 2
             Y: =350
       - galJobCards:
-          Control: Gallery
+          Control: Gallery@2.15.0
           Variant: Vertical
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
@@ -197,7 +203,7 @@ Screens:
             Y: =160
           Children:
             - recCardBackground:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =If(varBatchSelectMode && ThisItem.ID in colBatchItems.ID, varColorSuccess, If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorBorderLight))
                   BorderThickness: =If(ThisItem.NeedsAttention, 2, 1.5)
@@ -229,7 +235,7 @@ Screens:
                     )
                   Width: =Parent.TemplateWidth
             - lblStudentName:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -242,7 +248,7 @@ Screens:
                   X: =12
                   Y: =14
             - lblSubmittedTime:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Right
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -278,7 +284,7 @@ Screens:
                   X: =195
                   Y: =16
             - lblFilename:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -291,7 +297,7 @@ Screens:
                   X: =13
                   Y: =72
             - lblStudentEmail:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -304,7 +310,7 @@ Screens:
                   X: =13
                   Y: =45
             - lblPrinter:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -318,7 +324,7 @@ Screens:
                   X: =147
                   Y: =101
             - cirColorDotBackdrop:
-                Control: Circle
+                Control: Circle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =RGBA(149, 149, 149, 1)
@@ -329,7 +335,7 @@ Screens:
                   X: =16
                   Y: =103
             - cirColorDot:
-                Control: Circle
+                Control: Circle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: |-
@@ -374,7 +380,7 @@ Screens:
                   X: =18
                   Y: =105
             - lblColorText:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -387,7 +393,7 @@ Screens:
                   X: =30
                   Y: =101
             - lblEstimates:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -416,7 +422,7 @@ Screens:
                   X: =12
                   Y: =128
             - lblBuildPlatesProgress:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -442,7 +448,7 @@ Screens:
                   X: =84
                   Y: =169
             - btnBuildPlates:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -504,7 +510,7 @@ Screens:
                   X: =13
                   Y: =167
             - btnViewNotes:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(184, 0, 0, 1), varColorPrimary)
                   BorderThickness: =varInputBorderThickness
@@ -533,8 +539,7 @@ Screens:
                   X: =117
                   Y: =350
             - lblJobId:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -547,8 +552,7 @@ Screens:
                   X: =80
                   Y: =231
             - lblcreated:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -561,8 +565,7 @@ Screens:
                   X: =220
                   Y: =223
             - lblDetailsHeader:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -575,8 +578,7 @@ Screens:
                   X: =12
                   Y: =207
             - lblJobIdLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -589,8 +591,7 @@ Screens:
                   X: =12
                   Y: =231
             - lblCreatedLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -603,8 +604,7 @@ Screens:
                   X: =165
                   Y: =227
             - lblDisciplineLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -616,8 +616,7 @@ Screens:
                   X: =12
                   Y: =255
             - lblDiscipline:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -630,8 +629,7 @@ Screens:
                   X: =75
                   Y: =252
             - lblProjectTypeLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -644,8 +642,7 @@ Screens:
                   X: =167
                   Y: =255
             - lblProjectType:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -658,8 +655,7 @@ Screens:
                   X: =219
                   Y: =255
             - lblCourseLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -672,8 +668,7 @@ Screens:
                   X: =12
                   Y: =279
             - lblCourse:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -685,7 +680,7 @@ Screens:
                   X: =80
                   Y: =279
             - icoLightbulb:
-                Control: Classic/Icon
+                Control: Classic/Icon@2.5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =If(ThisItem.NeedsAttention, RGBA(102, 102, 102, 1), varColorDisabled)
@@ -721,7 +716,7 @@ Screens:
                   X: =Parent.TemplateWidth - 30
                   Y: =16
             - icoBatchCheck:
-                Control: Classic/Icon
+                Control: Classic/Icon@2.5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))
@@ -733,7 +728,7 @@ Screens:
                   X: =299
                   Y: =14
             - btnApprove:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -764,7 +759,7 @@ Screens:
                   X: =116
                   Y: =402
             - btnReject:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -794,7 +789,7 @@ Screens:
                   X: =223
                   Y: =Parent.TemplateHeight - varBtnHeight - 12
             - btnArchive:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -824,7 +819,7 @@ Screens:
                   X: =12
                   Y: =402
             - btnStartPrint:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Color: =Color.White
@@ -890,7 +885,7 @@ Screens:
                   X: =12
                   Y: =Parent.TemplateHeight - varBtnHeight - 12
             - btnComplete:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =1
@@ -938,7 +933,7 @@ Screens:
                   X: =12
                   Y: =Parent.TemplateHeight - varBtnHeight - 12
             - btnPickedUp:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -1072,8 +1067,7 @@ Screens:
                   X: =169
                   Y: =Parent.TemplateHeight - varBtnHeight - 12
             - btnEditDetails:
-                Control: Classic/Button
-                Group: Details
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varSecondaryBtnBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -1104,7 +1098,7 @@ Screens:
                   X: =72
                   Y: =207
             - btnFiles:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varColorPrimary
                   BorderThickness: =varInputBorderThickness
@@ -1134,7 +1128,7 @@ Screens:
                   X: =222
                   Y: =350
             - lblMessagesHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -1148,7 +1142,7 @@ Screens:
                   X: =13
                   Y: =330
             - btnViewMessages:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(184, 0, 0, 1), varColorPrimary)
                   BorderThickness: =varInputBorderThickness
@@ -1177,7 +1171,7 @@ Screens:
                   X: =12
                   Y: =350
             - lblUnreadBadge:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -1197,8 +1191,7 @@ Screens:
                   X: =94
                   Y: =363
             - lblTransactionLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -1212,8 +1205,7 @@ Screens:
                   X: =137
                   Y: =279
             - lblTransactionValue:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -1228,7 +1220,7 @@ Screens:
                   X: =221
                   Y: =279
             - btnRevert:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =0
@@ -1262,8 +1254,7 @@ Screens:
                   X: =299
                   Y: =43
             - lblPaymentHistoryLabel:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextLight
@@ -1277,8 +1268,7 @@ Screens:
                   X: =12
                   Y: =303
             - lblPaymentHistoryValue:
-                Control: Label
-                Group: Details
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -1310,7 +1300,7 @@ Screens:
                   X: =100
                   Y: =304
             - btnStudentNote:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =RGBA(184, 0, 0, 1)
                   BorderThickness: =varInputBorderThickness
@@ -1340,7 +1330,7 @@ Screens:
                   X: =260
                   Y: =71
             - lblNotesHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -1354,7 +1344,7 @@ Screens:
                   X: =117
                   Y: =330
             - lblSlicedOn:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -1370,7 +1360,7 @@ Screens:
                   X: =223
                   Y: =328
       - recFilterBar:
-          Control: Rectangle
+          Control: Rectangle@2.3.0
           Properties:
             BorderColor: =varColorBorderLight
             BorderThickness: =varInputBorderThickness
@@ -1379,7 +1369,7 @@ Screens:
             Width: =Parent.Width
             Y: =110
       - txtSearch:
-          Control: Classic/TextInput
+          Control: Classic/TextInput@2.3.2
           Properties:
             BorderColor: =varInputBorderColor
             BorderThickness: =varInputBorderThickness
@@ -1401,7 +1391,7 @@ Screens:
             X: =183
             Y: =119
       - chkNeedsAttention:
-          Control: Classic/CheckBox
+          Control: Classic/CheckBox@2.1.0
           Properties:
             BorderColor: =Color.Transparent
             CheckboxBorderColor: =varInputBorderColor
@@ -1420,7 +1410,7 @@ Screens:
             X: =382
             Y: =116
       - ddSortOrder:
-          Control: Classic/DropDown
+          Control: Classic/DropDown@2.3.1
           Properties:
             AccessibleLabel: ="Sort dashboard jobs"
             BorderColor: =varInputBorderColor
@@ -1450,7 +1440,7 @@ Screens:
             X: =8
             Y: =119
       - btnClearFilters:
-          Control: Classic/Button
+          Control: Classic/Button@2.2.0
           Properties:
             BorderColor: =varInputBorderColor
             BorderThickness: =varInputBorderThickness
@@ -1484,7 +1474,7 @@ Screens:
             X: =535
             Y: =119
       - btnRefresh:
-          Control: Classic/Button
+          Control: Classic/Button@2.2.0
           Properties:
             BorderColor: =varColorPrimary
             Color: =Color.White
@@ -1529,7 +1519,7 @@ Screens:
             X: =1262
             Y: =119
       - galStatusTabs:
-          Control: Gallery
+          Control: Gallery@2.15.0
           Variant: Horizontal
           Properties:
             BorderColor: =RGBA(0, 18, 107, 1)
@@ -1554,7 +1544,7 @@ Screens:
             Y: =55
           Children:
             - btnStatusTab:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =If(varSelectedStatus = ThisItem.Status, Color.Transparent, varInputBorderColor)
                   BorderThickness: =1
@@ -1577,7 +1567,7 @@ Screens:
                   X: =5
                   Y: =4
       - conRejectModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -1585,14 +1575,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recRejectOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRejectModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -1601,7 +1591,7 @@ Screens:
                   X: =219
                   Y: =34
             - lblRejectTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorDanger
@@ -1614,7 +1604,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =48
             - btnRejectClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -1655,7 +1645,7 @@ Screens:
                   X: =recRejectModal.X + recRejectModal.Width - 40
                   Y: =recRejectModal.Y + 10
             - lblRejectStudent:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -1668,7 +1658,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 55
             - lblRejectStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -1679,7 +1669,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =118
             - ddRejectStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -1708,7 +1698,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 115
             - lblRejectReasonsLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -1719,7 +1709,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 160
             - chkTooSmall:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1733,7 +1723,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =recRejectModal.Y + 185
             - chkGeometry:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1746,7 +1736,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =254
             - chkNotSolid:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1759,7 +1749,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =289
             - chkScale:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1772,7 +1762,7 @@ Screens:
                   X: =recRejectModal.X + 20
                   Y: =324
             - chkMessy:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1785,7 +1775,7 @@ Screens:
                   X: =585
                   Y: =220
             - chkOverhangs:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1798,7 +1788,7 @@ Screens:
                   X: =585
                   Y: =255
             - chkNotJoined:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -1811,7 +1801,7 @@ Screens:
                   X: =585
                   Y: =290
             - lblRejectCommentsLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -1821,7 +1811,7 @@ Screens:
                   X: =239
                   Y: =395
             - txtRejectComments:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -1842,7 +1832,7 @@ Screens:
                   X: =239
                   Y: =442
             - btnRejectCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Color: =Color.White
@@ -1879,7 +1869,7 @@ Screens:
                   X: =835
                   Y: =680
             - btnRejectConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   Color: =Color.White
@@ -2016,7 +2006,7 @@ Screens:
                   X: =969
                   Y: =680
       - conApprovalModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -2024,14 +2014,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recApprovalOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recApprovalModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -2041,7 +2031,7 @@ Screens:
                   X: =(Parent.Width - 600) / 2
                   Y: =64
             - lblApprovalTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorSuccess
@@ -2053,7 +2043,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =79
             - btnApprovalClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -2091,7 +2081,7 @@ Screens:
                   X: =recApprovalModal.X + recApprovalModal.Width - 40
                   Y: =recApprovalModal.Y + 10
             - lblApprovalStudent:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -2104,7 +2094,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 55
             - lblApprovalStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2116,7 +2106,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 90
             - ddApprovalStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2145,7 +2135,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 115
             - lblApprovalWeightLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2157,7 +2147,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 165
             - txtEstimatedWeight:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2178,7 +2168,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 190
             - lblApprovalTimeLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2190,7 +2180,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 240
             - txtEstimatedTime:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2211,7 +2201,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 265
             - lblApprovalCostLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2223,7 +2213,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 320
             - lblApprovalCostValue:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorSuccess
@@ -2255,7 +2245,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 345
             - lblApprovalCommentsLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2266,7 +2256,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 400
             - txtApprovalComments:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2286,7 +2276,7 @@ Screens:
                   X: =recApprovalModal.X + 20
                   Y: =recApprovalModal.Y + 425
             - btnApprovalCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -2321,7 +2311,7 @@ Screens:
                   X: =recApprovalModal.X + 300
                   Y: =recApprovalModal.Y + 560
             - btnApprovalConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =1
@@ -2361,7 +2351,7 @@ Screens:
                   X: =recApprovalModal.X + 430
                   Y: =recApprovalModal.Y + 560
             - lblSlicedOnLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2373,7 +2363,7 @@ Screens:
                   X: =676
                   Y: =232
             - ddSlicedOnComputer:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2402,7 +2392,7 @@ Screens:
                   X: =676
                   Y: =254
             - lblApprovePlatesInfo:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -2424,7 +2414,7 @@ Screens:
                   X: =649
                   Y: =306
             - btnApproveAddPlates:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varColorPrimary
                   BorderThickness: =varInputBorderThickness
@@ -2479,7 +2469,7 @@ Screens:
                   X: =709
                   Y: =329
             - chkApprovalOwnMaterial:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   CheckboxBorderColor: =varInputBorderColor
@@ -2494,7 +2484,7 @@ Screens:
                   X: =723
                   Y: =384
       - conArchiveModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -2502,14 +2492,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recArchiveOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recArchiveModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -2518,7 +2508,7 @@ Screens:
                   X: =(Parent.Width - 500) / 2
                   Y: =(Parent.Height - 400) / 2
             - lblArchiveTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -2531,7 +2521,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 20
             - btnArchiveClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -2565,7 +2555,7 @@ Screens:
                   X: =recArchiveModal.X + recArchiveModal.Width - 40
                   Y: =recArchiveModal.Y + 10
             - lblArchiveWarning:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -2578,7 +2568,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 60
             - lblArchiveStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2589,7 +2579,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =300
             - ddArchiveStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2617,7 +2607,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 145
             - lblArchiveReasonLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -2628,7 +2618,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 195
             - txtArchiveReason:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -2648,7 +2638,7 @@ Screens:
                   X: =recArchiveModal.X + 20
                   Y: =recArchiveModal.Y + 220
             - btnArchiveCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -2679,7 +2669,7 @@ Screens:
                   X: =recArchiveModal.X + 200
                   Y: =recArchiveModal.Y + 340
             - btnArchiveConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -2785,7 +2775,7 @@ Screens:
                   X: =recArchiveModal.X + 330
                   Y: =recArchiveModal.Y + 340
       - conBatchSelectionFooter:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Fill: =RGBA(255, 255, 255, 0.98)
@@ -2795,7 +2785,7 @@ Screens:
             Y: =Parent.Height - 80
           Children:
             - recBatchFooterBg:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =varColorBorderLight
                   BorderThickness: =1
@@ -2803,7 +2793,7 @@ Screens:
                   Height: =Parent.Height
                   Width: =Parent.Width
             - lblBatchModeActive:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorPrimary
@@ -2816,7 +2806,7 @@ Screens:
                   X: =20
                   Y: =8
             - lblBatchCount:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -2828,7 +2818,7 @@ Screens:
                   X: =20
                   Y: =30
             - lblBatchEstTotal:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -2841,7 +2831,7 @@ Screens:
                   X: =20
                   Y: =50
             - lblBatchStudents:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -2853,7 +2843,7 @@ Screens:
                   X: =230
                   Y: =30
             - btnBatchCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -2882,7 +2872,7 @@ Screens:
                   X: =Parent.Width - 280
                   Y: =(Parent.Height - varBtnHeight) / 2
             - btnProcessBatchPayment:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -2918,7 +2908,7 @@ Screens:
                   X: =Parent.Width - 170
                   Y: =(Parent.Height - varBtnHeight) / 2
       - conCompleteModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -2926,13 +2916,13 @@ Screens:
             Width: =Parent.Width
           Children:
             - recCompleteOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recCompleteModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   Fill: =varColorBgCard
                   Height: =340
@@ -2940,7 +2930,7 @@ Screens:
                   X: =(Parent.Width - 500) / 2
                   Y: =(Parent.Height - 260) / 2
             - lblCompleteTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorTextMuted
                   Font: =varAppFont
@@ -2952,7 +2942,7 @@ Screens:
                   X: =recCompleteModal.X + 20
                   Y: =262
             - lblCompleteWarning:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =RGBA(150, 100, 0, 1)
                   Font: =varAppFont
@@ -2964,7 +2954,7 @@ Screens:
                   X: =recCompleteModal.X + 20
                   Y: =305
             - lblCompleteStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -2976,7 +2966,7 @@ Screens:
                   X: =recCompleteModal.X + 20
                   Y: =recCompleteModal.Y + 115
             - ddCompleteStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3004,7 +2994,7 @@ Screens:
                   X: =recCompleteModal.X + 20
                   Y: =recCompleteModal.Y + 140
             - btnCompleteCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -3034,7 +3024,7 @@ Screens:
                   X: =recCompleteModal.X + 200
                   Y: =recCompleteModal.Y + 280
             - btnCompleteConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =1
@@ -3152,7 +3142,7 @@ Screens:
                   X: =recCompleteModal.X + 330
                   Y: =recCompleteModal.Y + 280
             - btnCompleteClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -3185,7 +3175,7 @@ Screens:
                   X: =recCompleteModal.X + recCompleteModal.Width - 40
                   Y: =recCompleteModal.Y + 10
             - lblActualPrinters:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -3208,7 +3198,7 @@ Screens:
                   X: =recCompleteModal.X + 20
                   Y: =recCompleteModal.Y + 190
       - conRevertModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -3216,14 +3206,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recRevertOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recRevertModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =Color.White
@@ -3232,7 +3222,7 @@ Screens:
                   X: =(Parent.Width - 450) / 2
                   Y: =194
             - lblRevertTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -3245,7 +3235,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 15
             - btnRevertClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -3280,7 +3270,7 @@ Screens:
                   X: =recRevertModal.X + recRevertModal.Width - 40
                   Y: =recRevertModal.Y + 10
             - lblRevertStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -3292,7 +3282,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =243
             - ddRevertStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3321,7 +3311,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 75
             - lblRevertCurrentStatus:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =RGBA(107, 105, 214, 1)
@@ -3335,7 +3325,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 120
             - lblRevertTargetLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -3348,7 +3338,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =338
             - ddRevertTarget:
-                Control: Classic/DropDown
+                Control: Classic/DropDown@2.3.1
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3381,7 +3371,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 170
             - lblRevertReasonLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -3394,7 +3384,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =406
             - txtRevertReason:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3414,7 +3404,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 235
             - btnRevertCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Color: =Color.White
@@ -3445,7 +3435,7 @@ Screens:
                   X: =recRevertModal.X + 20
                   Y: =recRevertModal.Y + 325
             - btnRevertConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =1
@@ -3557,7 +3547,7 @@ Screens:
                   X: =recRevertModal.X + 235
                   Y: =recRevertModal.Y + 325
       - conDetailsModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -3565,14 +3555,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recDetailsOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recDetailsModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -3581,7 +3571,7 @@ Screens:
                   X: =(Parent.Width - 550) / 2
                   Y: =(Parent.Height - 660) / 2
             - lblDetailsTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorPrimary
@@ -3594,7 +3584,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =recDetailsModal.Y + 20
             - btnDetailsClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -3636,7 +3626,7 @@ Screens:
                   X: =recDetailsModal.X + recDetailsModal.Width - 40
                   Y: =recDetailsModal.Y + 10
             - lblDetailsCurrentLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3649,7 +3639,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =113
             - lblDetailsCurrent:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3672,7 +3662,7 @@ Screens:
                   X: =428
                   Y: =149
             - lblDetailsStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3685,7 +3675,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =198
             - ddDetailsStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3713,7 +3703,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =230
             - lblDetailsMethodLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3726,7 +3716,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =274
             - ddDetailsMethod:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3755,7 +3745,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =306
             - lblDetailsPrinterLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3768,7 +3758,7 @@ Screens:
                   X: =recDetailsModal.X + 190
                   Y: =273
             - ddDetailsPrinter:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3813,7 +3803,7 @@ Screens:
                   X: =recDetailsModal.X + 190
                   Y: =306
             - lblDetailsColorLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3826,7 +3816,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =347
             - ddDetailsColor:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3854,7 +3844,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =379
             - lblDetailsWeightLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3867,7 +3857,7 @@ Screens:
                   X: =428
                   Y: =443
             - txtDetailsWeight:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3887,7 +3877,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =476
             - lblDetailsHoursLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3900,7 +3890,7 @@ Screens:
                   X: =580
                   Y: =444
             - txtDetailsHours:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -3920,7 +3910,7 @@ Screens:
                   X: =580
                   Y: =476
             - lblDetailsCostLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -3934,7 +3924,7 @@ Screens:
                   X: =706
                   Y: =444
             - lblDetailsCostValue:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -3967,7 +3957,7 @@ Screens:
                   X: =706
                   Y: =476
             - btnDetailsCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -4006,7 +3996,7 @@ Screens:
                   X: =671
                   Y: =recDetailsModal.Y + 560
             - btnDetailsConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -4176,7 +4166,7 @@ Screens:
                   X: =799
                   Y: =recDetailsModal.Y + 560
             - lblDetailsTransLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =Font.'Open Sans'
@@ -4189,7 +4179,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =520
             - txtDetailsTransaction:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4209,7 +4199,7 @@ Screens:
                   X: =recDetailsModal.X + 20
                   Y: =546
             - lblDetailsSlicedOnLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -4222,7 +4212,7 @@ Screens:
                   X: =678
                   Y: =346
             - ddDetailsSlicedOnComputer:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4252,7 +4242,7 @@ Screens:
                   X: =678
                   Y: =379
             - chkDetailsOwnMaterial:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   CheckboxBorderColor: =varInputBorderColor
@@ -4267,7 +4257,7 @@ Screens:
                   X: =423
                   Y: =532
       - conPaymentModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -4275,14 +4265,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recPaymentOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recPaymentModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -4291,7 +4281,7 @@ Screens:
                   X: =(Parent.Width - 1100) / 2
                   Y: =(Parent.Height - 680) / 2
             - lblPaymentTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorSuccess
@@ -4304,7 +4294,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 20
             - btnPaymentClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -4349,7 +4339,7 @@ Screens:
                   X: =recPaymentModal.X + recPaymentModal.Width - 40
                   Y: =recPaymentModal.Y + 10
             - lblPaymentStudent:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -4367,7 +4357,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =94
             - lblPaymentStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4380,7 +4370,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =145
             - ddPaymentStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4408,7 +4398,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 130
             - lblPaymentTypeLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4421,7 +4411,7 @@ Screens:
                   X: =445
                   Y: =145
             - txtPaymentTransaction:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4449,7 +4439,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 205
             - lblPaymentWeightLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: |-
@@ -4494,7 +4484,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =291
             - txtPaymentWeight:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4514,7 +4504,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =recPaymentModal.Y + 280
             - lblPaymentCostLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4526,7 +4516,7 @@ Screens:
                   X: =403
                   Y: =299
             - lblPaymentCostValue:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4559,7 +4549,7 @@ Screens:
                   X: =397
                   Y: =322
             - lblPaymentDateLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4572,7 +4562,7 @@ Screens:
                   X: =445
                   Y: =220
             - dpPaymentDate:
-                Control: Classic/DatePicker
+                Control: Classic/DatePicker@2.6.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4585,7 +4575,7 @@ Screens:
                   X: =445
                   Y: =recPaymentModal.Y + 205
             - chkOwnMaterial:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =varColorText
                   CheckboxBorderColor: =varInputBorderColor
@@ -4601,7 +4591,7 @@ Screens:
                   X: =153
                   Y: =417
             - ddPaymentType:
-                Control: Classic/DropDown
+                Control: Classic/DropDown@2.3.1
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4626,7 +4616,7 @@ Screens:
                   X: =445
                   Y: =recPaymentModal.Y + 130
             - lblPaymentTransLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -4646,7 +4636,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =220
             - lblPaymentNotesLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -4658,7 +4648,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =551
             - txtPaymentNotes:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -4678,7 +4668,7 @@ Screens:
                   X: =recPaymentModal.X + 20
                   Y: =587
             - chkPartialPickup:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   CheckboxBorderColor: =varInputBorderColor
@@ -4695,7 +4685,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =btnPaymentConfirm.Y - Self.Height - 8
             - btnAddMoreItems:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -4755,7 +4745,7 @@ Screens:
                   X: =753
                   Y: =668
             - btnPaymentCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Color: =Color.White
@@ -4796,7 +4786,7 @@ Screens:
                   X: =btnPaymentConfirm.X - Self.Width - 20
                   Y: =recPaymentModal.Y + recPaymentModal.Height - Self.Height - 20
             - btnPaymentConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =1
@@ -5018,7 +5008,7 @@ Screens:
                   X: =recPaymentModal.X + recPaymentModal.Width - Self.Width - 30
                   Y: =recPaymentModal.Y + recPaymentModal.Height - Self.Height - 20
             - recPaymentVerticalDivider:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorText
@@ -5028,7 +5018,7 @@ Screens:
                   X: =recPaymentModal.X + 555
                   Y: =125
             - chkPayerSameAsStudent:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =varColorText
                   CheckboxBorderColor: =varInputBorderColor
@@ -5044,7 +5034,7 @@ Screens:
                   X: =153
                   Y: =381
             - lblPayerNameLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -5056,7 +5046,7 @@ Screens:
                   X: =153
                   Y: =469
             - lblPaymentHistoryHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -5069,7 +5059,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =recPaymentModal.Y + 110
             - lblPayerTigerCardLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
@@ -5080,7 +5070,7 @@ Screens:
                   X: =425
                   Y: =463
             - txtPayerTigerCard:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -5096,7 +5086,7 @@ Screens:
                   X: =425
                   Y: =503
             - txtPayerName:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -5111,7 +5101,7 @@ Screens:
                   X: =153
                   Y: =503
             - galPaymentHistory:
-                Control: Gallery
+                Control: Gallery@2.15.0
                 Variant: BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -5125,7 +5115,7 @@ Screens:
                   Y: =lblPaymentHistoryHeader.Y + lblPaymentHistoryHeader.Height + 4
                 Children:
                   - recHistRowBg:
-                      Control: Rectangle
+                      Control: Rectangle@2.3.0
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Fill: =RGBA(219, 219, 219, 1)
@@ -5134,7 +5124,7 @@ Screens:
                         Width: =448
                         Y: =1
                   - lblHistSummary:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Font: =varAppFont
@@ -5195,7 +5185,7 @@ Screens:
                         X: =10
                         Y: =5
             - lblPaidSoFar:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorSuccess
@@ -5216,7 +5206,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =If(galPaymentHistory.Visible, galPaymentHistory.Y + galPaymentHistory.Height + 8, recPaymentModal.Y + 110)
             - lblRemainingEst:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -5248,7 +5238,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =lblPaidSoFar.Y + lblPaidSoFar.Height + 4
             - recPlatesDivider:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorText
@@ -5258,7 +5248,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =lblRemainingEst.Y + lblRemainingEst.Height + 12
             - lblPlatesPickupHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -5271,7 +5261,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =recPlatesDivider.Y + recPlatesDivider.Height + 12
             - galPlatesPickup:
-                Control: Gallery
+                Control: Gallery@2.15.0
                 Variant: BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -5285,7 +5275,7 @@ Screens:
                   Y: =lblPlatesPickupHeader.Y + lblPlatesPickupHeader.Height + 4
                 Children:
                   - chkPlate:
-                      Control: Classic/CheckBox
+                      Control: Classic/CheckBox@2.1.0
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         CheckboxBorderColor: =RGBA(0, 18, 107, 1)
@@ -5307,7 +5297,7 @@ Screens:
                         X: =4
                         Y: =2
                   - lblPlateName:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Font: =varAppFont
@@ -5327,7 +5317,7 @@ Screens:
                         X: =34
                         Y: =5
             - lblPlatesHint:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -5341,7 +5331,7 @@ Screens:
                   X: =recPaymentModal.X + 590
                   Y: =galPlatesPickup.Y + galPlatesPickup.Height + 4
       - conBuildPlatesModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -5349,14 +5339,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recBuildPlatesOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recBuildPlatesModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -5365,7 +5355,7 @@ Screens:
                   X: =(Parent.Width - 600) / 2
                   Y: =(Parent.Height - 620) / 2
             - lblBuildPlatesTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -5378,7 +5368,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 20
                   Y: =recBuildPlatesModal.Y + 18
             - btnBuildPlatesClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -5408,7 +5398,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 562
                   Y: =recBuildPlatesModal.Y + 16
             - recBuildPlatesDivider1:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBorderLight
@@ -5417,7 +5407,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 20
                   Y: =recBuildPlatesModal.Y + 52
             - lblTotalSlicedLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -5430,7 +5420,7 @@ Screens:
                   X: =409
                   Y: =532
             - lblBuildPlatesProgressModal:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   AutoHeight: =true
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -5445,7 +5435,7 @@ Screens:
                   X: =509
                   Y: =532
             - recBuildPlatesDivider2:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBorderLight
@@ -5454,7 +5444,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 20
                   Y: =185
             - galBuildPlates:
-                Control: Gallery
+                Control: Gallery@2.15.0
                 Variant: BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -5469,7 +5459,7 @@ Screens:
                   Y: =193
                 Children:
                   - recPlateRowBg:
-                      Control: Rectangle
+                      Control: Rectangle@2.3.0
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Fill: =If(Mod(ThisItem.PlateNum, 2) = 0, RGBA(245, 247, 250, 1), RGBA(255, 255, 255, 1))
@@ -5477,7 +5467,7 @@ Screens:
                         OnSelect: =Select(Parent)
                         Width: =Parent.TemplateWidth
                   - lblPlateLabel:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Color: =varColorText
@@ -5490,7 +5480,7 @@ Screens:
                         Width: =80
                         X: =8
                   - drpPlateMachine:
-                      Control: Classic/DropDown
+                      Control: Classic/DropDown@2.3.1
                       Properties:
                         BorderColor: =If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)
                         BorderThickness: =varInputBorderThickness
@@ -5608,7 +5598,7 @@ Screens:
                         X: =88
                         Y: =8
                   - lblPlateStatus:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Align: =Align.Center
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -5623,7 +5613,7 @@ Screens:
                         X: =246
                         Y: =10
                   - btnMarkPrinting:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =Color.Transparent
                         BorderThickness: =0
@@ -5652,7 +5642,7 @@ Screens:
                         X: =356
                         Y: =10
                   - btnMarkDone:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =Color.Transparent
                         BorderThickness: =0
@@ -5681,7 +5671,7 @@ Screens:
                         X: =367
                         Y: =10
                   - btnRemovePlate:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =Color.Transparent
                         BorderThickness: =0
@@ -5761,7 +5751,7 @@ Screens:
                         X: =524
                         Y: =14
             - recBuildPlatesDivider3:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBorderLight
@@ -5770,7 +5760,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 20
                   Y: =recBuildPlatesModal.Y + 438
             - btnBuildPlatesAdd:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -5926,7 +5916,7 @@ Screens:
                   X: =633
                   Y: =140
             - btnBuildPlatesDone:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -5963,7 +5953,7 @@ Screens:
                   X: =recBuildPlatesModal.X + 460
                   Y: =630
       - conBatchPaymentModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -5971,13 +5961,13 @@ Screens:
             Width: =Parent.Width
           Children:
             - recBatchPaymentOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recBatchPaymentModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   Fill: =varColorBgCard
@@ -5987,7 +5977,7 @@ Screens:
                   X: =(Parent.Width - 600) / 2
                   Y: =(Parent.Height - 720) / 2
             - lblBatchTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorSuccess
                   Font: =varAppFont
@@ -5999,7 +5989,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 20
             - lblBatchSummary:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorTextMuted
                   Font: =varAppFont
@@ -6015,7 +6005,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =83
             - lblBatchStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -6027,7 +6017,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 85
             - lblBatchPaymentTypeLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -6039,7 +6029,7 @@ Screens:
                   X: =403
                   Y: =184
             - ddBatchPaymentType:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -6071,7 +6061,7 @@ Screens:
                   X: =403
                   Y: =209
             - lblBatchTransLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -6094,7 +6084,7 @@ Screens:
                   X: =563
                   Y: =184
             - txtBatchTransaction:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   Align: =Align.Center
                   BorderColor: =varInputBorderColor
@@ -6127,7 +6117,7 @@ Screens:
                   X: =563
                   Y: =209
             - lblBatchWeightLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: |-
                     =If(
@@ -6171,7 +6161,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =269
             - txtBatchWeight:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -6192,7 +6182,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 270
             - lblBatchCostLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -6204,7 +6194,7 @@ Screens:
                   X: =597
                   Y: =recBatchPaymentModal.Y + 245
             - lblBatchCostValue:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -6253,7 +6243,7 @@ Screens:
                   X: =597
                   Y: =recBatchPaymentModal.Y + 270
             - chkBatchOwnMaterial:
-                Control: Classic/CheckBox
+                Control: Classic/CheckBox@2.1.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   CheckboxBorderColor: =varInputBorderColor
@@ -6268,7 +6258,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 360
                   Y: =recBatchPaymentModal.Y + 270
             - lblBatchItemsHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
@@ -6279,7 +6269,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 320
             - galBatchItems:
-                Control: Gallery
+                Control: Gallery@2.15.0
                 Variant: BrowseLayout_Vertical_OneTextVariant_ver5.0
                 Properties:
                   BorderColor: =varColorBorder
@@ -6293,7 +6283,7 @@ Screens:
                   Y: =recBatchPaymentModal.Y + 345
                 Children:
                   - lblBatchItemRow:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =varColorText
                         Font: =varAppFont
@@ -6310,7 +6300,7 @@ Screens:
                           )
                         Width: =Parent.TemplateWidth
                   - btnRemoveFromBatch:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =ColorFade(Self.Fill, -15%)
                         BorderThickness: =0
@@ -6344,7 +6334,7 @@ Screens:
                         X: =Parent.TemplateWidth - 30
                         Y: =(Parent.TemplateHeight - 24) / 2
             - btnBatchPaymentCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Color: =Color.White
@@ -6378,7 +6368,7 @@ Screens:
                   X: =btnBatchPaymentConfirm.X - Self.Width - 20
                   Y: =btnBatchPaymentConfirm.Y
             - btnBatchPaymentConfirm:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =varInputBorderThickness
@@ -6519,7 +6509,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 450
                   Y: =690
             - ddBatchStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -6552,7 +6542,7 @@ Screens:
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 110
             - btnBatchPaymentClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -6591,7 +6581,7 @@ Screens:
                   X: =recBatchPaymentModal.X + recBatchPaymentModal.Width - 40
                   Y: =recBatchPaymentModal.Y + 10
             - lblBatchPayerNameLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6604,7 +6594,7 @@ Screens:
                   X: =673
                   Y: =109
             - txtBatchPayerName:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Default: =""
@@ -6616,7 +6606,7 @@ Screens:
                   X: =673
                   Y: =134
             - lblBatchPaymentDateLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6629,7 +6619,7 @@ Screens:
                   X: =743
                   Y: =184
             - dpBatchPaymentDate:
-                Control: Classic/DatePicker
+                Control: Classic/DatePicker@2.6.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =Font.'Open Sans'
@@ -6640,7 +6630,7 @@ Screens:
                   X: =743
                   Y: =209
       - conStudentNoteModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -6648,7 +6638,7 @@ Screens:
             Width: =Parent.Width
           Children:
             - recStudentNoteOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
@@ -6658,7 +6648,7 @@ Screens:
                     Set(varSelectedItem, Blank())
                   Width: =Parent.Width
             - recStudentNoteModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =Color.White
@@ -6667,7 +6657,7 @@ Screens:
                   X: =(Parent.Width - 400) / 2
                   Y: =(Parent.Height - 250) / 2
             - lblStudentNoteTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6680,7 +6670,7 @@ Screens:
                   X: =recStudentNoteModal.X + 20
                   Y: =recStudentNoteModal.Y + 15
             - txtStudentNoteContent:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -6701,7 +6691,7 @@ Screens:
                   X: =recStudentNoteModal.X + 20
                   Y: =recStudentNoteModal.Y + 55
             - btnStudentNoteOk:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -6730,7 +6720,7 @@ Screens:
                   X: =recStudentNoteModal.X + recStudentNoteModal.Width - 100
                   Y: =recStudentNoteModal.Y + recStudentNoteModal.Height - 50
             - btnStudentNoteClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -6762,7 +6752,7 @@ Screens:
                   X: =recStudentNoteModal.X + recStudentNoteModal.Width - 40
                   Y: =recStudentNoteModal.Y + 10
       - conNotesModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -6770,14 +6760,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recNotesOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recNotesModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -6786,7 +6776,7 @@ Screens:
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
             - lblNotesTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6799,7 +6789,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =recNotesModal.Y + 20
             - btnNotesClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -6833,7 +6823,7 @@ Screens:
                   X: =recNotesModal.X + recNotesModal.Width - 40
                   Y: =recNotesModal.Y + 10
             - lblStaffNotesHeader:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6846,7 +6836,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =recNotesModal.Y + 60
             - txtStaffNotesContent:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varColorBorder
                   BorderThickness: =varInputBorderThickness
@@ -6983,7 +6973,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =lblStaffNotesHeader.Y + 28
             - lblNotesStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -6996,7 +6986,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =txtStaffNotesContent.Y + txtStaffNotesContent.Height + 16
             - ddNotesStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7025,7 +7015,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =lblNotesStaffLabel.Y + 22
             - lblAddNoteLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -7037,7 +7027,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =ddNotesStaff.Y + ddNotesStaff.Height + 12
             - txtAddNote:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7057,7 +7047,7 @@ Screens:
                   X: =recNotesModal.X + 20
                   Y: =lblAddNoteLabel.Y + 22
             - btnNotesCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -7087,7 +7077,7 @@ Screens:
                   X: =recNotesModal.X + recNotesModal.Width - 255
                   Y: =recNotesModal.Y + recNotesModal.Height - 52
             - btnAddNote:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -7134,7 +7124,7 @@ Screens:
                   X: =recNotesModal.X + recNotesModal.Width - 140
                   Y: =recNotesModal.Y + recNotesModal.Height - 52
       - conFileModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -7142,14 +7132,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recFileOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recFileModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -7158,7 +7148,7 @@ Screens:
                   X: =(Parent.Width - 500) / 2
                   Y: =(Parent.Height - 450) / 2
             - lblFileTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorPrimary
@@ -7171,7 +7161,7 @@ Screens:
                   X: =recFileModal.X + 20
                   Y: =176
             - btnFileClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -7205,7 +7195,7 @@ Screens:
                   X: =recFileModal.X + recFileModal.Width - 40
                   Y: =recFileModal.Y + 10
             - lblFileStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =RGBA(51, 51, 51, 1)
@@ -7216,7 +7206,7 @@ Screens:
                   X: =recFileModal.X + 20
                   Y: =214
             - ddFileActor:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7245,7 +7235,7 @@ Screens:
                   X: =461
                   Y: =245
             - frmAttachmentsEdit:
-                Control: Form
+                Control: Form@2.4.4
                 Variant: Classic
                 Layout: Vertical
                 Properties:
@@ -7281,7 +7271,7 @@ Screens:
                   Y: =recFileModal.Y + 130
                 Children:
                   - Attachments_DataCard1:
-                      Control: TypedDataCard
+                      Control: TypedDataCard@1.0.7
                       Variant: ClassicAttachmentsEdit
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -7296,7 +7286,7 @@ Screens:
                         Y: =0
                       Children:
                         - DataCardKey13:
-                            Control: Label
+                            Control: Label@2.5.1
                             MetadataKey: FieldName
                             Properties:
                               AutoHeight: =true
@@ -7309,7 +7299,7 @@ Screens:
                               Wrap: =false
                               Y: =10
                         - DataCardValue13:
-                            Control: Attachments
+                            Control: Attachments@2.3.0
                             MetadataKey: FieldValue
                             Properties:
                               AddedItemFill: =varChevronFill
@@ -7337,7 +7327,7 @@ Screens:
                               X: =5
                               Y: =DataCardKey13.Y + DataCardKey13.Height + 5
                         - ErrorMessage13:
-                            Control: Label
+                            Control: Label@2.5.1
                             MetadataKey: ErrorMessage
                             Properties:
                               AutoHeight: =true
@@ -7358,7 +7348,7 @@ Screens:
                               X: =30
                               Y: =DataCardValue13.Y + DataCardValue13.Height
                         - StarVisible13:
-                            Control: Label
+                            Control: Label@2.5.1
                             MetadataKey: FieldRequired
                             Properties:
                               Align: =Align.Center
@@ -7372,7 +7362,7 @@ Screens:
                               Wrap: =false
                               Y: =DataCardKey13.Y
             - btnFileSave:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -7400,7 +7390,7 @@ Screens:
                   X: =recFileModal.X + 350
                   Y: =recFileModal.Y + 390
             - btnFileCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -7431,7 +7421,7 @@ Screens:
                   X: =recFileModal.X + 220
                   Y: =recFileModal.Y + 390
       - conViewMessagesModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -7439,14 +7429,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recViewMsgOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recViewMsgModal:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorBgCard
@@ -7455,7 +7445,7 @@ Screens:
                   X: =(Parent.Width - Min(varModalMaxWidth, Parent.Width - varModalMargin)) / 2
                   Y: =(Parent.Height - 750) / 2
             - lblViewMsgTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorPrimary
@@ -7468,7 +7458,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =recViewMsgModal.Y + 15
             - galViewMessages:
-                Control: Gallery
+                Control: Gallery@2.15.0
                 Variant: VariableHeight
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -7481,7 +7471,7 @@ Screens:
                   Y: =recViewMsgModal.Y + 75
                 Children:
                   - recVMsgBg:
-                      Control: Rectangle
+                      Control: Rectangle@2.3.0
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Fill: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))
@@ -7490,7 +7480,7 @@ Screens:
                         Width: =Parent.TemplateWidth * varMessageBubbleWidth
                         X: =If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)
                   - icoVMsgDirection:
-                      Control: Classic/Icon
+                      Control: Classic/Icon@2.5.0
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))
@@ -7502,7 +7492,7 @@ Screens:
                         X: =recVMsgBg.X + 10
                         Y: =8
                   - lblVMsgAuthor:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         AutoHeight: =true
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -7518,7 +7508,7 @@ Screens:
                         X: =recVMsgBg.X + 32
                         Y: =6
                   - lblVMsgDirectionBadge:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Align: =Align.Right
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -7533,7 +7523,7 @@ Screens:
                         X: =recVMsgBg.X + recVMsgBg.Width - 55
                         Y: =6
                   - lblVMsgContent:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         AutoHeight: =true
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -7548,7 +7538,7 @@ Screens:
                         X: =recVMsgBg.X + 10
                         Y: =lblVMsgAuthor.Y + lblVMsgAuthor.Height + 8
             - btnViewMsgClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
@@ -7583,7 +7573,7 @@ Screens:
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 40
                   Y: =recViewMsgModal.Y + 10
             - recViewMsgSeparator:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =Color.Transparent
                   Fill: =RGBA(200, 200, 200, 1)
@@ -7592,7 +7582,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =427
             - lblViewMsgStaffLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -7605,7 +7595,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =449
             - ddViewMsgStaff:
-                Control: Classic/ComboBox
+                Control: Classic/ComboBox@2.4.0
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7635,7 +7625,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =472
             - lblViewMsgSubjectLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -7648,7 +7638,7 @@ Screens:
                   X: =recViewMsgModal.X + 290
                   Y: =449
             - txtViewMsgSubject:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7666,7 +7656,7 @@ Screens:
                   X: =recViewMsgModal.X + 290
                   Y: =472
             - lblViewMsgBodyLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
@@ -7678,7 +7668,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =519
             - txtViewMsgBody:
-                Control: Classic/TextInput
+                Control: Classic/TextInput@2.3.2
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -7692,7 +7682,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =542
             - lblViewMsgCharCount:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Right
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -7705,7 +7695,7 @@ Screens:
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 150
                   Y: =676
             - btnViewMsgMarkRead:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varColorDanger
                   BorderThickness: =varInputBorderThickness
@@ -7765,7 +7755,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
             - btnViewMsgCancel:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(varColorNeutral, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -7797,7 +7787,7 @@ Screens:
                   X: =721
                   Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
             - btnViewMsgSend:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =varColorBorder
                   BorderThickness: =varInputBorderThickness
@@ -7894,7 +7884,7 @@ Screens:
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 150
                   Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
             - lblViewMsgSubtitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorTextMuted
@@ -7907,7 +7897,7 @@ Screens:
                   X: =recViewMsgModal.X + 20
                   Y: =54
       - conLoadingOverlay:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -7915,14 +7905,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recLoadingOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   Width: =Parent.Width
             - recLoadingBox:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   BorderColor: =varColorPrimary
                   BorderThickness: =2
@@ -7932,7 +7922,7 @@ Screens:
                   X: =(Parent.Width - 200) / 2
                   Y: =(Parent.Height - 100) / 2
             - lblLoadingSpinner:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   BorderColor: =RGBA(0, 18, 107, 1)
@@ -7943,7 +7933,7 @@ Screens:
                   X: =(Parent.Width - 50) / 2
                   Y: =(Parent.Height - 100) / 2 + 15
             - lblLoadingMessage:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Align: =Align.Center
                   AutoHeight: =true
@@ -7957,7 +7947,7 @@ Screens:
                   X: =(Parent.Width - 200) / 2
                   Y: =385
       - conExportModal:
-          Control: GroupContainer
+          Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
@@ -7965,14 +7955,14 @@ Screens:
             Width: =Parent.Width
           Children:
             - recExportOverlay:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   Fill: =varColorOverlay
                   Height: =Parent.Height
                   OnSelect: =Set(varShowExportModal, false)
                   Width: =Parent.Width
             - recExportBox:
-                Control: Rectangle
+                Control: Rectangle@2.3.0
                 Properties:
                   Fill: =varColorBgCard
                   Height: =320
@@ -7980,7 +7970,7 @@ Screens:
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
             - lblExportTitle:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -7992,7 +7982,7 @@ Screens:
                   X: =recExportBox.X + 20
                   Y: =recExportBox.Y + 15
             - btnExportClose:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =RGBA(0, 0, 0, 0)
                   BorderThickness: =0
@@ -8021,7 +8011,7 @@ Screens:
                   X: =recExportBox.X + recExportBox.Width - 40
                   Y: =recExportBox.Y + 10
             - lblExportMonthLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -8032,7 +8022,7 @@ Screens:
                   X: =recExportBox.X + 20
                   Y: =recExportBox.Y + 65
             - ddExportMonth:
-                Control: Classic/DropDown
+                Control: Classic/DropDown@2.3.1
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -8070,7 +8060,7 @@ Screens:
                   X: =recExportBox.X + 20
                   Y: =lblExportMonthLabel.Y + lblExportMonthLabel.Height + 4
             - lblExportYearLabel:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -8081,7 +8071,7 @@ Screens:
                   X: =ddExportMonth.X + ddExportMonth.Width + 30
                   Y: =lblExportMonthLabel.Y
             - ddExportYear:
-                Control: Classic/DropDown
+                Control: Classic/DropDown@2.3.1
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
@@ -8105,7 +8095,7 @@ Screens:
                   X: =lblExportYearLabel.X
                   Y: =ddExportMonth.Y
             - lblExportPreview:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =varColorText
                   Font: =varAppFont
@@ -8127,7 +8117,7 @@ Screens:
                   X: =recExportBox.X + 20
                   Y: =ddExportMonth.Y + ddExportMonth.Height + 20
             - btnExportDownload:
-                Control: Classic/Button
+                Control: Classic/Button@2.2.0
                 Properties:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   BorderThickness: =varInputBorderThickness
@@ -8193,7 +8183,7 @@ Screens:
                   X: =(recExportBox.X + recExportBox.Width - Self.Width) / 2 + recExportBox.X / 2
                   Y: =lblExportPreview.Y + lblExportPreview.Height + 20
             - lblExportNote:
-                Control: Label
+                Control: Label@2.5.1
                 Properties:
                   Color: =RGBA(120, 120, 120, 1)
                   Font: =varAppFont

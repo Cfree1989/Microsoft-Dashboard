@@ -15,11 +15,8 @@ App:
       Set(varMeName, User().FullName);
 
       // === SLICING COMPUTERS ===
-      // Collection for slicing computer dropdown in approval modal (local only — no SharePoint call)
-      ClearCollect(colSlicingComputers, 
-          {Name: "Computer 1"},
-          {Name: "Computer 2"}
-      );
+      // Loaded directly from SharePoint choices — adding a computer to the column auto-updates this
+      ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
       // === STATUS DEFINITIONS ===
       // All possible statuses in the system
@@ -109,6 +106,20 @@ App:
           ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
           ClearCollect(colAllBuildPlates, BuildPlates),
           ClearCollect(colAllPayments, Payments)
+      );
+
+      // Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
+      ClearCollect(colBuildPlateSummary,
+          ForAll(
+              Distinct(colAllBuildPlates, RequestID) As grp,
+              {
+                  RequestID: grp.Value,
+                  TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                  ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+              }
+          )
       );
 
       // Check if current user is a staff member (uses colStaff loaded above)
