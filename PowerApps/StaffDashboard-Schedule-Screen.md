@@ -66,6 +66,8 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 ```
 
 - The **HtmlViewer** grid shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colStaff`)
+  - **Per-day filtering:** Each day column shows **only** the people who have shifts on that specific day (not all staff). This reduces visual clutter and makes each day easier to read.
+  - Days with no shifts show "No shifts" instead of empty columns.
 - The **Edit Bar** lets someone pick their name, then edit shifts in a **gallery** (add/remove rows; unlimited shifts per day)
 - Saving **removes** all `StaffShifts` rows for that email, then **inserts** one row per gallery row (complete rows only)
 
@@ -596,8 +598,11 @@ The live formula is **large** and must stay under Power Fx string limits. **Sour
 - Outer `<div style='overflow:auto;width:100%;height:100%;…'>` for in-control scrolling.
 - **Outer 3-column table:** left time gutter \| week \| right gutter (`border-spacing:8px 0` between columns).
 - **Week row:** inner table with `width:100%;table-layout:fixed` (no `min-width`) so Mon–Fri share the `HtmlViewer` width and the week fits one screen without a forced horizontal scroll. If you have many staff columns and readability suffers on small tablets, you can add a modest `min-width` again or reduce slot height `H` in the formula.
+- **Per day filtering (reduces visual clutter):** For each day (Mon–Fri), the formula uses `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, ...)` to show **only staff who have shifts on that specific day**. Days with no scheduled shifts display "No shifts" in a single cell.
+  - The `colspan` header is dynamic per day: `colspan='{Text(CountRows(dayStaff))}'` instead of a fixed count.
+  - Staff appear in `SchedSortOrder` within each day (consistent left-to-right order when they work).
 - **Per day:** rounded border `div` wrapping an inner table with **`border-collapse:separate;border-spacing:1px;background:#e8e0d8`** so **1px grid lines** (horizontal and vertical) show without per-cell border markup.
-- **Slot coloring:** one `<tr>` per `colTimeSlots` row; inner `Concat` over staff; use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`).
+- **Slot coloring:** one `<tr>` per `colTimeSlots` row; inner `Concat` over **`dayStaff`** (not all staff); use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`).
 - **Gutters:** `vertical-align:top`, **`59px`** spacer, then time labels at **`H+1`** px line height to align with **`border-spacing`** row rhythm (`H = 28`).
 - **Totals table:** appended after the week grid in the same `HtmlText` string.
 

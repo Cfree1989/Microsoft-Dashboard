@@ -213,8 +213,9 @@ Screens:
           Control: Gallery
           Variant: Vertical
           Properties:
-            Height: =Max(CountRows(colEditShifts), 1) * Self.TemplateSize
+            Height: =92
             Items: =colEditShifts
+            ShowScrollbar: =true
             TemplatePadding: =0
             TemplateSize: =36
             Visible: =varSchedSelectedEmail <> ""
@@ -437,8 +438,7 @@ Screens:
               =With(
                   {
                       st: Sort(colStaff, SchedSortOrder, SortOrder.Ascending),
-                      H:  28,
-                      nc: Text(CountRows(colStaff))
+                      H:  28
                   },
                   "<div style='overflow:auto;width:100%;height:100%;box-sizing:border-box;background:#f5f1eb;padding:8px;font-family:Segoe UI,Arial,sans-serif;font-size:11px;'>" &
                   "<table style='border-collapse:separate;border-spacing:8px 0;'><tr>" &
@@ -459,43 +459,54 @@ Screens:
                   "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;table-layout:fixed;'><tr>" &
                   Concat(
                       ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
-                      "<td style='vertical-align:top;padding:0;'>" &
-                      "<div style='border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
-                      "<table cellpadding='0' style='border-collapse:separate;border-spacing:1px;background:#e8e0d8;width:100%;table-layout:fixed;'>" &
-                      "<tr><th colspan='" & nc & "' style='height:" & Text(H) & "px;background:#d7ccc8;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;'>" & Upper(dn.Value) & "</th></tr>" &
-                      "<tr>" &
-                      Concat(
-                          st As s,
-                          With(
-                              {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
-                              "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;overflow:hidden;white-space:nowrap;'>" &
-                              Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1) &
-                              "</td>"
-                          )
-                      ) &
-                      "</tr>" &
-                      Concat(
-                          colTimeSlots As slot,
-                          With(
-                              {si: slot.Idx},
-                              "<tr style='height:" & Text(H) & "px;'>" &
+                      With(
+                          {dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)},
+                          "<td style='vertical-align:top;padding:0;'>" &
+                          "<div style='border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                          If(
+                              CountRows(dayStaff) = 0,
+                              "<table cellpadding='0' style='border-collapse:separate;border-spacing:1px;background:#e8e0d8;width:100%;table-layout:fixed;'>" &
+                              "<tr><th style='height:" & Text(H) & "px;background:#d7ccc8;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;'>" & Upper(dn.Value) & "</th></tr>" &
+                              "<tr><td style='height:" & Text(H * 16 + 16) & "px;background:#fdfaf6;text-align:center;color:#999;padding:20px;'>No shifts</td></tr>" &
+                              "</table>",
+                              "<table cellpadding='0' style='border-collapse:separate;border-spacing:1px;background:#e8e0d8;width:100%;table-layout:fixed;'>" &
+                              "<tr><th colspan='" & Text(CountRows(dayStaff)) & "' style='height:" & Text(H) & "px;background:#d7ccc8;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;'>" & Upper(dn.Value) & "</th></tr>" &
+                              "<tr>" &
                               Concat(
-                                  st As s,
+                                  dayStaff As s,
                                   With(
-                                      {
-                                          cr:  LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
-                                          on:  CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
-                                      },
-                                      If(on,
-                                          "<td style='background:" & Coalesce(cr.Hex, "#8B4513") & ";'></td>",
-                                          "<td style='background:#fdfaf6;'></td>"
-                                      )
+                                      {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
+                                      "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;overflow:hidden;white-space:nowrap;'>" &
+                                      Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1) &
+                                      "</td>"
                                   )
                               ) &
-                              "</tr>"
-                          )
-                      ) &
-                      "</table></div></td>"
+                              "</tr>" &
+                              Concat(
+                                  colTimeSlots As slot,
+                                  With(
+                                      {si: slot.Idx},
+                                      "<tr style='height:" & Text(H) & "px;'>" &
+                                      Concat(
+                                          dayStaff As s,
+                                          With(
+                                              {
+                                                  cr:  LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
+                                                  on:  CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
+                                              },
+                                              If(on,
+                                                  "<td style='background:" & Coalesce(cr.Hex, "#8B4513") & ";'></td>",
+                                                  "<td style='background:#fdfaf6;'></td>"
+                                              )
+                                          )
+                                      ) &
+                                      "</tr>"
+                                  )
+                              ) &
+                              "</table>"
+                          ) &
+                          "</div></td>"
+                      )
                   ) &
                   "</tr></table></td>" &
                   "<td style='vertical-align:top;width:80px;padding:0;'>" &
