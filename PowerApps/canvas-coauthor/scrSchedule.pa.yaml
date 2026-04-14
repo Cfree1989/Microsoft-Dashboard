@@ -70,21 +70,25 @@ Screens:
             BorderColor: =Color.Transparent
             BorderThickness: =0
             Color: =Color.White
-            Fill: =Color.Transparent
+            Fill: =varColorPrimary
             Font: =varAppFont
-            Height: =24
-            HoverBorderColor: =Color.Transparent
+            Height: =22
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =Color.White
-            HoverFill: =RGBA(255, 255, 255, 0.1)
+            HoverFill: =varColorPrimaryHover
             OnSelect: =Navigate(scrDashboard, varScreenTransition)
-            PressedBorderColor: =Color.Transparent
-            PressedColor: =Color.White
-            PressedFill: =RGBA(255, 255, 255, 0.2)
-            Size: =11
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =varColorPrimaryPressed
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
+            Size: =8
             Text: ="← Dashboard"
-            Width: =120
-            X: =8
-            Y: =14
+            Width: =90
+            X: =Parent.Width - 100
+            Y: =15
       - lblSchedTitle:
           Control: Label
           Properties:
@@ -107,17 +111,6 @@ Screens:
             Height: =If(varSchedSelectedEmail <> "", 200, 56)
             Width: =Parent.Width
             Y: =52
-      - lblSchedWho:
-          Control: Label
-          Properties:
-            Color: =varColorTextMuted
-            Font: =varAppFont
-            Height: =22
-            Size: =10
-            Text: ="Who are you?"
-            Width: =160
-            X: =16
-            Y: =60
       - drpSchedName:
           Control: Classic/DropDown
           Properties:
@@ -155,7 +148,7 @@ Screens:
             Size: =varInputFontSize
             Width: =180
             X: =16
-            Y: =82
+            Y: =64
       - lblSchedAidInfo:
           Control: Label
           Properties:
@@ -188,7 +181,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =220
             X: =208
-            Y: =82
+            Y: =64
       - galEditShifts:
           Control: Gallery
           Variant: Vertical
@@ -287,13 +280,12 @@ Screens:
             HoverColor: =Color.White
             HoverFill: =varColorSuccessHover
             OnSelect: |-
-              =Set(varSchedEditSaving, true);
+              =              Set(varSchedEditSaving, true);
               RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
-              ForAll(
-                  Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
-                  Patch(
-                      StaffShifts,
-                      Defaults(StaffShifts),
+              Patch(
+                  StaffShifts,
+                  ForAll(
+                      Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
                       {
                           StaffEmail: varSchedSelectedEmail,
                           Day:        {Value: Day},
@@ -356,7 +348,6 @@ Screens:
               );
               Set(varSchedSelectedEmail, "");
               Clear(colEditShifts);
-              Reset(drpSchedName);
               Set(varSchedEditSaving, false)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
@@ -453,17 +444,20 @@ Screens:
                       "</tr>" &
                       Concat(
                           colTimeSlots As slot,
-                          "<tr style='height:" & Text(H) & "px;'>" &
-                          Concat(
-                              st As s,
-                              With(
-                                  {
-                                      cr:  LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
-                                      on:  CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && slot.Idx >= StartSlot && slot.Idx < EndSlot)) > 0
-                                  },
-                                  If(on,
-                                      "<td style='background:" & Coalesce(cr.Hex, "#8B4513") & ";padding:0;'></td>",
-                                      "<td style='background:#fdfaf6;padding:0;'></td>"
+                          With(
+                              {si: slot.Idx},
+                              "<tr style='height:" & Text(H) & "px;'>" &
+                              Concat(
+                                  st As s,
+                                  With(
+                                      {
+                                          cr:  LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
+                                          on:  CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
+                                      },
+                                      If(on,
+                                          "<td style='background:" & Coalesce(cr.Hex, "#8B4513") & ";padding:0;'></td>",
+                                          "<td style='background:#fdfaf6;padding:0;'></td>"
+                                      )
                                   )
                               ) &
                               "</tr>"
