@@ -371,7 +371,7 @@ The Edit Bar sits below the header. It shows the name picker always; once a name
 | BorderThickness | `1` |
 | X | `0`, Y | `52` |
 | Width | `=Parent.Width` |
-| Height | `=If(varSchedSelectedEmail <> "", 200, 56)` |
+| Height | `=If(varSchedSelectedEmail <> "", 114 + Max(CountRows(colEditShifts), 1) * 36, 56)` |
 
 > **No “Who are you?” label** — the ComboBox placeholder is enough; controls sit on one row when collapsed.
 
@@ -396,7 +396,7 @@ Use **`Classic/ComboBox`**, not DropDown — same pattern as staff pickers elsew
 | Chevron* | Same as other app ComboBoxes (`varChevronBackground`, etc.) |
 | HoverFill / Pressed* / Selection* | `varDropdownHoverFill`, `varDropdownPressedColor`, `varDropdownSelectionColor`, `varDropdownSelectionFill` |
 | Font | `=varAppFont`, Size | `=varInputFontSize` |
-| X | `16`, Y | `62`, Width | `200`, Height | `36` |
+| X | `16`, Y | `62`, Width | `227`, Height | `36` |
 | OnChange | *(formula below)* |
 
 **OnChange formula** — loads that person's shifts from `colShifts` into `colEditShifts` (one gallery row per shift). If they have no shifts yet, seeds one blank row.
@@ -439,7 +439,7 @@ If(
 | Name | `lblSchedAidInfo` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `208`, Y | `64`, Width | `220`, Height | `32` |
+| X | `257`, Y | `64`, Width | `220`, Height | `32` |
 | Text | *(formula below)* |
 | Color | *(formula below)* |
 
@@ -499,6 +499,7 @@ Insert a **Vertical gallery** on the edit bar:
 | X | `16`, Y | `118` |
 | Width | `=Parent.Width - 260`, Height | `92` |
 | ShowScrollbar | `true` |
+| ShowScrollbar | `true` |
 
 **Inside the gallery template**, add controls in a row:
 
@@ -506,24 +507,24 @@ Insert a **Vertical gallery** on the edit bar:
    - **Items:** `=["Monday","Tuesday","Wednesday","Thursday","Friday"]`
    - **DefaultSelectedItems:** `=[ThisItem.Day]`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})`
-   - Width `110`, Height `28`
+   - Width `137`, Height `28`
 
 2. **Start** — Drop down `drpGalShiftStart`
    - **Items:** `=["8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftStart), Blank(), [ThisItem.ShiftStart])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})`
-   - Width `100`, Height `28`
+   - Width `124`, Height `28`, X `148`
 
 3. **End** — Drop down `drpGalShiftEnd`
    - **Items:** `=["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftEnd), Blank(), [ThisItem.ShiftEnd])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})`
-   - Width `100`, Height `28`
+   - Width `113`, Height `28`, X `283`
 
 4. **Delete** — Button `btnGalShiftRemove`
    - **Text:** `"✕"`
    - **OnSelect:** `=Remove(colEditShifts, ThisItem)`
-   - Width `32`, Height `28`
+   - Width `32`, Height `28`, X `402`
 
 > **Note:** If `DefaultSelectedItems` with `Blank()` causes issues in your build, use a first option like `"--"` in Items and treat it as empty in the save filter (`ShiftStart <> "--"`).
 
@@ -535,7 +536,7 @@ Insert a **Vertical gallery** on the edit bar:
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Text | `"+ Add shift"` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `16`, Y | `186` |
+| X | `16`, Y | `=galEditShifts.Y + galEditShifts.Height + 8` |
 | Width | `100`, Height | `28` |
 | OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})` |
 
@@ -582,12 +583,12 @@ Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used
 |----------|-------|
 | Name | `htmlSchedGrid` |
 | Control | `HtmlViewer` |
-| Y | `=If(varSchedSelectedEmail <> "", 252, 108)` |
+| Y | `=recSchedEditBar.Y + recSchedEditBar.Height` |
 | Width | `=Parent.Width` |
-| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)` |
+| Height | `=Parent.Height - Self.Y` |
 | Padding | `0` on all sides |
 
-> **Dynamic top offset:** `recSchedEditBar` height is `If(varSchedSelectedEmail <> "", 200, 56)` starting at `Y = 52`, so the grid begins at **`52 + 56 = 108`** or **`52 + 200 = 252`**.
+> **Dynamic positioning:** The grid Y position and height use `recSchedEditBar` references so they automatically adjust when the edit bar expands/collapses or when shifts are added/removed from the gallery.
 
 ### Authoritative `HtmlText` formula
 
@@ -742,9 +743,9 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
 | X | `=Parent.Width - 220` |
-| Y | `=If(varSchedSelectedEmail <> "", 252, 108)` |
+| Y | `=recSchedEditBar.Y + recSchedEditBar.Height` |
 | Width | `220` |
-| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)` |
+| Height | `=Parent.Height - Self.Y` |
 
 ### Reorder gallery
 
@@ -755,9 +756,9 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
 | TemplateSize | `40` |
 | X | `=Parent.Width - 218` |
-| Y | `=If(varSchedSelectedEmail <> "", 256, 112)` |
+| Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 4` |
 | Width | `216` |
-| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 258, 114)` |
+| Height | `=Parent.Height - Self.Y - 2` |
 
 **Inside the gallery template, add:**
 
