@@ -11,12 +11,14 @@
 
 Before starting, confirm all of the following:
 
-- [ ] All 12 new columns added to the `Staff` list → `SharePoint/Staff-List-AidType-Update.md`
+- [ ] `Staff` list configured per [SharePoint/Staff-List-Setup.md](../SharePoint/Staff-List-Setup.md) (Member, Role, Active, AidType, SchedSortOrder)
+- [ ] `StaffShifts` list created per [SharePoint/StaffShifts-List-Setup.md](../SharePoint/StaffShifts-List-Setup.md)
 - [ ] `AidType` populated for all active student workers
-- [ ] You can open the Staff Dashboard app in **Power Apps Studio** (go to make.powerapps.com → Apps → open StaffDashboard in Edit mode)
+- [ ] In Power Apps Studio: **Data** → add the **StaffShifts** SharePoint list as a data source (same site as `Staff`)
+- [ ] You can open the Staff Dashboard app in **Power Apps Studio** (make.powerapps.com → Apps → Edit StaffDashboard)
 - [ ] The existing app is working (print requests dashboard is functional)
 
-> **No new SharePoint list or data connection needed.** Everything reads from and writes to the existing `Staff` list that the app already uses.
+> **Two data sources:** `Staff` (who they are, caps, column order) and `StaffShifts` (one row per shift, unlimited per person per day).
 
 ---
 
@@ -63,9 +65,9 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 └──────────────────────────────────────────────────────┘
 ```
 
-- The **HTML Text grid** always shows the live schedule pulled from `colStaff`
-- The **Edit Bar** appears when someone picks their name from the dropdown
-- Saving writes directly to the `Staff` list — one `Patch()` call, no separate list needed
+- The **HTML Text grid** shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colStaff`)
+- The **Edit Bar** lets someone pick their name, then edit shifts in a **gallery** (add/remove rows; unlimited shifts per day)
+- Saving **removes** all `StaffShifts` rows for that email, then **inserts** one row per gallery row (complete rows only)
 
 ---
 
@@ -73,9 +75,9 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 
 `App.OnStart` already loads the `Staff` list into `colStaff`. You need to:
 
-1. Add the new schedule columns to the `colStaff` projection
+1. Ensure `colStaff` includes schedule-related fields **only from Staff** (no time columns — shifts live in `StaffShifts`)
 2. Add helper collections for the time slots and color palette
-3. Add schedule state variables
+3. Add schedule state: `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedShowReorder`, and initialize `colEditShifts`
 
 ### 1A — Update the colStaff load
 
@@ -85,7 +87,7 @@ Find this existing line in `App.OnStart`:
 ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
 ```
 
-> **Note:** Your existing line may not have `StaffID` yet. Add it along with the schedule fields below.
+> **Note:** Your existing line may not have `StaffID` yet — add it along with `AidType` and `SchedSortOrder` below.
 
 Replace it with:
 
@@ -100,33 +102,13 @@ ClearCollect(colStaff,
             Role:           Role,
             Active:         Active,
             AidType:        AidType.Value,
-            MonStart:       MonStart.Value,
-            MonEnd:         MonEnd.Value,
-            TueStart:       TueStart.Value,
-            TueEnd:         TueEnd.Value,
-            WedStart:       WedStart.Value,
-            WedEnd:         WedEnd.Value,
-            ThuStart:       ThuStart.Value,
-            ThuEnd:         ThuEnd.Value,
-            FriStart:       FriStart.Value,
-            FriEnd:         FriEnd.Value,
-            MonStart2:      MonStart2.Value,
-            MonEnd2:        MonEnd2.Value,
-            TueStart2:      TueStart2.Value,
-            TueEnd2:        TueEnd2.Value,
-            WedStart2:      WedStart2.Value,
-            WedEnd2:        WedEnd2.Value,
-            ThuStart2:      ThuStart2.Value,
-            ThuEnd2:        ThuEnd2.Value,
-            FriStart2:      FriStart2.Value,
-            FriEnd2:        FriEnd2.Value,
             SchedSortOrder: Coalesce(SchedSortOrder, 10)
         }
     )
 ),
 ```
 
-> **What changed:** Added `StaffID`, `AidType`, all 10 day time fields, and `SchedSortOrder`. The `.Value` suffix is needed because Choice columns in SharePoint are complex objects — `.Value` gives you the text string.
+> **What changed:** `AidType` and `SchedSortOrder` stay on Staff. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here.
 
 ### 1B — Add the colTimeSlots collection
 
@@ -179,35 +161,18 @@ ClearCollect(colSchedColors,
 );
 ```
 
-### 1D — Add schedule state variables
+### 1D — Add schedule state variables and empty edit collection
 
 Find the `// === MODAL CONTROLS ===` section and add these alongside the other `Set()` calls:
 
 ```
 // === SCHEDULE SCREEN STATE ===
-Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
-Set(varSchedEditMon_Start,  "");    // Shift 1
-Set(varSchedEditMon_End,    "");
-Set(varSchedEditTue_Start,  "");
-Set(varSchedEditTue_End,    "");
-Set(varSchedEditWed_Start,  "");
-Set(varSchedEditWed_End,    "");
-Set(varSchedEditThu_Start,  "");
-Set(varSchedEditThu_End,    "");
-Set(varSchedEditFri_Start,  "");
-Set(varSchedEditFri_End,    "");
-Set(varSchedEditMon_Start2, "");    // Shift 2 (split shift)
-Set(varSchedEditMon_End2,   "");
-Set(varSchedEditTue_Start2, "");
-Set(varSchedEditTue_End2,   "");
-Set(varSchedEditWed_Start2, "");
-Set(varSchedEditWed_End2,   "");
-Set(varSchedEditThu_Start2, "");
-Set(varSchedEditThu_End2,   "");
-Set(varSchedEditFri_Start2, "");
-Set(varSchedEditFri_End2,   "");
+Set(varSchedSelectedEmail, "");   // Email of the person being edited ("" = no one)
 Set(varSchedEditSaving, false);
 Set(varSchedShowReorder, false);
+// Working copy of shifts while editing — one row per shift: RowKey, Day, ShiftStart, ShiftEnd
+ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
+Clear(colEditShifts);
 ```
 
 After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to confirm the app starts without errors.
@@ -261,69 +226,73 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 **OnVisible formula:**
 
 ```
-// Build a flat lookup table used by the HTML grid formula.
-// One row per person per day — pre-computes slot indices and colors so
-// the HTML formula stays fast and readable.
-ClearCollect(colSchedLookup,
+// Refresh active staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
+ClearCollect(
+    colStaff,
     ForAll(
-        Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As s,
-        ForAll(
-            ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
-            With(
-                {
-                    startLabel:  Switch(d.Value,
-                        "Monday",    s.MonStart,
-                        "Tuesday",   s.TueStart,
-                        "Wednesday", s.WedStart,
-                        "Thursday",  s.ThuStart,
-                        "Friday",    s.FriStart
-                    ),
-                    endLabel:    Switch(d.Value,
-                        "Monday",    s.MonEnd,
-                        "Tuesday",   s.TueEnd,
-                        "Wednesday", s.WedEnd,
-                        "Thursday",  s.ThuEnd,
-                        "Friday",    s.FriEnd
-                    ),
-                    startLabel2: Switch(d.Value,
-                        "Monday",    s.MonStart2,
-                        "Tuesday",   s.TueStart2,
-                        "Wednesday", s.WedStart2,
-                        "Thursday",  s.ThuStart2,
-                        "Friday",    s.FriStart2
-                    ),
-                    endLabel2:   Switch(d.Value,
-                        "Monday",    s.MonEnd2,
-                        "Tuesday",   s.TueEnd2,
-                        "Wednesday", s.WedEnd2,
-                        "Thursday",  s.ThuEnd2,
-                        "Friday",    s.FriEnd2
-                    ),
-                    colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
-                },
-                {
-                    Email:      s.MemberEmail,
-                    Name:       s.MemberName,
-                    Initials:   Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1),
-                    Day:        d.Value,
-                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx,  -1),
-                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,    -1),
-                    StartSlot2: Coalesce(LookUp(colTimeSlots, Label = startLabel2).Idx, -1),
-                    EndSlot2:   Coalesce(LookUp(colTimeSlots, Label = endLabel2).Idx,   -1),
-                    ColorHex:   colorRec.Hex,
-                    ColorLight: colorRec.Light,
-                    SortOrder:  s.SchedSortOrder
-                }
-            )
+        Filter(Staff, Active = true),
+        {
+            StaffID:        ID,
+            MemberName:     Member.DisplayName,
+            MemberEmail:    Member.Email,
+            Role:           Role,
+            Active:         Active,
+            AidType:        AidType.Value,
+            SchedSortOrder: Coalesce(SchedSortOrder, 10)
+        }
+    )
+);
+
+// Load all shift rows from SharePoint into a flat collection
+ClearCollect(colShifts,
+    ForAll(
+        Filter(StaffShifts, StaffEmail <> ""),
+        {
+            ShiftID:    ID,
+            Email:      StaffEmail,
+            Day:        Day.Value,
+            ShiftStart: ShiftStart.Value,
+            ShiftEnd:   ShiftEnd.Value
+        }
+    )
+);
+
+// One row per SHIFT (not per person-day) — unlimited shifts per day supported
+ClearCollect(
+    colSchedLookup,
+    ForAll(
+        colShifts As sh,
+        With(
+            {
+                sr: LookUp(colStaff, MemberEmail = sh.Email),
+                cr: LookUp(
+                    colSchedColors,
+                    Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12)
+                )
+            },
+            {
+                ShiftID:    sh.ShiftID,
+                Email:      sh.Email,
+                Name:       sr.MemberName,
+                Initials:   Left(sr.MemberName, 1) &
+                            Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                Day:        sh.Day,
+                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
+                ColorHex:   cr.Hex,
+                ColorLight: cr.Light,
+                SortOrder:  sr.SchedSortOrder
+            }
         )
     )
 );
 
 // Reset editing state whenever the screen becomes visible
-Set(varSchedSelectedEmail, "")
+Set(varSchedSelectedEmail, "");
+Clear(colEditShifts)
 ```
 
-> **What colSchedLookup does:** Instead of running complex lookups inside the HTML formula itself, we pre-compute everything once here. The HTML formula then does a simple `LookUp(colSchedLookup, Email = ... && Day = ...)` per cell. This keeps the grid fast and the formula readable.
+> **What `colSchedLookup` does:** One record per row in `StaffShifts`. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
 
 ---
 
@@ -373,7 +342,7 @@ Set(varSchedSelectedEmail, "")
 
 ## Step 5: Build the Edit Bar
 
-The Edit Bar sits below the header. It's always visible, but most of it only appears once a name is selected.
+The Edit Bar sits below the header. It shows the name picker always; once a name is selected, the **shift gallery** appears so the user can add, edit, or remove any number of shift rows.
 
 ### Edit bar background
 
@@ -384,7 +353,7 @@ The Edit Bar sits below the header. It's always visible, but most of it only app
 | BorderColor | `=varColorBorder` |
 | BorderThickness | `1` |
 | X | `0`, Y | `52` |
-| Width | `=Parent.Width`, Height | `90` |
+| Width | `=Parent.Width`, Height | `220` |
 
 ### "Who are you?" label
 
@@ -394,7 +363,7 @@ The Edit Bar sits below the header. It's always visible, but most of it only app
 | Text | `"Who are you?"` |
 | Font | `=varAppFont`, Size | `11` |
 | Color | `=varColorTextMuted` |
-| X | `16`, Y | `66`, Width | `100`, Height | `20` |
+| X | `16`, Y | `62`, Width | `100`, Height | `20` |
 
 ### Name dropdown
 
@@ -405,40 +374,38 @@ The Edit Bar sits below the header. It's always visible, but most of it only app
 | Value | `MemberName` |
 | Font | `=varAppFont`, Size | `=varInputFontSize` |
 | BorderColor | `=varInputBorderColor` |
-| X | `16`, Y | `88`, Width | `180`, Height | `32` |
+| X | `16`, Y | `82`, Width | `180`, Height | `32` |
 | OnChange | *(formula below)* |
 
-**OnChange formula:**
+**OnChange formula** — loads that person's shifts from `colShifts` into `colEditShifts` (one gallery row per shift). If they have no shifts yet, seeds one blank row.
 
 ```
 If(
     IsBlank(drpSchedName.Selected) || drpSchedName.Selected.MemberName = "Select...",
-    Set(varSchedSelectedEmail, ""),
-
-    // Load this person's existing schedule into the edit variables
+    Set(varSchedSelectedEmail, "");
+    Clear(colEditShifts),
     With(
-        {p: drpSchedName.Selected},
-        Set(varSchedSelectedEmail,  p.MemberEmail);
-        Set(varSchedEditMon_Start,  Coalesce(p.MonStart,  ""));
-        Set(varSchedEditMon_End,    Coalesce(p.MonEnd,    ""));
-        Set(varSchedEditTue_Start,  Coalesce(p.TueStart,  ""));
-        Set(varSchedEditTue_End,    Coalesce(p.TueEnd,    ""));
-        Set(varSchedEditWed_Start,  Coalesce(p.WedStart,  ""));
-        Set(varSchedEditWed_End,    Coalesce(p.WedEnd,    ""));
-        Set(varSchedEditThu_Start,  Coalesce(p.ThuStart,  ""));
-        Set(varSchedEditThu_End,    Coalesce(p.ThuEnd,    ""));
-        Set(varSchedEditFri_Start,  Coalesce(p.FriStart,  ""));
-        Set(varSchedEditFri_End,    Coalesce(p.FriEnd,    ""));
-        Set(varSchedEditMon_Start2, Coalesce(p.MonStart2, ""));
-        Set(varSchedEditMon_End2,   Coalesce(p.MonEnd2,   ""));
-        Set(varSchedEditTue_Start2, Coalesce(p.TueStart2, ""));
-        Set(varSchedEditTue_End2,   Coalesce(p.TueEnd2,   ""));
-        Set(varSchedEditWed_Start2, Coalesce(p.WedStart2, ""));
-        Set(varSchedEditWed_End2,   Coalesce(p.WedEnd2,   ""));
-        Set(varSchedEditThu_Start2, Coalesce(p.ThuStart2, ""));
-        Set(varSchedEditThu_End2,   Coalesce(p.ThuEnd2,   ""));
-        Set(varSchedEditFri_Start2, Coalesce(p.FriStart2, ""));
-        Set(varSchedEditFri_End2,   Coalesce(p.FriEnd2,   ""))
+        {em: drpSchedName.Selected.MemberEmail},
+        Set(varSchedSelectedEmail, em);
+        ClearCollect(
+            colEditShifts,
+            ForAll(
+                Filter(colShifts, Email = em),
+                {
+                    RowKey:     Text(GUID()),
+                    Day:        Day,
+                    ShiftStart: ShiftStart,
+                    ShiftEnd:   ShiftEnd
+                }
+            )
+        );
+        If(
+            CountRows(colEditShifts) = 0,
+            Collect(
+                colEditShifts,
+                {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""}
+            )
+        )
     )
 )
 ```
@@ -450,45 +417,33 @@ If(
 | Name | `lblSchedAidInfo` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `208`, Y | `88`, Width | `200`, Height | `32` |
+| X | `208`, Y | `82`, Width | `220`, Height | `32` |
 | Text | *(formula below)* |
 | Color | *(formula below)* |
 
-**Text formula:**
+**Text formula** — sums all **complete** rows in `colEditShifts` (both start and end filled):
 
 ```
 =With(
     {
         aidType: drpSchedName.Selected.AidType,
-        maxHrs:  Switch(drpSchedName.Selected.AidType,
-                     "Work Study",        12,
-                     "Graduate Assistant", 20,
-                     6   // President's Aid default
-                 ),
-        usedSlots: Sum(
-            Filter(colTimeSlots,
-                Or(
-                    And(varSchedEditMon_Start <> "", varSchedEditMon_End <> "",
-                        Idx >= LookUp(colTimeSlots, Label = varSchedEditMon_Start).Idx,
-                        Idx <  LookUp(colTimeSlots, Label = varSchedEditMon_End).Idx),
-                    And(varSchedEditTue_Start <> "", varSchedEditTue_End <> "",
-                        Idx >= LookUp(colTimeSlots, Label = varSchedEditTue_Start).Idx,
-                        Idx <  LookUp(colTimeSlots, Label = varSchedEditTue_End).Idx),
-                    And(varSchedEditWed_Start <> "", varSchedEditWed_End <> "",
-                        Idx >= LookUp(colTimeSlots, Label = varSchedEditWed_Start).Idx,
-                        Idx <  LookUp(colTimeSlots, Label = varSchedEditWed_End).Idx),
-                    And(varSchedEditThu_Start <> "", varSchedEditThu_End <> "",
-                        Idx >= LookUp(colTimeSlots, Label = varSchedEditThu_Start).Idx,
-                        Idx <  LookUp(colTimeSlots, Label = varSchedEditThu_End).Idx),
-                    And(varSchedEditFri_Start <> "", varSchedEditFri_End <> "",
-                        Idx >= LookUp(colTimeSlots, Label = varSchedEditFri_Start).Idx,
-                        Idx <  LookUp(colTimeSlots, Label = varSchedEditFri_End).Idx)
-                )
+        maxHrs: Switch(
+            drpSchedName.Selected.AidType,
+            "Work Study",         12,
+            "Graduate Assistant", 20,
+            6
+        ),
+        mins: Sum(
+            AddColumns(
+                Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                "SlotMins",
+                (LookUp(colTimeSlots, Label = ShiftEnd).Idx -
+                 LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30
             ),
-            30
+            SlotMins
         )
     },
-    aidType & " · " & Text(usedSlots / 60, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
+    aidType & " · " & Text(mins / 60, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
 )
 ```
 
@@ -497,10 +452,9 @@ If(
 ```
 =With(
     {maxHrs: Switch(drpSchedName.Selected.AidType,
-                 "Work Study",        12,
+                 "Work Study",         12,
                  "Graduate Assistant", 20,
-                 6
-             )},
+                 6)},
     If(
         Value(Mid(lblSchedAidInfo.Text, Find("·", lblSchedAidInfo.Text) + 2, 4)) > maxHrs,
         varColorDanger,
@@ -509,80 +463,59 @@ If(
 )
 ```
 
-### Per-day dropdowns
+### Shift gallery (`galEditShifts`)
 
-For each of the 5 days, add a day label and **four** dropdowns — two rows of (start, end) for shift 1 and shift 2. Below is the full spec for **Monday** — repeat for Tuesday–Friday changing only the names, variables, and X positions.
-
-The edit bar background height should be **`130`** (increased from 90) to fit both shift rows.
-
-**Day header label (Mon):**
+Insert a **Vertical gallery** on the edit bar:
 
 | Property | Value |
 |----------|-------|
-| Name | `lblSchedMonHdr` |
-| Text | `"Mon"` |
+| Name | `galEditShifts` |
 | Visible | `=varSchedSelectedEmail <> ""` |
-| Font | `=varAppFont`, Size | `9`, FontWeight | `=FontWeight.Semibold` |
-| Align | `=Align.Center` |
-| X | `420`, Y | `56`, Width | `88`, Height | `16` |
+| Items | `=colEditShifts` |
+| Layout | Vertical |
+| TemplateSize | `36` |
+| X | `16`, Y | `118` |
+| Width | `=Parent.Width - 260`, Height | `92` |
+| ShowScrollbar | `true` |
 
-**Monday Shift 1 Start dropdown:**
+**Inside the gallery template**, add controls in a row:
+
+1. **Day** — Drop down `drpGalShiftDay`
+   - **Items:** `=["Monday","Tuesday","Wednesday","Thursday","Friday"]`
+   - **DefaultSelectedItems:** `=[ThisItem.Day]`
+   - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})`
+   - Width `110`, Height `28`
+
+2. **Start** — Drop down `drpGalShiftStart`
+   - **Items:** `=["8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]`
+   - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftStart), Blank(), [ThisItem.ShiftStart])`
+   - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})`
+   - Width `100`, Height `28`
+
+3. **End** — Drop down `drpGalShiftEnd`
+   - **Items:** `=["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]`
+   - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftEnd), Blank(), [ThisItem.ShiftEnd])`
+   - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})`
+   - Width `100`, Height `28`
+
+4. **Delete** — Button `btnGalShiftRemove`
+   - **Text:** `"✕"`
+   - **OnSelect:** `=Remove(colEditShifts, ThisItem)`
+   - Width `32`, Height `28`
+
+> **Note:** If `DefaultSelectedItems` with `Blank()` causes issues in your build, use a first option like `"--"` in Items and treat it as empty in the save filter (`ShiftStart <> "--"`).
+
+### Add Shift button
 
 | Property | Value |
 |----------|-------|
-| Name | `drpSchedMonStart` |
+| Name | `btnSchedAddShift` |
 | Visible | `=varSchedSelectedEmail <> ""` |
-| Items | `=["Off","8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]` |
-| Default | `=If(varSchedEditMon_Start = "", "Off", varSchedEditMon_Start)` |
-| Font | `=varAppFont`, Size | `9` |
-| X | `420`, Y | `74`, Width | `88`, Height | `28` |
-| OnChange | `=Set(varSchedEditMon_Start, If(drpSchedMonStart.Selected.Value = "Off", "", drpSchedMonStart.Selected.Value))` |
-
-**Monday Shift 1 End dropdown:**
-
-| Property | Value |
-|----------|-------|
-| Name | `drpSchedMonEnd` |
-| Visible | `=varSchedSelectedEmail <> ""` |
-| Items | `=["Off","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]` |
-| Default | `=If(varSchedEditMon_End = "", "Off", varSchedEditMon_End)` |
-| Font | `=varAppFont`, Size | `9` |
-| X | `420`, Y | `104`, Width | `88`, Height | `28` |
-| OnChange | `=Set(varSchedEditMon_End, If(drpSchedMonEnd.Selected.Value = "Off", "", drpSchedMonEnd.Selected.Value))` |
-
-**Monday Shift 2 Start dropdown** *(split shift — leave "Off" if only one shift)*:
-
-| Property | Value |
-|----------|-------|
-| Name | `drpSchedMonStart2` |
-| Visible | `=varSchedSelectedEmail <> ""` |
-| Items | *(same as Shift 1 start)* |
-| Default | `=If(varSchedEditMon_Start2 = "", "Off", varSchedEditMon_Start2)` |
-| Font | `=varAppFont`, Size | `9` |
-| X | `420`, Y | `134`, Width | `88`, Height | `28` |
-| OnChange | `=Set(varSchedEditMon_Start2, If(drpSchedMonStart2.Selected.Value = "Off", "", drpSchedMonStart2.Selected.Value))` |
-
-**Monday Shift 2 End dropdown:**
-
-| Property | Value |
-|----------|-------|
-| Name | `drpSchedMonEnd2` |
-| Visible | `=varSchedSelectedEmail <> ""` |
-| Items | *(same as Shift 1 end)* |
-| Default | `=If(varSchedEditMon_End2 = "", "Off", varSchedEditMon_End2)` |
-| Font | `=varAppFont`, Size | `9` |
-| X | `420`, Y | `164`, Width | `88`, Height | `28` |
-| OnChange | `=Set(varSchedEditMon_End2, If(drpSchedMonEnd2.Selected.Value = "Off", "", drpSchedMonEnd2.Selected.Value))` |
-
-**Repeat for Tuesday–Friday** with these X positions (92px gap per day):
-
-| Day | X | Shift 1 Start Var | Shift 1 End Var | Shift 2 Start Var | Shift 2 End Var |
-|-----|---|-------------------|-----------------|-------------------|-----------------|
-| Monday | `420` | `varSchedEditMon_Start` | `varSchedEditMon_End` | `varSchedEditMon_Start2` | `varSchedEditMon_End2` |
-| Tuesday | `512` | `varSchedEditTue_Start` | `varSchedEditTue_End` | `varSchedEditTue_Start2` | `varSchedEditTue_End2` |
-| Wednesday | `604` | `varSchedEditWed_Start` | `varSchedEditWed_End` | `varSchedEditWed_Start2` | `varSchedEditWed_End2` |
-| Thursday | `696` | `varSchedEditThu_Start` | `varSchedEditThu_End` | `varSchedEditThu_Start2` | `varSchedEditThu_End2` |
-| Friday | `788` | `varSchedEditFri_Start` | `varSchedEditFri_End` | `varSchedEditFri_Start2` | `varSchedEditFri_End2` |
+| Text | `"+ Add shift"` |
+| Font | `=varAppFont`, Size | `10` |
+| X | `16`, Y | `186` |
+| Width | `100`, Height | `28` |
+| OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})` |
 
 ### Save button
 
@@ -613,7 +546,7 @@ The edit bar background height should be **`130`** (increased from 90) to fit bo
 | Fill | `=RGBA(0,0,0,0)` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
 | X | `1032`, Y | `68`, Width | `80`, Height | `36` |
-| OnSelect | `=Set(varSchedSelectedEmail, ""); Reset(drpSchedName)` |
+| OnSelect | `=Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Reset(drpSchedName)` |
 
 ---
 
@@ -626,9 +559,9 @@ Insert an **HTML Text** control:
 | Property | Value |
 |----------|-------|
 | Name | `htmlSchedGrid` |
-| X | `0`, Y | `144` |
+| X | `0`, Y | `272` |
 | Width | `=Parent.Width` |
-| Height | `=Parent.Height - 144` |
+| Height | `=Parent.Height - 272` |
 | PaddingLeft | `0`, PaddingTop | `0` |
 | HtmlText | *(formula below)* |
 
@@ -641,7 +574,7 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
 ```
 =With(
     {
-        sortedStaff: Distinct(Sort(colSchedLookup, SortOrder, SortOrder.Ascending), Email),
+        sortedStaff: Distinct(Sort(colStaff, SchedSortOrder, SortOrder.Ascending), MemberEmail),
         slotH: 24,
         colW:  28,
         gutterW: 60
@@ -680,17 +613,20 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
     ) &
     "</tr>" &
 
-    // ---- ROW 2: Staff name headers ----
+    // ---- ROW 2: Staff initials (from colStaff — same for every day column) ----
     "<tr>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
         Concat(
             sortedStaff As s,
             With(
-                {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                {
+                    sr: LookUp(colStaff, MemberEmail = s.Value),
+                    cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12))
+                },
                 "<th class='sh" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
-                "' style='background:" & Coalesce(c.ColorLight, "#eeeeee") & ";width:" & Text(colW) & "px'>" &
-                LookUp(colSchedLookup, Email = s.Value).Initials &
+                "' style='background:" & Coalesce(cr.Light, "#eeeeee") & ";width:" & Text(colW) & "px'>" &
+                Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1) &
                 "</th>"
             )
         )
@@ -706,47 +642,52 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
             Concat(
                 sortedStaff As s,
                 With(
-                    {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                    {
+                        matches: Filter(
+                            colSchedLookup,
+                            Email = s.Value &&
+                            Day = dayName.Value &&
+                            StartSlot >= 0 &&
+                            slot.Idx >= StartSlot &&
+                            slot.Idx < EndSlot
+                        ),
+                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
+                    },
                     "<td class='sc" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
                     "' style='background:" &
-                    If(
-                        !IsBlank(c) && (
-                            (c.StartSlot  >= 0 && slot.Idx >= c.StartSlot  && slot.Idx < c.EndSlot)  ||
-                            (c.StartSlot2 >= 0 && slot.Idx >= c.StartSlot2 && slot.Idx < c.EndSlot2)
-                        ),
-                        c.ColorHex,
-                        "#ffffff"
-                    ) & "'></td>"
+                    If(CountRows(matches) > 0, cr.Hex, "#ffffff") & "'></td>"
                 )
             )
         ) &
         "</tr>"
     ) &
 
-    // ---- TOTALS ROW (includes both shifts) ----
+    // ---- TOTALS ROW (sum all shift rows for that person + day) ----
     "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Hrs/Day</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
         Concat(
             sortedStaff As s,
             With(
-                {c: LookUp(colSchedLookup, Email = s.Value && Day = dayName.Value)},
+                {
+                    dayHrs: Sum(
+                        Filter(
+                            colSchedLookup,
+                            Email = s.Value && Day = dayName.Value && StartSlot >= 0
+                        ),
+                        (EndSlot - StartSlot) / 2
+                    ),
+                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
+                },
                 "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
-                "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & "'>" &
-                If(!IsBlank(c) && c.StartSlot >= 0,
-                    Text(
-                        ((c.EndSlot - c.StartSlot) +
-                         If(c.StartSlot2 >= 0, c.EndSlot2 - c.StartSlot2, 0)) / 2,
-                        "0.#"
-                    ) & "h",
-                    "—"
-                ) & "</td>"
+                "' style='background:" & Coalesce(cr.Light, "#f0f0f0") & "'>" &
+                If(dayHrs > 0, Text(dayHrs, "0.#") & "h", "—") & "</td>"
             )
         )
     ) &
     "</tr>" &
 
-    // ---- WEEKLY TOTAL ROW (includes both shifts, GA-aware) ----
+    // ---- WEEKLY TOTAL ROW ----
     "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Wk / Max</td>" &
     Concat(
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
@@ -755,16 +696,19 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
             With(
                 {
                     totalHrs: Sum(
-                        Filter(colSchedLookup, Email = s.Value),
-                        (If(StartSlot >= 0, EndSlot - StartSlot, 0) +
-                         If(StartSlot2 >= 0, EndSlot2 - StartSlot2, 0)) / 2
+                        Filter(colSchedLookup, Email = s.Value && StartSlot >= 0),
+                        (EndSlot - StartSlot) / 2
                     ),
-                    maxHrs: Switch(LookUp(colStaff, MemberEmail = s.Value).AidType,
-                                "Work Study", 12, "Graduate Assistant", 20, 6),
-                    c: LookUp(colSchedLookup, Email = s.Value && Day = "Monday")
+                    maxHrs: Switch(
+                        LookUp(colStaff, MemberEmail = s.Value).AidType,
+                        "Work Study",         12,
+                        "Graduate Assistant", 20,
+                        6
+                    ),
+                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
                 },
                 "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
-                "' style='background:" & Coalesce(c.ColorLight, "#f0f0f0") & ";font-size:9px;'>" &
+                "' style='background:" & Coalesce(cr.Light, "#f0f0f0") & ";font-size:9px;'>" &
                 If(dayName.Value = "Monday",
                     Text(totalHrs, "0.#") & "/" & Text(maxHrs, "0"),
                     ""
@@ -784,41 +728,59 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
     "<th>Total</th><th>Max</th>" &
     "</tr></thead><tbody>" &
     Concat(
-        Distinct(Sort(colSchedLookup, SortOrder, SortOrder.Ascending), Email) As p,
+        Distinct(Sort(colStaff, SchedSortOrder, SortOrder.Ascending), MemberEmail) As p,
         With(
             {
-                cMon: LookUp(colSchedLookup, Email = p.Value && Day = "Monday"),
-                cTue: LookUp(colSchedLookup, Email = p.Value && Day = "Tuesday"),
-                cWed: LookUp(colSchedLookup, Email = p.Value && Day = "Wednesday"),
-                cThu: LookUp(colSchedLookup, Email = p.Value && Day = "Thursday"),
-                cFri: LookUp(colSchedLookup, Email = p.Value && Day = "Friday"),
-                sr:   LookUp(colStaff, MemberEmail = p.Value)
+                sr: LookUp(colStaff, MemberEmail = p.Value),
+                cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)),
+                mH: Sum(
+                    Filter(colSchedLookup, Email = p.Value && Day = "Monday" && StartSlot >= 0),
+                    (EndSlot - StartSlot) / 2
+                ),
+                tuH: Sum(
+                    Filter(colSchedLookup, Email = p.Value && Day = "Tuesday" && StartSlot >= 0),
+                    (EndSlot - StartSlot) / 2
+                ),
+                wH: Sum(
+                    Filter(colSchedLookup, Email = p.Value && Day = "Wednesday" && StartSlot >= 0),
+                    (EndSlot - StartSlot) / 2
+                ),
+                thH: Sum(
+                    Filter(colSchedLookup, Email = p.Value && Day = "Thursday" && StartSlot >= 0),
+                    (EndSlot - StartSlot) / 2
+                ),
+                fH: Sum(
+                    Filter(colSchedLookup, Email = p.Value && Day = "Friday" && StartSlot >= 0),
+                    (EndSlot - StartSlot) / 2
+                ),
+                maxH: Switch(
+                    sr.AidType,
+                    "Work Study",         12,
+                    "Graduate Assistant", 20,
+                    6
+                ),
+                abbrev: Switch(
+                    sr.AidType,
+                    "Work Study",         "WS",
+                    "Graduate Assistant", "GA",
+                    "President's Aid",    "PA",
+                    "—"
+                ),
+                bgColor: Coalesce(cr.Light, "#f5f5f5")
             },
             With(
-                {
-                    mH:  (If(!IsBlank(cMon)&&cMon.EndSlot>=0, cMon.EndSlot-cMon.StartSlot, 0) + If(!IsBlank(cMon)&&cMon.EndSlot2>=0, cMon.EndSlot2-cMon.StartSlot2, 0)) / 2,
-                    tuH: (If(!IsBlank(cTue)&&cTue.EndSlot>=0, cTue.EndSlot-cTue.StartSlot, 0) + If(!IsBlank(cTue)&&cTue.EndSlot2>=0, cTue.EndSlot2-cTue.StartSlot2, 0)) / 2,
-                    wH:  (If(!IsBlank(cWed)&&cWed.EndSlot>=0, cWed.EndSlot-cWed.StartSlot, 0) + If(!IsBlank(cWed)&&cWed.EndSlot2>=0, cWed.EndSlot2-cWed.StartSlot2, 0)) / 2,
-                    thH: (If(!IsBlank(cThu)&&cThu.EndSlot>=0, cThu.EndSlot-cThu.StartSlot, 0) + If(!IsBlank(cThu)&&cThu.EndSlot2>=0, cThu.EndSlot2-cThu.StartSlot2, 0)) / 2,
-                    fH:  (If(!IsBlank(cFri)&&cFri.EndSlot>=0, cFri.EndSlot-cFri.StartSlot, 0) + If(!IsBlank(cFri)&&cFri.EndSlot2>=0, cFri.EndSlot2-cFri.StartSlot2, 0)) / 2,
-                    maxH:   Switch(sr.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
-                    abbrev: Switch(sr.AidType, "Work Study", "WS", "Graduate Assistant", "GA", "President's Aid", "PA", "—"),
-                    bgColor: Coalesce(LookUp(colSchedLookup, Email = p.Value).ColorLight, "#f5f5f5")
-                },
-                With(
-                    {totH: mH + tuH + wH + thH + fH},
-                    "<tr style='background:" & bgColor & "'>" &
-                    "<td class='ts-n'>" & Coalesce(LookUp(colSchedLookup, Email = p.Value).Name, p.Value) & "</td>" &
-                    "<td>" & abbrev & "</td>" &
-                    "<td>" & Text(mH,  "0.#") & "</td>" &
-                    "<td>" & Text(tuH, "0.#") & "</td>" &
-                    "<td>" & Text(wH,  "0.#") & "</td>" &
-                    "<td>" & Text(thH, "0.#") & "</td>" &
-                    "<td>" & Text(fH,  "0.#") & "</td>" &
-                    "<td class='" & If(totH > maxH, "over", "") & "'>" & Text(totH, "0.#") & "</td>" &
-                    "<td>" & Text(maxH, "0") & "</td>" &
-                    "</tr>"
-                )
+                {totH: mH + tuH + wH + thH + fH},
+                "<tr style='background:" & bgColor & "'>" &
+                "<td class='ts-n'>" & sr.MemberName & "</td>" &
+                "<td>" & abbrev & "</td>" &
+                "<td>" & Text(mH,  "0.#") & "</td>" &
+                "<td>" & Text(tuH, "0.#") & "</td>" &
+                "<td>" & Text(wH,  "0.#") & "</td>" &
+                "<td>" & Text(thH, "0.#") & "</td>" &
+                "<td>" & Text(fH,  "0.#") & "</td>" &
+                "<td class='" & If(totH > maxH, "over", "") & "'>" & Text(totH, "0.#") & "</td>" &
+                "<td>" & Text(maxH, "0") & "</td>" &
+                "</tr>"
             )
         )
     ) &
@@ -830,17 +792,20 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
         ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
         "<td>" &
         Text(
-            Sum(Filter(colSchedLookup, Day = d.Value),
-                (If(StartSlot>=0, EndSlot-StartSlot, 0) +
-                 If(StartSlot2>=0, EndSlot2-StartSlot2, 0)) / 2
-            ), "0.#"
+            Sum(
+                Filter(colSchedLookup, Day = d.Value && StartSlot >= 0),
+                (EndSlot - StartSlot) / 2
+            ),
+            "0.#"
         ) & "</td>"
     ) &
     With(
-        {grandTotal: Sum(colSchedLookup,
-            (If(StartSlot>=0, EndSlot-StartSlot, 0) +
-             If(StartSlot2>=0, EndSlot2-StartSlot2, 0)) / 2
-        )},
+        {
+            grandTotal: Sum(
+                Filter(colSchedLookup, StartSlot >= 0),
+                (EndSlot - StartSlot) / 2
+            )
+        },
         "<td>" & Text(grandTotal, "0.#") & "</td><td></td>"
     ) &
     "</tr></tfoot></table>" &
@@ -857,92 +822,99 @@ This formula builds the entire grid as a string. It uses `colSchedLookup` (built
 
 ## Step 7: Save Logic
 
-Wire the `OnSelect` of `btnSchedSave` with this formula. It patches a single row in the `Staff` list — much simpler than the separate-list approach.
+Wire the `OnSelect` of `btnSchedSave` with this formula. It **replaces** all `StaffShifts` rows for the selected email with the current gallery rows (complete rows only), then rebuilds collections so the grid updates without leaving the screen.
 
 ```
 Set(varSchedEditSaving, true);
 
-// Patch the one Staff list row for this person with all their schedule times
-Patch(
-    Staff,
-    LookUp(Staff, Member.Email = varSchedSelectedEmail),
-    {
-        MonStart:  If(varSchedEditMon_Start  = "", Blank(), {Value: varSchedEditMon_Start}),
-        MonEnd:    If(varSchedEditMon_End    = "", Blank(), {Value: varSchedEditMon_End}),
-        TueStart:  If(varSchedEditTue_Start  = "", Blank(), {Value: varSchedEditTue_Start}),
-        TueEnd:    If(varSchedEditTue_End    = "", Blank(), {Value: varSchedEditTue_End}),
-        WedStart:  If(varSchedEditWed_Start  = "", Blank(), {Value: varSchedEditWed_Start}),
-        WedEnd:    If(varSchedEditWed_End    = "", Blank(), {Value: varSchedEditWed_End}),
-        ThuStart:  If(varSchedEditThu_Start  = "", Blank(), {Value: varSchedEditThu_Start}),
-        ThuEnd:    If(varSchedEditThu_End    = "", Blank(), {Value: varSchedEditThu_End}),
-        FriStart:  If(varSchedEditFri_Start  = "", Blank(), {Value: varSchedEditFri_Start}),
-        FriEnd:    If(varSchedEditFri_End    = "", Blank(), {Value: varSchedEditFri_End}),
-        MonStart2: If(varSchedEditMon_Start2 = "", Blank(), {Value: varSchedEditMon_Start2}),
-        MonEnd2:   If(varSchedEditMon_End2   = "", Blank(), {Value: varSchedEditMon_End2}),
-        TueStart2: If(varSchedEditTue_Start2 = "", Blank(), {Value: varSchedEditTue_Start2}),
-        TueEnd2:   If(varSchedEditTue_End2   = "", Blank(), {Value: varSchedEditTue_End2}),
-        WedStart2: If(varSchedEditWed_Start2 = "", Blank(), {Value: varSchedEditWed_Start2}),
-        WedEnd2:   If(varSchedEditWed_End2   = "", Blank(), {Value: varSchedEditWed_End2}),
-        ThuStart2: If(varSchedEditThu_Start2 = "", Blank(), {Value: varSchedEditThu_Start2}),
-        ThuEnd2:   If(varSchedEditThu_End2   = "", Blank(), {Value: varSchedEditThu_End2}),
-        FriStart2: If(varSchedEditFri_Start2 = "", Blank(), {Value: varSchedEditFri_Start2}),
-        FriEnd2:   If(varSchedEditFri_End2   = "", Blank(), {Value: varSchedEditFri_End2})
-    }
+// 1. Remove every existing shift row for this person
+RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+
+// 2. Insert one SharePoint row per complete gallery row
+ForAll(
+    Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+    Patch(
+        StaffShifts,
+        Defaults(StaffShifts),
+        {
+            StaffEmail: varSchedSelectedEmail,
+            Day:        {Value: Day},
+            ShiftStart: {Value: ShiftStart},
+            ShiftEnd:   {Value: ShiftEnd}
+        }
+    )
 );
 
-// Refresh colStaff from SharePoint to pick up the saved values
-ClearCollect(colStaff,
+// 3. Refresh colStaff (in case AidType / sort changed elsewhere)
+ClearCollect(
+    colStaff,
     ForAll(
         Filter(Staff, Active = true),
         {
-            StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email,
-            Role: Role, Active: Active, AidType: AidType.Value,
-            MonStart:  MonStart.Value,  MonEnd:  MonEnd.Value,
-            TueStart:  TueStart.Value,  TueEnd:  TueEnd.Value,
-            WedStart:  WedStart.Value,  WedEnd:  WedEnd.Value,
-            ThuStart:  ThuStart.Value,  ThuEnd:  ThuEnd.Value,
-            FriStart:  FriStart.Value,  FriEnd:  FriEnd.Value,
-            MonStart2: MonStart2.Value, MonEnd2: MonEnd2.Value,
-            TueStart2: TueStart2.Value, TueEnd2: TueEnd2.Value,
-            WedStart2: WedStart2.Value, WedEnd2: WedEnd2.Value,
-            ThuStart2: ThuStart2.Value, ThuEnd2: ThuEnd2.Value,
-            FriStart2: FriStart2.Value, FriEnd2: FriEnd2.Value,
+            StaffID:        ID,
+            MemberName:     Member.DisplayName,
+            MemberEmail:    Member.Email,
+            Role:           Role,
+            Active:         Active,
+            AidType:        AidType.Value,
             SchedSortOrder: Coalesce(SchedSortOrder, 10)
         }
     )
 );
 
-// Rebuild the lookup table so the grid refreshes immediately
-ClearCollect(colSchedLookup,
-    ForAll(Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As s,
-        ForAll(["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
-            With({
-                    startLabel:  Switch(d.Value,"Monday",s.MonStart, "Tuesday",s.TueStart, "Wednesday",s.WedStart, "Thursday",s.ThuStart, "Friday",s.FriStart),
-                    endLabel:    Switch(d.Value,"Monday",s.MonEnd,   "Tuesday",s.TueEnd,   "Wednesday",s.WedEnd,   "Thursday",s.ThuEnd,   "Friday",s.FriEnd),
-                    startLabel2: Switch(d.Value,"Monday",s.MonStart2,"Tuesday",s.TueStart2,"Wednesday",s.WedStart2,"Thursday",s.ThuStart2,"Friday",s.FriStart2),
-                    endLabel2:   Switch(d.Value,"Monday",s.MonEnd2,  "Tuesday",s.TueEnd2,  "Wednesday",s.WedEnd2,  "Thursday",s.ThuEnd2,  "Friday",s.FriEnd2),
-                    colorRec: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))
-                },
-                {Email: s.MemberEmail, Name: s.MemberName,
-                 Initials: Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1),
-                 Day: d.Value,
-                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = startLabel).Idx,  -1),
-                 EndSlot:    Coalesce(LookUp(colTimeSlots, Label = endLabel).Idx,    -1),
-                 StartSlot2: Coalesce(LookUp(colTimeSlots, Label = startLabel2).Idx, -1),
-                 EndSlot2:   Coalesce(LookUp(colTimeSlots, Label = endLabel2).Idx,   -1),
-                 ColorHex: colorRec.Hex, ColorLight: colorRec.Light, SortOrder: s.SchedSortOrder}
-            )
+// 4. Reload shifts + rebuild colSchedLookup (same logic as scrSchedule.OnVisible)
+ClearCollect(
+    colShifts,
+    ForAll(
+        Filter(StaffShifts, StaffEmail <> ""),
+        {
+            ShiftID:    ID,
+            Email:      StaffEmail,
+            Day:        Day.Value,
+            ShiftStart: ShiftStart.Value,
+            ShiftEnd:   ShiftEnd.Value
+        }
+    )
+);
+ClearCollect(
+    colSchedLookup,
+    ForAll(
+        colShifts As sh,
+        With(
+            {
+                sr: LookUp(colStaff, MemberEmail = sh.Email),
+                cr: LookUp(
+                    colSchedColors,
+                    Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12)
+                )
+            },
+            {
+                ShiftID:    sh.ShiftID,
+                Email:      sh.Email,
+                Name:       sr.MemberName,
+                Initials:   Left(sr.MemberName, 1) &
+                            Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                Day:        sh.Day,
+                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
+                ColorHex:   cr.Hex,
+                ColorLight: cr.Light,
+                SortOrder:  sr.SchedSortOrder
+            }
         )
     )
 );
 
-// Reset editing state
+// 5. Reset editing state
 Set(varSchedSelectedEmail, "");
+Clear(colEditShifts);
 Reset(drpSchedName);
 Set(varSchedEditSaving, false)
 ```
 
-> **Why `{Value: varSchedEdit...}`?** Choice columns in SharePoint must be written as a record with a `Value` field, not a plain string. `If(... = "", Blank(), {Value: ...})` clears the field when "Off" is selected and sets it correctly when a time is chosen.
+> **Why `RemoveIf` + `Patch`?** SharePoint has no "replace collection" in one call. Deleting all rows for that email then inserting the current set keeps unlimited shifts per day without orphaned rows.
+
+> **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 
 ---
 
@@ -963,6 +935,8 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | X | `1150`, Y | `68`, Width | `90`, Height | `36` |
 | OnSelect | `=Set(varSchedShowReorder, !varSchedShowReorder)` |
 
+> **Layout:** Edit bar is **220px** tall (52 + 220 = **272** for the top of `htmlSchedGrid` and reorder panel).
+
 ### Reorder panel background
 
 | Property | Value |
@@ -971,8 +945,8 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `=Parent.Width - 220`, Y | `144` |
-| Width | `220`, Height | `=Parent.Height - 144` |
+| X | `=Parent.Width - 220`, Y | `272` |
+| Width | `220`, Height | `=Parent.Height - 272` |
 
 ### Reorder gallery
 
@@ -982,8 +956,8 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
 | TemplateSize | `40` |
-| X | `=Parent.Width - 218`, Y | `148` |
-| Width | `216`, Height | `=Parent.Height - 152` |
+| X | `=Parent.Width - 218`, Y | `276` |
+| Width | `216`, Height | `=Parent.Height - 280` |
 
 **Inside the gallery template, add:**
 
@@ -1004,7 +978,7 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
            Patch(Staff, prevRow, {SchedSortOrder: myRow.SchedSortOrder})
        )
    );
-   // Navigate to self to re-trigger OnVisible (rebuilds colStaff + colSchedLookup cleanly)
+   // Navigate to self to re-trigger OnVisible (reloads colShifts + colSchedLookup)
    Navigate(scrSchedule, ScreenTransition.None)
    ```
 
@@ -1025,7 +999,7 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
    Navigate(scrSchedule, ScreenTransition.None)
    ```
 
-> **Why `Navigate(scrSchedule, ScreenTransition.None)`?** This re-triggers `OnVisible`, which rebuilds `colStaff` and `colSchedLookup` with the updated sort order. It's the cleanest way to refresh everything without duplicating the load formula.
+> **Why `Navigate(scrSchedule, ScreenTransition.None)`?** This re-triggers `OnVisible`, which reloads `colShifts` from SharePoint and rebuilds `colSchedLookup` with the updated column order. It avoids duplicating that load logic after each reorder.
 
 ---
 
@@ -1038,16 +1012,16 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 
 ### Test 2: Enter a schedule
 - Select your name from the dropdown
-- Set Monday: 9:00 AM – 1:00 PM
-- Set Wednesday: 10:00 AM – 2:00 PM
-- Hour counter should show "4 / 12 hrs" (or "4 / 6 hrs" for President's Aid)
+- In the gallery, set Day **Monday**, Start **9:00 AM**, End **1:00 PM**
+- Click **+ Add shift** and add **Wednesday** 10:00 AM – 2:00 PM
+- Hour counter should show "8 / 12 hrs" (or "8 / 6 hrs" for President's Aid), etc.
 - Click **Save Schedule**
 - Grid should update with your colored blocks
 
 ### Test 3: Re-edit
 - Select the same name again
-- Dropdowns should pre-fill with your saved times
-- Change one day and save — grid should reflect the change
+- Gallery should list the same shift rows you saved
+- Add a third shift, remove one, or change times — save — grid should reflect the change
 
 ### Test 4: Reorder
 - Click **Reorder**
@@ -1061,26 +1035,35 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 
 ## Verification Checklist
 
+**SharePoint:**
+- [ ] `StaffShifts` list exists per [StaffShifts-List-Setup.md](../SharePoint/StaffShifts-List-Setup.md)
+- [ ] `Staff` list has no time columns — only `AidType`, `SchedSortOrder`, etc.
+
 **App.OnStart:**
-- [ ] `colStaff` includes `StaffID`, `AidType`, all 10 time fields, and `SchedSortOrder`
+- [ ] `colStaff` includes `StaffID`, `AidType`, `SchedSortOrder` (no shift time fields)
 - [ ] `colTimeSlots` has 16 rows, correct labels and minute values
 - [ ] `colSchedColors` has 12 color entries
-- [ ] All `varSched*` state variables initialized
+- [ ] `colEditShifts` initialized empty (`ClearCollect` dummy row then `Clear`)
+- [ ] `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedShowReorder` initialized
 - [ ] App starts without errors
+
+**Data:**
+- [ ] `StaffShifts` added as a data source in the app
 
 **scrDashboard:**
 - [ ] `btnNavSchedule` navigates to `scrSchedule`
 
 **scrSchedule:**
-- [ ] `OnVisible` builds `colSchedLookup` from `colStaff`
+- [ ] `OnVisible` loads `colShifts` from `StaffShifts` and builds `colSchedLookup` (one row per shift)
 - [ ] Header bar has back button + title
-- [ ] Selecting a name pre-fills day dropdowns
-- [ ] Hour counter updates as times are set
+- [ ] Selecting a name fills `galEditShifts` from `colShifts`
+- [ ] **+ Add shift** appends rows; delete removes a row
+- [ ] Hour counter updates from `colEditShifts`
 - [ ] HTML grid renders with time labels and day groups
-- [ ] Grid cells color correctly after a schedule is saved
-- [ ] Save patches `Staff` list and refreshes grid
-- [ ] Cancel clears selection without saving
-- [ ] Reorder panel Up/Down buttons update column order
+- [ ] Grid cells color when any shift covers the slot (multiple shifts per day OK)
+- [ ] Save runs `RemoveIf` + `ForAll`/`Patch` on `StaffShifts`, then rebuilds `colShifts` / `colSchedLookup`
+- [ ] Cancel clears selection and `colEditShifts` without saving
+- [ ] Reorder panel Up/Down buttons update `SchedSortOrder` on `Staff`
 
 ---
 
@@ -1089,11 +1072,11 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 **Grid is all white after saving**
 - Check that `colSchedLookup` is being rebuilt in the save formula. Add a temporary label with `Text: =CountRows(colSchedLookup)` to verify it has rows.
 
-**"Invalid argument type" on the Patch choice field**
-- Choice fields must be written as `{Value: "some text"}`, not as plain strings. Double-check that the save formula wraps each time value in `{Value: ...}`.
+**"Invalid argument type" on Patch to StaffShifts**
+- `Day`, `ShiftStart`, and `ShiftEnd` are Choice columns — use `{Value: Day}` etc., not plain strings.
 
-**Dropdown doesn't pre-fill when selecting a name**
-- The `Default` property on each dropdown references `varSchedEditMon_Start` etc. Make sure the `OnChange` of `drpSchedName` runs and sets those variables before the dropdowns render. If needed, add `Reset(drpSchedMonStart)` after each `Set()` in the OnChange formula.
+**Gallery dropdowns don't reflect collection updates**
+- Prefer `UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {...})` on each dropdown's `OnChange`. If defaults stick incorrectly, toggle `Reset(galEditShifts)` after `ClearCollect` in `drpSchedName.OnChange` (Power Apps build-dependent).
 
 **"Delegation warning" on colStaff load**
 - Expected. `Filter(Staff, Active = true)` may show a delegation warning. Since your Staff list has well under 500 rows, this is fine.
@@ -1105,6 +1088,6 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 
 ## Seasonal Maintenance
 
-At the start of each new semester, staff update their own schedule using the app — old values are simply overwritten. No archiving, no list changes needed.
+At the start of each new semester, staff update their own schedule in the app — saving **replaces** their rows in `StaffShifts` for that email.
 
-To clear all schedules at once (e.g., start of a new year before staff re-enter their times), use **Edit in grid view** in the `Staff` SharePoint list and bulk-clear the 10 time columns.
+To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in grid view** and delete rows (or filter/export first if you need a record).

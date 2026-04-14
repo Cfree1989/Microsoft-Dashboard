@@ -1,0 +1,5 @@
+,Title,Member,Role,Active,AidType,SchedSortOrder
+Type,Single line,Person,Choice,Yes/No,Choice,Number
+Required,No,Yes,Yes,No,No,No
+Default,,,,Yes,,10
+Purpose,Optional identifier,Staff member's LSU account,Manager; Technician; Student Worker,Employment status,President's Aid; Work Study; Graduate Assistant,Left-to-right grid column order
