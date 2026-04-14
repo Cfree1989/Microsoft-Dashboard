@@ -21,7 +21,11 @@ Screens:
         ClearCollect(
             colShifts,
             ForAll(
-                Filter(StaffShifts, StaffEmail <> ""),
+                Filter(
+                    StaffShifts,
+                    StaffEmail <> "" &&
+                    !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+                ),
                 {
                     ShiftID:    ID,
                     Email:      StaffEmail,
@@ -108,7 +112,12 @@ Screens:
             BorderColor: =varColorBorder
             BorderThickness: =1
             Fill: =varColorBgCard
-            Height: =If(varSchedSelectedEmail <> "", 200, 56)
+            Height: |-
+              =If(
+                  varSchedSelectedEmail <> "",
+                  114 + Max(CountRows(colEditShifts), 1) * 36,
+                  56
+              )
             Width: =Parent.Width
             Y: =52
       - drpSchedName:
@@ -204,7 +213,7 @@ Screens:
           Control: Gallery
           Variant: Vertical
           Properties:
-            Height: =92
+            Height: =Max(CountRows(colEditShifts), 1) * Self.TemplateSize
             Items: =colEditShifts
             TemplatePadding: =0
             TemplateSize: =36
@@ -283,7 +292,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =100
             X: =16
-            Y: =186
+            Y: =galEditShifts.Y + galEditShifts.Height + 8
       - btnSchedSave:
           Control: Classic/Button
           Properties:
@@ -330,7 +339,11 @@ Screens:
               ClearCollect(
                   colShifts,
                   ForAll(
-                      Filter(StaffShifts, StaffEmail <> ""),
+                      Filter(
+                          StaffShifts,
+                          StaffEmail <> "" &&
+                          !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+                      ),
                       {
                           ShiftID:    ID,
                           Email:      StaffEmail,
@@ -419,7 +432,7 @@ Screens:
       - htmlSchedGrid:
           Control: HtmlViewer
           Properties:
-            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)
+            Height: =Parent.Height - Self.Y
             HtmlText: |-
               =With(
                   {
@@ -443,7 +456,7 @@ Screens:
                   ) &
                   "</div></td>" &
                   "<td style='vertical-align:top;padding:0;'>" &
-                  "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;min-width:1500px;table-layout:fixed;'><tr>" &
+                  "<table style='border-collapse:separate;border-spacing:4px 0;width:100%;table-layout:fixed;'><tr>" &
                   Concat(
                       ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
                       "<td style='vertical-align:top;padding:0;'>" &
@@ -558,30 +571,30 @@ Screens:
             PaddingRight: =0
             PaddingTop: =0
             Width: =Parent.Width
-            Y: =If(varSchedSelectedEmail <> "", 252, 108)
+            Y: =recSchedEditBar.Y + recSchedEditBar.Height
       - recSchedReorderPanel:
           Control: Rectangle
           Properties:
             BorderColor: =varColorBorder
             BorderThickness: =1
             Fill: =varColorBgCard
-            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)
+            Height: =Parent.Height - Self.Y
             Visible: =varSchedShowReorder
             Width: =220
             X: =Parent.Width - 220
-            Y: =If(varSchedSelectedEmail <> "", 252, 108)
+            Y: =recSchedEditBar.Y + recSchedEditBar.Height
       - galSchedReorder:
           Control: Gallery
           Variant: Vertical
           Properties:
-            Height: =Parent.Height - If(varSchedSelectedEmail <> "", 258, 114)
+            Height: =Parent.Height - Self.Y - 2
             Items: =Sort(colStaff, SchedSortOrder, SortOrder.Ascending)
             TemplatePadding: =0
             TemplateSize: =40
             Visible: =varSchedShowReorder
             Width: =216
             X: =Parent.Width - 218
-            Y: =If(varSchedSelectedEmail <> "", 256, 112)
+            Y: =recSchedEditBar.Y + recSchedEditBar.Height + 4
           Children:
             - lblReorderName:
                 Control: Label

@@ -56,7 +56,7 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 │  (gallery + Save/Cancel when a name is selected)     │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
-│  HTML TEXT GRID (read-only colored block schedule)   │
+│  HTMLVIEWER GRID (read-only colored block schedule)  │
 │                                                      │
 │  [Time] ║ Mon: JAKE SARA TOM ║ Tue: JAKE SARA ... ║  │
 │  8:30   ║  ██   ░░   ░░    ║  ██   ██   ░░    ║     │
@@ -65,7 +65,7 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 └──────────────────────────────────────────────────────┘
 ```
 
-- The **HTML Text grid** shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colStaff`)
+- The **HtmlViewer** grid shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colStaff`)
 - The **Edit Bar** lets someone pick their name, then edit shifts in a **gallery** (add/remove rows; unlimited shifts per day)
 - Saving **removes** all `StaffShifts` rows for that email, then **inserts** one row per gallery row (complete rows only)
 
@@ -109,6 +109,8 @@ ClearCollect(colStaff,
 ```
 
 > **What changed:** `AidType` and `SchedSortOrder` stay on Staff. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here.
+
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with **`Active = true && Role.Value <> "Manager"`** so the manager never appears in the schedule grid or ComboBox. Other screens may still use the wider `colStaff` from **`App.OnStart`** until the schedule screen runs.
 
 ### 1B — Add the colTimeSlots collection
 
@@ -245,9 +247,14 @@ ClearCollect(
 );
 
 // Load all shift rows from SharePoint into a flat collection
+// Filter out shifts for people not in colStaff (inactive users or managers)
 ClearCollect(colShifts,
     ForAll(
-        Filter(StaffShifts, StaffEmail <> ""),
+        Filter(
+            StaffShifts,
+            StaffEmail <> "" &&
+            !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+        ),
         {
             ShiftID:    ID,
             Email:      StaffEmail,
@@ -313,32 +320,38 @@ Reset(drpSchedName)
 
 ### Back button
 
+Matches `btnNavSchedule` styling (primary fill, top-right): same look as dashboard navigation.
+
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedBack` |
 | Text | `"← Dashboard"` |
 | Font | `=varAppFont` |
-| Size | `11` |
+| Size | `8` |
 | Color | `=Color.White` |
-| Fill | `=Color.Transparent` |
-| HoverFill | `=RGBA(255,255,255,0.1)` |
+| Fill | `=varColorPrimary` |
+| HoverFill | `=varColorPrimaryHover` |
+| PressedFill | `=varColorPrimaryPressed` |
+| BorderColor | `=Color.Transparent` |
 | BorderThickness | `0` |
-| X | `8`, Y | `14`, Width | `120`, Height | `24` |
+| Radius corners | `=varBtnBorderRadius` (all four) |
+| X | `=Parent.Width - 100`, Y | `15`, Width | `90`, Height | `22` |
 | OnSelect | `=Navigate(scrDashboard, varScreenTransition)` |
 
 ### Title label
+
+Same treatment as **Print Lab Dashboard** on `scrDashboard` (`lblAppTitle`): left-aligned, larger type.
 
 | Property | Value |
 |----------|-------|
 | Name | `lblSchedTitle` |
 | Text | `"Schedule"` |
 | Font | `=varAppFont` |
-| Size | `14` |
+| Size | `18` |
 | FontWeight | `=FontWeight.Semibold` |
 | Color | `=Color.White` |
-| Align | `=Align.Center` |
-| X | `=(Parent.Width - 300) / 2`, Y | `13` |
-| Width | `300`, Height | `26` |
+| X | `20`, Y | `11` |
+| Width | `300`, Height | `30` |
 
 ---
 
@@ -355,35 +368,40 @@ The Edit Bar sits below the header. It shows the name picker always; once a name
 | BorderColor | `=varColorBorder` |
 | BorderThickness | `1` |
 | X | `0`, Y | `52` |
-| Width | `=Parent.Width`, Height | `220` |
+| Width | `=Parent.Width` |
+| Height | `=If(varSchedSelectedEmail <> "", 200, 56)` |
 
-### "Who are you?" label
+> **No “Who are you?” label** — the ComboBox placeholder is enough; controls sit on one row when collapsed.
 
-| Property | Value |
-|----------|-------|
-| Name | `lblSchedWho` |
-| Text | `"Who are you?"` |
-| Font | `=varAppFont`, Size | `11` |
-| Color | `=varColorTextMuted` |
-| X | `16`, Y | `62`, Width | `100`, Height | `20` |
+### Name picker (ComboBox)
 
-### Name dropdown
+Use **`Classic/ComboBox`**, not DropDown — same pattern as staff pickers elsewhere in the app (`DisplayFields` / `SearchFields` on `MemberName`, shared `varDropdown*` / chevron colors).
 
 | Property | Value |
 |----------|-------|
 | Name | `drpSchedName` |
+| Control | `Classic/ComboBox` |
 | Items | `=Sort(colStaff, MemberName, SortOrder.Ascending)` |
-| Value | `MemberName` |
-| Font | `=varAppFont`, Size | `=varInputFontSize` |
+| DisplayFields | `=["MemberName"]` |
+| SearchFields | `=["MemberName"]` |
+| SelectMultiple | `false` |
+| IsSearchable | `false` |
+| DefaultSelectedItems | `Blank()` |
+| InputTextPlaceholder | `"Select Your Name"` |
 | BorderColor | `=varInputBorderColor` |
-| X | `16`, Y | `82`, Width | `180`, Height | `32` |
+| BorderThickness | `=varInputBorderThickness` |
+| FocusedBorderThickness | `=varFocusedBorderThickness` |
+| Chevron* | Same as other app ComboBoxes (`varChevronBackground`, etc.) |
+| HoverFill / Pressed* / Selection* | `varDropdownHoverFill`, `varDropdownPressedColor`, `varDropdownSelectionColor`, `varDropdownSelectionFill` |
+| Font | `=varAppFont`, Size | `=varInputFontSize` |
+| X | `16`, Y | `62`, Width | `200`, Height | `36` |
 | OnChange | *(formula below)* |
 
 **OnChange formula** — loads that person's shifts from `colShifts` into `colEditShifts` (one gallery row per shift). If they have no shifts yet, seeds one blank row.
 
 ```
 If(
-    IsBlank(drpSchedName.Selected) || drpSchedName.Selected.MemberName = "Select...",
+    IsBlank(drpSchedName.Selected),
     Set(varSchedSelectedEmail, "");
     Clear(colEditShifts),
     With(
@@ -419,7 +437,7 @@ If(
 | Name | `lblSchedAidInfo` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `208`, Y | `82`, Width | `220`, Height | `32` |
+| X | `208`, Y | `64`, Width | `220`, Height | `32` |
 | Text | *(formula below)* |
 | Color | *(formula below)* |
 
@@ -532,7 +550,7 @@ Insert a **Vertical gallery** on the edit bar:
 | HoverFill | `=varColorSuccessHover` |
 | BorderThickness | `0` |
 | RadiusTopLeft/Right/Bottom | `=varBtnBorderRadius` |
-| X | `890`, Y | `68`, Width | `130`, Height | `36` |
+| X | `=Parent.Width - 330`, Y | `62`, Width | `130`, Height | `36` |
 | DisplayMode | `=If(varSchedEditSaving, DisplayMode.Disabled, DisplayMode.Edit)` |
 | OnSelect | *(add in Step 7)* |
 
@@ -547,278 +565,51 @@ Insert a **Vertical gallery** on the edit bar:
 | Color | `=varColorText` |
 | Fill | `=RGBA(0,0,0,0)` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `1032`, Y | `68`, Width | `80`, Height | `36` |
+| X | `=Parent.Width - 190`, Y | `62`, Width | `80`, Height | `36` |
 | OnSelect | `=Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Reset(drpSchedName)` |
 
 ---
 
-## Step 6: Build the HTML Text Grid
+## Step 6: Build the HtmlViewer schedule grid
 
 ### Add the control
 
-Insert an **HTML Text** control:
+Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used a `<style>` block or CSS Grid — those are stripped or ignored; the working layout is **nested `<table>`s with inline `style="..."` only**. Full rationale is in **HtmlViewer: What Actually Works** below.
 
 | Property | Value |
 |----------|-------|
 | Name | `htmlSchedGrid` |
-| X | `0`, Y | `272` |
+| Control | `HtmlViewer` |
+| Y | `=If(varSchedSelectedEmail <> "", 252, 108)` |
 | Width | `=Parent.Width` |
-| Height | `=Parent.Height - 272` |
-| PaddingLeft | `0`, PaddingTop | `0` |
-| HtmlText | *(formula below)* |
+| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)` |
+| Padding | `0` on all sides |
 
-> **Scrolling:** The HTML formula wraps everything in `<div style="overflow:auto; height:100%">`. This gives you horizontal scroll for the wide staff grid and vertical scroll to reveal the totals summary table below it — all within the single control, no extra setup needed.
+> **Dynamic top offset:** `recSchedEditBar` height is `If(varSchedSelectedEmail <> "", 200, 56)` starting at `Y = 52`, so the grid begins at **`52 + 56 = 108`** or **`52 + 200 = 252`**.
 
-### The HTML formula
+### Authoritative `HtmlText` formula
 
-This formula builds the entire grid as a string. It uses `colSchedLookup` (built in `OnVisible`) to determine which cells to color.
+The live formula is **large** and must stay under Power Fx string limits. **Source of truth:** `PowerApps/canvas-coauthor/scrSchedule.pa.yaml` → control **`htmlSchedGrid`** → property **`HtmlText`**. Copy from there when updating Studio by hand.
 
-```
-=With(
-    {
-        sortedStaff: Distinct(Sort(colStaff, SchedSortOrder, SortOrder.Ascending), MemberEmail),
-        slotH: 24,
-        colW:  28,
-        gutterW: 60
-    },
+**Structure summary (as implemented):**
 
-    // ---- OUTER SCROLL WRAPPER + CSS ----
-    // overflow:auto lets the content scroll both horizontally (17 columns) and
-    // vertically (grid + totals table) within the single HTML control.
-    "<div style='overflow:auto;width:100%;height:100%;box-sizing:border-box;'>" &
-    "<style>
-    .sg{border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;}
-    .sg td,.sg th{padding:0;margin:0;}
-    .sg .tg{width:" & Text(gutterW) & "px;text-align:right;padding-right:6px;color:#666;font-size:10px;height:" & Text(slotH) & "px;vertical-align:middle;background:#f8f8f8;border-right:1px solid #ddd;}
-    .sg .dh{font-weight:700;text-align:center;background:#4d4d4d;color:#fff;height:28px;font-size:11px;border-right:2px solid #999;}
-    .sg .sh{text-align:center;height:28px;font-weight:600;font-size:10px;border-right:1px solid #ccc;border-bottom:1px solid #aaa;overflow:hidden;}
-    .sg .sc{width:" & Text(colW) & "px;height:" & Text(slotH) & "px;border-right:1px solid #e0e0e0;border-bottom:1px solid #e8e8e8;}
-    .sg .ds{border-right:2px solid #999!important;}
-    .sg .tot{text-align:center;font-size:10px;font-weight:600;height:22px;vertical-align:middle;border-top:2px solid #aaa;border-right:1px solid #ccc;}
-    .ts{border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;margin-top:24px;min-width:500px;}
-    .ts th{background:#4d4d4d;color:#fff;padding:6px 12px;text-align:center;white-space:nowrap;}
-    .ts th.ts-n{text-align:left;min-width:160px;}
-    .ts td{padding:5px 12px;text-align:center;border-bottom:1px solid #ddd;white-space:nowrap;}
-    .ts td.ts-n{text-align:left;}
-    .ts .over{color:#c0392b;font-weight:700;}
-    .ts-foot td{background:#6b6b6b;color:#fff;font-weight:700;padding:6px 12px;}
-    </style>" &
+- Outer `<div style='overflow:auto;width:100%;height:100%;…'>` for in-control scrolling.
+- **Outer 3-column table:** left time gutter \| week \| right gutter (`border-spacing:8px 0` between columns).
+- **Week row:** inner table with `width:100%;table-layout:fixed` (no `min-width`) so Mon–Fri share the `HtmlViewer` width and the week fits one screen without a forced horizontal scroll. If you have many staff columns and readability suffers on small tablets, you can add a modest `min-width` again or reduce slot height `H` in the formula.
+- **Per day:** rounded border `div` wrapping an inner table with **`border-collapse:separate;border-spacing:1px;background:#e8e0d8`** so **1px grid lines** (horizontal and vertical) show without per-cell border markup.
+- **Slot coloring:** one `<tr>` per `colTimeSlots` row; inner `Concat` over staff; use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`).
+- **Gutters:** `vertical-align:top`, **`59px`** spacer, then time labels at **`H+1`** px line height to align with **`border-spacing`** row rhythm (`H = 28`).
+- **Totals table:** appended after the week grid in the same `HtmlText` string.
 
-    "<table class='sg'>" &
+### Fitting the whole week on one screen width
 
-    // ---- ROW 1: Day group headers ----
-    "<tr><th class='tg' rowspan='2'></th>" &
-    Concat(
-        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-        "<th class='dh" & If(dayName.Value = "Friday", " ds", "") & "' colspan='" &
-        Text(CountRows(sortedStaff)) & "'>" & Left(dayName.Value, 3) & "</th>"
-    ) &
-    "</tr>" &
+1. **HtmlViewer table:** Keep the week inner table at **`width:100%`** without a large **`min-width`** in pixels. A fixed `min-width` larger than the app’s design width (this project uses **1366** in `CanvasManifest.json`) guarantees horizontal scrolling and can clip the first day depending on scroll position.
+2. **Screen controls:** `htmlSchedGrid` should use **`Width: =Parent.Width`** and **`X: =0`** (default) so it spans the screen; the guide already sets this.
+3. **App display settings:** If you still see empty margins on a wide monitor, the app may be using **Scale to fit** with **Maintain aspect ratio** (common on desktop layouts). In Studio: **Settings** → **Display** — try **Lock aspect ratio** off or adjust **Scale to fit** / design resolution so the canvas matches how you run the app (trade-off: layout may letterbox or stretch).
 
-    // ---- ROW 2: Staff initials (from colStaff — same for every day column) ----
-    "<tr>" &
-    Concat(
-        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-        Concat(
-            sortedStaff As s,
-            With(
-                {
-                    sr: LookUp(colStaff, MemberEmail = s.Value),
-                    cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12))
-                },
-                "<th class='sh" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
-                "' style='background:" & Coalesce(cr.Light, "#eeeeee") & ";width:" & Text(colW) & "px'>" &
-                Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1) &
-                "</th>"
-            )
-        )
-    ) &
-    "</tr>" &
+### Obsolete sample removed
 
-    // ---- TIME SLOT ROWS ----
-    Concat(
-        colTimeSlots As slot,
-        "<tr><td class='tg'>" & slot.Label & "</td>" &
-        Concat(
-            ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-            Concat(
-                sortedStaff As s,
-                With(
-                    {
-                        matches: Filter(
-                            colSchedLookup,
-                            Email = s.Value &&
-                            Day = dayName.Value &&
-                            StartSlot >= 0 &&
-                            slot.Idx >= StartSlot &&
-                            slot.Idx < EndSlot
-                        ),
-                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
-                    },
-                    "<td class='sc" & If(dayName.Value = "Friday" && s.Value = Last(sortedStaff).Value, " ds", If(s.Value = Last(sortedStaff).Value, " ds", "")) &
-                    "' style='background:" &
-                    If(CountRows(matches) > 0, cr.Hex, "#ffffff") & "'></td>"
-                )
-            )
-        ) &
-        "</tr>"
-    ) &
-
-    // ---- TOTALS ROW (sum all shift rows for that person + day) ----
-    "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Hrs/Day</td>" &
-    Concat(
-        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-        Concat(
-            sortedStaff As s,
-            With(
-                {
-                    dayHrs: Sum(
-                        Filter(
-                            colSchedLookup,
-                            Email = s.Value && Day = dayName.Value && StartSlot >= 0
-                        ),
-                        (EndSlot - StartSlot) / 2
-                    ),
-                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
-                },
-                "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
-                "' style='background:" & Coalesce(cr.Light, "#f0f0f0") & "'>" &
-                If(dayHrs > 0, Text(dayHrs, "0.#") & "h", "—") & "</td>"
-            )
-        )
-    ) &
-    "</tr>" &
-
-    // ---- WEEKLY TOTAL ROW ----
-    "<tr><td class='tg' style='font-size:9px;font-weight:700;'>Wk / Max</td>" &
-    Concat(
-        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As dayName,
-        Concat(
-            sortedStaff As s,
-            With(
-                {
-                    totalHrs: Sum(
-                        Filter(colSchedLookup, Email = s.Value && StartSlot >= 0),
-                        (EndSlot - StartSlot) / 2
-                    ),
-                    maxHrs: Switch(
-                        LookUp(colStaff, MemberEmail = s.Value).AidType,
-                        "Work Study",         12,
-                        "Graduate Assistant", 20,
-                        6
-                    ),
-                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = s.Value).StaffID, 12))
-                },
-                "<td class='tot" & If(s.Value = Last(sortedStaff).Value, " ds", "") &
-                "' style='background:" & Coalesce(cr.Light, "#f0f0f0") & ";font-size:9px;'>" &
-                If(dayName.Value = "Monday",
-                    Text(totalHrs, "0.#") & "/" & Text(maxHrs, "0"),
-                    ""
-                ) & "</td>"
-            )
-        )
-    ) &
-    "</tr>" &
-
-    "</table>" &
-
-    // ---- TOTALS SUMMARY TABLE ----
-    "<table class='ts'>" &
-    "<thead><tr>" &
-    "<th class='ts-n'>Student</th><th>Type</th>" &
-    "<th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th>" &
-    "<th>Total</th><th>Max</th>" &
-    "</tr></thead><tbody>" &
-    Concat(
-        Distinct(Sort(colStaff, SchedSortOrder, SortOrder.Ascending), MemberEmail) As p,
-        With(
-            {
-                sr: LookUp(colStaff, MemberEmail = p.Value),
-                cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)),
-                mH: Sum(
-                    Filter(colSchedLookup, Email = p.Value && Day = "Monday" && StartSlot >= 0),
-                    (EndSlot - StartSlot) / 2
-                ),
-                tuH: Sum(
-                    Filter(colSchedLookup, Email = p.Value && Day = "Tuesday" && StartSlot >= 0),
-                    (EndSlot - StartSlot) / 2
-                ),
-                wH: Sum(
-                    Filter(colSchedLookup, Email = p.Value && Day = "Wednesday" && StartSlot >= 0),
-                    (EndSlot - StartSlot) / 2
-                ),
-                thH: Sum(
-                    Filter(colSchedLookup, Email = p.Value && Day = "Thursday" && StartSlot >= 0),
-                    (EndSlot - StartSlot) / 2
-                ),
-                fH: Sum(
-                    Filter(colSchedLookup, Email = p.Value && Day = "Friday" && StartSlot >= 0),
-                    (EndSlot - StartSlot) / 2
-                ),
-                maxH: Switch(
-                    sr.AidType,
-                    "Work Study",         12,
-                    "Graduate Assistant", 20,
-                    6
-                ),
-                abbrev: Switch(
-                    sr.AidType,
-                    "Work Study",         "WS",
-                    "Graduate Assistant", "GA",
-                    "President's Aid",    "PA",
-                    "—"
-                ),
-                bgColor: Coalesce(cr.Light, "#f5f5f5")
-            },
-            With(
-                {totH: mH + tuH + wH + thH + fH},
-                "<tr style='background:" & bgColor & "'>" &
-                "<td class='ts-n'>" & sr.MemberName & "</td>" &
-                "<td>" & abbrev & "</td>" &
-                "<td>" & Text(mH,  "0.#") & "</td>" &
-                "<td>" & Text(tuH, "0.#") & "</td>" &
-                "<td>" & Text(wH,  "0.#") & "</td>" &
-                "<td>" & Text(thH, "0.#") & "</td>" &
-                "<td>" & Text(fH,  "0.#") & "</td>" &
-                "<td class='" & If(totH > maxH, "over", "") & "'>" & Text(totH, "0.#") & "</td>" &
-                "<td>" & Text(maxH, "0") & "</td>" &
-                "</tr>"
-            )
-        )
-    ) &
-    "</tbody><tfoot>" &
-
-    // Footer: daily totals across all staff
-    "<tr class='ts-foot'><td class='ts-n'>DAILY TOTALS</td><td></td>" &
-    Concat(
-        ["Monday","Tuesday","Wednesday","Thursday","Friday"] As d,
-        "<td>" &
-        Text(
-            Sum(
-                Filter(colSchedLookup, Day = d.Value && StartSlot >= 0),
-                (EndSlot - StartSlot) / 2
-            ),
-            "0.#"
-        ) & "</td>"
-    ) &
-    With(
-        {
-            grandTotal: Sum(
-                Filter(colSchedLookup, StartSlot >= 0),
-                (EndSlot - StartSlot) / 2
-            )
-        },
-        "<td>" & Text(grandTotal, "0.#") & "</td><td></td>"
-    ) &
-    "</tr></tfoot></table>" &
-
-    "</div>"
-)
-```
-
-> **Column width:** `colW: 28` is sized for 2-letter initials. Widen to `32`–`36` if you want a bit more breathing room per column.
-
-> **Totals summary table:** Appears below the grid after scrolling down. Rows match staff sort order, colored with each person's pastel. The `Total` column turns red if a person exceeds their AidType cap. `DAILY TOTALS` footer sums all staff hours per day plus a grand weekly total.
+Older drafts of this document inlined a **CSS class + `<style>`** grid formula. **That approach does not work in Canvas HtmlViewer** and is intentionally removed here to avoid confusion.
 
 ---
 
@@ -828,16 +619,11 @@ Wire the `OnSelect` of `btnSchedSave` with this formula. It **replaces** all `St
 
 ```
 Set(varSchedEditSaving, true);
-
-// 1. Remove every existing shift row for this person
 RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
-
-// 2. Insert one SharePoint row per complete gallery row
-ForAll(
-    Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
-    Patch(
-        StaffShifts,
-        Defaults(StaffShifts),
+Patch(
+    StaffShifts,
+    ForAll(
+        Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
         {
             StaffEmail: varSchedSelectedEmail,
             Day:        {Value: Day},
@@ -846,12 +632,10 @@ ForAll(
         }
     )
 );
-
-// 3. Refresh colStaff (in case AidType / sort changed elsewhere)
 ClearCollect(
     colStaff,
     ForAll(
-        Filter(Staff, Active = true),
+        Filter(Staff, Active = true && Role.Value <> "Manager"),
         {
             StaffID:        ID,
             MemberName:     Member.DisplayName,
@@ -863,12 +647,14 @@ ClearCollect(
         }
     )
 );
-
-// 4. Reload shifts + rebuild colSchedLookup (same logic as scrSchedule.OnVisible)
 ClearCollect(
     colShifts,
     ForAll(
-        Filter(StaffShifts, StaffEmail <> ""),
+        Filter(
+            StaffShifts,
+            StaffEmail <> "" &&
+            !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+        ),
         {
             ShiftID:    ID,
             Email:      StaffEmail,
@@ -906,17 +692,20 @@ ClearCollect(
         )
     )
 );
-
-// 5. Reset editing state
 Set(varSchedSelectedEmail, "");
 Clear(colEditShifts);
-Reset(drpSchedName);
 Set(varSchedEditSaving, false)
 ```
+
+> **Why filter `colShifts` by `LookUp(colStaff, …)`?** If a manager or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active non-manager staff appear.
+
+> **Why not `ForAll(..., Patch(Defaults(StaffShifts), …))`?** That pattern often creates **only one** new row when several are needed (concurrent evaluation). **`Patch(StaffShifts, ForAll(..., { ... }))`** performs a **batch create** in one call — reliable for multiple shifts.
 
 > **Why `RemoveIf` + `Patch`?** SharePoint has no "replace collection" in one call. Deleting all rows for that email then inserting the current set keeps unlimited shifts per day without orphaned rows.
 
 > **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
+
+> **Cancel / OnVisible** use `Reset(drpSchedName)` so the ComboBox placeholder shows again; the save handler above clears selection state only (add `Reset(drpSchedName)` there too if you want the picker blank immediately after save).
 
 ---
 
@@ -934,10 +723,10 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Color | `=Color.White` |
 | Fill | `=varColorNeutral` |
 | BorderThickness | `0` |
-| X | `1150`, Y | `68`, Width | `90`, Height | `36` |
+| X | `=Parent.Width - 100`, Y | `62`, Width | `90`, Height | `36` |
 | OnSelect | `=Set(varSchedShowReorder, !varSchedShowReorder)` |
 
-> **Layout:** Edit bar is **220px** tall (52 + 220 = **272** for the top of `htmlSchedGrid` and reorder panel).
+> **Layout:** Edit bar height is **`If(varSchedSelectedEmail <> "", 200, 56)`** starting at `Y = 52`. **`htmlSchedGrid`** and the reorder chrome use **`Y = If(varSchedSelectedEmail <> "", 252, 108)`** (and matching heights) so everything stays aligned when the bar expands.
 
 ### Reorder panel background
 
@@ -947,8 +736,10 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `=Parent.Width - 220`, Y | `272` |
-| Width | `220`, Height | `=Parent.Height - 272` |
+| X | `=Parent.Width - 220` |
+| Y | `=If(varSchedSelectedEmail <> "", 252, 108)` |
+| Width | `220` |
+| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 252, 108)` |
 
 ### Reorder gallery
 
@@ -958,8 +749,10 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
 | TemplateSize | `40` |
-| X | `=Parent.Width - 218`, Y | `276` |
-| Width | `216`, Height | `=Parent.Height - 280` |
+| X | `=Parent.Width - 218` |
+| Y | `=If(varSchedSelectedEmail <> "", 256, 112)` |
+| Width | `216` |
+| Height | `=Parent.Height - If(varSchedSelectedEmail <> "", 258, 114)` |
 
 **Inside the gallery template, add:**
 
@@ -1013,7 +806,7 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 - No errors in the app checker
 
 ### Test 2: Enter a schedule
-- Select your name from the dropdown
+- Select your name from the ComboBox (`Select Your Name` placeholder when empty)
 - In the gallery, set Day **Monday**, Start **9:00 AM**, End **1:00 PM**
 - Click **+ Add shift** and add **Wednesday** 10:00 AM – 2:00 PM
 - Hour counter should show "8 / 12 hrs" (or "8 / 6 hrs" for President's Aid), etc.
@@ -1063,7 +856,7 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 - [ ] Hour counter updates from `colEditShifts`
 - [ ] HTML grid renders with time labels and day groups
 - [ ] Grid cells color when any shift covers the slot (multiple shifts per day OK)
-- [ ] Save runs `RemoveIf` + `ForAll`/`Patch` on `StaffShifts`, then rebuilds `colShifts` / `colSchedLookup`
+- [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colStaff` (Manager excluded), `colShifts`, and `colSchedLookup`
 - [ ] Cancel clears selection and `colEditShifts` without saving
 - [ ] Reorder panel Up/Down buttons update `SchedSortOrder` on `Staff`
 
@@ -1086,13 +879,15 @@ This means **every style must be an inline `style="..."` attribute** on the elem
 | Inline `style="..."` on any element | ✅ Works | The only way to apply styles |
 | `<table>`, `<tr>`, `<td>`, `<th>` | ✅ Works | Most reliable layout method |
 | `border-collapse:collapse` on `<table>` | ✅ Works | Inline on the table element |
-| `border-spacing` on `<table>` | ✅ Works | Use for gap between day columns |
-| `table-layout:fixed` | ✅ Works | Forces equal-width columns |
-| `vertical-align:bottom` on `<td>` | ✅ Works | Used to bottom-align time gutters with schedule grid |
+| `border-collapse:separate` + `border-spacing:1px` + table `background` | ✅ Works | **Grid lines trick:** 1px gaps between cells show the table background as both horizontal and vertical rules (saves characters vs per-cell borders) |
+| `border-spacing` on `<table>` | ✅ Works | Also use for gap between day columns (`8px 0` outer, `4px 0` week row) |
+| `min-width` on week inner `<table>` | ✅ Works | Prevents over-compression; restores horizontal scroll in `overflow:auto` wrapper |
+| `vertical-align:bottom` on `<td>` | ✅ Works | Legacy gutter alignment when inner day table used `border-collapse:collapse` only |
+| `vertical-align:top` + fixed spacer on gutter `<td>` | ✅ Works | Aligns gutters when per-day table uses `border-spacing` (row pitch is `H+1` px) |
 | `height:Npx` on `<tr>` | ✅ Works | Sets row height; empty cells don't collapse |
 | `overflow:hidden` on `<div>` | ✅ Works | Used to clip `border-radius` on day block wrappers |
 | `border-radius` on `<div>` | ✅ Works | Must be on a `<div>`, not directly on `<table>` |
-| `position:sticky; left:0` | ✅ Works | Left time gutter stays visible on horizontal scroll |
+| `position:sticky; left:0` | ✅ Works | Optional; left gutter can stay visible on horizontal scroll (current shipped YAML may omit sticky if not required) |
 | `background:#hexcolor` inline | ✅ Works | How shift colors are applied to cells |
 
 ### What does NOT work
@@ -1116,45 +911,47 @@ Use a **3-cell outer table** (left gutter | content | right gutter), with **a se
 <!-- Outer 3-column layout -->
 <table style="border-collapse:separate; border-spacing:8px 0;">
   <tr>
-    <!-- Left time gutter — sticky, aligns to bottom of day blocks -->
-    <td style="vertical-align:bottom; width:80px; padding:0;">
+    <!-- Left time gutter — optional sticky; align with slot rows (see below) -->
+    <td style="vertical-align:top; width:80px; padding:0;">
+      <div style="height:59px;"></div>
       <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
-        <div style="height:28px; line-height:28px; text-align:center; ...">8:30-9:00</div>
-        <!-- repeat for each time slot -->
+        <div style="height:29px; line-height:29px; text-align:center; ...">8:30-9:00</div>
+        <!-- repeat for each time slot (29px = 28px slot + 1px border-spacing rhythm) -->
       </div>
     </td>
 
-    <!-- Week grid — 5 equal day columns -->
+    <!-- Week grid — add min-width so HtmlViewer shows horizontal scroll instead of crushing columns -->
     <td style="vertical-align:top; padding:0;">
-      <table style="border-collapse:separate; border-spacing:4px 0; table-layout:fixed; width:100%;">
+      <table style="border-collapse:separate; border-spacing:4px 0; table-layout:fixed; width:100%; min-width:1500px;">
         <tr>
           <td style="vertical-align:top; padding:0;">
-            <!-- Day block wrapper: border-radius MUST be on the div, not the table -->
             <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
-              <table style="border-collapse:collapse; width:100%; table-layout:fixed;">
-                <tr><th colspan="N" style="background:#d7ccc8; height:28px; ...">MONDAY</th></tr>
-                <tr><!-- legend chips: one <td> per person, inline background color --></tr>
-                <tr style="height:28px;"><!-- slot cells --></tr>
-                <!-- repeat for 16 time slots -->
+              <!-- Per-day: 1px grid via border-spacing + table background (not collapse) -->
+              <table cellpadding="0" style="border-collapse:separate; border-spacing:1px; background:#e8e0d8; width:100%; table-layout:fixed;">
+                <tr><th colspan="N" style="...">MONDAY</th></tr>
+                <tr><!-- legend: one <td> per staff --></tr>
+                <tr style="height:28px;"><!-- slot row: one <td> per staff --></tr>
               </table>
             </div>
           </td>
-          <!-- repeat for Tuesday–Friday -->
         </tr>
       </table>
     </td>
 
-    <!-- Right time gutter — NOT sticky, stays in its column (prevents overlap on zoom) -->
-    <td style="vertical-align:bottom; width:80px; padding:0;">
-      <!-- same structure as left gutter -->
+    <!-- Right time gutter — NOT sticky (prevents overlap on zoom) -->
+    <td style="vertical-align:top; width:80px; padding:0;">
+      <div style="height:59px;"></div>
+      <!-- same label stack as left -->
     </td>
   </tr>
 </table>
 ```
 
-### Gutter alignment trick
+### Gutter alignment (with `border-spacing` on the day table)
 
-The left and right time gutters only have 16 rows (one per time slot). The day blocks have 18 rows (day header + legend row + 16 slots). Setting **`vertical-align:bottom`** on the gutter `<td>` makes the browser push the gutter content to the bottom of the table row — leaving exactly 56px (2 × 28px) of empty space at the top. This aligns the first time label perfectly with the first slot row, without any manual offset calculation.
+When the **inner per-day** table uses **`border-collapse:separate; border-spacing:1px`**, each slot row is effectively **one pixel taller** than its cell `height` alone. **`vertical-align:bottom`** on the gutter no longer lines up. The shipped screen uses **`vertical-align:top`**, a **`59px`** spacer `<div>` above the gutter box, and **29px**-tall label rows (**`H+1`** when `H = 28`) so labels track the slot rows.
+
+If you ever switch the day table back to **`border-collapse:collapse`** with no vertical `border-spacing`, you can revert to **bottom-aligned** gutters and **28px** labels only (two header rows × 28px = 56px offset).
 
 ### Right gutter overlap fix
 
@@ -1174,7 +971,7 @@ The left and right time gutters only have 16 rows (one per time slot). The day b
 - Prefer `UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {...})` on each dropdown's `OnChange`. If defaults stick incorrectly, toggle `Reset(galEditShifts)` after `ClearCollect` in `drpSchedName.OnChange` (Power Apps build-dependent).
 
 **"Delegation warning" on colStaff load**
-- Expected. `Filter(Staff, Active = true)` may show a delegation warning. Since your Staff list has well under 500 rows, this is fine.
+- Expected. `Filter(Staff, Active = true && Role.Value <> "Manager")` may show delegation warnings. Since your Staff list is well under 500 rows, this is fine.
 
 **Reorder doesn't persist after navigating away**
 - The `Navigate(scrSchedule, ScreenTransition.None)` approach re-runs `OnVisible` which reloads from SharePoint. If the order still doesn't stick, verify that `Patch(Staff, myRow, {SchedSortOrder: ...})` is succeeding — check for errors using `IfError(Patch(...), Notify("Save failed: " & FirstError.Message, NotificationType.Error))`.
