@@ -115,7 +115,7 @@ Screens:
             Height: |-
               =If(
                   varSchedSelectedEmail <> "",
-                  114 + Max(CountRows(colEditShifts), 1) * 36,
+                  66 + Max(CountRows(colEditShifts), 1) * 36 + 48,
                   56
               )
             Width: =Parent.Width
@@ -133,8 +133,8 @@ Screens:
             ChevronHoverFill: =varChevronHoverFill
             DefaultSelectedItems: =Blank()
             DisplayFields: =["MemberName"]
-            FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
+            FocusedBorderThickness: =varFocusedBorderThickness
             Height: =36
             HoverFill: =varDropdownHoverFill
             InputTextPlaceholder: ="Select Your Name"
@@ -213,7 +213,7 @@ Screens:
           Control: Gallery
           Variant: Vertical
           Properties:
-            Height: =92
+            Height: =Max(CountRows(colEditShifts), 1) * 36
             Items: =colEditShifts
             TemplatePadding: =0
             TemplateSize: =36

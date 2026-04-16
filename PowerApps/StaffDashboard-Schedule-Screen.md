@@ -371,7 +371,11 @@ The Edit Bar sits below the header. It shows the name picker always; once a name
 | BorderThickness | `1` |
 | X | `0`, Y | `52` |
 | Width | `=Parent.Width` |
-| Height | `=If(varSchedSelectedEmail <> "", 114 + Max(CountRows(colEditShifts), 1) * 36, 56)` |
+| Height | `=If(varSchedSelectedEmail <> "", 66 + Max(CountRows(colEditShifts), 1) * 36 + 48, 56)` |
+
+> **Responsive height formula breakdown:**
+> - When collapsed (no selection): `56` pixels (just enough for name picker with padding)
+> - When expanded: `66` (space before gallery) + `Max(CountRows(colEditShifts), 1) * 36` (dynamic gallery) + `48` (button space and padding)
 
 > **No “Who are you?” label** — the ComboBox placeholder is enough; controls sit on one row when collapsed.
 
@@ -497,8 +501,10 @@ Insert a **Vertical gallery** on the edit bar:
 | Layout | Vertical |
 | TemplateSize | `36` |
 | X | `16`, Y | `118` |
-| Width | `=Parent.Width - 260`, Height | `92` |
-| ShowScrollbar | `true` |
+| Width | `=Parent.Width - 260` |
+| Height | `=Max(CountRows(colEditShifts), 1) * 36` |
+
+> **Dynamic gallery height:** The gallery height automatically adjusts based on the number of shift rows. Each row is 36 pixels tall (`TemplateSize`), so the gallery grows/shrinks as shifts are added or removed.
 | ShowScrollbar | `true` |
 
 **Inside the gallery template**, add controls in a row:
@@ -539,6 +545,8 @@ Insert a **Vertical gallery** on the edit bar:
 | X | `16`, Y | `=galEditShifts.Y + galEditShifts.Height + 8` |
 | Width | `100`, Height | `28` |
 | OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})` |
+
+> **Dynamic positioning:** The Add Shift button Y position automatically adjusts based on the gallery's dynamic height, so it's always visible below the last shift row.
 
 ### Save button
 
