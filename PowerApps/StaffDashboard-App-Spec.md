@@ -684,6 +684,9 @@ Set(varLoadingMessage, "")
 | `varShowViewMessagesModal` | ID of item for unified messages modal (0=hidden) | Number |
 | `varShowStudentNoteModal` | ID of item for student note modal (0=hidden) | Number |
 | `varShowRevertModal` | ID of item for revert status modal (0=hidden) | Number |
+| `varRevertPlatesNeeded` | True when the current revert is `Paid & Picked Up` → `Completed` and should cascade to plates | Boolean |
+| `varRevertedPlateCount` | Number of plates the revert cascade will flip `Picked Up` → `Completed` (used in StaffNotes, audit log, and toast) | Number |
+| `colRevertedPlates` | Snapshot of `BuildPlates` rows targeted by the revert cascade (used to drive the `ForAll` patch) | Table |
 | `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
 | `varShowExportModal` | Controls export modal visibility | Boolean |
@@ -7688,8 +7691,21 @@ Set(varLoadingMessage, "")
 | Printing | Ready to Print | Printer jam, wrong filament, need to reassign |
 | Completed | Printing | Print has defect, needs reprint |
 | Completed | Ready to Print | Complete redo needed |
+| Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate `TransactionNumber` rejected the sibling job). |
 
-> ⚠️ **Note:** "Paid & Picked Up" cannot be reverted since a financial transaction has been completed.
+> ⚠️ **Paid & Picked Up revert is a recovery path, not a payment undo.** Reverting the request status **does not** delete the existing `Payments` row — that ledger entry remains the record of money actually collected at the POS. Staff use this revert to re-run a **batch** checkout (Step 12E) across the original job plus its sibling(s) after manually deleting the orphaned `Payments` row in SharePoint. See **Plate cascade on Paid & Picked Up → Completed** below for the plate-side behavior.
+
+### Plate cascade on Paid & Picked Up → Completed
+
+When — and only when — a staffer reverts a request from **Paid & Picked Up** back to **Completed**, `btnRevertConfirm.OnSelect` also flips every `BuildPlates` row for that request where `Status.Value = "Picked Up"` back to `Status.Value = "Completed"`. This keeps request state and plate state in sync so the next payment attempt (single or batch) sees a clean `Completed` job with `Completed` plates.
+
+For all other revert transitions (`Printing → Ready to Print`, `Completed → Printing`, `Completed → Ready to Print`) the cascade is **skipped** and plate statuses are preserved — those transitions intentionally reopen a job without discarding progress already logged against individual plates.
+
+The cascade is reflected in three places:
+
+- **`StaffNotes`:** the `[Changes]` bracket includes `"N plate(s) Picked Up -> Completed"` when the cascade fires.
+- **Flow C audit log:** the `NewValue` arg is suffixed with `" (+N plate(s) reverted Picked Up->Completed)"` so the raw audit table records it too.
+- **Toast notification:** staff see `"Status reverted to Completed — N plate(s) also reverted to Completed."` instead of the generic "adjust in Build Plates if needed" hint.
 
 ### Control Hierarchy (Container-Based)
 
@@ -8089,6 +8105,28 @@ Reset(txtRevertReason)
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Reverting status...");
 
+// Cascade plate revert on "Paid & Picked Up" -> "Completed".
+// Without this, request status and plate status drift apart (plates
+// stay "Picked Up" while request is back at "Completed"), which then
+// corrupts batch/partial checkout logic on the next payment attempt.
+Set(
+    varRevertPlatesNeeded,
+    varSelectedItem.Status.Value = "Paid & Picked Up" && ddRevertTarget.Selected.Value = "Completed"
+);
+Clear(colRevertedPlates);
+If(
+    varRevertPlatesNeeded,
+    Collect(
+        colRevertedPlates,
+        Filter(
+            colAllBuildPlates,
+            RequestID = varSelectedItem.ID,
+            Status.Value = "Picked Up"
+        )
+    )
+);
+Set(varRevertedPlateCount, CountRows(colRevertedPlates));
+
 // Update SharePoint item
 Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     Status: LookUp(Choices(PrintRequests.Status), Value = ddRevertTarget.Selected.Value),
@@ -8108,6 +8146,11 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
         With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
         ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
         " [Changes] " &
+        If(
+            varRevertPlatesNeeded && varRevertedPlateCount > 0,
+            Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " Picked Up -> Completed",
+            ""
+        ) &
         " [Reason] " &
         Trim(
             Substitute(
@@ -8141,21 +8184,59 @@ Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
     )
 });
 
+// Cascade revert to plates when returning from "Paid & Picked Up"
+// to "Completed". Preserves required fields to match the rest of
+// the app's BuildPlates patch pattern.
+If(
+    varRevertPlatesNeeded && varRevertedPlateCount > 0,
+    ForAll(
+        colRevertedPlates As wSnapPlate,
+        With(
+            { wFreshPlate: LookUp(BuildPlates, ID = wSnapPlate.ID) },
+            If(
+                !IsBlank(wFreshPlate),
+                Patch(
+                    BuildPlates,
+                    wFreshPlate,
+                    {
+                        Status: { Value: "Completed" },
+                        RequestID: wFreshPlate.RequestID,
+                        ReqKey: wFreshPlate.ReqKey,
+                        PlateKey: wFreshPlate.PlateKey,
+                        Machine: wFreshPlate.Machine,
+                        Title: wFreshPlate.Title
+                    }
+                )
+            )
+        )
+    );
+    ClearCollect(colAllBuildPlates, BuildPlates)
+);
+
 // Log to audit flow
 'Flow-(C)-Action-LogAction'.Run(
     Text(varSelectedItem.ID),                    // RequestID
     "Status Change",                             // Action
     "Status",                                    // FieldName
-    ddRevertTarget.Selected.Value,               // NewValue
+    ddRevertTarget.Selected.Value &
+        If(
+            varRevertPlatesNeeded && varRevertedPlateCount > 0,
+            " (+" & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " reverted Picked Up->Completed)",
+            ""
+        ),                                       // NewValue
     ddRevertStaff.Selected.MemberEmail           // ActorEmail
 );
 
 Notify(
     "Status reverted to " & ddRevertTarget.Selected.Value &
     If(
-        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
-        ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
-        ""
+        varRevertPlatesNeeded && varRevertedPlateCount > 0,
+        " — " & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " also reverted to Completed.",
+        If(
+            CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
+            ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
+            ""
+        )
     ),
     NotificationType.Success
 );
@@ -8172,9 +8253,21 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> 💡 **Audit Trail:** The revert action is logged in two places:
-> - **StaffNotes field:** Human-readable entry like "REVERTED by John D.: Printing → Ready to Print - Printer jammed - 2/6 2:45pm"
-> - **Flow C audit log:** Machine-readable entry for reporting and compliance
+> 💡 **Audit Trail:** The revert action is logged in three places:
+> - **StaffNotes field:** Human-readable entry like `"REVERTED by John D.: [Summary] Paid & Picked Up -> Completed [Changes] 2 plates Picked Up -> Completed [Reason] POS transaction covered a sibling job ..."`.
+> - **Flow C audit log:** Machine-readable entry where `NewValue` is `"Completed (+2 plates reverted Picked Up->Completed)"` so the cascade is queryable in the audit table.
+> - **BuildPlates list:** Each cascaded plate is patched via the standard `wFreshPlate` pattern (required fields preserved), so its SharePoint `Modified` / `Editor` reflect the revert operation.
+
+> ⚠️ **Cascade is scoped to Paid & Picked Up → Completed.** No other revert transition touches `BuildPlates`. This is intentional: reverting `Completed → Printing` (for example, to add a reprint) should keep the finished plates marked `Completed` so their completion history isn't lost. The legacy "plate statuses are unchanged" notice still fires in those cases.
+
+> 🧹 **Cleanup guidance — orphaned Payment row after single-save on a multi-job POS receipt.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job, hit a duplicate `TransactionNumber` error on the sibling job, then reverted the first job to try again as a batch, the original `Payments` row is still attached to the first job and blocks re-use of the transaction number. To reconcile:
+>
+> 1. Verify against the POS receipt that the existing `Payments` row understates the real amount collected (common when the first single-save only captured the first job's portion).
+> 2. Screenshot / export the existing `Payments` row for audit (PaymentID, TransactionNumber, Amount, Weight, PayerName, PaymentDate, StaffEmail).
+> 3. Delete the `Payments` row in SharePoint.
+> 4. Confirm both requests are in `Completed` (Job 1 is already there because of the revert cascade; Job 2 never moved). Confirm plates for Job 1 are `Completed` (the cascade handles this) and Job 2's plates are `Completed`.
+> 5. Re-run checkout via the **Batch Payment Modal** (Step 12E) on both jobs, entering the real combined weight, the real combined amount, and the original `TransactionNumber` and `PaymentDate` from the POS receipt so the monthly export lands in the correct period.
+> 6. Add a manual `Flow-(C)-Action-LogAction` entry on each request with a reconciliation note referencing the deleted `PaymentID`.
 
 ---
 

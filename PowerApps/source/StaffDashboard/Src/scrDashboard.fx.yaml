@@ -3376,7 +3376,29 @@ scrDashboard As screen:
                 =// === SHOW LOADING ===
                 Set(varIsLoading, true);
                 Set(varLoadingMessage, "Reverting status...");
-                
+
+                // Cascade plate revert on "Paid & Picked Up" -> "Completed".
+                // Without this, request status and plate status drift apart (plates
+                // stay "Picked Up" while request is back at "Completed"), which then
+                // corrupts batch/partial checkout logic on the next payment attempt.
+                Set(
+                    varRevertPlatesNeeded,
+                    varSelectedItem.Status.Value = "Paid & Picked Up" && ddRevertTarget.Selected.Value = "Completed"
+                );
+                Clear(colRevertedPlates);
+                If(
+                    varRevertPlatesNeeded,
+                    Collect(
+                        colRevertedPlates,
+                        Filter(
+                            colAllBuildPlates,
+                            RequestID = varSelectedItem.ID,
+                            Status.Value = "Picked Up"
+                        )
+                    )
+                );
+                Set(varRevertedPlateCount, CountRows(colRevertedPlates));
+
                 // Update SharePoint item
                 Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
                     Status: LookUp(Choices(PrintRequests.Status), Value = ddRevertTarget.Selected.Value),
@@ -3396,6 +3418,11 @@ scrDashboard As screen:
                         With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
                         ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
                         " [Changes] " &
+                        If(
+                            varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                            Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " Picked Up -> Completed",
+                            ""
+                        ) &
                         " [Reason] " &
                         Trim(
                             Substitute(
@@ -3428,33 +3455,71 @@ scrDashboard As screen:
                         " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
                     )
                 });
-                
+
+                // Cascade revert to plates when returning from "Paid & Picked Up"
+                // to "Completed". Preserves required fields to match the rest of
+                // the app's BuildPlates patch pattern.
+                If(
+                    varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                    ForAll(
+                        colRevertedPlates As wSnapPlate,
+                        With(
+                            { wFreshPlate: LookUp(BuildPlates, ID = wSnapPlate.ID) },
+                            If(
+                                !IsBlank(wFreshPlate),
+                                Patch(
+                                    BuildPlates,
+                                    wFreshPlate,
+                                    {
+                                        Status: { Value: "Completed" },
+                                        RequestID: wFreshPlate.RequestID,
+                                        ReqKey: wFreshPlate.ReqKey,
+                                        PlateKey: wFreshPlate.PlateKey,
+                                        Machine: wFreshPlate.Machine,
+                                        Title: wFreshPlate.Title
+                                    }
+                                )
+                            )
+                        )
+                    );
+                    ClearCollect(colAllBuildPlates, BuildPlates)
+                );
+
                 // Log to audit flow
                 'Flow-(C)-Action-LogAction'.Run(
                     Text(varSelectedItem.ID),                    // RequestID
                     "Status Change",                             // Action
                     "Status",                                    // FieldName
-                    ddRevertTarget.Selected.Value,               // NewValue
+                    ddRevertTarget.Selected.Value &
+                        If(
+                            varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                            " (+" & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " reverted Picked Up->Completed)",
+                            ""
+                        ),                                       // NewValue
                     ddRevertStaff.Selected.MemberEmail           // ActorEmail
                 );
-                
+
                 Notify(
                     "Status reverted to " & ddRevertTarget.Selected.Value &
                     If(
-                        CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
-                        ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
-                        ""
+                        varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                        " — " & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " also reverted to Completed.",
+                        If(
+                            CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
+                            ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
+                            ""
+                        )
                     ),
                     NotificationType.Success
                 );
-                
+
                 // Close modal and reset
                 Set(varShowRevertModal, 0);
                 Set(varSelectedItem, Blank());
                 Reset(ddRevertStaff);
                 Reset(ddRevertTarget);
                 Reset(txtRevertReason);
-                
+
                 // === HIDE LOADING ===
                 Set(varIsLoading, false);
                 Set(varLoadingMessage, "")
