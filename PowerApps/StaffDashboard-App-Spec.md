@@ -7693,7 +7693,7 @@ Set(varLoadingMessage, "")
 | Completed | Ready to Print | Complete redo needed |
 | Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate `TransactionNumber` rejected the sibling job). |
 
-> ⚠️ **Paid & Picked Up revert is a recovery path, not a payment undo.** Reverting the request status **does not** delete the existing `Payments` row — that ledger entry remains the record of money actually collected at the POS. Staff use this revert to re-run a **batch** checkout (Step 12E) across the original job plus its sibling(s) after manually deleting the orphaned `Payments` row in SharePoint. See **Plate cascade on Paid & Picked Up → Completed** below for the plate-side behavior.
+> ⚠️ **Paid & Picked Up revert is a recovery path, not a payment undo.** Reverting the request status **does not** delete any `Payments` row — those ledger entries remain the record of money actually collected at the POS. Staff use this revert to redo work on a completed request and then re-run checkout (single or batch) on the cleaned-up request. See **Plate cascade on Paid & Picked Up → Completed** and **Payment-field cascade on Paid & Picked Up → Completed** below for what the revert does touch.
 
 ### Plate cascade on Paid & Picked Up → Completed
 
@@ -7706,6 +7706,35 @@ The cascade is reflected in three places:
 - **`StaffNotes`:** the `[Changes]` bracket includes `"N plate(s) Picked Up -> Completed"` when the cascade fires.
 - **Flow C audit log:** the `NewValue` arg is suffixed with `" (+N plate(s) reverted Picked Up->Completed)"` so the raw audit table records it too.
 - **Toast notification:** staff see `"Status reverted to Completed — N plate(s) also reverted to Completed."` instead of the generic "adjust in Build Plates if needed" hint.
+
+### Payment-field cascade on Paid & Picked Up → Completed
+
+When — and only when — a staffer reverts a request from **Paid & Picked Up** back to **Completed**, `btnRevertConfirm.OnSelect` also clears the denormalized payment fields on the `PrintRequests` row:
+
+- `FinalWeight`
+- `FinalCost`
+- `PaymentDate`
+- `PaymentType`
+- `PayerName`
+- `PayerTigerCard`
+- `TransactionNumber`
+- `PaymentNotes`
+
+This is **required for correctness**, not cosmetic. Both `Flow-(H)-Payment-SaveSingle` and `Flow-(I)-Payment-SaveBatch` write `FinalWeight` / `FinalCost` using an **additive** expression — `add(coalesce(<existing>, 0), <new allocation>)` — so that multi-plate partial payments on the same request accumulate correctly. If the revert leaves the previously-paid totals in place, the next payment attempt against that request silently double-counts them (e.g., a $3.10 re-charge on a reverted batch item ends up recorded as $6.19 because the flow reads `$3.10 + $3.09` on the SharePoint row).
+
+#### What the cascade does **not** touch
+
+- **`Payments` ledger rows stay intact.** The flows never clean them up, and neither does this revert. Rationale:
+  - A single request may have several `Payments` rows from earlier **partial pickups**; only the final pickup should be "undone" conceptually, and the app has no reliable way to pick which one out automatically.
+  - **Batch** `Payments` rows are shared across siblings via `BatchRequestIDs` / `BatchAllocationSummary`. Deleting the row when reverting one batch member would break the still-paid siblings.
+  - Finance reconciles via `Flow-(G)-Export-MonthlyTransactions`, whose Excel export reflects actual TigerCASH charges. Staff who issued a refund through TigerCASH manually delete the corresponding `Payments` row in SharePoint before the month closes (see cleanup guidance on `btnRevertConfirm`).
+- **Sibling batch requests are untouched.** Only the reverted request's own fields are cleared. `REQ-00501`'s `FinalCost` stays intact when you revert `REQ-00502` out of the same batch.
+
+#### Follow-on behavior after the cascade
+
+- **Re-paying the reverted request works cleanly from zero.** The additive math now starts at `0 + <new allocation>` because `FinalWeight` / `FinalCost` were cleared.
+- **The reverted request still shows the old batch row in its payment history dropdown** — `BatchRequestIDs` on that row still lists this request's ID. Staff see both the original batch entry (now historically accurate context) and the new payment, separated by the `REVERTED by…` entry in `StaffNotes`. This is intentional history, not a bug: it's identical to how plate history is kept even after a revert.
+- **Flow-(G) monthly export is unaffected.** It reads `Payments`, not `PrintRequests`, so untouched ledger rows continue to export as-is; the new payment creates a new ledger row and also exports. If TigerCASH refunded the first charge, the staffer deletes that specific `Payments` row manually before month-end.
 
 ### Control Hierarchy (Container-Based)
 
@@ -8213,6 +8242,34 @@ If(
     ClearCollect(colAllBuildPlates, BuildPlates)
 );
 
+// Clear the stale payment fields on the request row when reverting
+// "Paid & Picked Up" -> "Completed". Without this, Flow-(H) and
+// Flow-(I) use additive math on the existing FinalWeight/FinalCost
+// values (coalesce(existing, 0) + new), so re-paying the same
+// request double-counts the previously recorded amounts.
+// Payments ledger rows are intentionally left alone — a single
+// request may have multiple Payments rows from prior partial
+// pickups, and batch rows are still referenced by sibling
+// requests. Staff delete orphaned Payments rows manually in
+// SharePoint when a full-price refund needs to leave the ledger.
+If(
+    varRevertPlatesNeeded,
+    Patch(
+        PrintRequests,
+        LookUp(PrintRequests, ID = varSelectedItem.ID),
+        {
+            FinalWeight: Blank(),
+            FinalCost: Blank(),
+            PaymentDate: Blank(),
+            PaymentType: Blank(),
+            PayerName: Blank(),
+            PayerTigerCard: Blank(),
+            TransactionNumber: Blank(),
+            PaymentNotes: Blank()
+        }
+    )
+);
+
 // Log to audit flow
 'Flow-(C)-Action-LogAction'.Run(
     Text(varSelectedItem.ID),                    // RequestID
@@ -8253,21 +8310,22 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> 💡 **Audit Trail:** The revert action is logged in three places:
+> 💡 **Audit Trail:** The revert action is logged in four places:
 > - **StaffNotes field:** Human-readable entry like `"REVERTED by John D.: [Summary] Paid & Picked Up -> Completed [Changes] 2 plates Picked Up -> Completed [Reason] POS transaction covered a sibling job ..."`.
 > - **Flow C audit log:** Machine-readable entry where `NewValue` is `"Completed (+2 plates reverted Picked Up->Completed)"` so the cascade is queryable in the audit table.
 > - **BuildPlates list:** Each cascaded plate is patched via the standard `wFreshPlate` pattern (required fields preserved), so its SharePoint `Modified` / `Editor` reflect the revert operation.
+> - **PrintRequests list:** The Paid & Picked Up → Completed transition patches the row twice — once to flip status / log staff notes, and once to clear the denormalized payment fields (`FinalWeight`, `FinalCost`, `PaymentDate`, `PaymentType`, `PayerName`, `PayerTigerCard`, `TransactionNumber`, `PaymentNotes`). Both patches run in the same `OnSelect` and show up as a single consecutive pair of `Modified` entries on the row.
 
-> ⚠️ **Cascade is scoped to Paid & Picked Up → Completed.** No other revert transition touches `BuildPlates`. This is intentional: reverting `Completed → Printing` (for example, to add a reprint) should keep the finished plates marked `Completed` so their completion history isn't lost. The legacy "plate statuses are unchanged" notice still fires in those cases.
+> ⚠️ **Cascade is scoped to Paid & Picked Up → Completed.** No other revert transition touches `BuildPlates` or clears payment fields. This is intentional: reverting `Completed → Printing` (for example, to add a reprint) should keep the finished plates marked `Completed` and preserve any `FinalWeight` / `FinalCost` already accumulated from partial-payment pickups. The legacy "plate statuses are unchanged" notice still fires in those cases.
 
-> 🧹 **Cleanup guidance — orphaned Payment row after single-save on a multi-job POS receipt.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job, hit a duplicate `TransactionNumber` error on the sibling job, then reverted the first job to try again as a batch, the original `Payments` row is still attached to the first job and blocks re-use of the transaction number. To reconcile:
+> ⚠️ **Why clear the payment fields automatically?** Both `Flow-(H)-Payment-SaveSingle` and `Flow-(I)-Payment-SaveBatch` write with `add(coalesce(<existing>, 0), <new>)` so that multi-plate partial pickups accumulate correctly on the same request. That same math **double-counts** if `Paid & Picked Up` is reverted without clearing the previously-saved totals — the second payment posts `$3.10` but the row records `$6.19`. Clearing the fields on the revert restores a clean `0` baseline for the next payment attempt. `Payments` ledger rows are deliberately left intact: a request may have several (partial-pickup history) and batch rows are shared with sibling requests. See **Payment-field cascade on Paid & Picked Up → Completed** above for the full rationale.
+
+> 🧹 **Cleanup guidance — orphaned or refunded Payment row.** The request row is cleaned automatically on revert, but `Payments` rows are not. You only need to delete a `Payments` row manually in two situations:
 >
-> 1. Verify against the POS receipt that the existing `Payments` row understates the real amount collected (common when the first single-save only captured the first job's portion).
-> 2. Screenshot / export the existing `Payments` row for audit (PaymentID, TransactionNumber, Amount, Weight, PayerName, PaymentDate, StaffEmail).
-> 3. Delete the `Payments` row in SharePoint.
-> 4. Confirm both requests are in `Completed` (Job 1 is already there because of the revert cascade; Job 2 never moved). Confirm plates for Job 1 are `Completed` (the cascade handles this) and Job 2's plates are `Completed`.
-> 5. Re-run checkout via the **Batch Payment Modal** (Step 12E) on both jobs, entering the real combined weight, the real combined amount, and the original `TransactionNumber` and `PaymentDate` from the POS receipt so the monthly export lands in the correct period.
-> 6. Add a manual `Flow-(C)-Action-LogAction` entry on each request with a reconciliation note referencing the deleted `PaymentID`.
+> 1. **TigerCASH refund issued.** If the student was refunded through TigerCASH, the monthly export (`Flow-(G)-Export-MonthlyTransactions`) will still include the charge. Screenshot the row for audit, then delete it in SharePoint before month-end so the export reconciles with the TigerCASH report.
+> 2. **Duplicate-transaction retry.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job, hit a duplicate `TransactionNumber` error on the sibling, and reverted the first job to rerun as a batch, the original `Payments` row blocks re-use of that transaction number. Delete it in SharePoint (after screenshotting for audit), then re-run the batch with the real combined weight/amount and the original `TransactionNumber` so the monthly export lands in the right period.
+>
+> In all other cases (student is re-paying without a refund, redo-the-print scenario, partial-payment flow, etc.), leave the `Payments` rows alone — the cleared request fields are enough, and the ledger entries are finance's source of truth.
 
 ---
 
