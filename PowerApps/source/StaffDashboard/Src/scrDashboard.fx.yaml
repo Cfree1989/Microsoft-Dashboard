@@ -2208,7 +2208,7 @@ scrDashboard As screen:
                     IfError(
                         With(
                             {
-                                wBuildPlateCount: Max(1, CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)))
+                                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))
                             },
                             Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
                                 Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
@@ -2292,7 +2292,7 @@ scrDashboard As screen:
                     
                     // === CREATE DEFAULT BUILD PLATE ===
                     // If staff didn't configure plates via "Add Plates/Printers" button, auto-create one
-                    If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
+                    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,
                         Patch(BuildPlates, Defaults(BuildPlates), {
                             RequestID: varSelectedItem.ID,
                             ReqKey: varSelectedItem.ReqKey,
@@ -2391,8 +2391,8 @@ scrDashboard As screen:
             Text: |-
                 ="Build Plates:  " & 
                 If(
-                    CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) > 0,
-                    Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " plate(s) configured",
+                    CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
+                    Text(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID))) & " plate(s) configured",
                     "1 plate on " & 
                     Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
                         Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), 
@@ -3159,7 +3159,7 @@ scrDashboard As screen:
             ZIndex: =1
 
         recRevertModal As rectangle:
-            Fill: =Color.White
+            Fill: =varColorBgCard
             Height: =380
             Width: =450
             X: =(Parent.Width - 450) / 2
@@ -3364,14 +3364,15 @@ scrDashboard As screen:
             ZIndex: =12
 
         btnRevertConfirm As button:
-            BorderThickness: =1
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
             Color: =Color.White
-            DisplayMode: =If(IsBlank(ddRevertStaff.Selected) Or IsBlank(txtRevertReason.Text) Or Len(Trim(txtRevertReason.Text)) < 5, DisplayMode.Disabled, DisplayMode.Edit)
-            Fill: =varColorNeutral
+            DisplayMode: =If(IsBlank(ddRevertStaff.Selected) Or IsBlank(ddRevertTarget.Selected) Or IsBlank(txtRevertReason.Text) Or Len(Trim(txtRevertReason.Text)) < 5, DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =varColorSuccess
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
-            Height: =36
-            HoverFill: =ColorFade(varColorNeutral, -15%)
+            Height: =varBtnHeight
+            HoverFill: =varColorSuccessHover
             OnSelect: |-
                 =// === SHOW LOADING ===
                 Set(varIsLoading, true);
@@ -3415,7 +3416,14 @@ scrDashboard As screen:
                     StaffNotes: Concatenate(
                         If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
                         "REVERTED by " &
-                        With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                        With(
+                            { n: ddRevertStaff.Selected.MemberName },
+                            If(
+                                IsBlank(Find(" ", n)),
+                                n,
+                                Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."
+                            )
+                        ) &
                         ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
                         " [Changes] " &
                         If(
@@ -3551,11 +3559,12 @@ scrDashboard As screen:
                 // === HIDE LOADING ===
                 Set(varIsLoading, false);
                 Set(varLoadingMessage, "")
-            PressedFill: =ColorFade(varColorNeutral, -25%)
+            PressedFill: =ColorFade(varColorSuccess, -25%)
             RadiusBottomLeft: =varBtnBorderRadius
             RadiusBottomRight: =varBtnBorderRadius
             RadiusTopLeft: =varBtnBorderRadius
             RadiusTopRight: =varBtnBorderRadius
+            Size: =varBtnFontSize
             Text: ="Confirm Revert"
             Width: =195
             X: =recRevertModal.X + 235
@@ -4873,11 +4882,8 @@ scrDashboard As screen:
                 
                 // Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
                 If(
-                    Or(
-                        varFlowResult.success = true,
-                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                    ),
-                
+                    Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
+
                     // === SUCCESS PATH ===
                     Concurrent(
                         Refresh(PrintRequests),
@@ -6522,11 +6528,8 @@ scrDashboard As screen:
                 
                 // Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
                 If(
-                    Or(
-                        varFlowResult.success = true,
-                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                    ),
-                
+                    Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
+
                     // === SUCCESS PATH ===
                     Concurrent(
                         Refresh(PrintRequests),
