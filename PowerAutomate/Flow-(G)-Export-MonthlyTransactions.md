@@ -442,13 +442,15 @@ Before calling the script, convert the SharePoint items into a JSON string that 
    - `payer` = `item()?['PayerName']`
    - `amount` = `item()?['Amount']`
   - `date` = `formatDateTime(item()?['PaymentDate'], 'M/d/yyyy')`
-  - `recordedAt` = `if(empty(item()?['RecordedAt']), '', formatDateTime(item()?['RecordedAt'], 'M/d/yyyy h:mm tt'))`
+  - `recordedAt` = `if(empty(item()?['RecordedAt']), '', formatDateTime(convertFromUtc(item()?['RecordedAt'], 'Central Standard Time'), 'M/d/yyyy h:mm tt'))`
 
 > **Important:** This action creates a clean array of plain values for the script. It replaces the old `Apply to each` + `Add a row into a table` pattern.
 >
 > 💡 **Why both date fields matter:** `PaymentDate` is the business date used for monthly filtering. `RecordedAt` preserves the exact order the transaction was entered, which is critical when several TigerCASH rows share the same day.
 >
 > 💡 **Consolidated batch rule:** If a TigerCASH checkout covered multiple requests, `amount` should still come from the single consolidated `Payments.Amount` value. Do not try to re-split it inside the flow.
+>
+> ⏰ **Why `convertFromUtc`:** SharePoint stores `RecordedAt` in UTC. `formatDateTime` alone would emit the raw UTC timestamp, so a checkout recorded at `4/17/2026 8:49 PM` Central would export as `4/18/2026 1:49 AM` in the workbook and no longer match what staff see in the Power App. Converting to `Central Standard Time` (the Windows zone id, which auto-handles CST/CDT daylight saving) makes the exported `Recorded At` column match the app's History and Payments views exactly.
 
 > **Important:** If you type `item()?['TransactionNumber']` directly into the field without using the **Expression** tab, Power Automate will treat it as literal text and the script will write that text into Excel.
 
@@ -544,7 +546,17 @@ The export file should:
 3. Confirm the exported workbook shows exactly one row for that checkout
 4. Confirm the exported `Amount` matches the full combined payment total, not a per-request split
 
-### Test 3: Excel Timing
+### Test 3: Recorded At Timezone
+
+1. Pick any TigerCASH payment and note the `RecordedAt` value shown in the Power App (for example, the Payments view or the request history card)
+2. Run the flow for that payment's month
+3. Open the exported workbook and find the same transaction number
+4. Confirm the `Recorded At` cell shows the same date and time as the app, not a UTC-shifted value
+5. Cross-check at least one payment recorded during CDT (March–November) and one during CST (November–March) so daylight saving is covered
+
+> **Important:** If the exported `Recorded At` is off by 5 or 6 hours from the app, the `recordedAt` mapping in `Build Payment Rows JSON` is missing the `convertFromUtc(..., 'Central Standard Time')` wrapper. Re-open that Select action and paste the expression exactly as written in Step 4.
+
+### Test 4: Excel Timing
 
 1. Run the flow with `Get Tables` still enabled
 2. Confirm `Get Tables` succeeds and can see `Transactions`
@@ -563,4 +575,4 @@ The export file should:
 
 ---
 
-*Updated: March 24, 2026*
+*Updated: April 17, 2026*
