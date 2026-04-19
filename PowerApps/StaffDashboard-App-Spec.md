@@ -14061,6 +14061,47 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 ---
 
+# STEP 20: Schedule Screen (`scrSchedule`)
+
+**What you're doing:** Adding a semester-wide color-coded schedule screen where each student worker can enter/edit their own shifts. Because this screen is large (HtmlViewer grid + edit bar + reorder panel) it has its own dedicated guide.
+
+### Source of truth
+
+- **Step-by-step build + property tables:** [`PowerApps/StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md) — covers the 3 collections (`colStaff`, `colShifts`, `colSchedLookup`), `colTimeSlots`, `colSchedColors`, the edit bar, the HtmlViewer grid formula, and the reorder panel.
+- **Live YAML** (authoritative for copy-paste): `.cursor-mcp-deploy/scrSchedule.pa.yaml` after running `sync_canvas` from the `canvas-authoring` MCP server. Edit there → `compile_canvas` pushes back into the coauthoring session.
+
+### Screen overview
+
+- **Header bar** (`recSchedHeader`, `lblSchedTitle`, `btnSchedBack` → Dashboard).
+- **Edit bar** (`recSchedEditBar`) — grows vertically with the number of rows the current user is editing.
+  - Row 1 (`Y = 62`): `drpSchedName` (ComboBox), `lblSchedAidInfo` (aid type + hour counter, red when over cap), `btnSchedSave`, `btnSchedClear` (cancel), `btnSchedReorderToggle`.
+  - Row 2 (`Y = 108`): **`btnSchedAddShift`** — solid primary button, anchored **above** the shift rows so it can never fall behind the HtmlViewer grid.
+  - Row 3+ (`Y = 146`): **`galEditShifts`** — Day / Start / End dropdowns + ✕ remove per shift; height = `Max(CountRows(colEditShifts), 1) * 36`.
+  - Bar height: `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)`.
+- **HtmlViewer grid** (`htmlSchedGrid`) — `Y = recSchedEditBar.Y + recSchedEditBar.Height`, so it re-flows automatically as the bar grows. Renders Mon–Fri columns with per-day filtering (only staff who have shifts on that day appear), plus a totals table.
+- **Reorder panel** (`recSchedReorderPanel` + `galSchedReorder`) — toggled by `btnSchedReorderToggle`. Width `280`; height auto-sizes to content: `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` (capped so it can't overflow the screen).
+
+### Critical conventions (easy to get wrong)
+
+1. **Seed real default times, never blank.** `btnSchedAddShift.OnSelect` and the fallback blank row in `drpSchedName.OnChange` must use `ShiftStart: "8:30 AM"`, `ShiftEnd: "9:00 AM"` — not `""`. Classic `DropDown` does **not** fire `OnChange` on first render, so a blank-seeded row looks valid in the UI but the record stays blank and `btnSchedSave` filters it out with `!IsBlank(ShiftStart) && !IsBlank(ShiftEnd)`. If you ever change the first item in `drpGalShiftStart.Items` / `drpGalShiftEnd.Items`, update these seeds too.
+2. **Initials = first + last name.** Use `Left(First(Split(name, " ")).Value, 1) & Left(Last(Split(name, " ")).Value, 1)` — **not** `Left(name, 1) & Mid(name, Find(" ", name)+1, 1)` (the old formula returned the middle initial for `Francisco A Gonzalez-Hernandez` → `FA` instead of `FG`). `Split` returns a single-column table whose column is `Value` (not `Result` — a common gotcha in older Power Fx docs).
+3. **Batch-create shifts on save.** Use `Patch(StaffShifts, ForAll(Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)), { ... }))`. Do **not** use `ForAll(..., Patch(Defaults(StaffShifts), …))` — that pattern often produces only one new row when multiple were needed (concurrent evaluation).
+4. **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
+5. **Reorder panel sizes to content, not to screen.** Don't revert `Height` to `Parent.Height - Self.Y`; use `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` so the background hugs the last row instead of stretching to the bottom.
+
+### Authoring workflow (canvas-authoring MCP)
+
+```text
+1. sync_canvas    → .cursor-mcp-deploy\ (pulls current server YAML)
+2. edit           → .cursor-mcp-deploy\scrSchedule.pa.yaml
+3. compile_canvas → .cursor-mcp-deploy\ (validates + pushes)
+4. sync_canvas    → any clean dir and diff to confirm
+```
+
+`compile_canvas` reports **"Validation FAILED"** with ~18 pre-existing delegation warnings (on `btnStatusTab`, `galJobCards`, messages counts, `btnPickedUp`, schedule `OnVisible`, and `btnSchedSave.OnSelect`). **None** of those warnings block the push — they're the same app-wide warnings that have always been there. Only investigate *new* warnings that mention controls you just changed. Always re-sync and diff to confirm the push actually landed.
+
+---
+
 # STEP 18: Publishing the App
 
 **What you're doing:** Saving and publishing your app so staff can use it.

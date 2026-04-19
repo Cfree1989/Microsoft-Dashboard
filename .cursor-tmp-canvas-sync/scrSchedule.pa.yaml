@@ -48,7 +48,7 @@ Screens:
                         ShiftID:    sh.ShiftID,
                         Email:      sh.Email,
                         Name:       sr.MemberName,
-                        Initials:   Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                        Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) & Left(Last(Split(sr.MemberName, " ")).Value, 1),
                         Day:        sh.Day,
                         StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
                         EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
@@ -115,7 +115,7 @@ Screens:
             Height: |-
               =If(
                   varSchedSelectedEmail <> "",
-                  114 + Max(CountRows(colEditShifts), 1) * 36,
+                  112 + Max(CountRows(colEditShifts), 1) * 36,
                   56
               )
             Width: =Parent.Width
@@ -162,7 +162,7 @@ Screens:
                       );
                       If(
                           CountRows(colEditShifts) = 0,
-                          Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+                          Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
                       )
                   )
               )
@@ -213,14 +213,14 @@ Screens:
           Control: Gallery
           Variant: Vertical
           Properties:
-            Height: =92
+            Height: =Max(CountRows(colEditShifts), 1) * 36
             Items: =colEditShifts
             TemplatePadding: =0
             TemplateSize: =36
             Visible: =varSchedSelectedEmail <> ""
             Width: =Parent.Width - 260
             X: =16
-            Y: =118
+            Y: =146
           Children:
             - drpGalShiftDay:
                 Control: Classic/DropDown
@@ -276,23 +276,30 @@ Screens:
       - btnSchedAddShift:
           Control: Classic/Button
           Properties:
-            BorderColor: =varColorPrimary
-            BorderThickness: =1
-            Color: =varColorPrimary
-            Fill: =Color.Transparent
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =Color.White
+            Fill: =varColorPrimary
             Font: =varAppFont
             Height: =28
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =Color.White
-            HoverFill: =varColorPrimary
+            HoverFill: =varColorPrimaryHover
             OnSelect: |-
-              =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+              =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
             PressedFill: =varColorPrimaryPressed
+            RadiusBottomLeft: =varBtnBorderRadius
+            RadiusBottomRight: =varBtnBorderRadius
+            RadiusTopLeft: =varBtnBorderRadius
+            RadiusTopRight: =varBtnBorderRadius
             Size: =10
             Text: ="+ Add shift"
             Visible: =varSchedSelectedEmail <> ""
             Width: =100
             X: =16
-            Y: =galEditShifts.Y + galEditShifts.Height + 8
+            Y: =108
       - btnSchedSave:
           Control: Classic/Button
           Properties:
@@ -366,7 +373,7 @@ Screens:
                               ShiftID:    sh.ShiftID,
                               Email:      sh.Email,
                               Name:       sr.MemberName,
-                              Initials:   Left(sr.MemberName, 1) & Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                              Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) & Left(Last(Split(sr.MemberName, " ")).Value, 1),
                               Day:        sh.Day,
                               StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
                               EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
@@ -476,7 +483,7 @@ Screens:
                                   With(
                                       {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
                                       "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;overflow:hidden;white-space:nowrap;'>" &
-                                      Left(s.MemberName, 1) & Mid(s.MemberName, Find(" ", s.MemberName) + 1, 1) &
+                                      Left(First(Split(s.MemberName, " ")).Value, 1) & Left(Last(Split(s.MemberName, " ")).Value, 1) &
                                       "</td>"
                                   )
                               ) &
@@ -590,8 +597,8 @@ Screens:
             Fill: =varColorBgCard
             Height: =Parent.Height - Self.Y
             Visible: =varSchedShowReorder
-            Width: =220
-            X: =Parent.Width - 220
+            Width: =280
+            X: =Parent.Width - 280
             Y: =recSchedEditBar.Y + recSchedEditBar.Height
       - galSchedReorder:
           Control: Gallery
@@ -600,22 +607,22 @@ Screens:
             Height: =Parent.Height - Self.Y - 2
             Items: =Sort(colStaff, SchedSortOrder, SortOrder.Ascending)
             TemplatePadding: =0
-            TemplateSize: =40
+            TemplateSize: =56
             Visible: =varSchedShowReorder
-            Width: =216
-            X: =Parent.Width - 218
+            Width: =276
+            X: =Parent.Width - 278
             Y: =recSchedEditBar.Y + recSchedEditBar.Height + 4
           Children:
             - lblReorderName:
                 Control: Label
                 Properties:
+                  AutoHeight: =true
                   Font: =varAppFont
-                  Height: =20
                   Size: =11
                   Text: =ThisItem.MemberName
-                  Width: =130
+                  Width: =180
                   X: =8
-                  Y: =10
+                  Y: =8
             - btnReorderUp:
                 Control: Classic/Button
                 Properties:
@@ -640,8 +647,8 @@ Screens:
                   Size: =12
                   Text: ="↑"
                   Width: =28
-                  X: =148
-                  Y: =8
+                  X: =200
+                  Y: =(Parent.TemplateHeight - 24) / 2
             - btnReorderDown:
                 Control: Classic/Button
                 Properties:
@@ -666,5 +673,5 @@ Screens:
                   Size: =12
                   Text: ="↓"
                   Width: =28
-                  X: =180
-                  Y: =8
+                  X: =232
+                  Y: =(Parent.TemplateHeight - 24) / 2

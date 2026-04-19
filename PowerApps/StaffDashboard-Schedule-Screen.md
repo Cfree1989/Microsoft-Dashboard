@@ -284,8 +284,8 @@ ClearCollect(
                 ShiftID:    sh.ShiftID,
                 Email:      sh.Email,
                 Name:       sr.MemberName,
-                Initials:   Left(sr.MemberName, 1) &
-                            Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) &
+                            Left(Last(Split(sr.MemberName, " ")).Value, 1),
                 Day:        sh.Day,
                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
                 EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
@@ -371,11 +371,22 @@ The Edit Bar sits below the header. It shows the name picker always; once a name
 | BorderThickness | `1` |
 | X | `0`, Y | `52` |
 | Width | `=Parent.Width` |
-| Height | `=If(varSchedSelectedEmail <> "", 66 + Max(CountRows(colEditShifts), 1) * 36 + 48, 56)` |
+| Height | `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)` |
 
 > **Responsive height formula breakdown:**
-> - When collapsed (no selection): `56` pixels (just enough for name picker with padding)
-> - When expanded: `66` (space before gallery) + `Max(CountRows(colEditShifts), 1) * 36` (dynamic gallery) + `48` (button space and padding)
+> - When collapsed (no selection): `56` px (name picker with padding).
+> - When expanded: `112` px (header row `Y=62`..`98` + `+ Add shift` button at `Y=108`..`136` + top padding to gallery at `Y=146`) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed.
+>
+> **Internal vertical stack when expanded:**
+>
+> | Y | Control |
+> |---|---------|
+> | 62 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedSave` · `btnSchedClear` · `btnSchedReorderToggle` |
+> | 108 | `btnSchedAddShift` (solid primary — **above** shift rows, not below) |
+> | 146 | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
+> | `recSchedEditBar.Y + .Height` | `htmlSchedGrid`, reorder chrome |
+
+> **Why Add shift sits above the rows:** Putting it below the gallery caused it to fall behind the `HtmlViewer` when the edit bar had only 1–2 rows (bar height < button Y). Anchoring the button at a fixed `Y=108` with the gallery underneath eliminates the z‑order / overlap bug and keeps the whole bar dynamic.
 
 > **No “Who are you?” label** — the ComboBox placeholder is enough; controls sit on one row when collapsed.
 
@@ -429,12 +440,14 @@ If(
             CountRows(colEditShifts) = 0,
             Collect(
                 colEditShifts,
-                {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""}
+                {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"}
             )
         )
     )
 )
 ```
+
+> **Why real defaults (not blank)?** Classic **DropDown** controls do **not** fire `OnChange` on first render, so a row seeded with `ShiftStart: ""`/`ShiftEnd: ""` looks valid in the UI (the dropdown shows the first item — `8:30 AM` / `9:00 AM`) but the underlying `colEditShifts` row stays blank. The Save handler filters with `!IsBlank(ShiftStart) && !IsBlank(ShiftEnd)`, so a user who clicked **+ Add shift** and then **Save Schedule** without touching the dropdowns would silently lose that row. Seeding with the actual first option keeps what you see = what you save. If you change the first item in `drpGalShiftStart.Items` or `drpGalShiftEnd.Items`, update these defaults to match.
 
 ### Aid type + hour counter label
 
@@ -500,12 +513,14 @@ Insert a **Vertical gallery** on the edit bar:
 | Items | `=colEditShifts` |
 | Layout | Vertical |
 | TemplateSize | `36` |
-| X | `16`, Y | `118` |
+| X | `16`, Y | `146` |
 | Width | `=Parent.Width - 260` |
 | Height | `=Max(CountRows(colEditShifts), 1) * 36` |
-
-> **Dynamic gallery height:** The gallery height automatically adjusts based on the number of shift rows. Each row is 36 pixels tall (`TemplateSize`), so the gallery grows/shrinks as shifts are added or removed.
 | ShowScrollbar | `true` |
+
+> **Dynamic gallery height:** Each row is `TemplateSize = 36` px tall; the gallery's `Height` grows/shrinks with `CountRows(colEditShifts)`. `Max(..., 1)` keeps a minimum of 1 row while editing.
+
+> **Why `Y = 146`:** the **+ Add shift** button now lives at `Y = 108..136` *above* the gallery. Gallery starts 10 px below it.
 
 **Inside the gallery template**, add controls in a row:
 
@@ -536,17 +551,27 @@ Insert a **Vertical gallery** on the edit bar:
 
 ### Add Shift button
 
+Solid primary-color button that sits **above** the shift rows (not below) so it can never fall behind the `HtmlViewer` grid.
+
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedAddShift` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Text | `"+ Add shift"` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `16`, Y | `=galEditShifts.Y + galEditShifts.Height + 8` |
+| Color | `=Color.White` |
+| Fill | `=varColorPrimary` |
+| HoverFill | `=varColorPrimaryHover` |
+| PressedFill | `=varColorPrimaryPressed` |
+| BorderColor | `=Color.Transparent`, BorderThickness | `0` |
+| RadiusTop/Bottom Left/Right | `=varBtnBorderRadius` |
+| X | `16`, Y | `108` |
 | Width | `100`, Height | `28` |
-| OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})` |
+| OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})` |
 
-> **Dynamic positioning:** The Add Shift button Y position automatically adjusts based on the gallery's dynamic height, so it's always visible below the last shift row.
+> **Why fixed `Y = 108` instead of below the gallery:** an earlier version used `Y = galEditShifts.Y + galEditShifts.Height + 8`. When the gallery contained only 1 row the computed Y fell *past* the bottom of `recSchedEditBar`, so the button was obscured by the `HtmlViewer` drawn immediately below the bar. Anchoring the button above the gallery fixes the z‑order for every row count and keeps layout fully responsive (the gallery below still auto‑sizes with `Max(CountRows(colEditShifts), 1) * 36`).
+
+> **OnSelect defaults match the first dropdown option.** Same reasoning as `drpSchedName.OnChange`: a blank row silently drops on Save because classic DropDowns don't fire `OnChange` on first render. If you change the first item in `drpGalShiftStart.Items` (`"8:30 AM"`) or `drpGalShiftEnd.Items` (`"9:00 AM"`), update this `Collect` to match.
 
 ### Save button
 
@@ -694,8 +719,8 @@ ClearCollect(
                 ShiftID:    sh.ShiftID,
                 Email:      sh.Email,
                 Name:       sr.MemberName,
-                Initials:   Left(sr.MemberName, 1) &
-                            Mid(sr.MemberName, Find(" ", sr.MemberName) + 1, 1),
+                Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) &
+                            Left(Last(Split(sr.MemberName, " ")).Value, 1),
                 Day:        sh.Day,
                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
                 EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
@@ -740,9 +765,11 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | X | `=Parent.Width - 100`, Y | `62`, Width | `90`, Height | `36` |
 | OnSelect | `=Set(varSchedShowReorder, !varSchedShowReorder)` |
 
-> **Layout:** Edit bar height is **`If(varSchedSelectedEmail <> "", 200, 56)`** starting at `Y = 52`. **`htmlSchedGrid`** and the reorder chrome use **`Y = If(varSchedSelectedEmail <> "", 252, 108)`** (and matching heights) so everything stays aligned when the bar expands.
+> **Layout:** Edit bar height is `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)` starting at `Y = 52`. `htmlSchedGrid`, `recSchedReorderPanel`, and `galSchedReorder` all reference `recSchedEditBar.Y + recSchedEditBar.Height` directly, so the grid and reorder chrome re‑flow automatically as the user adds/removes shift rows.
 
 ### Reorder panel background
+
+Panel background auto‑sizes to the actual number of staff rows (`CountRows(colStaff) * 40 + 8 px padding`), capped so it can never extend past the screen. Panel is **280 px wide** so long names fit on one line.
 
 | Property | Value |
 |----------|-------|
@@ -750,10 +777,10 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `=Parent.Width - 220` |
+| X | `=Parent.Width - 280` |
 | Y | `=recSchedEditBar.Y + recSchedEditBar.Height` |
-| Width | `220` |
-| Height | `=Parent.Height - Self.Y` |
+| Width | `280` |
+| Height | `=Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` |
 
 ### Reorder gallery
 
@@ -763,16 +790,18 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
 | Visible | `=varSchedShowReorder` |
 | Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
 | TemplateSize | `40` |
-| X | `=Parent.Width - 218` |
+| X | `=Parent.Width - 278` |
 | Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 4` |
-| Width | `216` |
-| Height | `=Parent.Height - Self.Y - 2` |
+| Width | `276` |
+| Height | `=Min(CountRows(colStaff) * 40, Parent.Height - Self.Y - 2)` |
+
+> **Why `Min(... , Parent.Height - Self.Y ...)`:** preserves adding‑more‑staff‑grows‑the‑panel behavior while preventing overflow past the screen bottom when the staff list exceeds the available space. The gallery falls back to internal scrolling in that case.
 
 **Inside the gallery template, add:**
 
-1. **Name label** — `Text`: `=ThisItem.MemberName`, X `8`, Y `10`, Width `130`, Height `20`
+1. **Name label (`lblReorderName`)** — `Text`: `=ThisItem.MemberName`, X `8`, Y `6`, Width `190`, Height `28`, `VerticalAlign = Middle`. The wider label (vs. the old `130 × 20`) accommodates most names on a single line; `VerticalAlign = Middle` keeps the text centered in the 40 px row without needing `AutoHeight` (which was tried and rejected — it made rows too tall).
 
-2. **Up button (↑)** — X `148`, Y `8`, Width `28`, Height `24`
+2. **Up button (↑) (`btnReorderUp`)** — X `200`, Y `=(Parent.TemplateHeight - 24) / 2`, Width `28`, Height `24`
 
    **OnSelect:**
    ```
@@ -791,7 +820,7 @@ The reorder panel lets a manager adjust the left-to-right column order by changi
    Navigate(scrSchedule, ScreenTransition.None)
    ```
 
-3. **Down button (↓)** — Same as Up but swap `<` for `>` and use `First(Filter(...))` instead of `Last`:
+3. **Down button (↓) (`btnReorderDown`)** — X `232`, Y `=(Parent.TemplateHeight - 24) / 2`, Width `28`, Height `24`. Same formula as Up but swap `<` for `>` and use `First(Filter(...))` instead of `Last`:
 
    **OnSelect:**
    ```
