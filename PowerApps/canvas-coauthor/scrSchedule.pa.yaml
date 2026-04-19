@@ -115,11 +115,23 @@ Screens:
             Height: |-
               =If(
                   varSchedSelectedEmail <> "",
-                  66 + Max(CountRows(colEditShifts), 1) * 36 + 48,
-                  56
+                  86 + Max(CountRows(colEditShifts), 1) * 36 + 48,
+                  76
               )
             Width: =Parent.Width
             Y: =52
+      - lblSchedDropdownHint:
+          Control: Label
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =20
+            Size: =11
+            Text: ="Edit Schedule For"
+            Width: =227
+            X: =16
+            Y: =60
       - drpSchedName:
           Control: Classic/ComboBox
           Properties:
@@ -133,11 +145,11 @@ Screens:
             ChevronHoverFill: =varChevronHoverFill
             DefaultSelectedItems: =Blank()
             DisplayFields: =["MemberName"]
-            Font: =varAppFont
             FocusedBorderThickness: =varFocusedBorderThickness
+            Font: =varAppFont
             Height: =36
             HoverFill: =varDropdownHoverFill
-            InputTextPlaceholder: ="Select Your Name"
+            InputTextPlaceholder: ="Select a student..."
             IsSearchable: =false
             Items: =Sort(colStaff, MemberName, SortOrder.Ascending)
             OnChange: |-
@@ -175,7 +187,7 @@ Screens:
             Size: =varInputFontSize
             Width: =227
             X: =16
-            Y: =62
+            Y: =82
       - lblSchedAidInfo:
           Control: Label
           Properties:
@@ -208,7 +220,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =220
             X: =257
-            Y: =64
+            Y: =84
       - galEditShifts:
           Control: Gallery
           Variant: Vertical
@@ -220,7 +232,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =Parent.Width - 260
             X: =16
-            Y: =118
+            Y: =138
           Children:
             - drpGalShiftDay:
                 Control: Classic/DropDown
@@ -392,7 +404,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =130
             X: =Parent.Width - 330
-            Y: =62
+            Y: =82
       - btnSchedClear:
           Control: Classic/Button
           Properties:
@@ -411,7 +423,7 @@ Screens:
             Visible: =varSchedSelectedEmail <> ""
             Width: =80
             X: =Parent.Width - 190
-            Y: =62
+            Y: =82
       - btnSchedReorderToggle:
           Control: Classic/Button
           Properties:
@@ -428,7 +440,7 @@ Screens:
             Text: ="⇅ Reorder"
             Width: =90
             X: =Parent.Width - 100
-            Y: =62
+            Y: =82
       - htmlSchedGrid:
           Control: HtmlViewer
           Properties:
@@ -443,12 +455,12 @@ Screens:
                   "<table style='border-collapse:separate;border-spacing:8px 0;'><tr>" &
                   "<td style='vertical-align:top;width:80px;padding:0;'>" &
                   "<div style='height:59px;'></div>" &
-                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;padding-bottom:1px;'>" &
                   Concat(
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H+1) & "px;line-height:" & Text(H+1) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
@@ -510,12 +522,12 @@ Screens:
                   "</tr></table></td>" &
                   "<td style='vertical-align:top;width:80px;padding:0;'>" &
                   "<div style='height:59px;'></div>" &
-                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+                  "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;padding-bottom:1px;'>" &
                   Concat(
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H+1) & "px;line-height:" & Text(H+1) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:2px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
