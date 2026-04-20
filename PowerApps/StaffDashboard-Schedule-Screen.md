@@ -99,7 +99,10 @@ ClearCollect(colStaff,
         Filter(Staff, Active = true),
         {
             StaffID:        ID,
-            MemberName:     Member.DisplayName,
+            MemberName:     Trim(
+                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                            ),
             MemberEmail:    Member.Email,
             Role:           Role,
             Active:         Active,
@@ -237,7 +240,10 @@ ClearCollect(
         Filter(Staff, Active = true && Role.Value <> "Manager"),
         {
             StaffID:        ID,
-            MemberName:     Member.DisplayName,
+            MemberName:     Trim(
+                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                            ),
             MemberEmail:    Member.Email,
             Role:           Role,
             Active:         Active,
@@ -696,7 +702,10 @@ ClearCollect(
         Filter(Staff, Active = true && Role.Value <> "Manager"),
         {
             StaffID:        ID,
-            MemberName:     Member.DisplayName,
+            MemberName:     Trim(
+                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                            ),
             MemberEmail:    Member.Email,
             Role:           Role,
             Active:         Active,
