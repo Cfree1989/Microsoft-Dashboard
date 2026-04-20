@@ -86,23 +86,19 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 Find this existing line in `App.OnStart`:
 
 ```
-ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {StaffID: ID, MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
 ```
 
-> **Note:** Your existing line may not have `StaffID` yet — add it along with `AidType` and `SchedSortOrder` below.
-
-Replace it with:
+Replace it with (adds `StaffID`, `AidType`, `SchedSortOrder` — the fields the schedule grid and totals rely on):
 
 ```
-ClearCollect(colStaff,
+ClearCollect(
+    colStaff,
     ForAll(
         Filter(Staff, Active = true),
         {
             StaffID:        ID,
-            MemberName:     Trim(
-                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                Last(Split(Trim(Member.DisplayName), " ")).Value
-                            ),
+            MemberName:     Member.DisplayName,
             MemberEmail:    Member.Email,
             Role:           Role,
             Active:         Active,
@@ -113,9 +109,9 @@ ClearCollect(colStaff,
 ),
 ```
 
-> **What changed:** `AidType` and `SchedSortOrder` stay on Staff. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here.
+> **What changed:** `StaffID`, `AidType`, and `SchedSortOrder` are added. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here. `MemberName` stays as the raw `Member.DisplayName` so dashboard screens and the schedule share the same display name.
 
-> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with a stricter student-worker filter: active records only, not role `"Manager"`, and only supported `AidType` values (`Work Study`, `Graduate Assistant`, `President's Aid`). That keeps manager or misc staff records out of the schedule grid and ComboBox even if the SharePoint role data is inconsistent.
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with a stricter student-worker filter (active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`) and with a **first + last** normalized `MemberName` (`Trim(First(Split(...)).Value & " " & Last(Split(...)).Value)`). That keeps manager or misc staff records out of the schedule grid/ComboBox and collapses middle names/initials so the colored HTML blocks show `First Last` instead of the full SharePoint display name.
 
 ### 1B — Add the colTimeSlots collection
 
@@ -148,38 +144,46 @@ ClearCollect(colTimeSlots,
 
 ### 1C — Add the colSchedColors collection
 
-A 12-color palette. Each staff member's color is assigned by `StaffID mod 12` — automatic, no manual assignment needed.
+A 12-color palette of warm earth tones that sits well against `varColorBgCard` (cream). Each staff member's color is assigned by `StaffID mod 12` — automatic, no manual assignment needed.
 
 ```
-// === SCHEDULE: COLOR PALETTE ===
+// === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
 ClearCollect(colSchedColors,
-    {Idx: 0,  Hex: "#4E79A7", Light: "#C8D9ED"},
-    {Idx: 1,  Hex: "#F28E2B", Light: "#FCDCB3"},
-    {Idx: 2,  Hex: "#59A14F", Light: "#C2E0BF"},
-    {Idx: 3,  Hex: "#E15759", Light: "#F5C2C3"},
-    {Idx: 4,  Hex: "#76B7B2", Light: "#C8E4E2"},
-    {Idx: 5,  Hex: "#EDC948", Light: "#F9EDBB"},
-    {Idx: 6,  Hex: "#B07AA1", Light: "#DEC8D9"},
-    {Idx: 7,  Hex: "#FF9DA7", Light: "#FFD8DC"},
-    {Idx: 8,  Hex: "#9C755F", Light: "#DACFCA"},
-    {Idx: 9,  Hex: "#BAB0AC", Light: "#E5E2E1"},
-    {Idx: 10, Hex: "#D37295", Light: "#F0C8D6"},
-    {Idx: 11, Hex: "#A0CBE8", Light: "#D9EDF7"}
+    {Idx: 0,  Hex: "#7B3F2B", Light: "#E8C9B8"},
+    {Idx: 1,  Hex: "#4A7C59", Light: "#B8D9C4"},
+    {Idx: 2,  Hex: "#C87941", Light: "#F0D4B0"},
+    {Idx: 3,  Hex: "#8B5E3C", Light: "#D9C0A8"},
+    {Idx: 4,  Hex: "#2E6B4F", Light: "#A8D4BE"},
+    {Idx: 5,  Hex: "#B34A2A", Light: "#EAB89A"},
+    {Idx: 6,  Hex: "#5B7A3A", Light: "#C0D4A0"},
+    {Idx: 7,  Hex: "#9B4520", Light: "#E8B898"},
+    {Idx: 8,  Hex: "#3D7060", Light: "#AACCB8"},
+    {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
+    {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
+    {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
 );
 ```
 
+> **Each record stores two colors:** `Hex` is the saturated body color used for slots that contain a shift. `Light` is the tint used for the legend/header cells so every staff column has a consistent identity color that doesn't wash out against the cream card background.
+
 ### 1D — Add schedule state variables and empty edit collection
 
-Find the `// === MODAL CONTROLS ===` section and add these alongside the other `Set()` calls:
+Add these alongside the other `Set()` calls in `App.OnStart` (immediately after the `// === MODAL CONTROLS ===` block in the live YAML):
 
 ```
 // === SCHEDULE SCREEN STATE ===
-Set(varSchedSelectedEmail, "");   // Email of the person being edited ("" = no one)
+Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
 Set(varSchedEditSaving, false);
+Set(varSchedShowReorder, false);    // Legacy flag from the retired reorder panel — kept for back-compat
+Set(varSchedTotalsSortBy, "Student"); // Current sort column in galSchedTotals
+Set(varSchedTotalsSortDesc, false); // Sort direction toggle (btnSchedTotalsSortDir)
+Set(varSchedScrollVersion, 0);      // Incremented to force conSchedScrollBody to rebuild (clears ComboBox)
 // Working copy of shifts while editing — one row per shift: RowKey, Day, ShiftStart, ShiftEnd
-ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
+ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
 Clear(colEditShifts);
 ```
+
+> **Why seed with real times (`"8:30 AM"` / `"9:00 AM"`) even though we immediately `Clear`?** The `ClearCollect` is there purely so Power Apps **infers the column types** of `colEditShifts` before any control reads it. Using real time strings (not `""`) matches the type that runtime code — `btnSchedAddShift.OnSelect` and the fallback seed in `drpSchedName.OnChange` — will insert later, preventing type-drift warnings on the gallery DropDowns.
 
 After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to confirm the app starts without errors.
 
@@ -298,11 +302,11 @@ ClearCollect(
                 ShiftID:    sh.ShiftID,
                 Email:      sh.Email,
                 Name:       sr.MemberName,
-                Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) &
-                            Left(Last(Split(sr.MemberName, " ")).Value, 1),
+                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
                 Day:        sh.Day,
                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
+                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
                 ColorHex:   cr.Hex,
                 ColorLight: cr.Light,
                 SortOrder:  sr.SchedSortOrder
@@ -311,9 +315,11 @@ ClearCollect(
     )
 );
 
-// Reset editing state whenever the screen becomes visible
+// Reset editing + totals sort state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "");
 Clear(colEditShifts);
+Set(varSchedTotalsSortBy, "Student");
+Set(varSchedTotalsSortDesc, false);
 Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 ```
 
@@ -408,16 +414,15 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 
 > **Responsive height formula breakdown:**
 > - When collapsed (no selection): `76` px.
-> - When expanded: `128` px of fixed chrome (`30` px top row + `36` px add-shift button + `8` px gap + `8` px bottom padding) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed while keeping the schedule grid pushed below the bar.
+> - When expanded: `128` px of fixed chrome (`30` px top offset + `36` px top input row + `8` px gap + ample bottom padding) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed while keeping the schedule grid pushed below the bar.
 >
 > **Internal vertical stack when expanded:**
 >
 > | Y | Control |
 > |---|---------|
 > | 8 | `lblSchedDropdownHint` |
-> | 30 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedSave` · `btnSchedClear` |
-> | 72 | `btnSchedAddShift` (filled primary; fixed Y so it never moves when rows are added) |
-> | `btnSchedAddShift.Y + btnSchedAddShift.Height + 8` (=116) | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
+> | 30 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedAddShift` · `btnSchedSave` · `btnSchedClear` (top input row — `btnSchedAddShift` anchored to the right of the name so it stays fixed) |
+> | `btnSchedAddShift.Y + btnSchedAddShift.Height + 8` (≈74) | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
 > | `recSchedEditBar.Y + recSchedEditBar.Height + 12` | `htmlSchedGrid` |
 
 > **Why this fixes the overlap:** because the entire scrollable page starts below the header and `htmlSchedGrid` is anchored from the edit bar bottom, the schedule can no longer ride up into the dropdown row.
@@ -554,38 +559,38 @@ Insert a **Vertical gallery** on the edit bar:
 
 > **Dynamic gallery height:** Each row is `TemplateSize = 36` px tall; the gallery's `Height` grows/shrinks with `CountRows(colEditShifts)`. `Max(..., 1)` keeps a minimum of 1 row while editing.
 
-> **Why this `Y`:** **+ Add shift** is pinned at `Y = 72` with `Height = varBtnHeight` (`36`). The gallery starts `8` px below the button so the button never moves when new rows are appended.
+> **Why this `Y`:** `btnSchedAddShift` sits on the top input row at `Y = 30` with `Height = varBtnHeight` (`36`). Anchoring the gallery to `btnSchedAddShift.Y + btnSchedAddShift.Height + 8` starts the first shift row at **Y ≈ 74**, leaving an `8` px gap under the top row so the **+ Add shift** button never moves when new shift rows are appended.
 
-**Inside the gallery template**, add controls in a row:
+**Inside the gallery template**, add controls in a row. Widths are sized to keep each classic DropDown wide enough to show its longest label on a single line without horizontal scroll:
 
 1. **Day** — Drop down `drpGalShiftDay`
    - **Items:** `=["Monday","Tuesday","Wednesday","Thursday","Friday"]`
    - **DefaultSelectedItems:** `=[ThisItem.Day]`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})`
-   - **X** `0`, **Width** `=(Parent.Width - 32 - 24) * 0.38`, **Height** `28`, **Y** `4`
+   - **X** `0`, **Width** `166`, **Height** `28`, **Y** `4`
 
 2. **Start** — Drop down `drpGalShiftStart`
    - **Items:** `=["8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftStart), Blank(), [ThisItem.ShiftStart])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})`
-   - **X** `=drpGalShiftDay.X + drpGalShiftDay.Width + 11`, **Width** `=(Parent.Width - 32 - 24) * 0.31`, **Height** `28`, **Y** `4`
+   - **X** `=drpGalShiftDay.X + drpGalShiftDay.Width + 11`, **Width** `132`, **Height** `28`, **Y** `4`
 
 3. **End** — Drop down `drpGalShiftEnd`
    - **Items:** `=["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftEnd), Blank(), [ThisItem.ShiftEnd])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})`
-   - **X** `=drpGalShiftStart.X + drpGalShiftStart.Width + 11`, **Width** `=(Parent.Width - 32 - 24) * 0.31`, **Height** `28`, **Y** `4`
+   - **X** `=drpGalShiftStart.X + drpGalShiftStart.Width + 11`, **Width** `130`, **Height** `28`, **Y** `4`
 
 4. **Delete** — Button `btnGalShiftRemove`
    - **Text:** `"✕"`
    - **OnSelect:** `=Remove(colEditShifts, ThisItem)`
-   - **X** `=Parent.Width - 32`, **Width** `32`, **Height** `28`, **Y** `4`
+   - **X** `463`, **Width** `32`, **Height** `28`, **Y** `4`
 
 > **Note:** If `DefaultSelectedItems` with `Blank()` causes issues in your build, use a first option like `"--"` in Items and treat it as empty in the save filter (`ShiftStart <> "--"`).
 
 ### Add Shift button
 
-Solid primary-color button that sits **above** the shift rows (not below) so it stays a fixed target when adding rows and never falls behind the `HtmlViewer` grid.
+Solid primary-color button that sits on the **top input row** (not below the gallery) so it stays a fixed target when adding rows and never falls behind the `HtmlViewer` grid. It sits to the right of the name/aid-info block, just before `btnSchedSave`.
 
 | Property | Value |
 |----------|-------|
@@ -604,11 +609,11 @@ Solid primary-color button that sits **above** the shift rows (not below) so it 
 | PressedFill | `=varColorPrimaryPressed` |
 | DisabledBorderColor | `=RGBA(166, 166, 166, 1)` |
 | RadiusTop/Bottom Left/Right | `=varBtnBorderRadius` |
-| X | `16`, Y | `72` |
+| X | `905`, Y | `30` |
 | Width | `120`, Height | `=varBtnHeight` |
 | OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})` |
 
-> **Why fixed `Y = 72`:** the name row ends at `Y = 66`; the add button sits on the next row with full `varBtnHeight` height. The gallery starts below it, so clicking **+ Add shift** never moves the button.
+> **Why this position:** the add button sits on the top input row at `Y = 30` alongside `drpSchedName`, `lblSchedAidInfo`, `btnSchedSave`, and `btnSchedClear`. Because it's above `galEditShifts` (which anchors to `btnSchedAddShift.Y + btnSchedAddShift.Height + 8`), the button stays in place as new shift rows are appended — no moving target.
 
 > **OnSelect defaults match the first dropdown option.** Same reasoning as `drpSchedName.OnChange`: a blank row silently drops on Save because classic DropDowns don't fire `OnChange` on first render. If you change the first item in `drpGalShiftStart.Items` (`"8:30 AM"`) or `drpGalShiftEnd.Items` (`"9:00 AM"`), update this `Collect` to match.
 
@@ -625,7 +630,7 @@ Solid primary-color button that sits **above** the shift rows (not below) so it 
 | HoverFill | `=varColorSuccessHover` |
 | BorderThickness | `0` |
 | RadiusTopLeft/Right/Bottom | `=varBtnBorderRadius` |
-| X | `=Parent.Width - 330`, Y | `62`, Width | `130`, Height | `36` |
+| X | `=Parent.Width - 330`, Y | `30`, Width | `130`, Height | `36` |
 | DisplayMode | `=If(varSchedEditSaving, DisplayMode.Disabled, DisplayMode.Edit)` |
 | OnSelect | *(add in Step 7)* |
 
@@ -640,7 +645,7 @@ Solid primary-color button that sits **above** the shift rows (not below) so it 
 | Color | `=varColorText` |
 | Fill | `=RGBA(0,0,0,0)` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `=Parent.Width - 190`, Y | `62`, Width | `80`, Height | `36` |
+| X | `=Parent.Width - 190`, Y | `30`, Width | `80`, Height | `36` |
 | OnSelect | `=Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)` |
 
 ---
@@ -770,11 +775,11 @@ ClearCollect(
                 ShiftID:    sh.ShiftID,
                 Email:      sh.Email,
                 Name:       sr.MemberName,
-                Initials:   Left(First(Split(sr.MemberName, " ")).Value, 1) &
-                            Left(Last(Split(sr.MemberName, " ")).Value, 1),
+                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
                 Day:        sh.Day,
                 StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx,   -1),
+                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
                 ColorHex:   cr.Hex,
                 ColorLight: cr.Light,
                 SortOrder:  sr.SchedSortOrder
@@ -784,6 +789,7 @@ ClearCollect(
 );
 Set(varSchedSelectedEmail, "");
 Clear(colEditShifts);
+Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1);
 Set(varSchedEditSaving, false)
 ```
 

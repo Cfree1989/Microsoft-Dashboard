@@ -14063,23 +14063,23 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 # STEP 20: Schedule Screen (`scrSchedule`)
 
-**What you're doing:** Adding a semester-wide color-coded schedule screen where each student worker can enter/edit their own shifts. Because this screen is large (HtmlViewer grid + edit bar + reorder panel) it has its own dedicated guide.
+**What you're doing:** Adding a semester-wide color-coded schedule screen where each student worker can enter/edit their own shifts. Because this screen is large (HtmlViewer grid + edit bar + sortable totals card) it has its own dedicated guide.
 
 ### Source of truth
 
-- **Step-by-step build + property tables:** [`PowerApps/StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md) — covers the 3 collections (`colStaff`, `colShifts`, `colSchedLookup`), `colTimeSlots`, `colSchedColors`, the edit bar, the HtmlViewer grid formula, and the reorder panel.
-- **Live YAML** (authoritative for copy-paste): `.cursor-mcp-deploy/scrSchedule.pa.yaml` after running `sync_canvas` from the `canvas-authoring` MCP server. Edit there → `compile_canvas` pushes back into the coauthoring session.
+- **Step-by-step build + property tables:** [`PowerApps/StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md) — covers the 3 collections (`colStaff`, `colShifts`, `colSchedLookup`), `colTimeSlots`, `colSchedColors`, the edit bar, the HtmlViewer grid formula, and the native totals card.
+- **Live YAML** (authoritative for copy-paste): `PowerApps/canvas-coauthor/scrSchedule.pa.yaml` after running `sync_canvas` from the `canvas-authoring` MCP server. Edit there → `compile_canvas` pushes back into the coauthoring session.
 
 ### Screen overview
 
 - **Header bar** (`recSchedHeader`, `lblSchedTitle`, `btnSchedBack` → Dashboard).
+- **Scroll body** (`conSchedScrollBody`) — single-item vertical gallery that wraps the edit bar, grid, and totals card so the whole page shares one vertical scrollbar below the header.
 - **Edit bar** (`recSchedEditBar`) — grows vertically with the number of rows the current user is editing.
-  - Row 1 (`Y = 62`): `drpSchedName` (ComboBox), `lblSchedAidInfo` (aid type + hour counter, red when over cap), `btnSchedSave`, `btnSchedClear` (cancel), `btnSchedReorderToggle`.
-  - Row 2 (`Y = 108`): **`btnSchedAddShift`** — solid primary button, anchored **above** the shift rows so it can never fall behind the HtmlViewer grid.
-  - Row 3+ (`Y = 146`): **`galEditShifts`** — Day / Start / End dropdowns + ✕ remove per shift; height = `Max(CountRows(colEditShifts), 1) * 36`.
-  - Bar height: `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)`.
-- **HtmlViewer grid** (`htmlSchedGrid`) — `Y = recSchedEditBar.Y + recSchedEditBar.Height`, so it re-flows automatically as the bar grows. Renders Mon–Fri columns with per-day filtering (only staff who have shifts on that day appear), plus a totals table.
-- **Reorder panel** (`recSchedReorderPanel` + `galSchedReorder`) — toggled by `btnSchedReorderToggle`. Width `280`; height auto-sizes to content: `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` (capped so it can't overflow the screen).
+  - Row 1 (`Y = 30`, height `36`): `drpSchedName` (ComboBox, `X=16`, `Width=227`) · `lblSchedAidInfo` (aid type + hour counter, red when over cap, `X=257`) · **`btnSchedAddShift`** (solid primary, `X=905`, `Width=120`, `Height=varBtnHeight`) · `btnSchedSave` (`X=Parent.Width-330`, `Width=130`) · `btnSchedClear` (cancel, `X=Parent.Width-190`, `Width=80`). Keeping **`btnSchedAddShift`** on this top row guarantees it never shifts position when new shift rows are appended.
+  - Row 2 (`Y = btnSchedAddShift.Y + btnSchedAddShift.Height + 8` ≈ `74`): **`galEditShifts`** — Day (`Width=166`) / Start (`Width=132`) / End (`Width=130`) DropDowns + ✕ remove per shift (`X=463`, `Width=32`); gallery height = `Max(CountRows(colEditShifts), 1) * 36`.
+  - Bar height: `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76)`.
+- **HtmlViewer grid** (`htmlSchedGrid`) — `Y = recSchedEditBar.Y + recSchedEditBar.Height + 12`, `Height = 80 + CountRows(colTimeSlots) * 30` so it always shows the full week grid without its own scrollbar. Renders Mon–Fri columns with per-day filtering (only staff who have shifts on that day appear).
+- **Totals card** (`recSchedTotalsCard` + `lblSchedTotalsTitle` + `drpSchedTotalsSort` + `btnSchedTotalsSortDir` + `galSchedTotals`) — sits directly below the grid. Native controls replaced the old HtmlViewer totals row so the columns can be truly click-sorted (`varSchedTotalsSortBy`, `varSchedTotalsSortDesc`). The reorder panel has been retired; per-person display order still comes from the `SchedSortOrder` column on the Staff list.
 
 ### Critical conventions (easy to get wrong)
 
