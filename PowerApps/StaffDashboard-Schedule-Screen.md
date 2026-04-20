@@ -65,7 +65,7 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 └──────────────────────────────────────────────────────┘
 ```
 
-- The **HtmlViewer** grid shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colStaff`)
+- The **HtmlViewer** grid shows the live schedule from `colSchedLookup` (built from `StaffShifts` + `colSchedStaff`)
   - **Per-day filtering:** Each day column shows **only** the people who have shifts on that specific day (not all staff). This reduces visual clutter and makes each day easier to read.
   - Days with no shifts show "No shifts" instead of empty columns.
 - The **Edit Bar** lets someone pick their name, then edit shifts in a **gallery** (add/remove rows; unlimited shifts per day)
@@ -111,7 +111,7 @@ ClearCollect(
 
 > **What changed:** `StaffID`, `AidType`, and `SchedSortOrder` are added. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here. `MemberName` stays as the raw `Member.DisplayName` so dashboard screens and the schedule share the same display name.
 
-> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with a stricter student-worker filter (active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`) and with a **first + last** normalized `MemberName` (`Trim(First(Split(...)).Value & " " & Last(Split(...)).Value)`). That keeps manager or misc staff records out of the schedule grid/ComboBox and collapses middle names/initials so the colored HTML blocks show `First Last` instead of the full SharePoint display name.
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** builds a **separate** collection called **`colSchedStaff`** (not `colStaff`) with a stricter student-worker filter (active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`) and with a **first + last** normalized `MemberName` (`Trim(First(Split(...)).Value & " " & Last(Split(...)).Value)`). That keeps manager or misc staff records out of the schedule grid/ComboBox and collapses middle names/initials so the colored HTML blocks show `First Last` instead of the full SharePoint display name. **Do not `ClearCollect` into `colStaff` from this screen** — that would silently drop full-time and manager staff from every other dropdown in the app (which all bind to `Items: =colStaff`) until the next app reload.
 
 ### 1B — Add the colTimeSlots collection
 
@@ -239,10 +239,12 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 **OnVisible formula:**
 
 ```
-// Refresh active staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
-// Excludes managers and any non-student worker records from this schedule UI.
+// Refresh active student-worker staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
+// IMPORTANT: we build a SEPARATE collection (colSchedStaff) so we don't stomp the global
+// colStaff that every dashboard dropdown binds to. Using colStaff here would silently
+// drop managers + full-time staff from every dropdown in the app after visiting this screen.
 ClearCollect(
-    colStaff,
+    colSchedStaff,
     ForAll(
         Filter(
             Staff,
@@ -270,13 +272,13 @@ ClearCollect(
 );
 
 // Load all shift rows from SharePoint into a flat collection
-// Filter out shifts for people not in colStaff (inactive users or managers)
+// Filter out shifts for people not in colSchedStaff (inactive users, managers, or full-time staff)
 ClearCollect(colShifts,
     ForAll(
         Filter(
             StaffShifts,
             StaffEmail <> "" &&
-            !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+            !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
         ),
         {
             ShiftID:    ID,
@@ -295,10 +297,10 @@ ClearCollect(
         colShifts As sh,
         With(
             {
-                sr: LookUp(colStaff, MemberEmail = sh.Email),
+                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
                 cr: LookUp(
                     colSchedColors,
-                    Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12)
+                    Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
                 )
             },
             {
@@ -399,7 +401,7 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 | Items | `=[1]` |
 | ShowScrollbar | `true` |
 | TemplatePadding | `0` |
-| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
+| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colSchedStaff), 1) * 28 + 124` |
 
 > **Why this wrapper matters:** it becomes the single vertical scroll surface for everything under the header. The edit bar, schedule grid, totals card, and totals footer all live inside one gallery template, so you no longer get separate vertical scrollbars for the schedule and totals areas.
 
@@ -440,7 +442,7 @@ Use **`Classic/ComboBox`**, not DropDown — same pattern as staff pickers elsew
 |----------|-------|
 | Name | `drpSchedName` |
 | Control | `Classic/ComboBox` |
-| Items | `=Sort(colStaff, MemberName, SortOrder.Ascending)` |
+| Items | `=Sort(colSchedStaff, MemberName, SortOrder.Ascending)` |
 | DisplayFields | `=["MemberName"]` |
 | SearchFields | `=["MemberName"]` |
 | SelectMultiple | `false` |
@@ -719,7 +721,7 @@ Patch(
     )
 );
 ClearCollect(
-    colStaff,
+    colSchedStaff,
     ForAll(
         Filter(
             Staff,
@@ -751,7 +753,7 @@ ClearCollect(
         Filter(
             StaffShifts,
             StaffEmail <> "" &&
-            !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+            !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
         ),
         {
             ShiftID:    ID,
@@ -768,10 +770,10 @@ ClearCollect(
         colShifts As sh,
         With(
             {
-                sr: LookUp(colStaff, MemberEmail = sh.Email),
+                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
                 cr: LookUp(
                     colSchedColors,
-                    Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12)
+                    Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
                 )
             },
             {
@@ -796,7 +798,7 @@ Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1);
 Set(varSchedEditSaving, false)
 ```
 
-> **Why filter `colShifts` by `LookUp(colStaff, …)`?** If a manager or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active non-manager staff appear.
+> **Why filter `colShifts` by `LookUp(colSchedStaff, …)`?** If a manager, full-time staffer, or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active student-worker staff appear.
 
 > **Why not `ForAll(..., Patch(Defaults(StaffShifts), …))`?** That pattern often creates **only one** new row when several are needed (concurrent evaluation). **`Patch(StaffShifts, ForAll(..., { ... }))`** performs a **batch create** in one call — reliable for multiple shifts.
 
@@ -838,7 +840,7 @@ The current app no longer includes the reorder panel. Instead, the lower section
 | Name | `galSchedTotals` |
 | Items | Precomputed per-person totals built with `ForAll(...)` and sorted from `varSchedTotalsSortBy` / `varSchedTotalsSortDesc` |
 | TemplateSize | `28` |
-| Height | `=Max(CountRows(colStaff), 1) * 28` |
+| Height | `=Max(CountRows(colSchedStaff), 1) * 28` |
 | ShowScrollbar | `false` |
 
 > **Why native controls instead of HTML here?** Power Apps can't do true click-to-sort inside `HtmlViewer`. Moving totals into a gallery keeps the week grid fast while allowing real sorting, while the surrounding scroll body keeps the entire page on one vertical scrollbar.
@@ -886,7 +888,7 @@ The current app no longer includes the reorder panel. Instead, the lower section
 - [ ] `Staff` list has no time columns — only `AidType`, `SchedSortOrder`, etc.
 
 **App.OnStart:**
-- [ ] `colStaff` includes `StaffID`, `AidType`, `SchedSortOrder` (no shift time fields)
+- [ ] `colStaff` includes `StaffID`, `AidType`, `SchedSortOrder` (no shift time fields). Loaded with `Filter(Staff, Active = true)` only — **no manager/AidType filter here** (that filter lives on `scrSchedule` and builds `colSchedStaff`, not `colStaff`)
 - [ ] `colTimeSlots` has **17** rows (Idx `0`–`15` for grid starts, Idx `16` = `"4:30 PM"` end boundary), correct labels and minute values; schedule **HtmlText** uses **`Filter(colTimeSlots, Idx < 16)`** for row count and gutters so the grid stays 16 rows tall
 - [ ] `colSchedColors` has 12 color entries
 - [ ] `colEditShifts` initialized empty (`ClearCollect` dummy row then `Clear`)
@@ -907,7 +909,7 @@ The current app no longer includes the reorder panel. Instead, the lower section
 - [ ] Hour counter updates from `colEditShifts`
 - [ ] HTML grid renders with time labels and day groups
 - [ ] Grid cells color when any shift covers the slot (multiple shifts per day OK)
-- [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colStaff` (Manager excluded), `colShifts`, and `colSchedLookup`
+- [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colSchedStaff` (managers + full-time excluded), `colShifts`, and `colSchedLookup`. **Never** `ClearCollect`s into `colStaff` — that collection stays as App.OnStart loaded it.
 - [ ] Cancel clears selection and `colEditShifts` without saving
 - [ ] Totals dropdown + chevron toggle sort `galSchedTotals`
 
@@ -1021,8 +1023,11 @@ If you ever switch the day table back to **`border-collapse:collapse`** with no 
 **Gallery dropdowns don't reflect collection updates**
 - Prefer `UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {...})` on each dropdown's `OnChange`. If defaults stick incorrectly, toggle `Reset(galEditShifts)` after `ClearCollect` in `drpSchedName.OnChange` (Power Apps build-dependent).
 
-**"Delegation warning" on colStaff load**
+**"Delegation warning" on colSchedStaff load**
 - Expected. The schedule's student-worker filter may show delegation warnings in Studio. Since your `Staff` list is well under 500 rows, this is fine for this app.
+
+**A staff member (manager / full-time) is missing from dashboard dropdowns after visiting the Schedule screen**
+- This means something on `scrSchedule` is still running `ClearCollect(colStaff, …)` instead of `ClearCollect(colSchedStaff, …)`. The schedule filter intentionally excludes managers, full-time, and non-student-worker staff — if that filter is allowed to overwrite the global `colStaff` collection, every dashboard dropdown (which binds to `Items: =colStaff`) will drop those people until the app is reloaded. Grep the live YAML for `ClearCollect( *colStaff` on the schedule screen — there should be zero hits. All schedule-side collects target `colSchedStaff`.
 
 **Totals sort looks wrong**
 - Verify `varSchedTotalsSortBy` is changing from `drpSchedTotalsSort.OnChange` and `varSchedTotalsSortDesc` is toggling from `btnSchedTotalsSortDir.OnSelect`. The gallery sorts a precomputed `totalsRows` table, so stale order usually means one of those variables did not update.

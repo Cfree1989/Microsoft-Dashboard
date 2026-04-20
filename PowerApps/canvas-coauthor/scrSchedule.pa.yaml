@@ -4,7 +4,7 @@ Screens:
       Fill: =varColorBg
       OnVisible: |-
         =ClearCollect(
-            colStaff,
+            colSchedStaff,
             ForAll(
                 Filter(
                     Staff,
@@ -36,7 +36,7 @@ Screens:
                 Filter(
                     StaffShifts,
                     StaffEmail <> "" &&
-                    !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+                    !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
                 ),
                 {
                     ShiftID:    ID,
@@ -53,8 +53,8 @@ Screens:
                 colShifts As sh,
                 With(
                     {
-                        sr: LookUp(colStaff, MemberEmail = sh.Email),
-                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12))
+                        sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
+                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
                     },
                     {
                         ShiftID:    sh.ShiftID,
@@ -74,8 +74,8 @@ Screens:
         );
         Set(varSchedSelectedEmail, "");
         Clear(colEditShifts);
-        Set(varSchedTotalsSortBy, "Total");
-        Set(varSchedTotalsSortDesc, true);
+        Set(varSchedTotalsSortBy, "Student");
+        Set(varSchedTotalsSortDesc, false);
         Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
     Children:
       - recSchedHeader:
@@ -129,7 +129,7 @@ Screens:
             Height: =Parent.Height - recSchedHeader.Height
             Items: =[varSchedScrollVersion]
             TemplatePadding: =0
-            TemplateSize: =If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
+            TemplateSize: =If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colSchedStaff), 1) * 28 + 124
             Width: =Parent.Width
             Y: =recSchedHeader.Height
           Children:
@@ -165,7 +165,7 @@ Screens:
                   HoverFill: =varDropdownHoverFill
                   InputTextPlaceholder: ="Select a student..."
                   IsSearchable: =false
-                  Items: =Sort(colStaff, MemberName, SortOrder.Ascending)
+                  Items: =Sort(colSchedStaff, MemberName, SortOrder.Ascending)
                   OnChange: |-
                     =If(
                         IsBlank(drpSchedName.Selected),
@@ -357,7 +357,7 @@ Screens:
                         )
                     );
                     ClearCollect(
-                        colStaff,
+                        colSchedStaff,
                         ForAll(
                             Filter(
                                 Staff,
@@ -389,7 +389,7 @@ Screens:
                             Filter(
                                 StaffShifts,
                                 StaffEmail <> "" &&
-                                !IsBlank(LookUp(colStaff, MemberEmail = StaffEmail))
+                                !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
                             ),
                             {
                                 ShiftID:    ID,
@@ -406,8 +406,8 @@ Screens:
                             colShifts As sh,
                             With(
                                 {
-                                    sr: LookUp(colStaff, MemberEmail = sh.Email),
-                                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colStaff, MemberEmail = sh.Email).StaffID, 12))
+                                    sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
+                                    cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
                                 },
                                 {
                                     ShiftID:    sh.ShiftID,
@@ -468,7 +468,7 @@ Screens:
                   HtmlText: |-
                     =With(
                         {
-                            st: Sort(colStaff, SchedSortOrder, SortOrder.Ascending),
+                            st: Sort(colSchedStaff, SchedSortOrder, SortOrder.Ascending),
                             H:  28
                         },
                         "<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;box-sizing:border-box;background:#f5f1eb;padding:8px;font-family:Segoe UI,Arial,sans-serif;font-size:11px;'>" &
@@ -773,13 +773,13 @@ Screens:
                 Control: Gallery
                 Variant: Vertical
                 Properties:
-                  Height: =Max(CountRows(colStaff), 1) * 28
+                  Height: =Max(CountRows(colSchedStaff), 1) * 28
                   Items: |-
                     =With(
                         {
                             ord: If(varSchedTotalsSortDesc, SortOrder.Descending, SortOrder.Ascending),
                             totalsRows: ForAll(
-                                Sort(colStaff, SchedSortOrder, SortOrder.Ascending) As p,
+                                Sort(colSchedStaff, SchedSortOrder, SortOrder.Ascending) As p,
                                 With(
                                     {
                                         mH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Monday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
@@ -807,7 +807,7 @@ Screens:
                             )
                         },
                         Switch(
-                            Coalesce(varSchedTotalsSortBy, "Total"),
+                            Coalesce(varSchedTotalsSortBy, "Student"),
                             "Role",  Sort(totalsRows, RoleAbbr, ord),
                             "Mon",   Sort(totalsRows, MonH, ord),
                             "Tue",   Sort(totalsRows, TueH, ord),

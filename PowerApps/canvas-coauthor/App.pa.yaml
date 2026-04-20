@@ -52,8 +52,8 @@ App:
       Set(varSchedSelectedEmail, "");
       Set(varSchedEditSaving, false);
       Set(varSchedShowReorder, false);
-      Set(varSchedTotalsSortBy, "Total");
-      Set(varSchedTotalsSortDesc, true);
+      Set(varSchedTotalsSortBy, "Student");
+      Set(varSchedTotalsSortDesc, false);
       Set(varSchedScrollVersion, 0);
       ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
       Clear(colEditShifts);
