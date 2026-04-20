@@ -129,7 +129,7 @@ Screens:
             Height: =Parent.Height - recSchedHeader.Height
             Items: =[varSchedScrollVersion]
             TemplatePadding: =0
-            TemplateSize: =If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
+            TemplateSize: =If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
             Width: =Parent.Width
             Y: =recSchedHeader.Height
           Children:
@@ -464,7 +464,7 @@ Screens:
             - htmlSchedGrid:
                 Control: HtmlViewer
                 Properties:
-                  Height: =80 + CountRows(colTimeSlots) * 30
+                  Height: =80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30
                   HtmlText: |-
                     =With(
                         {
@@ -477,7 +477,7 @@ Screens:
                         "<div style='height:59px;'></div>" &
                         "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;padding-bottom:1px;'>" &
                         Concat(
-                            colTimeSlots As slot,
+                            Filter(colTimeSlots, Idx < 16) As slot,
                             With(
                                 {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
                                 "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
@@ -515,7 +515,7 @@ Screens:
                                     ) &
                                     "</tr>" &
                                     Concat(
-                                        colTimeSlots As slot,
+                                        Filter(colTimeSlots, Idx < 16) As slot,
                                         With(
                                             {si: slot.Idx},
                                             "<tr style='height:" & Text(H) & "px;'>" &
@@ -545,7 +545,7 @@ Screens:
                         "<div style='height:59px;'></div>" &
                         "<div style='background:#fdf6f0;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;padding-bottom:1px;'>" &
                         Concat(
-                            colTimeSlots As slot,
+                            Filter(colTimeSlots, Idx < 16) As slot,
                             With(
                                 {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
                                 "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &

@@ -115,11 +115,13 @@ ClearCollect(
 
 ### 1B — Add the colTimeSlots collection
 
-This helper table converts time labels like `"9:00 AM"` into slot index numbers used by the HTML grid formula. Add this anywhere inside the `Concurrent()` block — or after it:
+This helper table converts time labels like `"9:00 AM"` into slot index numbers used by the HTML grid formula and by hour totals. The **end-time** dropdown includes `"4:30 PM"`, so **`colTimeSlots` must include a row for that label** (Idx `16`). Idx `0`–`15` are the **start-of-block** times for the 16 visible half-hour rows (8:30 through 4:00); Idx `16` is only the **4:30 close boundary** for lookups — the schedule grid still iterates **`Filter(colTimeSlots, Idx < 16)`** so you do not render a bogus extra `4:30–4:30` label row.
+
+Add this anywhere inside the `Concurrent()` block — or after it:
 
 ```
 // === SCHEDULE: TIME SLOTS ===
-// 16 slots: index 0 = 8:30 AM, index 15 = 4:00 PM (last start before 4:30 close)
+// 17 rows: Idx 0-15 = grid start-of-block (8:30 AM-4:00 PM); Idx 16 = 4:30 PM end boundary for lookups only
 ClearCollect(colTimeSlots,
     {Idx: 0,  Label: "8:30 AM",  Minutes: 510},
     {Idx: 1,  Label: "9:00 AM",  Minutes: 540},
@@ -136,7 +138,8 @@ ClearCollect(colTimeSlots,
     {Idx: 12, Label: "2:30 PM",  Minutes: 870},
     {Idx: 13, Label: "3:00 PM",  Minutes: 900},
     {Idx: 14, Label: "3:30 PM",  Minutes: 930},
-    {Idx: 15, Label: "4:00 PM",  Minutes: 960}
+    {Idx: 15, Label: "4:00 PM",  Minutes: 960},
+    {Idx: 16, Label: "4:30 PM",  Minutes: 990}
 );
 ```
 
@@ -396,7 +399,7 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 | Items | `=[1]` |
 | ShowScrollbar | `true` |
 | TemplatePadding | `0` |
-| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
+| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
 
 > **Why this wrapper matters:** it becomes the single vertical scroll surface for everything under the header. The edit bar, schedule grid, totals card, and totals footer all live inside one gallery template, so you no longer get separate vertical scrollbars for the schedule and totals areas.
 
@@ -662,7 +665,7 @@ Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used
 | Control | `HtmlViewer` |
 | Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 12` |
 | Width | `=Parent.Width` |
-| Height | `=80 + CountRows(colTimeSlots) * 30` |
+| Height | `=80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30` |
 | Padding | `0` on all sides |
 
 > **Dynamic positioning:** the grid still tracks the edit bar bottom, but it now uses a content-sized height instead of viewport height so the **page container** owns vertical scrolling.
@@ -680,7 +683,7 @@ The live formula is **large** and must stay under Power Fx string limits. **Sour
   - The `colspan` header is dynamic per day: `colspan='{Text(CountRows(dayStaff))}'` instead of a fixed count.
   - Staff appear in `SchedSortOrder` within each day (consistent left-to-right order when they work).
 - **Per day:** rounded border `div` wrapping an inner table with **`border-collapse:separate;border-spacing:1px;background:#e8e0d8`** so **1px grid lines** (horizontal and vertical) show without per-cell border markup.
-- **Slot coloring:** one `<tr>` per `colTimeSlots` row; inner `Concat` over **`dayStaff`** (not all staff); use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`).
+- **Slot coloring:** one `<tr>` per **visible** slot — iterate **`Filter(colTimeSlots, Idx < 16) As slot`** (same filter for the left and right time gutters). Inner `Concat` over **`dayStaff`** (not all staff); use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`). The full `colTimeSlots` table (including Idx `16` for `"4:30 PM"`) is still used in **`LookUp(colTimeSlots, Idx = slot.Idx + 1)`** inside those gutters so the last label row shows **4:00–4:30**.
 - **Gutters:** `vertical-align:top`, **`59px`** spacer, then time labels at **`H+1`** px line height to align with **`border-spacing`** row rhythm (`H = 28`).
 - **Totals section:** no longer part of `HtmlText`. The week grid stays in `htmlSchedGrid`, while the sortable totals area is now a native card + gallery (`recSchedTotalsCard`, `drpSchedTotalsSort`, `btnSchedTotalsSortDir`, `galSchedTotals`) rendered below it.
 
@@ -846,7 +849,7 @@ The current app no longer includes the reorder panel. Instead, the lower section
 
 ### Test 1: Grid displays with no data
 - Navigate to the Schedule screen
-- The HTML grid should show time labels (8:30 AM – 4:00 PM), day headers, and blank white cells
+- The HTML grid should show **16** half-hour time labels (8:30–9:00 through 4:00–4:30), day headers, and blank white cells
 - No errors in the app checker
 
 ### Test 2: Enter a schedule
@@ -861,6 +864,10 @@ The current app no longer includes the reorder panel. Instead, the lower section
 - Select the same name again
 - Gallery should list the same shift rows you saved
 - Add a third shift, remove one, or change times — save — grid should reflect the change
+
+### Test 3b: End time 4:30 PM (regression guard)
+- Add or edit a shift with **End** = **4:30 PM** (e.g. Monday 9:00 AM – 4:30 PM)
+- Hour preview and **Totals** should show **positive** hours (e.g. **7.5** for that day), not negative values. If totals go negative, `colTimeSlots` is missing the Idx `16` row or the grid is iterating all 17 rows without the `Idx < 16` filter.
 
 ### Test 4: Totals sorting
 - Change the sort dropdown to **Total** or **Student**
@@ -880,7 +887,7 @@ The current app no longer includes the reorder panel. Instead, the lower section
 
 **App.OnStart:**
 - [ ] `colStaff` includes `StaffID`, `AidType`, `SchedSortOrder` (no shift time fields)
-- [ ] `colTimeSlots` has 16 rows, correct labels and minute values
+- [ ] `colTimeSlots` has **17** rows (Idx `0`–`15` for grid starts, Idx `16` = `"4:30 PM"` end boundary), correct labels and minute values; schedule **HtmlText** uses **`Filter(colTimeSlots, Idx < 16)`** for row count and gutters so the grid stays 16 rows tall
 - [ ] `colSchedColors` has 12 color entries
 - [ ] `colEditShifts` initialized empty (`ClearCollect` dummy row then `Clear`)
 - [ ] `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedTotalsSortBy`, `varSchedTotalsSortDesc` initialized
@@ -1019,6 +1026,9 @@ If you ever switch the day table back to **`border-collapse:collapse`** with no 
 
 **Totals sort looks wrong**
 - Verify `varSchedTotalsSortBy` is changing from `drpSchedTotalsSort.OnChange` and `varSchedTotalsSortDesc` is toggling from `btnSchedTotalsSortDir.OnSelect`. The gallery sorts a precomputed `totalsRows` table, so stale order usually means one of those variables did not update.
+
+**Negative hours when end time is 4:30 PM**
+- The end dropdown includes `"4:30 PM"` but **`LookUp(colTimeSlots, Label = ShiftEnd)`** must find a matching row. Without **`{Idx: 16, Label: "4:30 PM", …}`**, `EndSlot` falls back to `-1` or *Blank* and hour math goes negative. Add the row and keep the HTML grid on **`Filter(colTimeSlots, Idx < 16)`** so layout does not gain an extra row.
 
 ---
 

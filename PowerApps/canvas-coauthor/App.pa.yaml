@@ -125,7 +125,7 @@ App:
       );
 
       // === SCHEDULE: TIME SLOTS ===
-      // 16 slots: index 0 = 8:30 AM, index 15 = 4:00 PM (last start before 4:30 close)
+      // 17 rows: Idx 0-15 = grid start-of-block (8:30 AM-4:00 PM); Idx 16 = 4:30 PM end boundary for lookups only
       ClearCollect(colTimeSlots,
           {Idx: 0,  Label: "8:30 AM",  Minutes: 510},
           {Idx: 1,  Label: "9:00 AM",  Minutes: 540},
@@ -142,7 +142,8 @@ App:
           {Idx: 12, Label: "2:30 PM", Minutes: 870},
           {Idx: 13, Label: "3:00 PM",  Minutes: 900},
           {Idx: 14, Label: "3:30 PM", Minutes: 930},
-          {Idx: 15, Label: "4:00 PM",  Minutes: 960}
+          {Idx: 15, Label: "4:00 PM",  Minutes: 960},
+          {Idx: 16, Label: "4:30 PM",  Minutes: 990}
       );
 
       // === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
