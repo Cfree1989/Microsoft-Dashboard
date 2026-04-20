@@ -129,7 +129,7 @@ Screens:
             Height: =Parent.Height - recSchedHeader.Height
             Items: =[varSchedScrollVersion]
             TemplatePadding: =0
-            TemplateSize: =If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
+            TemplateSize: =If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
             Width: =Parent.Width
             Y: =recSchedHeader.Height
           Children:
@@ -142,7 +142,7 @@ Screens:
                   Height: |-
                     =If(
                         varSchedSelectedEmail <> "",
-                        116 + Max(CountRows(colEditShifts), 1) * 36 + 12,
+                        86 + Max(CountRows(colEditShifts), 1) * 36 + 48,
                         76
                     )
                   Width: =Parent.Width
@@ -232,7 +232,7 @@ Screens:
                         aidType & " · " & If(hrs = RoundDown(hrs, 0), Text(hrs, "0"), Text(hrs, "0.#")) & " / " & Text(maxHrs, "0") & " hrs"
                     )
                   Visible: =varSchedSelectedEmail <> ""
-                  Width: =Max(120, btnSchedSave.X - Self.X - 8)
+                  Width: =220
                   X: =257
                   Y: =32
             - galEditShifts:
@@ -247,7 +247,7 @@ Screens:
                   Visible: =varSchedSelectedEmail <> ""
                   Width: =Parent.Width - 260
                   X: =16
-                  Y: =btnSchedAddShift.Y + btnSchedAddShift.Height + 8
+                  Y: =86
                 Children:
                   - drpGalShiftDay:
                       Control: Classic/DropDown
@@ -258,7 +258,7 @@ Screens:
                         Items.Value: =Value
                         OnChange: |-
                           =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})
-                        Width: =(Parent.Width - 32 - 24) * 0.38
+                        Width: =141
                         Y: =4
                   - drpGalShiftStart:
                       Control: Classic/DropDown
@@ -269,8 +269,8 @@ Screens:
                         Items.Value: =Value
                         OnChange: |-
                           =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})
-                        Width: =(Parent.Width - 32 - 24) * 0.31
-                        X: =drpGalShiftDay.X + drpGalShiftDay.Width + 11
+                        Width: =124
+                        X: =152
                         Y: =4
                   - drpGalShiftEnd:
                       Control: Classic/DropDown
@@ -281,8 +281,8 @@ Screens:
                         Items.Value: =Value
                         OnChange: |-
                           =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})
-                        Width: =(Parent.Width - 32 - 24) * 0.31
-                        X: =drpGalShiftStart.X + drpGalShiftStart.Width + 11
+                        Width: =124
+                        X: =287
                         Y: =4
                   - btnGalShiftRemove:
                       Control: Classic/Button
@@ -298,36 +298,28 @@ Screens:
                         Size: =12
                         Text: ="✕"
                         Width: =32
-                        X: =Parent.Width - 32
+                        X: =418
                         Y: =4
             - btnSchedAddShift:
                 Control: Classic/Button
                 Properties:
                   BorderColor: =varColorPrimary
-                  BorderThickness: =varInputBorderThickness
-                  Color: =Color.White
-                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =varColorPrimary
+                  BorderThickness: =1
+                  Color: =varColorPrimary
+                  Fill: =Color.Transparent
                   Font: =varAppFont
-                  Height: =varBtnHeight
-                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  Height: =28
                   HoverColor: =Color.White
-                  HoverFill: =varColorPrimaryHover
+                  HoverFill: =varColorPrimary
                   OnSelect: |-
                     =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
-                  PressedBorderColor: =Self.Fill
-                  PressedColor: =Self.Fill
                   PressedFill: =varColorPrimaryPressed
-                  RadiusBottomLeft: =varBtnBorderRadius
-                  RadiusBottomRight: =varBtnBorderRadius
-                  RadiusTopLeft: =varBtnBorderRadius
-                  RadiusTopRight: =varBtnBorderRadius
-                  Size: =11
+                  Size: =10
                   Text: ="+ Add shift"
                   Visible: =varSchedSelectedEmail <> ""
-                  Width: =120
+                  Width: =100
                   X: =16
-                  Y: =72
+                  Y: =56
             - btnSchedSave:
                 Control: Classic/Button
                 Properties:
@@ -570,8 +562,8 @@ Screens:
                   BorderThickness: =1
                   Fill: =varColorBgCard
                   Height: =recSchedTotalsFooter.Y + recSchedTotalsFooter.Height - Self.Y + 8
-                  Width: =Min(Parent.Width - 32, 864)
-                  X: =(Parent.Width - Self.Width) / 2
+                  Width: =Parent.Width - 16
+                  X: =8
                   Y: =htmlSchedGrid.Y + htmlSchedGrid.Height + 12
             - lblSchedTotalsTitle:
                 Control: Label

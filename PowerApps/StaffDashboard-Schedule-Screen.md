@@ -390,7 +390,7 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 | Items | `=[1]` |
 | ShowScrollbar | `true` |
 | TemplatePadding | `0` |
-| TemplateSize | `=If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
+| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
 
 > **Why this wrapper matters:** it becomes the single vertical scroll surface for everything under the header. The edit bar, schedule grid, totals card, and totals footer all live inside one gallery template, so you no longer get separate vertical scrollbars for the schedule and totals areas.
 
@@ -404,11 +404,11 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 | BorderThickness | `1` |
 | X | `0`, Y | `0` |
 | Width | `=Parent.Width` |
-| Height | `=If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76)` |
+| Height | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76)` |
 
 > **Responsive height formula breakdown:**
 > - When collapsed (no selection): `76` px.
-> - When expanded: `134` px of fixed chrome (`30` px top row + `28` px add-shift button + spacing) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed while keeping the schedule grid pushed below the bar.
+> - When expanded: `128` px of fixed chrome (`30` px top row + `36` px add-shift button + `8` px gap + `8` px bottom padding) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed while keeping the schedule grid pushed below the bar.
 >
 > **Internal vertical stack when expanded:**
 >
@@ -416,8 +416,8 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 > |---|---------|
 > | 8 | `lblSchedDropdownHint` |
 > | 30 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedSave` · `btnSchedClear` |
-> | 56 | `btnSchedAddShift` |
-> | 86 | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
+> | 72 | `btnSchedAddShift` (filled primary; fixed Y so it never moves when rows are added) |
+> | `btnSchedAddShift.Y + btnSchedAddShift.Height + 8` (=116) | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
 > | `recSchedEditBar.Y + recSchedEditBar.Height + 12` | `htmlSchedGrid` |
 
 > **Why this fixes the overlap:** because the entire scrollable page starts below the header and `htmlSchedGrid` is anchored from the edit bar bottom, the schedule can no longer ride up into the dropdown row.
@@ -445,7 +445,7 @@ Use **`Classic/ComboBox`**, not DropDown — same pattern as staff pickers elsew
 | Chevron* | Same as other app ComboBoxes (`varChevronBackground`, etc.) |
 | HoverFill / Pressed* / Selection* | `varDropdownHoverFill`, `varDropdownPressedColor`, `varDropdownSelectionColor`, `varDropdownSelectionFill` |
 | Font | `=varAppFont`, Size | `=varInputFontSize` |
-| X | `16`, Y | `62`, Width | `227`, Height | `36` |
+| X | `16`, Y | `30`, Width | `227`, Height | `36` |
 | OnChange | *(formula below)* |
 
 **OnChange formula** — loads that person's shifts from `colShifts` into `colEditShifts` (one gallery row per shift). If they have no shifts yet, seeds one blank row.
@@ -490,7 +490,7 @@ If(
 | Name | `lblSchedAidInfo` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Font | `=varAppFont`, Size | `10` |
-| X | `257`, Y | `64`, Width | `220`, Height | `32` |
+| X | `257`, Y | `32`, Width | `=Max(120, btnSchedSave.X - Self.X - 8)`, Height | `32` |
 | Text | *(formula below)* |
 | Color | *(formula below)* |
 
@@ -547,14 +547,14 @@ Insert a **Vertical gallery** on the edit bar:
 | Items | `=colEditShifts` |
 | Layout | Vertical |
 | TemplateSize | `36` |
-| X | `16`, Y | `86` |
+| X | `16`, Y | `=btnSchedAddShift.Y + btnSchedAddShift.Height + 8` |
 | Width | `=Parent.Width - 260` |
 | Height | `=Max(CountRows(colEditShifts), 1) * 36` |
 | ShowScrollbar | `false` |
 
 > **Dynamic gallery height:** Each row is `TemplateSize = 36` px tall; the gallery's `Height` grows/shrinks with `CountRows(colEditShifts)`. `Max(..., 1)` keeps a minimum of 1 row while editing.
 
-> **Why `Y = 86`:** the **+ Add shift** button sits at `Y = 56..84`, so the gallery starts immediately below that control inside the edit bar.
+> **Why this `Y`:** **+ Add shift** is pinned at `Y = 72` with `Height = varBtnHeight` (`36`). The gallery starts `8` px below the button so the button never moves when new rows are appended.
 
 **Inside the gallery template**, add controls in a row:
 
@@ -562,48 +562,53 @@ Insert a **Vertical gallery** on the edit bar:
    - **Items:** `=["Monday","Tuesday","Wednesday","Thursday","Friday"]`
    - **DefaultSelectedItems:** `=[ThisItem.Day]`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})`
-   - Width `137`, Height `28`
+   - **X** `0`, **Width** `=(Parent.Width - 32 - 24) * 0.38`, **Height** `28`, **Y** `4`
 
 2. **Start** — Drop down `drpGalShiftStart`
    - **Items:** `=["8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftStart), Blank(), [ThisItem.ShiftStart])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})`
-   - Width `124`, Height `28`, X `148`
+   - **X** `=drpGalShiftDay.X + drpGalShiftDay.Width + 11`, **Width** `=(Parent.Width - 32 - 24) * 0.31`, **Height** `28`, **Y** `4`
 
 3. **End** — Drop down `drpGalShiftEnd`
    - **Items:** `=["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM","4:30 PM"]`
    - **DefaultSelectedItems:** `=If(IsBlank(ThisItem.ShiftEnd), Blank(), [ThisItem.ShiftEnd])`
    - **OnChange:** `=UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})`
-   - Width `113`, Height `28`, X `283`
+   - **X** `=drpGalShiftStart.X + drpGalShiftStart.Width + 11`, **Width** `=(Parent.Width - 32 - 24) * 0.31`, **Height** `28`, **Y** `4`
 
 4. **Delete** — Button `btnGalShiftRemove`
    - **Text:** `"✕"`
    - **OnSelect:** `=Remove(colEditShifts, ThisItem)`
-   - Width `32`, Height `28`, X `402`
+   - **X** `=Parent.Width - 32`, **Width** `32`, **Height** `28`, **Y** `4`
 
 > **Note:** If `DefaultSelectedItems` with `Blank()` causes issues in your build, use a first option like `"--"` in Items and treat it as empty in the save filter (`ShiftStart <> "--"`).
 
 ### Add Shift button
 
-Solid primary-color button that sits **above** the shift rows (not below) so it can never fall behind the `HtmlViewer` grid.
+Solid primary-color button that sits **above** the shift rows (not below) so it stays a fixed target when adding rows and never falls behind the `HtmlViewer` grid.
 
 | Property | Value |
 |----------|-------|
 | Name | `btnSchedAddShift` |
 | Visible | `=varSchedSelectedEmail <> ""` |
 | Text | `"+ Add shift"` |
-| Font | `=varAppFont`, Size | `10` |
+| Font | `=varAppFont`, Size | `11` |
 | Color | `=Color.White` |
 | Fill | `=varColorPrimary` |
+| BorderColor | `=varColorPrimary`, BorderThickness | `=varInputBorderThickness` |
+| HoverBorderColor | `=ColorFade(Self.BorderColor, 20%)` |
+| HoverColor | `=Color.White` |
 | HoverFill | `=varColorPrimaryHover` |
+| PressedBorderColor | `=Self.Fill` |
+| PressedColor | `=Self.Fill` |
 | PressedFill | `=varColorPrimaryPressed` |
-| BorderColor | `=Color.Transparent`, BorderThickness | `0` |
+| DisabledBorderColor | `=RGBA(166, 166, 166, 1)` |
 | RadiusTop/Bottom Left/Right | `=varBtnBorderRadius` |
-| X | `16`, Y | `56` |
-| Width | `100`, Height | `28` |
+| X | `16`, Y | `72` |
+| Width | `120`, Height | `=varBtnHeight` |
 | OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})` |
 
-> **Why fixed `Y = 56`:** the button stays above the rows, but now it also stays inside the scrollable body container's edit-bar region so it never gets covered by the schedule grid.
+> **Why fixed `Y = 72`:** the name row ends at `Y = 66`; the add button sits on the next row with full `varBtnHeight` height. The gallery starts below it, so clicking **+ Add shift** never moves the button.
 
 > **OnSelect defaults match the first dropdown option.** Same reasoning as `drpSchedName.OnChange`: a blank row silently drops on Save because classic DropDowns don't fire `OnChange` on first render. If you change the first item in `drpGalShiftStart.Items` (`"8:30 AM"`) or `drpGalShiftEnd.Items` (`"9:00 AM"`), update this `Collect` to match.
 
