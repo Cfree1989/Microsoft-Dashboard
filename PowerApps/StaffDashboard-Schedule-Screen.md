@@ -482,7 +482,7 @@ If(
             SlotMins
         )
     },
-    aidType & " · " & Text(mins / 60, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
+    aidType & " · " & If(mins / 60 = RoundDown(mins / 60, 0), Text(mins / 60, "0"), Text(mins / 60, "0.#")) & " / " & Text(maxHrs, "0") & " hrs"
 )
 ```
 

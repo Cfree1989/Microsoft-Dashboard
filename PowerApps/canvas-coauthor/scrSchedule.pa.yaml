@@ -120,18 +120,6 @@ Screens:
               )
             Width: =Parent.Width
             Y: =52
-      - lblSchedDropdownHint:
-          Control: Label
-          Properties:
-            BorderColor: =RGBA(0, 18, 107, 1)
-            Font: =varAppFont
-            FontWeight: =FontWeight.Semibold
-            Height: =20
-            Size: =11
-            Text: ="Edit Schedule For"
-            Width: =227
-            X: =16
-            Y: =60
       - drpSchedName:
           Control: Classic/ComboBox
           Properties:
@@ -215,7 +203,7 @@ Screens:
                           (LookUp(colTimeSlots, Label = ShiftEnd).Idx - LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30 / 60
                       )
                   },
-                  aidType & " · " & Text(hrs, "0.#") & " / " & Text(maxHrs, "0") & " hrs"
+                  aidType & " · " & If(hrs = RoundDown(hrs, 0), Text(hrs, "0"), Text(hrs, "0.#")) & " / " & Text(maxHrs, "0") & " hrs"
               )
             Visible: =varSchedSelectedEmail <> ""
             Width: =220
@@ -243,7 +231,7 @@ Screens:
                   Items.Value: =Value
                   OnChange: |-
                     =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})
-                  Width: =137
+                  Width: =141
                   Y: =4
             - drpGalShiftStart:
                 Control: Classic/DropDown
@@ -255,7 +243,7 @@ Screens:
                   OnChange: |-
                     =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})
                   Width: =124
-                  X: =148
+                  X: =152
                   Y: =4
             - drpGalShiftEnd:
                 Control: Classic/DropDown
@@ -266,8 +254,8 @@ Screens:
                   Items.Value: =Value
                   OnChange: |-
                     =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})
-                  Width: =113
-                  X: =283
+                  Width: =124
+                  X: =287
                   Y: =4
             - btnGalShiftRemove:
                 Control: Classic/Button
@@ -283,7 +271,7 @@ Screens:
                   Size: =12
                   Text: ="✕"
                   Width: =32
-                  X: =402
+                  X: =418
                   Y: =4
       - btnSchedAddShift:
           Control: Classic/Button
@@ -460,7 +448,7 @@ Screens:
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
@@ -527,7 +515,7 @@ Screens:
                       colTimeSlots As slot,
                       With(
                           {nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM")},
-                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
+                          "<div style='height:" & Text(H) & "px;line-height:" & Text(H) & "px;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;box-sizing:border-box;" & If(slot.Idx > 0, "border-top:1px solid #d7ccc8;", "") & "'>" &
                           Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1) &
                           "</div>"
                       )
@@ -680,3 +668,15 @@ Screens:
                   Width: =28
                   X: =180
                   Y: =8
+      - lblSchedDropdownHint:
+          Control: Label
+          Properties:
+            Color: =varColorTextMuted
+            Font: =varAppFont
+            FontWeight: =FontWeight.Semibold
+            Height: =16
+            Size: =9
+            Text: ="EDIT STUDENT SCHEDULE"
+            Width: =227
+            X: =16
+            Y: =60
