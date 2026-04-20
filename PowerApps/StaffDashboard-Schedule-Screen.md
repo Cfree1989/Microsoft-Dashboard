@@ -79,7 +79,7 @@ This screen reuses the same variables already defined in `App.OnStart`. Key vari
 
 1. Ensure `colStaff` includes schedule-related fields **only from Staff** (no time columns — shifts live in `StaffShifts`)
 2. Add helper collections for the time slots and color palette
-3. Add schedule state: `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedShowReorder`, and initialize `colEditShifts`
+3. Add schedule state: `varSchedSelectedEmail`, `varSchedEditSaving`, and initialize `colEditShifts`
 
 ### 1A — Update the colStaff load
 
@@ -173,7 +173,6 @@ Find the `// === MODAL CONTROLS ===` section and add these alongside the other `
 // === SCHEDULE SCREEN STATE ===
 Set(varSchedSelectedEmail, "");   // Email of the person being edited ("" = no one)
 Set(varSchedEditSaving, false);
-Set(varSchedShowReorder, false);
 // Working copy of shifts while editing — one row per shift: RowKey, Day, ShiftStart, ShiftEnd
 ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
 Clear(colEditShifts);
@@ -361,6 +360,25 @@ Same treatment as **Print Lab Dashboard** on `scrDashboard` (`lblAppTitle`): lef
 
 The Edit Bar sits below the header. It shows the name picker always; once a name is selected, the **shift gallery** appears so the user can add, edit, or remove any number of shift rows.
 
+### Scrollable body container
+
+Use a **single-item vertical gallery** as the page viewport so the **page** scrolls instead of the schedule grid and totals section scrolling separately:
+
+| Property | Value |
+|----------|-------|
+| Name | `conSchedScrollBody` |
+| Control | `Gallery` |
+| Variant | `Vertical` |
+| Width | `=Parent.Width` |
+| Height | `=Parent.Height - recSchedHeader.Height` |
+| Y | `=recSchedHeader.Height` |
+| Items | `=[1]` |
+| ShowScrollbar | `true` |
+| TemplatePadding | `0` |
+| TemplateSize | `=If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124` |
+
+> **Why this wrapper matters:** it becomes the single vertical scroll surface for everything under the header. The edit bar, schedule grid, totals card, and totals footer all live inside one gallery template, so you no longer get separate vertical scrollbars for the schedule and totals areas.
+
 ### Edit bar background
 
 | Property | Value |
@@ -369,24 +387,25 @@ The Edit Bar sits below the header. It shows the name picker always; once a name
 | Fill | `=varColorBgCard` |
 | BorderColor | `=varColorBorder` |
 | BorderThickness | `1` |
-| X | `0`, Y | `52` |
+| X | `0`, Y | `0` |
 | Width | `=Parent.Width` |
-| Height | `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)` |
+| Height | `=If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76)` |
 
 > **Responsive height formula breakdown:**
-> - When collapsed (no selection): `56` px (name picker with padding).
-> - When expanded: `112` px (header row `Y=62`..`98` + `+ Add shift` button at `Y=108`..`136` + top padding to gallery at `Y=146`) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed.
+> - When collapsed (no selection): `76` px.
+> - When expanded: `134` px of fixed chrome (`30` px top row + `28` px add-shift button + spacing) plus `Max(CountRows(colEditShifts), 1) * 36` for the shift gallery. Grows/shrinks as rows are added/removed while keeping the schedule grid pushed below the bar.
 >
 > **Internal vertical stack when expanded:**
 >
 > | Y | Control |
 > |---|---------|
-> | 62 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedSave` · `btnSchedClear` · `btnSchedReorderToggle` |
-> | 108 | `btnSchedAddShift` (solid primary — **above** shift rows, not below) |
-> | 146 | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
-> | `recSchedEditBar.Y + .Height` | `htmlSchedGrid`, reorder chrome |
+> | 8 | `lblSchedDropdownHint` |
+> | 30 | `drpSchedName` · `lblSchedAidInfo` · `btnSchedSave` · `btnSchedClear` |
+> | 56 | `btnSchedAddShift` |
+> | 86 | `galEditShifts` (height = `Max(CountRows(colEditShifts), 1) * 36`) |
+> | `recSchedEditBar.Y + recSchedEditBar.Height + 12` | `htmlSchedGrid` |
 
-> **Why Add shift sits above the rows:** Putting it below the gallery caused it to fall behind the `HtmlViewer` when the edit bar had only 1–2 rows (bar height < button Y). Anchoring the button at a fixed `Y=108` with the gallery underneath eliminates the z‑order / overlap bug and keeps the whole bar dynamic.
+> **Why this fixes the overlap:** because the entire scrollable page starts below the header and `htmlSchedGrid` is anchored from the edit bar bottom, the schedule can no longer ride up into the dropdown row.
 
 > **No “Who are you?” label** — the ComboBox placeholder is enough; controls sit on one row when collapsed.
 
@@ -513,14 +532,14 @@ Insert a **Vertical gallery** on the edit bar:
 | Items | `=colEditShifts` |
 | Layout | Vertical |
 | TemplateSize | `36` |
-| X | `16`, Y | `146` |
+| X | `16`, Y | `86` |
 | Width | `=Parent.Width - 260` |
 | Height | `=Max(CountRows(colEditShifts), 1) * 36` |
-| ShowScrollbar | `true` |
+| ShowScrollbar | `false` |
 
 > **Dynamic gallery height:** Each row is `TemplateSize = 36` px tall; the gallery's `Height` grows/shrinks with `CountRows(colEditShifts)`. `Max(..., 1)` keeps a minimum of 1 row while editing.
 
-> **Why `Y = 146`:** the **+ Add shift** button now lives at `Y = 108..136` *above* the gallery. Gallery starts 10 px below it.
+> **Why `Y = 86`:** the **+ Add shift** button sits at `Y = 56..84`, so the gallery starts immediately below that control inside the edit bar.
 
 **Inside the gallery template**, add controls in a row:
 
@@ -565,11 +584,11 @@ Solid primary-color button that sits **above** the shift rows (not below) so it 
 | PressedFill | `=varColorPrimaryPressed` |
 | BorderColor | `=Color.Transparent`, BorderThickness | `0` |
 | RadiusTop/Bottom Left/Right | `=varBtnBorderRadius` |
-| X | `16`, Y | `108` |
+| X | `16`, Y | `56` |
 | Width | `100`, Height | `28` |
 | OnSelect | `=Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})` |
 
-> **Why fixed `Y = 108` instead of below the gallery:** an earlier version used `Y = galEditShifts.Y + galEditShifts.Height + 8`. When the gallery contained only 1 row the computed Y fell *past* the bottom of `recSchedEditBar`, so the button was obscured by the `HtmlViewer` drawn immediately below the bar. Anchoring the button above the gallery fixes the z‑order for every row count and keeps layout fully responsive (the gallery below still auto‑sizes with `Max(CountRows(colEditShifts), 1) * 36`).
+> **Why fixed `Y = 56`:** the button stays above the rows, but now it also stays inside the scrollable body container's edit-bar region so it never gets covered by the schedule grid.
 
 > **OnSelect defaults match the first dropdown option.** Same reasoning as `drpSchedName.OnChange`: a blank row silently drops on Save because classic DropDowns don't fire `OnChange` on first render. If you change the first item in `drpGalShiftStart.Items` (`"8:30 AM"`) or `drpGalShiftEnd.Items` (`"9:00 AM"`), update this `Collect` to match.
 
@@ -616,12 +635,12 @@ Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used
 |----------|-------|
 | Name | `htmlSchedGrid` |
 | Control | `HtmlViewer` |
-| Y | `=recSchedEditBar.Y + recSchedEditBar.Height` |
+| Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 12` |
 | Width | `=Parent.Width` |
-| Height | `=Parent.Height - Self.Y` |
+| Height | `=80 + CountRows(colTimeSlots) * 30` |
 | Padding | `0` on all sides |
 
-> **Dynamic positioning:** The grid Y position and height use `recSchedEditBar` references so they automatically adjust when the edit bar expands/collapses or when shifts are added/removed from the gallery.
+> **Dynamic positioning:** the grid still tracks the edit bar bottom, but it now uses a content-sized height instead of viewport height so the **page container** owns vertical scrolling.
 
 ### Authoritative `HtmlText` formula
 
@@ -629,7 +648,7 @@ The live formula is **large** and must stay under Power Fx string limits. **Sour
 
 **Structure summary (as implemented):**
 
-- Outer `<div style='overflow:auto;width:100%;height:100%;…'>` for in-control scrolling.
+- Outer `<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;…'>` so horizontal overflow can still fit if needed without the grid taking over vertical scrolling.
 - **Outer 3-column table:** left time gutter \| week \| right gutter (`border-spacing:8px 0` between columns).
 - **Week row:** inner table with `width:100%;table-layout:fixed` (no `min-width`) so Mon–Fri share the `HtmlViewer` width and the week fits one screen without a forced horizontal scroll. If you have many staff columns and readability suffers on small tablets, you can add a modest `min-width` again or reduce slot height `H` in the formula.
 - **Per day filtering (reduces visual clutter):** For each day (Mon–Fri), the formula uses `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, ...)` to show **only staff who have shifts on that specific day**. Days with no scheduled shifts display "No shifts" in a single cell.
@@ -638,7 +657,7 @@ The live formula is **large** and must stay under Power Fx string limits. **Sour
 - **Per day:** rounded border `div` wrapping an inner table with **`border-collapse:separate;border-spacing:1px;background:#e8e0d8`** so **1px grid lines** (horizontal and vertical) show without per-cell border markup.
 - **Slot coloring:** one `<tr>` per `colTimeSlots` row; inner `Concat` over **`dayStaff`** (not all staff); use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`).
 - **Gutters:** `vertical-align:top`, **`59px`** spacer, then time labels at **`H+1`** px line height to align with **`border-spacing`** row rhythm (`H = 28`).
-- **Totals table:** appended after the week grid in the same `HtmlText` string.
+- **Totals section:** no longer part of `HtmlText`. The week grid stays in `htmlSchedGrid`, while the sortable totals area is now a native card + gallery (`recSchedTotalsCard`, `drpSchedTotalsSort`, `btnSchedTotalsSortDir`, `galSchedTotals`) rendered below it.
 
 ### Fitting the whole week on one screen width
 
@@ -748,96 +767,40 @@ Set(varSchedEditSaving, false)
 
 ---
 
-## Step 8: Reorder Panel (Up/Down Arrows)
+## Step 8: Sortable Totals Section
 
-The reorder panel lets a manager adjust the left-to-right column order by changing `SchedSortOrder` in the Staff list.
+The current app no longer includes the reorder panel. Instead, the lower section is a native totals card so it can sort properly while the week grid stays in `htmlSchedGrid`.
 
-### Toggle button
+### Current layout
 
-| Property | Value |
-|----------|-------|
-| Name | `btnSchedReorderToggle` |
-| Text | `"⇅ Reorder"` |
-| Font | `=varAppFont`, Size | `10` |
-| Color | `=Color.White` |
-| Fill | `=varColorNeutral` |
-| BorderThickness | `0` |
-| X | `=Parent.Width - 100`, Y | `62`, Width | `90`, Height | `36` |
-| OnSelect | `=Set(varSchedShowReorder, !varSchedShowReorder)` |
+- `conSchedScrollBody` provides the single vertical scrollbar for the page below the header.
+- `htmlSchedGrid` uses a fixed content height tall enough to show the full week grid without its own vertical scrollbar.
+- `recSchedTotalsCard` sits directly below the grid and contains the sortable totals area.
+- `galSchedTotals` expands to its full content height so the totals rows and footer stay reachable via page scroll.
 
-> **Layout:** Edit bar height is `=If(varSchedSelectedEmail <> "", 112 + Max(CountRows(colEditShifts), 1) * 36, 56)` starting at `Y = 52`. `htmlSchedGrid`, `recSchedReorderPanel`, and `galSchedReorder` all reference `recSchedEditBar.Y + recSchedEditBar.Height` directly, so the grid and reorder chrome re‑flow automatically as the user adds/removes shift rows.
-
-### Reorder panel background
-
-Panel background auto‑sizes to the actual number of staff rows (`CountRows(colStaff) * 40 + 8 px padding`), capped so it can never extend past the screen. Panel is **280 px wide** so long names fit on one line.
+### Sort controls
 
 | Property | Value |
 |----------|-------|
-| Name | `recSchedReorderPanel` |
-| Visible | `=varSchedShowReorder` |
-| Fill | `=varColorBgCard` |
-| BorderColor | `=varColorBorder`, BorderThickness | `1` |
-| X | `=Parent.Width - 280` |
-| Y | `=recSchedEditBar.Y + recSchedEditBar.Height` |
-| Width | `280` |
-| Height | `=Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` |
+| Sort field control | `drpSchedTotalsSort` |
+| Items | `"Student"`, `"Role"`, `"Mon"`, `"Tue"`, `"Wed"`, `"Thu"`, `"Fri"`, `"Total"`, `"Max"` |
+| X | `=lblSchedTotalsTitle.X + lblSchedTotalsTitle.Width + 8` |
+| Shared styling | `varInputBorderColor`, `varChevron*`, `varDropdown*`, `varFocusedBorderThickness` |
+| Direction toggle | `btnSchedTotalsSortDir` |
+| Direction text | `=If(varSchedTotalsSortDesc, "⌄", "⌃")` |
+| Direction X | `=drpSchedTotalsSort.X + drpSchedTotalsSort.Width + 8` |
 
-### Reorder gallery
+### Totals gallery
 
 | Property | Value |
 |----------|-------|
-| Name | `galSchedReorder` |
-| Visible | `=varSchedShowReorder` |
-| Items | `=Sort(colStaff, SchedSortOrder, SortOrder.Ascending)` |
-| TemplateSize | `40` |
-| X | `=Parent.Width - 278` |
-| Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 4` |
-| Width | `276` |
-| Height | `=Min(CountRows(colStaff) * 40, Parent.Height - Self.Y - 2)` |
+| Name | `galSchedTotals` |
+| Items | Precomputed per-person totals built with `ForAll(...)` and sorted from `varSchedTotalsSortBy` / `varSchedTotalsSortDesc` |
+| TemplateSize | `28` |
+| Height | `=Max(CountRows(colStaff), 1) * 28` |
+| ShowScrollbar | `false` |
 
-> **Why `Min(... , Parent.Height - Self.Y ...)`:** preserves adding‑more‑staff‑grows‑the‑panel behavior while preventing overflow past the screen bottom when the staff list exceeds the available space. The gallery falls back to internal scrolling in that case.
-
-**Inside the gallery template, add:**
-
-1. **Name label (`lblReorderName`)** — `Text`: `=ThisItem.MemberName`, X `8`, Y `6`, Width `190`, Height `28`, `VerticalAlign = Middle`. The wider label (vs. the old `130 × 20`) accommodates most names on a single line; `VerticalAlign = Middle` keeps the text centered in the 40 px row without needing `AutoHeight` (which was tried and rejected — it made rows too tall).
-
-2. **Up button (↑) (`btnReorderUp`)** — X `200`, Y `=(Parent.TemplateHeight - 24) / 2`, Width `28`, Height `24`
-
-   **OnSelect:**
-   ```
-   // Find this person's Staff list row and the row above them (lower SortOrder)
-   With(
-       {
-           myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
-           prevRow: Last(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder < ThisItem.SchedSortOrder && Active = true))
-       },
-       If(!IsBlank(myRow) && !IsBlank(prevRow),
-           Patch(Staff, myRow,   {SchedSortOrder: prevRow.SchedSortOrder});
-           Patch(Staff, prevRow, {SchedSortOrder: myRow.SchedSortOrder})
-       )
-   );
-   // Navigate to self to re-trigger OnVisible (reloads colShifts + colSchedLookup)
-   Navigate(scrSchedule, ScreenTransition.None)
-   ```
-
-3. **Down button (↓) (`btnReorderDown`)** — X `232`, Y `=(Parent.TemplateHeight - 24) / 2`, Width `28`, Height `24`. Same formula as Up but swap `<` for `>` and use `First(Filter(...))` instead of `Last`:
-
-   **OnSelect:**
-   ```
-   With(
-       {
-           myRow:   LookUp(Staff, Member.Email = ThisItem.MemberEmail),
-           nextRow: First(Filter(Sort(Staff, SchedSortOrder, SortOrder.Ascending), SchedSortOrder > ThisItem.SchedSortOrder && Active = true))
-       },
-       If(!IsBlank(myRow) && !IsBlank(nextRow),
-           Patch(Staff, myRow,   {SchedSortOrder: nextRow.SchedSortOrder});
-           Patch(Staff, nextRow, {SchedSortOrder: myRow.SchedSortOrder})
-       )
-   );
-   Navigate(scrSchedule, ScreenTransition.None)
-   ```
-
-> **Why `Navigate(scrSchedule, ScreenTransition.None)`?** This re-triggers `OnVisible`, which reloads `colShifts` from SharePoint and rebuilds `colSchedLookup` with the updated column order. It avoids duplicating that load logic after each reorder.
+> **Why native controls instead of HTML here?** Power Apps can't do true click-to-sort inside `HtmlViewer`. Moving totals into a gallery keeps the week grid fast while allowing real sorting, while the surrounding scroll body keeps the entire page on one vertical scrollbar.
 
 ---
 
@@ -861,10 +824,10 @@ Panel background auto‑sizes to the actual number of staff rows (`CountRows(col
 - Gallery should list the same shift rows you saved
 - Add a third shift, remove one, or change times — save — grid should reflect the change
 
-### Test 4: Reorder
-- Click **Reorder**
-- Press ↑ on a staff member — their column should move left in the grid
-- Navigate away and back — order should be preserved
+### Test 4: Totals sorting
+- Change the sort dropdown to **Total** or **Student**
+- Press the chevron toggle to reverse the order
+- Confirm the totals rows reorder correctly while the week grid above stays unchanged
 
 ### Test 5: Return to dashboard
 - Press **← Dashboard** — returns to `scrDashboard` without errors
@@ -882,7 +845,7 @@ Panel background auto‑sizes to the actual number of staff rows (`CountRows(col
 - [ ] `colTimeSlots` has 16 rows, correct labels and minute values
 - [ ] `colSchedColors` has 12 color entries
 - [ ] `colEditShifts` initialized empty (`ClearCollect` dummy row then `Clear`)
-- [ ] `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedShowReorder` initialized
+- [ ] `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedTotalsSortBy`, `varSchedTotalsSortDesc` initialized
 - [ ] App starts without errors
 
 **Data:**
@@ -901,7 +864,7 @@ Panel background auto‑sizes to the actual number of staff rows (`CountRows(col
 - [ ] Grid cells color when any shift covers the slot (multiple shifts per day OK)
 - [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colStaff` (Manager excluded), `colShifts`, and `colSchedLookup`
 - [ ] Cancel clears selection and `colEditShifts` without saving
-- [ ] Reorder panel Up/Down buttons update `SchedSortOrder` on `Staff`
+- [ ] Totals dropdown + chevron toggle sort `galSchedTotals`
 
 ---
 
@@ -1016,8 +979,8 @@ If you ever switch the day table back to **`border-collapse:collapse`** with no 
 **"Delegation warning" on colStaff load**
 - Expected. `Filter(Staff, Active = true && Role.Value <> "Manager")` may show delegation warnings. Since your Staff list is well under 500 rows, this is fine.
 
-**Reorder doesn't persist after navigating away**
-- The `Navigate(scrSchedule, ScreenTransition.None)` approach re-runs `OnVisible` which reloads from SharePoint. If the order still doesn't stick, verify that `Patch(Staff, myRow, {SchedSortOrder: ...})` is succeeding — check for errors using `IfError(Patch(...), Notify("Save failed: " & FirstError.Message, NotificationType.Error))`.
+**Totals sort looks wrong**
+- Verify `varSchedTotalsSortBy` is changing from `drpSchedTotalsSort.OnChange` and `varSchedTotalsSortDesc` is toggling from `btnSchedTotalsSortDir.OnSelect`. The gallery sorts a precomputed `totalsRows` table, so stale order usually means one of those variables did not update.
 
 ---
 
