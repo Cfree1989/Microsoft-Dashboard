@@ -178,8 +178,8 @@ Add these alongside the other `Set()` calls in `App.OnStart` (immediately after 
 Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
 Set(varSchedEditSaving, false);
 Set(varSchedShowReorder, false);    // Legacy flag from the retired reorder panel — kept for back-compat
-Set(varSchedTotalsSortBy, "Student"); // Current sort column in galSchedTotals
-Set(varSchedTotalsSortDesc, false); // Sort direction toggle (btnSchedTotalsSortDir)
+Set(varSchedTotalsSortBy, "Total"); // Current sort column in galSchedTotals
+Set(varSchedTotalsSortDesc, true); // Sort direction toggle (btnSchedTotalsSortDir); true = descending by default
 Set(varSchedScrollVersion, 0);      // Incremented to force conSchedScrollBody to rebuild (clears ComboBox)
 // Working copy of shifts while editing — one row per shift: RowKey, Day, ShiftStart, ShiftEnd
 ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
@@ -321,8 +321,8 @@ ClearCollect(
 // Reset editing + totals sort state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "");
 Clear(colEditShifts);
-Set(varSchedTotalsSortBy, "Student");
-Set(varSchedTotalsSortDesc, false);
+Set(varSchedTotalsSortBy, "Total");
+Set(varSchedTotalsSortDesc, true);
 Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 ```
 

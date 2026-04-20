@@ -74,8 +74,8 @@ Screens:
         );
         Set(varSchedSelectedEmail, "");
         Clear(colEditShifts);
-        Set(varSchedTotalsSortBy, "Student");
-        Set(varSchedTotalsSortDesc, false);
+        Set(varSchedTotalsSortBy, "Total");
+        Set(varSchedTotalsSortDesc, true);
         Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
     Children:
       - recSchedHeader:
@@ -598,7 +598,7 @@ Screens:
                   ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =varChevronHoverFill
                   Color: =varColorTextMuted
-                  Default: =Coalesce(varSchedTotalsSortBy, "Student")
+                  Default: =Coalesce(varSchedTotalsSortBy, "Total")
                   DisabledBorderColor: =varInputBorderColor
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -807,7 +807,7 @@ Screens:
                             )
                         },
                         Switch(
-                            Coalesce(varSchedTotalsSortBy, "Student"),
+                            Coalesce(varSchedTotalsSortBy, "Total"),
                             "Role",  Sort(totalsRows, RoleAbbr, ord),
                             "Mon",   Sort(totalsRows, MonH, ord),
                             "Tue",   Sort(totalsRows, TueH, ord),
