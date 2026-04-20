@@ -6,10 +6,22 @@ Screens:
         =ClearCollect(
             colStaff,
             ForAll(
-                Filter(Staff, Active = true && Role.Value <> "Manager"),
+                Filter(
+                    Staff,
+                    Active = true &&
+                    Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                    (
+                        AidType.Value = "Work Study" ||
+                        AidType.Value = "Graduate Assistant" ||
+                        AidType.Value = "President's Aid"
+                    )
+                ),
                 {
                     StaffID:        ID,
-                    MemberName:     Member.DisplayName,
+                    MemberName:     Trim(
+                                        First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                        Last(Split(Trim(Member.DisplayName), " ")).Value
+                                    ),
                     MemberEmail:    Member.Email,
                     Role:           Role,
                     Active:         Active,
@@ -61,6 +73,8 @@ Screens:
         );
         Set(varSchedSelectedEmail, "");
         Clear(colEditShifts);
+        Set(varSchedTotalsSortBy, "Student");
+        Set(varSchedTotalsSortDesc, false);
         Reset(drpSchedName)
     Children:
       - recSchedHeader:
@@ -137,7 +151,7 @@ Screens:
             Font: =varAppFont
             Height: =36
             HoverFill: =varDropdownHoverFill
-            InputTextPlaceholder: ="Select Your Name"
+            InputTextPlaceholder: ="Select a student..."
             IsSearchable: =false
             Items: =Sort(colStaff, MemberName, SortOrder.Ascending)
             OnChange: |-
@@ -331,10 +345,22 @@ Screens:
               ClearCollect(
                   colStaff,
                   ForAll(
-                      Filter(Staff, Active = true && Role.Value <> "Manager"),
+                      Filter(
+                          Staff,
+                          Active = true &&
+                          Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                          (
+                              AidType.Value = "Work Study" ||
+                              AidType.Value = "Graduate Assistant" ||
+                              AidType.Value = "President's Aid"
+                          )
+                      ),
                       {
                           StaffID:        ID,
-                          MemberName:     Member.DisplayName,
+                          MemberName:     Trim(
+                                              First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                              Last(Split(Trim(Member.DisplayName), " ")).Value
+                                          ),
                           MemberEmail:    Member.Email,
                           Role:           Role,
                           Active:         Active,
@@ -386,6 +412,7 @@ Screens:
               );
               Set(varSchedSelectedEmail, "");
               Clear(colEditShifts);
+              Reset(drpSchedName);
               Set(varSchedEditSaving, false)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
@@ -529,7 +556,7 @@ Screens:
                   ) &
                   "</div></td>" &
                   "</tr></table>" &
-                  "<table style='border-collapse:collapse;font-size:12px;margin-top:20px;width:100%;'>" &
+                  "<table style='border-collapse:collapse;font-size:12px;margin:20px auto 0 auto;width:94%;'>" &
                   "<thead><tr>" &
                   "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:left;white-space:nowrap;'>Student</th>" &
                   "<th style='background:#5a3e2b;color:#f5ede3;padding:6px 10px;text-align:center;white-space:nowrap;'>Role</th>" &

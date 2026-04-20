@@ -6,7 +6,16 @@ Screens:
         =ClearCollect(
             colStaff,
             ForAll(
-                Filter(Staff, Active = true && Role.Value <> "Manager"),
+                Filter(
+                    Staff,
+                    Active = true &&
+                    Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                    (
+                        AidType.Value = "Work Study" ||
+                        AidType.Value = "Graduate Assistant" ||
+                        AidType.Value = "President's Aid"
+                    )
+                ),
                 {
                     StaffID:        ID,
                     MemberName:     Trim(
@@ -67,7 +76,7 @@ Screens:
         Clear(colEditShifts);
         Set(varSchedTotalsSortBy, "Student");
         Set(varSchedTotalsSortDesc, false);
-        Reset(drpSchedName)
+        Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
     Children:
       - recSchedHeader:
           Control: Rectangle
@@ -118,7 +127,7 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =Parent.Height - recSchedHeader.Height
-            Items: =[1]
+            Items: =[varSchedScrollVersion]
             ShowScrollbar: =true
             TemplatePadding: =0
             TemplateSize: =If(varSchedSelectedEmail <> "", 86 + Max(CountRows(colEditShifts), 1) * 36 + 48, 76) + (80 + CountRows(colTimeSlots) * 30) + Max(CountRows(colStaff), 1) * 28 + 124
@@ -181,7 +190,7 @@ Screens:
                             );
                             If(
                                 CountRows(colEditShifts) = 0,
-                                Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+                                Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
                             )
                         )
                     )
@@ -305,7 +314,7 @@ Screens:
                   HoverColor: =Color.White
                   HoverFill: =varColorPrimary
                   OnSelect: |-
-                    =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "", ShiftEnd: ""})
+                    =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
                   PressedFill: =varColorPrimaryPressed
                   Size: =10
                   Text: ="+ Add shift"
@@ -344,7 +353,16 @@ Screens:
                     ClearCollect(
                         colStaff,
                         ForAll(
-                            Filter(Staff, Active = true && Role.Value <> "Manager"),
+                            Filter(
+                                Staff,
+                                Active = true &&
+                                Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                                (
+                                    AidType.Value = "Work Study" ||
+                                    AidType.Value = "Graduate Assistant" ||
+                                    AidType.Value = "President's Aid"
+                                )
+                            ),
                             {
                                 StaffID:        ID,
                                 MemberName:     Trim(
@@ -403,6 +421,7 @@ Screens:
                     );
                     Set(varSchedSelectedEmail, "");
                     Clear(colEditShifts);
+                    Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1);
                     Set(varSchedEditSaving, false)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -427,7 +446,7 @@ Screens:
                   Font: =varAppFont
                   Height: =36
                   HoverFill: =RGBA(220, 220, 220, 1)
-                  OnSelect: =Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Reset(drpSchedName)
+                  OnSelect: =Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
                   PressedBorderColor: =Self.BorderColor
                   PressedFill: =RGBA(200, 200, 200, 1)
                   Size: =11
@@ -545,8 +564,8 @@ Screens:
                   BorderThickness: =1
                   Fill: =varColorBgCard
                   Height: =recSchedTotalsFooter.Y + recSchedTotalsFooter.Height - Self.Y + 8
-                  Width: =Parent.Width - 16
-                  X: =8
+                  Width: =Min(Parent.Width - 32, 864)
+                  X: =(Parent.Width - Self.Width) / 2
                   Y: =htmlSchedGrid.Y + htmlSchedGrid.Height + 12
             - lblSchedTotalsTitle:
                 Control: Label
@@ -558,7 +577,7 @@ Screens:
                   Size: =12
                   Text: ="Totals"
                   Width: =120
-                  X: =24
+                  X: =recSchedTotalsCard.X + 8
                   Y: =recSchedTotalsCard.Y + 8
             - drpSchedTotalsSort:
                 Control: Classic/DropDown
@@ -593,24 +612,33 @@ Screens:
             - btnSchedTotalsSortDir:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: =varInputBorderColor
-                  BorderThickness: =varInputBorderThickness
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
                   Color: =varColorTextMuted
-                  Fill: =Color.White
+                  Fill: =Color.Transparent
                   Font: =varAppFont
+                  FocusedBorderThickness: =0
                   Height: =28
+                  HoverBorderColor: =Color.Transparent
                   HoverColor: =varColorText
                   HoverFill: =varDropdownHoverFill
                   OnSelect: =Set(varSchedTotalsSortDesc, !varSchedTotalsSortDesc)
+                  Align: =Align.Center
                   PressedColor: =varDropdownPressedColor
+                  PressedBorderColor: =Color.Transparent
                   PressedFill: =varDropdownPressedFill
+                  PaddingBottom: =0
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
                   RadiusTopRight: =varBtnBorderRadius
                   Size: =14
                   Text: =If(varSchedTotalsSortDesc, "⌄", "⌃")
-                  Width: =32
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =28
                   X: =drpSchedTotalsSort.X + drpSchedTotalsSort.Width + 8
                   Y: =recSchedTotalsCard.Y + 6
             - recSchedTotalsHeader:
@@ -618,8 +646,8 @@ Screens:
                 Properties:
                   Fill: =RGBA(90, 62, 43, 1)
                   Height: =26
-                  Width: =Parent.Width - 32
-                  X: =16
+                  Width: =recSchedTotalsCard.Width - 16
+                  X: =recSchedTotalsCard.X + 8
                   Y: =lblSchedTotalsTitle.Y + lblSchedTotalsTitle.Height + 8
             - lblSchedTotalsHeaderStudent:
                 Control: Label
@@ -631,7 +659,7 @@ Screens:
                   Size: =10
                   Text: ="Student"
                   Width: =220
-                  X: =24
+                  X: =recSchedTotalsHeader.X + 8
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderRole:
                 Control: Label
@@ -644,7 +672,7 @@ Screens:
                   Size: =10
                   Text: ="Role"
                   Width: =70
-                  X: =248
+                  X: =recSchedTotalsHeader.X + 232
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderMon:
                 Control: Label
@@ -657,7 +685,7 @@ Screens:
                   Size: =10
                   Text: ="Mon"
                   Width: =72
-                  X: =322
+                  X: =recSchedTotalsHeader.X + 306
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderTue:
                 Control: Label
@@ -670,7 +698,7 @@ Screens:
                   Size: =10
                   Text: ="Tue"
                   Width: =72
-                  X: =398
+                  X: =recSchedTotalsHeader.X + 382
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderWed:
                 Control: Label
@@ -683,7 +711,7 @@ Screens:
                   Size: =10
                   Text: ="Wed"
                   Width: =72
-                  X: =474
+                  X: =recSchedTotalsHeader.X + 458
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderThu:
                 Control: Label
@@ -696,7 +724,7 @@ Screens:
                   Size: =10
                   Text: ="Thu"
                   Width: =72
-                  X: =550
+                  X: =recSchedTotalsHeader.X + 534
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderFri:
                 Control: Label
@@ -709,7 +737,7 @@ Screens:
                   Size: =10
                   Text: ="Fri"
                   Width: =72
-                  X: =626
+                  X: =recSchedTotalsHeader.X + 610
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderTotal:
                 Control: Label
@@ -722,7 +750,7 @@ Screens:
                   Size: =10
                   Text: ="Total"
                   Width: =80
-                  X: =702
+                  X: =recSchedTotalsHeader.X + 686
                   Y: =recSchedTotalsHeader.Y + 2
             - lblSchedTotalsHeaderMax:
                 Control: Label
@@ -735,7 +763,7 @@ Screens:
                   Size: =10
                   Text: ="Max"
                   Width: =70
-                  X: =786
+                  X: =recSchedTotalsHeader.X + 770
                   Y: =recSchedTotalsHeader.Y + 2
             - galSchedTotals:
                 Control: Gallery
@@ -790,8 +818,8 @@ Screens:
                   ShowScrollbar: =false
                   TemplatePadding: =0
                   TemplateSize: =28
-                  Width: =Parent.Width - 32
-                  X: =16
+                  Width: =recSchedTotalsHeader.Width
+                  X: =recSchedTotalsHeader.X
                   Y: =recSchedTotalsHeader.Y + recSchedTotalsHeader.Height
                 Children:
                   - recSchedTotalsRowBg:
@@ -905,8 +933,8 @@ Screens:
                 Properties:
                   Fill: =RGBA(74, 48, 32, 1)
                   Height: =28
-                  Width: =Parent.Width - 32
-                  X: =16
+                  Width: =recSchedTotalsHeader.Width
+                  X: =recSchedTotalsHeader.X
                   Y: =galSchedTotals.Y + galSchedTotals.Height
             - lblSchedTotalsFooterTitle:
                 Control: Label
@@ -918,7 +946,7 @@ Screens:
                   Size: =10
                   Text: ="Daily Totals"
                   Width: =220
-                  X: =24
+                  X: =recSchedTotalsHeader.X + 8
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterMon:
                 Control: Label
@@ -935,7 +963,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =72
-                  X: =322
+                  X: =recSchedTotalsHeader.X + 306
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterTue:
                 Control: Label
@@ -952,7 +980,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =72
-                  X: =398
+                  X: =recSchedTotalsHeader.X + 382
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterWed:
                 Control: Label
@@ -969,7 +997,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =72
-                  X: =474
+                  X: =recSchedTotalsHeader.X + 458
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterThu:
                 Control: Label
@@ -986,7 +1014,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =72
-                  X: =550
+                  X: =recSchedTotalsHeader.X + 534
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterFri:
                 Control: Label
@@ -1003,7 +1031,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =72
-                  X: =626
+                  X: =recSchedTotalsHeader.X + 610
                   Y: =recSchedTotalsFooter.Y
             - lblSchedTotalsFooterTotal:
                 Control: Label
@@ -1020,7 +1048,7 @@ Screens:
                         If(v = RoundDown(v, 0), Text(v, "0"), Text(v, "0.#"))
                     )
                   Width: =80
-                  X: =702
+                  X: =recSchedTotalsHeader.X + 686
                   Y: =recSchedTotalsFooter.Y
             - lblSchedDropdownHint:
                 Control: Label

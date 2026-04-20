@@ -52,7 +52,10 @@ App:
       Set(varSchedSelectedEmail, "");
       Set(varSchedEditSaving, false);
       Set(varSchedShowReorder, false);
-      ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
+      Set(varSchedTotalsSortBy, "Student");
+      Set(varSchedTotalsSortDesc, false);
+      Set(varSchedScrollVersion, 0);
+      ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
       Clear(colEditShifts);
 
       // === BATCH PAYMENT MODE ===

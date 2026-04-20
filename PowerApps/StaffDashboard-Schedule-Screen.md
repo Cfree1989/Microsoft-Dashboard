@@ -115,7 +115,7 @@ ClearCollect(colStaff,
 
 > **What changed:** `AidType` and `SchedSortOrder` stay on Staff. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here.
 
-> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with **`Active = true && Role.Value <> "Manager"`** so the manager never appears in the schedule grid or ComboBox. Other screens may still use the wider `colStaff` from **`App.OnStart`** until the schedule screen runs.
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** runs **`ClearCollect(colStaff, …)`** again with a stricter student-worker filter: active records only, not role `"Manager"`, and only supported `AidType` values (`Work Study`, `Graduate Assistant`, `President's Aid`). That keeps manager or misc staff records out of the schedule grid and ComboBox even if the SharePoint role data is inconsistent.
 
 ### 1B — Add the colTimeSlots collection
 
@@ -233,11 +233,20 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 
 ```
 // Refresh active staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
-// Excludes Role = Manager — they never appear on this schedule UI.
+// Excludes managers and any non-student worker records from this schedule UI.
 ClearCollect(
     colStaff,
     ForAll(
-        Filter(Staff, Active = true && Role.Value <> "Manager"),
+        Filter(
+            Staff,
+            Active = true &&
+            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+            (
+                AidType.Value = "Work Study" ||
+                AidType.Value = "Graduate Assistant" ||
+                AidType.Value = "President's Aid"
+            )
+        ),
         {
             StaffID:        ID,
             MemberName:     Trim(
@@ -305,7 +314,7 @@ ClearCollect(
 // Reset editing state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "");
 Clear(colEditShifts);
-Reset(drpSchedName)
+Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 ```
 
 > **What `colSchedLookup` does:** One record per row in `StaffShifts`. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
@@ -627,7 +636,7 @@ Solid primary-color button that sits **above** the shift rows (not below) so it 
 | Fill | `=RGBA(0,0,0,0)` |
 | BorderColor | `=varColorBorder`, BorderThickness | `1` |
 | X | `=Parent.Width - 190`, Y | `62`, Width | `80`, Height | `36` |
-| OnSelect | `=Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Reset(drpSchedName)` |
+| OnSelect | `=Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)` |
 
 ---
 
@@ -699,7 +708,16 @@ Patch(
 ClearCollect(
     colStaff,
     ForAll(
-        Filter(Staff, Active = true && Role.Value <> "Manager"),
+        Filter(
+            Staff,
+            Active = true &&
+            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+            (
+                AidType.Value = "Work Study" ||
+                AidType.Value = "Graduate Assistant" ||
+                AidType.Value = "President's Aid"
+            )
+        ),
         {
             StaffID:        ID,
             MemberName:     Trim(
@@ -772,7 +790,7 @@ Set(varSchedEditSaving, false)
 
 > **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 
-> **Cancel / OnVisible** use `Reset(drpSchedName)` so the ComboBox placeholder shows again; the save handler above clears selection state only (add `Reset(drpSchedName)` there too if you want the picker blank immediately after save).
+> **Cancel / OnVisible** cannot reset `drpSchedName` directly because the ComboBox lives inside the scroll gallery template. Instead, use a gallery refresh key like `varSchedScrollVersion` and bind `conSchedScrollBody.Items` to `=[varSchedScrollVersion]`. Incrementing that value from `OnVisible`, Cancel, or Save rebuilds the single gallery row and naturally clears the ComboBox placeholder without using `Reset(...)`.
 
 ---
 
@@ -986,7 +1004,7 @@ If you ever switch the day table back to **`border-collapse:collapse`** with no 
 - Prefer `UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {...})` on each dropdown's `OnChange`. If defaults stick incorrectly, toggle `Reset(galEditShifts)` after `ClearCollect` in `drpSchedName.OnChange` (Power Apps build-dependent).
 
 **"Delegation warning" on colStaff load**
-- Expected. `Filter(Staff, Active = true && Role.Value <> "Manager")` may show delegation warnings. Since your Staff list is well under 500 rows, this is fine.
+- Expected. The schedule's student-worker filter may show delegation warnings in Studio. Since your `Staff` list is well under 500 rows, this is fine for this app.
 
 **Totals sort looks wrong**
 - Verify `varSchedTotalsSortBy` is changing from `drpSchedTotalsSort.OnChange` and `varSchedTotalsSortDesc` is toggling from `btnSchedTotalsSortDir.OnSelect`. The gallery sorts a precomputed `totalsRows` table, so stale order usually means one of those variables did not update.
