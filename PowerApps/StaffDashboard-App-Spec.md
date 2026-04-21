@@ -396,7 +396,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 3. Click in the **formula bar** (the wide text area at the top).
 4. Delete any existing content and paste this formula:
 
-> **Coauthor source of truth:** The block below matches **`PowerApps/canvas-coauthor/App.pa.yaml`** after `sync_canvas`. If Studio and this doc diverge, sync YAML first, then update this section.
+> **Canonical `App.OnStart`:** Paste the block below into **App.OnStart** in Studio. It intentionally includes **one** `// === SCHEDULE SCREEN STATE ===` block (after modal flags, before batch payment) with typed `colEditShifts` seed times. If your coauthor YAML still has a **second** duplicate schedule block after `varRefreshInterval`, **delete that duplicate** so the app matches this doc — the duplicate reset `colEditShifts` with empty strings and could cause type drift on schedule dropdowns.
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
@@ -407,7 +407,7 @@ Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
 // === SLICING COMPUTERS ===
-// Loaded directly from SharePoint choices â€” adding a computer to the column auto-updates this
+// Loaded directly from SharePoint choices - adding a computer to the column auto-updates this
 ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
 // === STATUS DEFINITIONS ===
@@ -476,7 +476,7 @@ Set(varBatchLastItemID, 0);
 Set(varBatchLastItemWeight, 0);
 Set(varBatchFinalCost, 0);
 Set(varBatchProcessedCount, 0);
-// DateTime â€” use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
+// DateTime - use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
 Set(varBatchRecordedAt, Now());
 Set(varPaymentRecordedAt, Now());
 
@@ -709,13 +709,6 @@ Set(varScreenTransition, ScreenTransition.Fade);
 // === TIMER CONFIGURATION ===
 // Auto-refresh interval for dashboard data (milliseconds)
 Set(varRefreshInterval, 30000);                    // 30 seconds
-
-// === SCHEDULE SCREEN STATE ===
-Set(varSchedSelectedEmail, "");
-Set(varSchedEditSaving, false);
-Set(varSchedShowReorder, false);
-ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
-Clear(colEditShifts);
 
 Set(varLoadingMessage, "")
 ```
@@ -15595,7 +15588,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 | Topic | Finding |
 |-------|---------|
-| **App.OnStart** | The live formula includes `// === SCHEDULE SCREEN STATE ===` **twice** (initial defaults, then again after `varRefreshInterval`). The second block resets `colEditShifts` with empty `ShiftStart`/`ShiftEnd` strings. Documented to match the live app; consider consolidating in a future app edit. |
+| **App.OnStart** | **Fixed in this spec:** a single schedule-state block remains (with `varSchedTotalsSortBy`, `varSchedTotalsSortDesc`, `varSchedScrollVersion`, and typed `colEditShifts` seed). Remove any duplicate `// === SCHEDULE SCREEN STATE ===` block after `varRefreshInterval` in the app. |
 | **Step 4 header** | Docs previously described `btnNavDashboard`, `btnNavAdmin`, and `lblUserName`. The live app uses **`btnNavSchedule`** + **`btnNavAnalytics`** (`Report`), `recHeader.Height = 55`, and `lblAppTitle.Y = 11`. |
 | **Job card messaging** | Older steps referenced **`btnCardSendMessage`** on the card template. The live YAML has **`btnViewMessages`** + **`lblUnreadBadge`** only; compose/send is inside **conViewMessagesModal**. |
 | **Approval modal tree** | **`lblWeightValidation`** is not present in the live app; sliced-on computer, own material, and build-plates shortcuts are. |
