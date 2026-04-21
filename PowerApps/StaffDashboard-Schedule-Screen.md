@@ -659,18 +659,19 @@ Solid primary-color button that sits on the **top input row** (not below the gal
 
 ### Add the control
 
-Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used a `<style>` block or CSS Grid — those are stripped or ignored; the working layout is **nested `<table>`s with inline `style="..."` only**. Full rationale is in **HtmlViewer: What Actually Works** below.
+Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used a `<style>` block or CSS Grid — those are stripped or ignored; the working layout is a **single master `<table>`** with **inline `style="..."` only** (`border-collapse:collapse`, one `<tr>` per time slot so labels and cells stay aligned). Full rationale is in **HtmlViewer: What Actually Works** below.
 
 | Property | Value |
 |----------|-------|
 | Name | `htmlSchedGrid` |
 | Control | `HtmlViewer` |
 | Y | `=recSchedEditBar.Y + recSchedEditBar.Height + 12` |
-| Width | `=Parent.Width` |
-| Height | `=80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30` |
+| X | `=(Parent.Width - Self.Width) / 2` |
+| Width | `=Parent.Width - 20` |
+| Height | `=80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28` |
 | Padding | `0` on all sides |
 
-> **Dynamic positioning:** the grid still tracks the edit bar bottom, but it now uses a content-sized height instead of viewport height so the **page container** owns vertical scrolling.
+> **Dynamic positioning:** the grid still tracks the edit bar bottom, but it now uses a content-sized height instead of viewport height so the **page container** owns vertical scrolling. Width is `Parent.Width - 20` (10 px gutter on each side) and centered horizontally via `X = (Parent.Width - Self.Width) / 2` so the grid doesn't run edge-to-edge with the screen.
 
 ### Authoritative `HtmlText` formula
 
@@ -679,20 +680,18 @@ The live formula is **large** and must stay under Power Fx string limits. **Sour
 **Structure summary (as implemented):**
 
 - Outer `<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;…'>` so horizontal overflow can still fit if needed without the grid taking over vertical scrolling.
-- **Outer 3-column table:** left time gutter \| week \| right gutter (`border-spacing:8px 0` between columns).
-- **Week row:** inner table with `width:100%;table-layout:fixed` (no `min-width`) so Mon–Fri share the `HtmlViewer` width and the week fits one screen without a forced horizontal scroll. If you have many staff columns and readability suffers on small tablets, you can add a modest `min-width` again or reduce slot height `H` in the formula.
-- **Per day filtering (reduces visual clutter):** For each day (Mon–Fri), the formula uses `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, ...)` to show **only staff who have shifts on that specific day**. Days with no scheduled shifts display "No shifts" in a single cell.
-  - The `colspan` header is dynamic per day: `colspan='{Text(CountRows(dayStaff))}'` instead of a fixed count.
-  - Staff appear in `SchedSortOrder` within each day (consistent left-to-right order when they work).
-- **Per day:** rounded border `div` wrapping an inner table with **`border-collapse:separate;border-spacing:1px;background:#e8e0d8`** so **1px grid lines** (horizontal and vertical) show without per-cell border markup.
-- **Slot coloring:** one `<tr>` per **visible** slot — iterate **`Filter(colTimeSlots, Idx < 16) As slot`** (same filter for the left and right time gutters). Inner `Concat` over **`dayStaff`** (not all staff); use **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so slot index is not lost in nested scope. Close **`</tr>` once per slot row** (not inside the staff `Concat`). The full `colTimeSlots` table (including Idx `16` for `"4:30 PM"`) is still used in **`LookUp(colTimeSlots, Idx = slot.Idx + 1)`** inside those gutters so the last label row shows **4:00–4:30**.
-- **Gutters:** `vertical-align:top`, **`59px`** spacer, then time labels at **`H+1`** px line height to align with **`border-spacing`** row rhythm (`H = 28`).
+- **Single master `<table>`** with `border-collapse:collapse`, `table-layout:fixed`, `width:100%`, and **per-cell** `border:1px solid #bdbdbd` (plus `border-top:1px solid #d7ccc8` on every slot row, including the first, so the grid line under the legend is visible). One outer rounded border wraps the whole table (`border:2px solid #d7ccc8;border-radius:10px`).
+- **Header rows:** Row 1 — left/right **corner** cells (`rowspan=2`, 80px) bracket Mon–Fri **`<th>`** cells (dynamic `colspan` from `CountRows(dayStaff)`). Row 2 — staff **initials** `<td>`s (one per staff column); empty placeholder `<td>` for a day with no staff.
+- **Slot rows:** one **`<tr style='height:{H}px'>`** per **`Filter(colTimeSlots, Idx < 16)`**. Cell order: **left time label** | Mon columns… | Tue… | … | **right time label** (same text as left). **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so the slot index is in scope for each staff cell.
+- **Per day filtering (reduces visual clutter):** For each day, `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, …)` so only staff with shifts on that day get columns. **`H = 28`** for header, legend, and slot row heights (same pitch everywhere).
+- **No shifts:** for a day with `CountRows(dayStaff)=0`, emit **one** `<td rowspan='{slotCount}' …>No shifts</td>` on the **first** slot row (`slot.Idx = Min(…)` / `minSlotIdx` in the YAML); emit `""` for that day on later slot rows so column counts stay valid.
+- **Gallery `TemplateSize`:** the scroll template’s grid segment uses the same **28px** slot pitch as the HtmlViewer (`80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28` in the formula’s grid part) so the body height matches the rendered grid.
 - **Totals section:** no longer part of `HtmlText`. The week grid stays in `htmlSchedGrid`, while the sortable totals area is now a native card + gallery (`recSchedTotalsCard`, `drpSchedTotalsSort`, `btnSchedTotalsSortDir`, `galSchedTotals`) rendered below it.
 
 ### Fitting the whole week on one screen width
 
 1. **HtmlViewer table:** Keep the week inner table at **`width:100%`** without a large **`min-width`** in pixels. A fixed `min-width` larger than the app’s design width (this project uses **1366** in `CanvasManifest.json`) guarantees horizontal scrolling and can clip the first day depending on scroll position.
-2. **Screen controls:** `htmlSchedGrid` should use **`Width: =Parent.Width`** and **`X: =0`** (default) so it spans the screen; the guide already sets this.
+2. **Screen controls:** `htmlSchedGrid` uses **`Width: =Parent.Width - 20`** and **`X: =(Parent.Width - Self.Width) / 2`** so it centers under the edit bar with a 10 px gutter on each side; the step above already sets this.
 3. **App display settings:** If you still see empty margins on a wide monitor, the app may be using **Scale to fit** with **Maintain aspect ratio** (common on desktop layouts). In Studio: **Settings** → **Display** — try **Lock aspect ratio** off or adjust **Scale to fit** / design resolution so the canvas matches how you run the app (trade-off: layout may letterbox or stretch).
 
 ### Obsolete sample removed
@@ -821,6 +820,32 @@ The current app no longer includes the reorder panel. Instead, the lower section
 - `recSchedTotalsCard` sits directly below the grid and contains the sortable totals area.
 - `galSchedTotals` expands to its full content height so the totals rows and footer stay reachable via page scroll.
 
+### Totals card sizing
+
+| Property | Value |
+|----------|-------|
+| Name | `recSchedTotalsCard` |
+| Control | `Rectangle` |
+| Fill | `=varColorBgCard` |
+| BorderColor | `=varColorBorder`, BorderThickness | `1` |
+| Width | `=Min(Parent.Width - 32, 1200)` |
+| X | `=(Parent.Width - Self.Width) / 2` |
+| Y | `=htmlSchedGrid.Y + htmlSchedGrid.Height + 12` |
+| Height | `=recSchedTotalsFooter.Y + recSchedTotalsFooter.Height - Self.Y + 8` |
+
+> **Width formula:** `Min(Parent.Width - 32, 1200)` keeps a 16 px gutter on each side while capping the max card width at **1200 px** on very wide monitors so the totals row stays readable and the card centers within the page via `X = (Parent.Width - Self.Width) / 2`.
+
+### Default sort
+
+`App.OnStart` (and `scrSchedule.OnVisible` on every screen entry) seed:
+
+```
+Set(varSchedTotalsSortBy, "Total");
+Set(varSchedTotalsSortDesc, true);
+```
+
+so the totals gallery opens sorted by **Total hours, descending** (heaviest scheduled students on top). The sort `Default: =Coalesce(varSchedTotalsSortBy, "Total")` on `drpSchedTotalsSort` and the `Switch(... "Total", Sort(totalsRows, TotalH, ord), ...)` branch in `galSchedTotals.Items` are what actually consume those variables.
+
 ### Sort controls
 
 | Property | Value |
@@ -932,11 +957,11 @@ This means **every style must be an inline `style="..."` attribute** on the elem
 | Inline `style="..."` on any element | ✅ Works | The only way to apply styles |
 | `<table>`, `<tr>`, `<td>`, `<th>` | ✅ Works | Most reliable layout method |
 | `border-collapse:collapse` on `<table>` | ✅ Works | Inline on the table element |
-| `border-collapse:separate` + `border-spacing:1px` + table `background` | ✅ Works | **Grid lines trick:** 1px gaps between cells show the table background as both horizontal and vertical rules (saves characters vs per-cell borders) |
-| `border-spacing` on `<table>` | ✅ Works | Also use for gap between day columns (`8px 0` outer, `4px 0` week row) |
-| `min-width` on week inner `<table>` | ✅ Works | Prevents over-compression; restores horizontal scroll in `overflow:auto` wrapper |
+| `border-collapse:separate` + `border-spacing:1px` + table `background` | ✅ Works | **Legacy grid-lines trick** (older nested per-day tables): 1px gaps show rules without per-cell borders. **Current schedule** uses `collapse` + explicit borders instead. |
+| `border-spacing` on `<table>` | ✅ Works | Optional for gaps between day groups; not used in the current single-table layout |
+| `min-width` on week inner `<table>` | ✅ Works | Prevents over-compression; restores horizontal scroll in `overflow:auto` wrapper (add only if you widen the column model) |
 | `vertical-align:bottom` on `<td>` | ✅ Works | Legacy gutter alignment when inner day table used `border-collapse:collapse` only |
-| `vertical-align:top` + fixed spacer on gutter `<td>` | ✅ Works | Aligns gutters when per-day table uses `border-spacing` (row pitch is `H+1` px) |
+| `vertical-align:top` + fixed spacer on gutter `<td>` | ⚠️ Superseded | Was used with **nested** day tables + `border-spacing` gutter drift; **current** screen uses **one row per slot** so left/right time cells align without spacers |
 | `height:Npx` on `<tr>` | ✅ Works | Sets row height; empty cells don't collapse |
 | `overflow:hidden` on `<div>` | ✅ Works | Used to clip `border-radius` on day block wrappers |
 | `border-radius` on `<div>` | ✅ Works | Must be on a `<div>`, not directly on `<table>` |
@@ -956,55 +981,33 @@ This means **every style must be an inline `style="..."` attribute** on the elem
 | `column-count` | ❌ Not supported | Reported broken across community |
 | `border-radius` directly on `<table>` | ❌ Inconsistent | Wrap the table in a `<div>` instead |
 
-### The layout pattern that works
+### The layout pattern that works (current)
 
-Use a **3-cell outer table** (left gutter | content | right gutter), with **a second inner table** for the 5 day columns, and **a third per-day table** for the day header, legend row, and slot rows. All styles inline.
+Use **one `<table>`** with **`border-collapse:collapse`**: two header rows (day titles + staff initials, with **empty corner `<td rowspan="2">`** columns for the left and right time gutters), then **one `<tr>` per visible time slot**. Each slot row contains, in order: **left time `<td>`** | **Monday staff cells** … **Friday staff cells** | **right time `<td>`** (duplicate label). Inline styles only.
 
 ```html
-<!-- Outer 3-column layout -->
-<table style="border-collapse:separate; border-spacing:8px 0;">
+<!-- Sketch: columns = [corner] [Mon×N₁] [Tue×N₂] … [Fri×N₅] [corner] on row 1; row 2 = initials; then slot rows -->
+<table cellpadding="0" style="width:100%; border-collapse:collapse; table-layout:fixed; border:2px solid #d7ccc8;">
   <tr>
-    <!-- Left time gutter — optional sticky; align with slot rows (see below) -->
-    <td style="vertical-align:top; width:80px; padding:0;">
-      <div style="height:59px;"></div>
-      <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
-        <div style="height:29px; line-height:29px; text-align:center; ...">8:30-9:00</div>
-        <!-- repeat for each time slot (29px = 28px slot + 1px border-spacing rhythm) -->
-      </div>
-    </td>
-
-    <!-- Week grid — add min-width so HtmlViewer shows horizontal scroll instead of crushing columns -->
-    <td style="vertical-align:top; padding:0;">
-      <table style="border-collapse:separate; border-spacing:4px 0; table-layout:fixed; width:100%; min-width:1500px;">
-        <tr>
-          <td style="vertical-align:top; padding:0;">
-            <div style="border:2px solid #d7ccc8; border-radius:10px; overflow:hidden;">
-              <!-- Per-day: 1px grid via border-spacing + table background (not collapse) -->
-              <table cellpadding="0" style="border-collapse:separate; border-spacing:1px; background:#e8e0d8; width:100%; table-layout:fixed;">
-                <tr><th colspan="N" style="...">MONDAY</th></tr>
-                <tr><!-- legend: one <td> per staff --></tr>
-                <tr style="height:28px;"><!-- slot row: one <td> per staff --></tr>
-              </table>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </td>
-
-    <!-- Right time gutter — NOT sticky (prevents overlap on zoom) -->
-    <td style="vertical-align:top; width:80px; padding:0;">
-      <div style="height:59px;"></div>
-      <!-- same label stack as left -->
-    </td>
+    <td rowspan="2" style="width:80px; …"></td>
+    <th colspan="3" style="height:28px; …">MONDAY</th>
+    <!-- … other days … -->
+    <td rowspan="2" style="width:80px; …"></td>
   </tr>
+  <tr><!-- one <td> per staff column; empty <td> for a no-staff day --></tr>
+  <tr style="height:28px;">
+    <td style="border-top:1px solid #d7ccc8; …">8:30-9:00</td>
+    <td style="border:1px solid #bdbdbd; border-top:1px solid #d7ccc8; …"></td>
+    <!-- … -->
+    <td style="border-top:1px solid #d7ccc8; …">8:30-9:00</td>
+  </tr>
+  <!-- repeat slot rows; "No shifts" = rowspan on first slot row only for that day column -->
 </table>
 ```
 
-### Gutter alignment (with `border-spacing` on the day table)
+### Gutter alignment (historical note)
 
-When the **inner per-day** table uses **`border-collapse:separate; border-spacing:1px`**, each slot row is effectively **one pixel taller** than its cell `height` alone. **`vertical-align:bottom`** on the gutter no longer lines up. The shipped screen uses **`vertical-align:top`**, a **`59px`** spacer `<div>` above the gutter box, and **29px**-tall label rows (**`H+1`** when `H = 28`) so labels track the slot rows.
-
-If you ever switch the day table back to **`border-collapse:collapse`** with no vertical `border-spacing`, you can revert to **bottom-aligned** gutters and **28px** labels only (two header rows × 28px = 56px offset).
+Older drafts used **separate** left/right gutter stacks and **nested** per-day tables with **`border-spacing:1px`**, which made row pitch drift from the time labels (spacers, **`H+1`** label heights, etc.). The **current** implementation avoids that by putting **time labels and slot cells in the same `<tr>`** so heights always match. If you fork the markup back to nested per-day tables, re-read community notes on **`border-spacing`** vs fixed **`height`** on `<tr>`.
 
 ### Right gutter overlap fix
 
