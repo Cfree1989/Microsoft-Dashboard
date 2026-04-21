@@ -400,8 +400,10 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
+> **Important:** Do **not** put a leading `=` on the first line. `App.OnStart` is a **statement list** (`Set(...);` …). A leading `=//` breaks parsing and can invalidate the whole property.
+
 ```powerfx
-=// === USER IDENTIFICATION ===
+// === USER IDENTIFICATION ===
 // Cache user info for performance
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
