@@ -48,6 +48,8 @@
 31. [Troubleshooting](#troubleshooting)
 32. [Quick Reference Card](#quick-reference-card)
 33. [Code Reference (Copy-Paste Snippets)](#code-reference-copy-paste-snippets)
+34. [Live coauthor control inventory](#live-coauthor-control-inventory)
+35. [Audit findings (live app vs docs)](#audit-findings-live-app-vs-docs)
 
 ---
 
@@ -170,7 +172,7 @@ This app follows consistent design patterns for a professional appearance:
 | Element Type | Radius | Variable | Examples |
 |--------------|--------|----------|----------|
 | Cards & Modals | `8` | — | `recCardBackground`, `recApprovalModal` |
-| Primary Buttons | `6` | — | `btnViewMsgSend`, `btnCardSendMessage` |
+| Primary Buttons | `6` | — | `btnViewMsgSend` (in messages modal), card uses `btnViewMessages` |
 | Action Buttons | `4` | `varBtnBorderRadius` | `btnApprove`, `btnReject`, `btnEditDetails` |
 | Text Inputs | `4` | `varInputBorderRadius` | `txtSearch`, `txtViewMsgSubject` |
 | Dropdowns | `4` | `varInputBorderRadius` | `ddRejectStaff`, `ddViewMsgStaff` |
@@ -394,17 +396,18 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 3. Click in the **formula bar** (the wide text area at the top).
 4. Delete any existing content and paste this formula:
 
+> **Coauthor source of truth:** The block below matches **`PowerApps/canvas-coauthor/App.pa.yaml`** after `sync_canvas`. If Studio and this doc diverge, sync YAML first, then update this section.
+
 **⬇️ FORMULA: Paste into App.OnStart**
 
 ```powerfx
-// === USER IDENTIFICATION ===
+=// === USER IDENTIFICATION ===
 // Cache user info for performance
 Set(varMeEmail, Lower(User().Email));
 Set(varMeName, User().FullName);
 
 // === SLICING COMPUTERS ===
-// Loaded from SharePoint choices — adding/renaming a computer in the SlicedOnComputer column
-// automatically updates this dropdown without any code change.
+// Loaded directly from SharePoint choices â€” adding a computer to the column auto-updates this
 ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
 // === STATUS DEFINITIONS ===
@@ -445,6 +448,16 @@ Set(varShowBatchPaymentModal, 0);
 Set(varShowBuildPlatesModal, 0);
 Set(varShowExportModal, false);
 
+// === SCHEDULE SCREEN STATE ===
+Set(varSchedSelectedEmail, "");
+Set(varSchedEditSaving, false);
+Set(varSchedShowReorder, false);
+Set(varSchedTotalsSortBy, "Total");
+Set(varSchedTotalsSortDesc, true);
+Set(varSchedScrollVersion, 0);
+ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
+Clear(colEditShifts);
+
 // === BATCH PAYMENT MODE ===
 // Controls multi-select batch payment functionality
 Set(varBatchSelectMode, false);
@@ -463,7 +476,7 @@ Set(varBatchLastItemID, 0);
 Set(varBatchLastItemWeight, 0);
 Set(varBatchFinalCost, 0);
 Set(varBatchProcessedCount, 0);
-// DateTime — use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
+// DateTime â€” use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
 Set(varBatchRecordedAt, Now());
 Set(varPaymentRecordedAt, Now());
 
@@ -491,10 +504,62 @@ Set(varPlaySound, false);
 // Load all SharePoint data in parallel to reduce startup time and avoid 429 throttling.
 // Concurrent() fires these as a single batched request instead of sequential calls.
 Concurrent(
-    ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+    ClearCollect(
+        colStaff,
+        ForAll(
+            Filter(Staff, Active = true),
+            {
+                StaffID:        ID,
+                MemberName:     Member.DisplayName,
+                MemberEmail:    Member.Email,
+                Role:           Role,
+                Active:         Active,
+                AidType:        AidType.Value,
+                SchedSortOrder: Coalesce(SchedSortOrder, 10)
+            }
+        )
+    ),
     ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
     ClearCollect(colAllBuildPlates, BuildPlates),
     ClearCollect(colAllPayments, Payments)
+);
+
+// === SCHEDULE: TIME SLOTS ===
+// 17 rows: Idx 0-15 = grid start-of-block (8:30 AM-4:00 PM); Idx 16 = 4:30 PM end boundary for lookups only
+ClearCollect(colTimeSlots,
+    {Idx: 0,  Label: "8:30 AM",  Minutes: 510},
+    {Idx: 1,  Label: "9:00 AM",  Minutes: 540},
+    {Idx: 2,  Label: "9:30 AM",  Minutes: 570},
+    {Idx: 3,  Label: "10:00 AM", Minutes: 600},
+    {Idx: 4,  Label: "10:30 AM", Minutes: 630},
+    {Idx: 5,  Label: "11:00 AM", Minutes: 660},
+    {Idx: 6,  Label: "11:30 AM", Minutes: 690},
+    {Idx: 7,  Label: "12:00 PM", Minutes: 720},
+    {Idx: 8,  Label: "12:30 PM", Minutes: 750},
+    {Idx: 9,  Label: "1:00 PM",  Minutes: 780},
+    {Idx: 10, Label: "1:30 PM",  Minutes: 810},
+    {Idx: 11, Label: "2:00 PM",  Minutes: 840},
+    {Idx: 12, Label: "2:30 PM", Minutes: 870},
+    {Idx: 13, Label: "3:00 PM",  Minutes: 900},
+    {Idx: 14, Label: "3:30 PM", Minutes: 930},
+    {Idx: 15, Label: "4:00 PM",  Minutes: 960},
+    {Idx: 16, Label: "4:30 PM",  Minutes: 990}
+);
+
+// === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
+ClearCollect(colSchedColors,
+    {Idx: 0,  Hex: "#7B3F2B", Light: "#E8C9B8"},
+    {Idx: 1,  Hex: "#4A7C59", Light: "#B8D9C4"},
+    {Idx: 2,  Hex: "#C87941", Light: "#F0D4B0"},
+    {Idx: 3,  Hex: "#8B5E3C", Light: "#D9C0A8"},
+    {Idx: 4,  Hex: "#2E6B4F", Light: "#A8D4BE"},
+    {Idx: 5,  Hex: "#B34A2A", Light: "#EAB89A"},
+    {Idx: 6,  Hex: "#5B7A3A", Light: "#C0D4A0"},
+    {Idx: 7,  Hex: "#9B4520", Light: "#E8B898"},
+    {Idx: 8,  Hex: "#3D7060", Light: "#AACCB8"},
+    {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
+    {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
+    {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
 );
 
 // Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
@@ -553,7 +618,7 @@ Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
 Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
 // === UI NEUTRAL COLORS ===
-Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (recHeader Fill)
+Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches recHeader)
 Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
 Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
@@ -645,6 +710,13 @@ Set(varScreenTransition, ScreenTransition.Fade);
 // Auto-refresh interval for dashboard data (milliseconds)
 Set(varRefreshInterval, 30000);                    // 30 seconds
 
+// === SCHEDULE SCREEN STATE ===
+Set(varSchedSelectedEmail, "");
+Set(varSchedEditSaving, false);
+Set(varSchedShowReorder, false);
+ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
+Clear(colEditShifts);
+
 Set(varLoadingMessage, "")
 ```
 
@@ -664,14 +736,26 @@ Set(varLoadingMessage, "")
 |----------|---------|------|
 | `varMeEmail` | Current user's email (lowercase) | Text |
 | `varMeName` | Current user's display name | Text |
-| `colStaff` | Collection of active staff (flattened: MemberName, MemberEmail, Role, Active) | Table |
+| `colStaff` | Active staff from SharePoint `Staff` (`Active = true`), flattened: `StaffID`, `MemberName`, `MemberEmail`, `Role`, `Active`, `AidType`, `SchedSortOrder` | Table |
 | `varIsStaff` | Is current user a staff member? | Boolean |
 | `varStatuses` | All status options | Table |
 | `varQuickQueue` | Active queue statuses | Table |
 | `varSelectedStatus` | Currently selected status tab | Text |
+| `varCurrentPage` | Legacy navigation flag (live header uses `Navigate` / modals instead of multi-page chrome) | Text |
+| `colSlicingComputers` | `{Name}` table from `Choices(PrintRequests.SlicedOnComputer)` for slicer dropdowns | Table |
 | `varSearchText` | Current search filter | Text |
 | `varSortOrder` | Current dashboard sort mode | Text |
 | `varNeedsAttention` | Filter for attention items only | Boolean |
+| `varExpandAll` | Reserved (expand/collapse removed; cards always expanded) | Boolean |
+| `varSchedSelectedEmail` | Schedule screen: staff member email selected for editing | Text |
+| `varSchedEditSaving` | Schedule screen: true while save is in progress | Boolean |
+| `varSchedShowReorder` | Schedule screen: UI flag for totals row reorder mode | Boolean |
+| `varSchedTotalsSortBy` | Schedule screen: totals gallery sort column (`Total`, day names, etc.) | Text |
+| `varSchedTotalsSortDesc` | Schedule screen: totals sort descending when true | Boolean |
+| `varSchedScrollVersion` | Schedule screen: bumps `conSchedScrollBody` template height when changed | Number |
+| `colEditShifts` | Schedule screen: in-memory shift rows for the editor gallery | Table |
+| `colTimeSlots` | Schedule screen: `{Idx, Label, Minutes}` rows for the HTML grid (Idx 0–16) | Table |
+| `colSchedColors` | Schedule screen: `{Idx, Hex, Light}` palette rows for staff blocks | Table |
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varBuildPlatesOpenedFromApproval` | Tracks whether Build Plates was opened from the Approval modal | Boolean |
@@ -1021,6 +1105,8 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         recRevertModal
         recRevertOverlay
     ▼ conCompleteModal                ← Step 12A (Complete Confirmation Modal Container)
+        lblActualPrinters
+        btnCompleteClose
         btnCompleteConfirm
         btnCompleteCancel
         ddCompleteStaff
@@ -1040,7 +1126,12 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblArchiveTitle
         recArchiveModal
         recArchiveOverlay
-    ▼ conApprovalModal                ← Step 11 (Approval Modal Container)
+    ▼ conApprovalModal                ← Step 11 (Approval Modal Container — `GroupContainer`)
+        chkApprovalOwnMaterial
+        btnApproveAddPlates
+        lblApprovePlatesInfo
+        ddSlicedOnComputer
+        lblSlicedOnLabel
         btnApprovalConfirm
         btnApprovalCancel
         txtApprovalComments
@@ -1049,12 +1140,12 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblApprovalCostLabel
         txtEstimatedTime
         lblApprovalTimeLabel
-        lblWeightValidation
         txtEstimatedWeight
         lblApprovalWeightLabel
         ddApprovalStaff
         lblApprovalStaffLabel
         lblApprovalStudent
+        btnApprovalClose
         lblApprovalTitle
         recApprovalModal
         recApprovalOverlay
@@ -1078,6 +1169,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         recRejectModal
         recRejectOverlay
     tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
+    audNotification                   ← Step 17F (Audio)
     btnClearFilters                   ← Step 14
     btnRefresh                        ← Step 14
     ddSortOrder                       ← Step 14
@@ -1092,58 +1184,60 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         lblBatchCount
         lblBatchModeActive
         recBatchFooterBg
-    ▼ galJobCards                     ← Step 6
-        btnCardSendMessage            ← Step 16C
-        lblUnreadBadge                ← Step 16B (text on top)
-        recUnreadBadge                ← Step 16B (circular background)
-        btnViewMessages               ← Step 16B (opens View Messages Modal)
-        lblMessagesHeader             ← Step 16B
-        lblNotesHeader                ← Step 16B (notes count indicator)
-        btnFiles                      ← Step 16
-        btnRevert                     ← Step 9 (revert status for Printing/Completed)
-        btnEditDetails                ← Step 12B
-        btnPickedUp                   ← Step 9
-        btnComplete                   ← Step 9
-        btnStartPrint                 ← Step 9
-        btnArchive                    ← Step 9
-        btnReject                     ← Step 9
-        btnApprove                    ← Step 9
-        icoLightbulb                  ← Step 15
-        icoBatchCheck                 ← Step 15 (batch selection indicator)
-        lblCourse                     ← Step 7
-        lblCourseLabel                ← Step 7
-        lblProjectType                ← Step 7
-        lblProjectTypeLabel           ← Step 7
-        lblDiscipline                 ← Step 7
-        lblDisciplineLabel            ← Step 7
-        lblCreatedLabel               ← Step 7
-        lblJobIdLabel                 ← Step 7
-        lblDetailsHeader              ← Step 7
-        lblCreated                    ← Step 7
-        lblJobId                      ← Step 7
-        btnViewNotes                  ← Step 7 (opens Notes Modal)
-        ▼ conBuildPlatesRow           ← Step 7 (Build Plates progress row)
-            lblBuildPlatesProgress
-            btnBuildPlates
-        lblEstimates                  ← Step 7 (shows after approval)
-        lblColor                      ← Step 7
-        btnStudentNote                ← Step 7 (opens Student Note Modal, visible only if note exists)
-        lblPrinter                    ← Step 7
-        lblStudentEmail               ← Step 7
-        lblFilename                   ← Step 7
-        lblSubmittedTime              ← Step 7
-        lblStudentName                ← Step 7
+    ▼ galJobCards                     ← Step 6 (template controls — order matches live YAML)
         recCardBackground             ← Step 7
+        lblStudentName                ← Step 7
+        lblSubmittedTime              ← Step 7
+        lblFilename                   ← Step 7
+        lblStudentEmail               ← Step 7
+        lblPrinter                    ← Step 7
+        cirColorDotBackdrop           ← Step 7
+        cirColorDot                   ← Step 7
+        lblColorText                  ← Step 7
+        lblEstimates                  ← Step 7
+        lblBuildPlatesProgress        ← Step 7
+        btnBuildPlates                ← Step 12F
+        btnViewNotes                  ← Step 13
+        lblJobId                      ← Step 7
+        lblcreated                    ← Step 7
+        lblDetailsHeader              ← Step 8
+        lblJobIdLabel                 ← Step 8
+        lblCreatedLabel               ← Step 8
+        lblDisciplineLabel            ← Step 8
+        lblDiscipline                 ← Step 8
+        lblProjectTypeLabel           ← Step 8
+        lblProjectType                ← Step 8
+        lblCourseLabel                ← Step 8
+        lblCourse                     ← Step 8
+        icoLightbulb                  ← Step 15
+        icoBatchCheck                 ← Step 15
+        btnApprove                    ← Step 9
+        btnReject                     ← Step 9
+        btnArchive                    ← Step 9
+        btnStartPrint                 ← Step 9
+        btnComplete                   ← Step 9
+        btnPickedUp                   ← Step 9
+        btnEditDetails                ← Step 12B
+        btnFiles                      ← Step 16
+        lblMessagesHeader             ← Step 17B
+        btnViewMessages               ← Step 17C
+        lblUnreadBadge                ← Step 17B
+        lblTransactionLabel           ← Step 12C (job card payment summary)
+        lblTransactionValue           ← Step 12C
+        btnRevert                     ← Step 12D
+        lblPaymentHistoryLabel        ← Step 12C
+        lblPaymentHistoryValue        ← Step 12C
+        btnStudentNote                ← Step 13B
+        lblNotesHeader                ← Step 13
+        lblSlicedOn                   ← Step 7 (slicer line on card)
     lblEmptyState                     ← Step 9
     ▼ galStatusTabs                   ← Step 5
         btnStatusTab                  ← Step 5
-    lblUserName                       ← Step 4
-    btnNavAnalytics                   ← Step 4
-    btnNavAdmin                       ← Step 4
-    btnNavDashboard                   ← Step 4
+    btnNavAnalytics                   ← Step 4 (`Report` — opens Export modal)
+    btnNavSchedule                    ← Step 4 (`Schedule` — `Navigate(scrSchedule)`)
     lblAppTitle                       ← Step 4
     recHeader                         ← Step 4
-    ▸ grpSoundNotification            ← Step 17F (group at bottom for invisible audio control)
+    audNotification                   ← Step 17F (Audio — `Start = varPlaySound`)
 ```
 
 Collapsed version (containers closed) for quick reference:
@@ -1167,6 +1261,7 @@ Collapsed version (containers closed) for quick reference:
     ▸ conApprovalModal                ← Step 11
     ▸ conRejectModal                  ← Step 10
     tmrAutoRefresh                    ← Step 17F (Auto-refresh timer - invisible)
+    audNotification                   ← Step 17F (Audio)
     btnClearFilters                   ← Step 14
     btnRefresh                        ← Step 14
     ddSortOrder                       ← Step 14
@@ -1177,13 +1272,11 @@ Collapsed version (containers closed) for quick reference:
     ▸ galJobCards                     ← Step 6
     lblEmptyState                     ← Step 9
     ▸ galStatusTabs                   ← Step 5
-    lblUserName                       ← Step 4
     btnNavAnalytics                   ← Step 4
-    btnNavAdmin                       ← Step 4
-    btnNavDashboard                   ← Step 4
+    btnNavSchedule                    ← Step 4
     lblAppTitle                       ← Step 4
     recHeader                         ← Step 4
-    ▸ grpSoundNotification            ← Step 17F
+    audNotification                   ← Step 17F
 ```
 
 > 💡 **Tree View Stacking Rule:** For overlapping controls on the same screen, items higher in Tree view appear in front of items below them. Use **Bring to front / Send to back** to adjust visual stacking.
@@ -1210,13 +1303,15 @@ Collapsed version (containers closed) for quick reference:
 
 # STEP 4: Building the Top Navigation Bar
 
-**What you're doing:** Creating a professional navigation bar at the top of the screen with page buttons.
+**What you're doing:** Creating the header bar on `scrDashboard` with the app title and two actions: open the **Schedule** screen and open the **Report** (monthly export) modal.
 
-**Controls you'll create:**
-- `recHeader` — Header background
-- `lblAppTitle` — App title label
-- `btnNavDashboard`, `btnNavAdmin`, `btnNavAnalytics` — Navigation buttons
-- `lblUserName` — User display
+**Live app controls (source: coauthor YAML):**
+- `recHeader` — Header background (`Classic/Button` nav controls sit visually on top)
+- `lblAppTitle` — Title `Print Lab Dashboard`
+- `btnNavSchedule` — Navigates to `scrSchedule`
+- `btnNavAnalytics` — Label **Report** in Studio; `OnSelect` = `Set(varShowExportModal, true)`
+
+> **Removed in the live build:** `btnNavDashboard`, `btnNavAdmin`, and `lblUserName` are not present. `varCurrentPage` remains in `App.OnStart` for compatibility with older formulas but the header does not use multi-tab chrome.
 
 ### First: Rename the Screen
 
@@ -1236,7 +1331,7 @@ Collapsed version (containers closed) for quick reference:
 | X | `0` |
 | Y | `0` |
 | Width | `Parent.Width` |
-| Height | `60` |
+| Height | `55` |
 | Fill | `varColorHeader` |
 
 > This creates a dark gray header bar. `varColorHeader` is set in **App.OnStart** to `RGBA(77, 77, 77, 1)` (see Color Palette).
@@ -1251,7 +1346,7 @@ Collapsed version (containers closed) for quick reference:
 |----------|-------|
 | Text | `Print Lab Dashboard` |
 | X | `20` |
-| Y | `15` |
+| Y | `11` |
 | Width | `300` |
 | Height | `30` |
 | Font | `varAppFont` |
@@ -1259,62 +1354,53 @@ Collapsed version (containers closed) for quick reference:
 | Size | `18` |
 | Color | `Color.White` |
 
-### Adding Navigation Buttons
+### Adding `btnNavSchedule`
 
-#### btnNavDashboard
+9. Insert a **Button** (`Classic/Button`), rename to **`btnNavSchedule`**.
+10. Properties:
 
-9. Click **+ Insert** → **Button**.
-10. **Rename it:** `btnNavDashboard`
-11. Set these properties:
-   - **Text:** `"Dashboard"`
-   - **X:** `300`
-   - **Y:** `12`
-   - **Width:** `120`
-   - **Height:** `36`
+| Property | Value |
+|----------|-------|
+| Text | `"Schedule"` |
+| X | `1206` |
+| Y | `15` |
+| Width | `64` |
+| Height | `22` |
+| Size | `8` |
+| Font | `varAppFont` |
+| Color | `Color.White` |
+| Fill | `varColorPrimary` |
+| BorderColor / BorderThickness | `Color.Transparent`, `0` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Radius corners | `varBtnBorderRadius` (all four) |
+| OnSelect | `Navigate(scrSchedule, varScreenTransition)` |
 
-10. Set the **Fill** property (makes it highlight when selected):
+### Adding `btnNavAnalytics` (label: **Report**)
 
-**⬇️ FORMULA: Paste into Button Fill**
+11. Insert a **Button**, rename **`btnNavAnalytics`**.
+12. Properties (match live):
 
-```powerfx
-If(varCurrentPage = "Dashboard", RGBA(70, 130, 220, 1), RGBA(60, 60, 65, 1))
-```
+| Property | Value |
+|----------|-------|
+| Text | `"Report"` |
+| X | `1278` |
+| Y | `15` |
+| Width | `58` |
+| Height | `22` |
+| Size | `8` |
+| Font | `varAppFont` |
+| Color | `Color.White` |
+| Fill | `varColorPrimary` |
+| BorderColor / BorderThickness | `Color.Transparent`, `0` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+| Radius corners | `varBtnBorderRadius` (all four) |
+| OnSelect | `Set(varShowExportModal, true)` |
 
-11. Set the **Color** property:
-
-```powerfx
-Color.White
-```
-
-12. Set the **OnSelect** property:
-
-```powerfx
-Set(varCurrentPage, "Dashboard")
-```
-
-13. Repeat steps 8-12 to create **Admin** and **Analytics** buttons:
-
-| Button | X | OnSelect |
-|--------|---|----------|
-| Admin | `430` | `Notify("Admin features coming soon!", NotificationType.Information)` |
-| Analytics | `560` | `Set(varShowExportModal, true)` |
-
-### Adding User Info Display (lblUserName)
-
-18. Click **+ Insert** → **Text label**.
-19. **Rename it:** `lblUserName`
-20. Set these properties:
-   - **Text:** `varMeName`
-   - **X:** `Parent.Width - 260`
-   - **Y:** `18`
-   - **Width:** `200`
-   - **Height:** `24`
-   - **Align:** `Align.Right`
-   - **Color:** `varColorBorder`
-   - **Size:** `12`
-   - **Visible:** `false`
-
-> 💡 **Hidden by default:** The user name label is hidden to keep the header clean. Set `Visible: true` if you want to display the user's name in the header.
+> **Export modal:** See [Step 12G](#step-12g-building-the-export-modal). The header button does not use `Launch()`; it toggles `varShowExportModal`.
 
 ### ✅ Step 4 Checklist
 
@@ -1325,10 +1411,8 @@ After completing this step, your Tree view should look like:
 ▼ scrDashboard
     recHeader
     lblAppTitle
-    btnNavDashboard
-    btnNavAdmin
+    btnNavSchedule
     btnNavAnalytics
-    lblUserName
 ```
 
 ---
@@ -1350,7 +1434,7 @@ After completing this step, your Tree view should look like:
 | Width | `Parent.Width` |
 | Height | `55` |
 | BorderColor | `RGBA(0, 18, 107, 1)` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
+| FocusedBorderThickness | `0` (live app; avoids a heavy focus ring on the tab strip) |
 | TemplateSize | `varTabGalleryHeight` |
 | TemplatePadding | `3` |
 | Transition | `Transition.Push` |
@@ -1392,12 +1476,12 @@ Table(
 | PressedFill | `ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)` |
 | HoverColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | PressedColor | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
-| BorderColor | `varInputBorderColor` |
+| BorderColor | `If(varSelectedStatus = ThisItem.Status, Color.Transparent, varInputBorderColor)` |
 | BorderThickness | `1` |
 | DisabledBorderColor | `RGBA(166, 166, 166, 1)` |
-| FocusedBorderColor | `varInputBorderColor` |
+| FocusedBorderColor | `Color.Transparent` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
+| HoverBorderColor | `If(varSelectedStatus = ThisItem.Status, Color.Transparent, ColorFade(Self.BorderColor, 20%))` |
 | PressedBorderColor | `Self.Fill` |
 
 > 💡 **Why these sizes?** 9 tabs at `Width = 141` with `TemplatePadding = 3` recreate the original compact tab strip while still fitting common tablet widths. Font size `10` keeps "Paid & Picked Up" readable without the rounded pill treatment.
@@ -12802,48 +12886,27 @@ The full messaging functionality (view history AND compose) is in the unified Me
 
 ## Step 17C: Adding the Message Button to Job Cards
 
-Add a "Send Message" button to each job card in the gallery.
+The **live app** uses a single compact control **`btnViewMessages`** (label **Messages**) plus **`lblUnreadBadge`** — there is **no** separate `btnCardSendMessage` on the card. Compose/reply happens inside **Step 17D** (`conViewMessagesModal`).
+
+> **Legacy docs:** Earlier versions added `btnCardSendMessage` beside **Files** / **Archive**. If you still have that control, you can delete it and rely on `btnViewMessages` only.
 
 ---
 
-### Gallery Message Button (btnCardSendMessage)
+### Gallery message entry (`btnViewMessages`)
 
-1. Inside `galJobCards`, click **+ Insert** → **Button**.
-2. **Rename it:** `btnCardSendMessage`
-3. Set properties:
+1. Inside `galJobCards`, confirm the control **`btnViewMessages`** (**Classic/Button**).
+2. Typical pattern (match live YAML):
 
-| Property | Value |
-|----------|-------|
-| Text | `"Message"` |
-| X | `12 + (Parent.TemplateWidth - 40) / 3 + 8` |
-| Y | `360` |
-| Width | `(Parent.TemplateWidth - 40) / 3` |
-| Height | `varBtnHeight` |
-| Fill | `Color.White` |
-| Color | `varColorPrimary` |
-| HoverColor | `Color.White` |
-| HoverFill | `varColorPrimary` |
-| PressedFill | `ColorFade(varColorPrimary, -15%)` |
-| BorderColor | `varColorPrimary` |
-| BorderThickness | `varInputBorderThickness` |
-| RadiusTopLeft | `varBtnBorderRadius` |
-| RadiusTopRight | `varBtnBorderRadius` |
-| RadiusBottomLeft | `varBtnBorderRadius` |
-| RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `varBtnFontSize` |
+| Property | Example (tune X/Y to your template) |
+|----------|--------------------------------------|
+| Text | `"Messages"` |
+| OnSelect | `Set(varSelectedItem, ThisItem); Set(varShowViewMessagesModal, ThisItem.ID)` |
+| Size | `9` (compact tier) |
 | Font | `varAppFont` |
-| FocusedBorderThickness | `varFocusedBorderThickness` |
 
-> Note: btnFiles, btnCardSendMessage, and btnArchive are positioned in a row with even 8px spacing.
+3. **`lblUnreadBadge`** — small label over the button showing unread count; **Visible** when count `> 0`.
 
-4. Set **OnSelect:**
-
-```powerfx
-Set(varSelectedItem, ThisItem);
-Set(varShowViewMessagesModal, ThisItem.ID)
-```
-
-> **Note:** This button opens the same unified Messages Modal as the "View Messages" button. Staff can view conversation history and send new messages from one place.
+> **Note:** `btnFiles`, `btnViewMessages`, and `btnArchive` share the action row on the card; spacing is driven by each control’s `X` / `Width` in the live app.
 
 ---
 
@@ -15038,6 +15101,506 @@ Blank()
 | Message | `RGBA(70, 130, 220, 1)` | Same | White |
 
 ---
+
+
+
+---
+
+# Live coauthor control inventory
+
+This section is the **authoritative list of controls** in `scrDashboard` as exported from **Canvas coauthor** (`sync_canvas` → `PowerApps/canvas-coauthor/scrDashboard.pa.yaml`). Use it when the step-by-step tree diagrams and older screenshots disagree with Studio.
+
+﻿## scrDashboard control inventory
+
+> Generated from coauthor YAML (sync_canvas). Parent is the immediate container in the YAML tree (screen, gallery, or container).
+
+### Attachments_DataCard1
+
+| Control | Type |
+|---------|------|
+| `DataCardKey13` | Label |
+| `DataCardValue13` | Attachments |
+| `ErrorMessage13` | Label |
+| `StarVisible13` | Label |
+
+### conApprovalModal
+
+| Control | Type |
+|---------|------|
+| `btnApprovalCancel` | Classic/Button |
+| `btnApprovalClose` | Classic/Button |
+| `btnApprovalConfirm` | Classic/Button |
+| `btnApproveAddPlates` | Classic/Button |
+| `chkApprovalOwnMaterial` | Classic/CheckBox |
+| `ddApprovalStaff` | Classic/ComboBox |
+| `ddSlicedOnComputer` | Classic/ComboBox |
+| `lblApprovalCommentsLabel` | Label |
+| `lblApprovalCostLabel` | Label |
+| `lblApprovalCostValue` | Label |
+| `lblApprovalStaffLabel` | Label |
+| `lblApprovalStudent` | Label |
+| `lblApprovalTimeLabel` | Label |
+| `lblApprovalTitle` | Label |
+| `lblApprovalWeightLabel` | Label |
+| `lblApprovePlatesInfo` | Label |
+| `lblSlicedOnLabel` | Label |
+| `recApprovalModal` | Rectangle |
+| `recApprovalOverlay` | Rectangle |
+| `txtApprovalComments` | Classic/TextInput |
+| `txtEstimatedTime` | Classic/TextInput |
+| `txtEstimatedWeight` | Classic/TextInput |
+
+### conArchiveModal
+
+| Control | Type |
+|---------|------|
+| `btnArchiveCancel` | Classic/Button |
+| `btnArchiveClose` | Classic/Button |
+| `btnArchiveConfirm` | Classic/Button |
+| `ddArchiveStaff` | Classic/ComboBox |
+| `lblArchiveReasonLabel` | Label |
+| `lblArchiveStaffLabel` | Label |
+| `lblArchiveTitle` | Label |
+| `lblArchiveWarning` | Label |
+| `recArchiveModal` | Rectangle |
+| `recArchiveOverlay` | Rectangle |
+| `txtArchiveReason` | Classic/TextInput |
+
+### conBatchPaymentModal
+
+| Control | Type |
+|---------|------|
+| `btnBatchPaymentCancel` | Classic/Button |
+| `btnBatchPaymentClose` | Classic/Button |
+| `btnBatchPaymentConfirm` | Classic/Button |
+| `chkBatchOwnMaterial` | Classic/CheckBox |
+| `ddBatchPaymentType` | Classic/ComboBox |
+| `ddBatchStaff` | Classic/ComboBox |
+| `dpBatchPaymentDate` | Classic/DatePicker |
+| `galBatchItems` | Gallery |
+| `lblBatchCostLabel` | Label |
+| `lblBatchCostValue` | Label |
+| `lblBatchItemsHeader` | Label |
+| `lblBatchPayerNameLabel` | Label |
+| `lblBatchPaymentDateLabel` | Label |
+| `lblBatchPaymentTypeLabel` | Label |
+| `lblBatchStaffLabel` | Label |
+| `lblBatchSummary` | Label |
+| `lblBatchTitle` | Label |
+| `lblBatchTransLabel` | Label |
+| `lblBatchWeightLabel` | Label |
+| `recBatchPaymentModal` | Rectangle |
+| `recBatchPaymentOverlay` | Rectangle |
+| `txtBatchPayerName` | Classic/TextInput |
+| `txtBatchTransaction` | Classic/TextInput |
+| `txtBatchWeight` | Classic/TextInput |
+
+### conBatchSelectionFooter
+
+| Control | Type |
+|---------|------|
+| `btnBatchCancel` | Classic/Button |
+| `btnProcessBatchPayment` | Classic/Button |
+| `lblBatchCount` | Label |
+| `lblBatchEstTotal` | Label |
+| `lblBatchModeActive` | Label |
+| `lblBatchStudents` | Label |
+| `recBatchFooterBg` | Rectangle |
+
+### conBuildPlatesModal
+
+| Control | Type |
+|---------|------|
+| `btnBuildPlatesAdd` | Classic/Button |
+| `btnBuildPlatesClose` | Classic/Button |
+| `btnBuildPlatesDone` | Classic/Button |
+| `galBuildPlates` | Gallery |
+| `lblBuildPlatesProgressModal` | Label |
+| `lblBuildPlatesTitle` | Label |
+| `lblTotalSlicedLabel` | Label |
+| `recBuildPlatesDivider1` | Rectangle |
+| `recBuildPlatesDivider2` | Rectangle |
+| `recBuildPlatesDivider3` | Rectangle |
+| `recBuildPlatesModal` | Rectangle |
+| `recBuildPlatesOverlay` | Rectangle |
+
+### conCompleteModal
+
+| Control | Type |
+|---------|------|
+| `btnCompleteCancel` | Classic/Button |
+| `btnCompleteClose` | Classic/Button |
+| `btnCompleteConfirm` | Classic/Button |
+| `ddCompleteStaff` | Classic/ComboBox |
+| `lblActualPrinters` | Label |
+| `lblCompleteStaffLabel` | Label |
+| `lblCompleteTitle` | Label |
+| `lblCompleteWarning` | Label |
+| `recCompleteModal` | Rectangle |
+| `recCompleteOverlay` | Rectangle |
+
+### conDetailsModal
+
+| Control | Type |
+|---------|------|
+| `btnDetailsCancel` | Classic/Button |
+| `btnDetailsClose` | Classic/Button |
+| `btnDetailsConfirm` | Classic/Button |
+| `chkDetailsOwnMaterial` | Classic/CheckBox |
+| `ddDetailsColor` | Classic/ComboBox |
+| `ddDetailsMethod` | Classic/ComboBox |
+| `ddDetailsPrinter` | Classic/ComboBox |
+| `ddDetailsSlicedOnComputer` | Classic/ComboBox |
+| `ddDetailsStaff` | Classic/ComboBox |
+| `lblDetailsColorLabel` | Label |
+| `lblDetailsCostLabel` | Label |
+| `lblDetailsCostValue` | Label |
+| `lblDetailsCurrent` | Label |
+| `lblDetailsCurrentLabel` | Label |
+| `lblDetailsHoursLabel` | Label |
+| `lblDetailsMethodLabel` | Label |
+| `lblDetailsPrinterLabel` | Label |
+| `lblDetailsSlicedOnLabel` | Label |
+| `lblDetailsStaffLabel` | Label |
+| `lblDetailsTitle` | Label |
+| `lblDetailsTransLabel` | Label |
+| `lblDetailsWeightLabel` | Label |
+| `recDetailsModal` | Rectangle |
+| `recDetailsOverlay` | Rectangle |
+| `txtDetailsHours` | Classic/TextInput |
+| `txtDetailsTransaction` | Classic/TextInput |
+| `txtDetailsWeight` | Classic/TextInput |
+
+### conExportModal
+
+| Control | Type |
+|---------|------|
+| `btnExportClose` | Classic/Button |
+| `btnExportDownload` | Classic/Button |
+| `ddExportMonth` | Classic/DropDown |
+| `ddExportYear` | Classic/DropDown |
+| `lblExportMonthLabel` | Label |
+| `lblExportNote` | Label |
+| `lblExportPreview` | Label |
+| `lblExportTitle` | Label |
+| `lblExportYearLabel` | Label |
+| `recExportBox` | Rectangle |
+| `recExportOverlay` | Rectangle |
+
+### conFileModal
+
+| Control | Type |
+|---------|------|
+| `btnFileCancel` | Classic/Button |
+| `btnFileClose` | Classic/Button |
+| `btnFileSave` | Classic/Button |
+| `ddFileActor` | Classic/ComboBox |
+| `frmAttachmentsEdit` | Form |
+| `lblFileStaffLabel` | Label |
+| `lblFileTitle` | Label |
+| `recFileModal` | Rectangle |
+| `recFileOverlay` | Rectangle |
+
+### conLoadingOverlay
+
+| Control | Type |
+|---------|------|
+| `lblLoadingMessage` | Label |
+| `lblLoadingSpinner` | Label |
+| `recLoadingBox` | Rectangle |
+| `recLoadingOverlay` | Rectangle |
+
+### conNotesModal
+
+| Control | Type |
+|---------|------|
+| `btnAddNote` | Classic/Button |
+| `btnNotesCancel` | Classic/Button |
+| `btnNotesClose` | Classic/Button |
+| `ddNotesStaff` | Classic/ComboBox |
+| `lblAddNoteLabel` | Label |
+| `lblNotesStaffLabel` | Label |
+| `lblNotesTitle` | Label |
+| `lblStaffNotesHeader` | Label |
+| `recNotesModal` | Rectangle |
+| `recNotesOverlay` | Rectangle |
+| `txtAddNote` | Classic/TextInput |
+| `txtStaffNotesContent` | Classic/TextInput |
+
+### conPaymentModal
+
+| Control | Type |
+|---------|------|
+| `btnAddMoreItems` | Classic/Button |
+| `btnPaymentCancel` | Classic/Button |
+| `btnPaymentClose` | Classic/Button |
+| `btnPaymentConfirm` | Classic/Button |
+| `chkOwnMaterial` | Classic/CheckBox |
+| `chkPartialPickup` | Classic/CheckBox |
+| `chkPayerSameAsStudent` | Classic/CheckBox |
+| `ddPaymentStaff` | Classic/ComboBox |
+| `ddPaymentType` | Classic/DropDown |
+| `dpPaymentDate` | Classic/DatePicker |
+| `galPaymentHistory` | Gallery |
+| `galPlatesPickup` | Gallery |
+| `lblPaidSoFar` | Label |
+| `lblPayerNameLabel` | Label |
+| `lblPayerTigerCardLabel` | Label |
+| `lblPaymentCostLabel` | Label |
+| `lblPaymentCostValue` | Label |
+| `lblPaymentDateLabel` | Label |
+| `lblPaymentHistoryHeader` | Label |
+| `lblPaymentNotesLabel` | Label |
+| `lblPaymentStaffLabel` | Label |
+| `lblPaymentStudent` | Label |
+| `lblPaymentTitle` | Label |
+| `lblPaymentTransLabel` | Label |
+| `lblPaymentTypeLabel` | Label |
+| `lblPaymentWeightLabel` | Label |
+| `lblPlatesHint` | Label |
+| `lblPlatesPickupHeader` | Label |
+| `lblRemainingEst` | Label |
+| `recPaymentModal` | Rectangle |
+| `recPaymentOverlay` | Rectangle |
+| `recPaymentVerticalDivider` | Rectangle |
+| `recPlatesDivider` | Rectangle |
+| `txtPayerName` | Classic/TextInput |
+| `txtPayerTigerCard` | Classic/TextInput |
+| `txtPaymentNotes` | Classic/TextInput |
+| `txtPaymentTransaction` | Classic/TextInput |
+| `txtPaymentWeight` | Classic/TextInput |
+
+### conRejectModal
+
+| Control | Type |
+|---------|------|
+| `btnRejectCancel` | Classic/Button |
+| `btnRejectClose` | Classic/Button |
+| `btnRejectConfirm` | Classic/Button |
+| `chkGeometry` | Classic/CheckBox |
+| `chkMessy` | Classic/CheckBox |
+| `chkNotJoined` | Classic/CheckBox |
+| `chkNotSolid` | Classic/CheckBox |
+| `chkOverhangs` | Classic/CheckBox |
+| `chkScale` | Classic/CheckBox |
+| `chkTooSmall` | Classic/CheckBox |
+| `ddRejectStaff` | Classic/ComboBox |
+| `lblRejectCommentsLabel` | Label |
+| `lblRejectReasonsLabel` | Label |
+| `lblRejectStaffLabel` | Label |
+| `lblRejectStudent` | Label |
+| `lblRejectTitle` | Label |
+| `recRejectModal` | Rectangle |
+| `recRejectOverlay` | Rectangle |
+| `txtRejectComments` | Classic/TextInput |
+
+### conRevertModal
+
+| Control | Type |
+|---------|------|
+| `btnRevertCancel` | Classic/Button |
+| `btnRevertClose` | Classic/Button |
+| `btnRevertConfirm` | Classic/Button |
+| `ddRevertStaff` | Classic/ComboBox |
+| `ddRevertTarget` | Classic/DropDown |
+| `lblRevertCurrentStatus` | Label |
+| `lblRevertReasonLabel` | Label |
+| `lblRevertStaffLabel` | Label |
+| `lblRevertTargetLabel` | Label |
+| `lblRevertTitle` | Label |
+| `recRevertModal` | Rectangle |
+| `recRevertOverlay` | Rectangle |
+| `txtRevertReason` | Classic/TextInput |
+
+### conStudentNoteModal
+
+| Control | Type |
+|---------|------|
+| `btnStudentNoteClose` | Classic/Button |
+| `btnStudentNoteOk` | Classic/Button |
+| `lblStudentNoteTitle` | Label |
+| `recStudentNoteModal` | Rectangle |
+| `recStudentNoteOverlay` | Rectangle |
+| `txtStudentNoteContent` | Classic/TextInput |
+
+### conViewMessagesModal
+
+| Control | Type |
+|---------|------|
+| `btnViewMsgCancel` | Classic/Button |
+| `btnViewMsgClose` | Classic/Button |
+| `btnViewMsgMarkRead` | Classic/Button |
+| `btnViewMsgSend` | Classic/Button |
+| `ddViewMsgStaff` | Classic/ComboBox |
+| `galViewMessages` | Gallery |
+| `lblViewMsgBodyLabel` | Label |
+| `lblViewMsgCharCount` | Label |
+| `lblViewMsgStaffLabel` | Label |
+| `lblViewMsgSubjectLabel` | Label |
+| `lblViewMsgSubtitle` | Label |
+| `lblViewMsgTitle` | Label |
+| `recViewMsgModal` | Rectangle |
+| `recViewMsgOverlay` | Rectangle |
+| `recViewMsgSeparator` | Rectangle |
+| `txtViewMsgBody` | Classic/TextInput |
+| `txtViewMsgSubject` | Classic/TextInput |
+
+### frmAttachmentsEdit
+
+| Control | Type |
+|---------|------|
+| `Attachments_DataCard1` | TypedDataCard |
+
+### galBatchItems
+
+| Control | Type |
+|---------|------|
+| `btnRemoveFromBatch` | Classic/Button |
+| `lblBatchItemRow` | Label |
+
+### galBuildPlates
+
+| Control | Type |
+|---------|------|
+| `btnMarkDone` | Classic/Button |
+| `btnMarkPrinting` | Classic/Button |
+| `btnRemovePlate` | Classic/Button |
+| `drpPlateMachine` | Classic/DropDown |
+| `lblPlateLabel` | Label |
+| `lblPlateStatus` | Label |
+| `recPlateRowBg` | Rectangle |
+
+### galJobCards
+
+| Control | Type |
+|---------|------|
+| `btnApprove` | Classic/Button |
+| `btnArchive` | Classic/Button |
+| `btnBuildPlates` | Classic/Button |
+| `btnComplete` | Classic/Button |
+| `btnEditDetails` | Classic/Button |
+| `btnFiles` | Classic/Button |
+| `btnPickedUp` | Classic/Button |
+| `btnReject` | Classic/Button |
+| `btnRevert` | Classic/Button |
+| `btnStartPrint` | Classic/Button |
+| `btnStudentNote` | Classic/Button |
+| `btnViewMessages` | Classic/Button |
+| `btnViewNotes` | Classic/Button |
+| `cirColorDot` | Circle |
+| `cirColorDotBackdrop` | Circle |
+| `icoBatchCheck` | Classic/Icon |
+| `icoLightbulb` | Classic/Icon |
+| `lblBuildPlatesProgress` | Label |
+| `lblColorText` | Label |
+| `lblCourse` | Label |
+| `lblCourseLabel` | Label |
+| `lblcreated` | Label |
+| `lblCreatedLabel` | Label |
+| `lblDetailsHeader` | Label |
+| `lblDiscipline` | Label |
+| `lblDisciplineLabel` | Label |
+| `lblEstimates` | Label |
+| `lblFilename` | Label |
+| `lblJobId` | Label |
+| `lblJobIdLabel` | Label |
+| `lblMessagesHeader` | Label |
+| `lblNotesHeader` | Label |
+| `lblPaymentHistoryLabel` | Label |
+| `lblPaymentHistoryValue` | Label |
+| `lblPrinter` | Label |
+| `lblProjectType` | Label |
+| `lblProjectTypeLabel` | Label |
+| `lblSlicedOn` | Label |
+| `lblStudentEmail` | Label |
+| `lblStudentName` | Label |
+| `lblSubmittedTime` | Label |
+| `lblTransactionLabel` | Label |
+| `lblTransactionValue` | Label |
+| `lblUnreadBadge` | Label |
+| `recCardBackground` | Rectangle |
+
+### galPaymentHistory
+
+| Control | Type |
+|---------|------|
+| `lblHistSummary` | Label |
+| `recHistRowBg` | Rectangle |
+
+### galPlatesPickup
+
+| Control | Type |
+|---------|------|
+| `chkPlate` | Classic/CheckBox |
+| `lblPlateName` | Label |
+
+### galStatusTabs
+
+| Control | Type |
+|---------|------|
+| `btnStatusTab` | Classic/Button |
+
+### galViewMessages
+
+| Control | Type |
+|---------|------|
+| `icoVMsgDirection` | Classic/Icon |
+| `lblVMsgAuthor` | Label |
+| `lblVMsgContent` | Label |
+| `lblVMsgDirectionBadge` | Label |
+| `recVMsgBg` | Rectangle |
+
+### scrDashboard
+
+| Control | Type |
+|---------|------|
+| `audNotification` | Audio |
+| `btnClearFilters` | Classic/Button |
+| `btnNavAnalytics` | Classic/Button |
+| `btnNavSchedule` | Classic/Button |
+| `btnRefresh` | Classic/Button |
+| `chkNeedsAttention` | Classic/CheckBox |
+| `conApprovalModal` | GroupContainer |
+| `conArchiveModal` | GroupContainer |
+| `conBatchPaymentModal` | GroupContainer |
+| `conBatchSelectionFooter` | GroupContainer |
+| `conBuildPlatesModal` | GroupContainer |
+| `conCompleteModal` | GroupContainer |
+| `conDetailsModal` | GroupContainer |
+| `conExportModal` | GroupContainer |
+| `conFileModal` | GroupContainer |
+| `conLoadingOverlay` | GroupContainer |
+| `conNotesModal` | GroupContainer |
+| `conPaymentModal` | GroupContainer |
+| `conRejectModal` | GroupContainer |
+| `conRevertModal` | GroupContainer |
+| `conStudentNoteModal` | GroupContainer |
+| `conViewMessagesModal` | GroupContainer |
+| `ddSortOrder` | Classic/DropDown |
+| `galJobCards` | Gallery |
+| `galStatusTabs` | Gallery |
+| `lblAppTitle` | Label |
+| `lblEmptyState` | Label |
+| `recFilterBar` | Rectangle |
+| `recHeader` | Rectangle |
+| `tmrAutoRefresh` | Timer |
+| `txtSearch` | Classic/TextInput |
+
+
+
+
+---
+
+# Audit findings (live app vs docs)
+
+| Topic | Finding |
+|-------|---------|
+| **App.OnStart** | The live formula includes `// === SCHEDULE SCREEN STATE ===` **twice** (initial defaults, then again after `varRefreshInterval`). The second block resets `colEditShifts` with empty `ShiftStart`/`ShiftEnd` strings. Documented to match the live app; consider consolidating in a future app edit. |
+| **Step 4 header** | Docs previously described `btnNavDashboard`, `btnNavAdmin`, and `lblUserName`. The live app uses **`btnNavSchedule`** + **`btnNavAnalytics`** (`Report`), `recHeader.Height = 55`, and `lblAppTitle.Y = 11`. |
+| **Job card messaging** | Older steps referenced **`btnCardSendMessage`** on the card template. The live YAML has **`btnViewMessages`** + **`lblUnreadBadge`** only; compose/send is inside **conViewMessagesModal**. |
+| **Approval modal tree** | **`lblWeightValidation`** is not present in the live app; sliced-on computer, own material, and build-plates shortcuts are. |
+| **DisplayFields for staff** | Live `colStaff` includes `StaffID`, `AidType`, and `SchedSortOrder` (see variable table). ComboBox `DisplayFields` may use `["MemberName"]` or include email — match your live control. |
+| **galStatusTabs** | Step 5 was updated: live **`FocusedBorderThickness`** is `0`. |
 
 # Next Steps
 

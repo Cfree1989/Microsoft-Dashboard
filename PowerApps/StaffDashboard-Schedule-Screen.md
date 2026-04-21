@@ -5,6 +5,28 @@
 
 > 📚 **This is a screen addition to the existing Staff Dashboard app.** Complete the SharePoint update before starting here.
 
+**Live YAML (coauthor):** [PowerApps/canvas-coauthor/scrSchedule.pa.yaml](canvas-coauthor/scrSchedule.pa.yaml) — run **`sync_canvas`** before comparing Studio to this repo.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Design Standards](#design-standards)
+3. [Overview](#overview-how-the-schedule-screen-works)
+4. [Step 1: Update App.OnStart](#step-1-update-apponstart)
+5. [Step 2: Add the Schedule Nav Button to scrDashboard](#step-2-add-the-schedule-nav-button-to-scrdashboard)
+6. [Step 3: Create the scrSchedule Screen](#step-3-create-the-scrschedule-screen)
+7. [Step 4: Build the Header Bar](#step-4-build-the-header-bar)
+8. [Step 5: Build the Edit Bar](#step-5-build-the-edit-bar)
+9. [Step 6: Build the HtmlViewer schedule grid](#step-6-build-the-htmlviewer-schedule-grid)
+10. [Step 7: Save Logic](#step-7-save-logic)
+11. [Step 8: Sortable Totals Section](#step-8-sortable-totals-section)
+12. [Troubleshooting](#troubleshooting)
+13. [Seasonal Maintenance](#seasonal-maintenance)
+14. [Live coauthor control inventory (scrSchedule)](#live-coauthor-control-inventory-scrschedule)
+15. [Audit findings](#audit-findings-schedule-doc-vs-live-yaml)
+
 ---
 
 ## Prerequisites
@@ -194,9 +216,11 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 
 ## Step 2: Add the Schedule Nav Button to scrDashboard
 
+> **Live app / coauthor:** The synced Staff Dashboard already includes **`btnNavSchedule`** next to **`btnNavAnalytics`** (`Report`). Use this step only when you are building from scratch or your header is missing the control.
+
 1. In Power Apps Studio, go to **scrDashboard**
-2. Find `btnNavAnalytics` (the "Report" button in the top-right of the header bar)
-3. Insert a new **Button** control to the left of it
+2. Find `btnNavAnalytics` (the **Report** button in the top-right of the header bar)
+3. Insert a new **Button** control to the left of it (skip if `btnNavSchedule` already exists)
 
 | Property | Value |
 |----------|-------|
@@ -398,10 +422,10 @@ Use a **single-item vertical gallery** as the page viewport so the **page** scro
 | Width | `=Parent.Width` |
 | Height | `=Parent.Height - recSchedHeader.Height` |
 | Y | `=recSchedHeader.Height` |
-| Items | `=[1]` |
+| Items | `=[varSchedScrollVersion]` (single-row “refresh key” gallery — increment to rebuild template and clear `drpSchedName`) |
 | ShowScrollbar | `true` |
 | TemplatePadding | `0` |
-| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + CountRows(Filter(colTimeSlots, Idx < 16)) * 30) + Max(CountRows(colSchedStaff), 1) * 28 + 124` |
+| TemplateSize | `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76) + (80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28) + Max(CountRows(colSchedStaff), 1) * 28 + 124` |
 
 > **Why this wrapper matters:** it becomes the single vertical scroll surface for everything under the header. The edit bar, schedule grid, totals card, and totals footer all live inside one gallery template, so you no longer get separate vertical scrollbars for the schedule and totals areas.
 
@@ -1045,3 +1069,98 @@ Older drafts used **separate** left/right gutter stacks and **nested** per-day t
 At the start of each new semester, staff update their own schedule in the app — saving **replaces** their rows in `StaffShifts` for that email.
 
 To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in grid view** and delete rows (or filter/export first if you need a record).
+
+---
+
+# Live coauthor control inventory (scrSchedule)
+
+> Synced from `PowerApps/canvas-coauthor/scrSchedule.pa.yaml` via `sync_canvas`. **Parent** is the immediate YAML container.
+
+﻿## scrSchedule control inventory
+
+> Generated from coauthor YAML (sync_canvas). Parent is the immediate container in the YAML tree (screen, gallery, or container).
+
+### conSchedScrollBody
+
+| Control | Type |
+|---------|------|
+| `btnSchedAddShift` | Classic/Button |
+| `btnSchedClear` | Classic/Button |
+| `btnSchedSave` | Classic/Button |
+| `btnSchedTotalsSortDir` | Classic/Button |
+| `drpSchedName` | Classic/ComboBox |
+| `drpSchedTotalsSort` | Classic/DropDown |
+| `galEditShifts` | Gallery |
+| `galSchedTotals` | Gallery |
+| `htmlSchedGrid` | HtmlViewer |
+| `lblSchedAidInfo` | Label |
+| `lblSchedDropdownHint` | Label |
+| `lblSchedTotalsFooterFri` | Label |
+| `lblSchedTotalsFooterMon` | Label |
+| `lblSchedTotalsFooterThu` | Label |
+| `lblSchedTotalsFooterTitle` | Label |
+| `lblSchedTotalsFooterTotal` | Label |
+| `lblSchedTotalsFooterTue` | Label |
+| `lblSchedTotalsFooterWed` | Label |
+| `lblSchedTotalsHeaderFri` | Label |
+| `lblSchedTotalsHeaderMax` | Label |
+| `lblSchedTotalsHeaderMon` | Label |
+| `lblSchedTotalsHeaderRole` | Label |
+| `lblSchedTotalsHeaderStudent` | Label |
+| `lblSchedTotalsHeaderThu` | Label |
+| `lblSchedTotalsHeaderTotal` | Label |
+| `lblSchedTotalsHeaderTue` | Label |
+| `lblSchedTotalsHeaderWed` | Label |
+| `lblSchedTotalsTitle` | Label |
+| `recSchedEditBar` | Rectangle |
+| `recSchedTotalsCard` | Rectangle |
+| `recSchedTotalsFooter` | Rectangle |
+| `recSchedTotalsHeader` | Rectangle |
+
+### galEditShifts
+
+| Control | Type |
+|---------|------|
+| `btnGalShiftRemove` | Classic/Button |
+| `drpGalShiftDay` | Classic/DropDown |
+| `drpGalShiftEnd` | Classic/DropDown |
+| `drpGalShiftStart` | Classic/DropDown |
+
+### galSchedTotals
+
+| Control | Type |
+|---------|------|
+| `lblSchedTotalsFri` | Label |
+| `lblSchedTotalsMax` | Label |
+| `lblSchedTotalsMon` | Label |
+| `lblSchedTotalsRole` | Label |
+| `lblSchedTotalsStudent` | Label |
+| `lblSchedTotalsThu` | Label |
+| `lblSchedTotalsTotal` | Label |
+| `lblSchedTotalsTue` | Label |
+| `lblSchedTotalsWed` | Label |
+| `recSchedTotalsRowBg` | Rectangle |
+
+### scrSchedule
+
+| Control | Type |
+|---------|------|
+| `btnSchedBack` | Classic/Button |
+| `conSchedScrollBody` | Gallery |
+| `lblSchedTitle` | Label |
+| `recSchedHeader` | Rectangle |
+
+
+
+
+---
+
+# Audit findings (schedule doc vs live YAML)
+
+| Topic | Finding |
+|-------|---------|
+| **conSchedScrollBody.Items** | Docs previously showed `=[1]`; live app uses **`=[varSchedScrollVersion]`** as the gallery refresh key. |
+| **TemplateSize** | Live formula uses **`(80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28) + Max(CountRows(colSchedStaff), 1) * 28 + 124`**, not `* 30` for slot rows. Updated in this guide. |
+| **Root controls** | Live screen has `recSchedHeader`, `btnSchedBack`, `lblSchedTitle`, **`conSchedScrollBody`** (vertical gallery wrapping the whole scroll body). |
+
+
