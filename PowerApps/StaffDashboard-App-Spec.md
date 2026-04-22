@@ -13899,7 +13899,7 @@ Before adding the Audio control, you need to upload a sound file to the app's Me
 
 ## Adding the Timer Control (tmrAutoRefresh)
 
-The Timer control automatically refreshes data and checks for new NeedsAttention items.
+The Timer control automatically refreshes data and checks for new NeedsAttention items. It must also refresh `RequestComments` so message counts, unread badges, and the red "Messages" button state do not go stale between manual refreshes.
 
 ### Instructions
 
@@ -13929,7 +13929,8 @@ The Timer control automatically refreshes data and checks for new NeedsAttention
 Concurrent(
     Refresh(PrintRequests),
     Refresh(BuildPlates),
-    Refresh(Payments)
+    Refresh(Payments),
+    Refresh(RequestComments)
 );
 
 // Reload local collections used by job-card summaries
@@ -13961,7 +13962,7 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 | Step | What Happens |
 |------|--------------|
 | 1 | Timer fires every 30 seconds |
-| 2 | `Concurrent(Refresh(PrintRequests), Refresh(BuildPlates), Refresh(Payments))` fetches all three SharePoint lists in parallel |
+| 2 | `Concurrent(Refresh(PrintRequests), Refresh(BuildPlates), Refresh(Payments), Refresh(RequestComments))` fetches the dashboard and messaging lists in parallel |
 | 3 | `colAllBuildPlates` and `colAllPayments` are reloaded for job-card summaries |
 | 4 | Count current NeedsAttention items |
 | 5 | Compare to previous count stored in `varPrevAttentionCount` |

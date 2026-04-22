@@ -33,7 +33,8 @@ Screens:
               Concurrent(
                   Refresh(PrintRequests),
                   Refresh(BuildPlates),
-                  Refresh(Payments)
+                  Refresh(Payments),
+                  Refresh(RequestComments)
               );
 
               // Reload local collections used by job-card summaries
