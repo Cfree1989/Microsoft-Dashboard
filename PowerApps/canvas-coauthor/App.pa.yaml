@@ -7,7 +7,7 @@ App:
       Set(varMeName, User().FullName);
 
       // === SLICING COMPUTERS ===
-      // Loaded directly from SharePoint choices — adding a computer to the column auto-updates this
+      // Loaded directly from SharePoint choices - adding a computer to the column auto-updates this
       ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
       // === STATUS DEFINITIONS ===
@@ -76,7 +76,7 @@ App:
       Set(varBatchLastItemWeight, 0);
       Set(varBatchFinalCost, 0);
       Set(varBatchProcessedCount, 0);
-      // DateTime — use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
+      // DateTime - use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
       Set(varBatchRecordedAt, Now());
       Set(varPaymentRecordedAt, Now());
 
@@ -309,13 +309,6 @@ App:
       // === TIMER CONFIGURATION ===
       // Auto-refresh interval for dashboard data (milliseconds)
       Set(varRefreshInterval, 30000);                    // 30 seconds
-
-      // === SCHEDULE SCREEN STATE ===
-      Set(varSchedSelectedEmail, "");
-      Set(varSchedEditSaving, false);
-      Set(varSchedShowReorder, false);
-      ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "", ShiftEnd: ""});
-      Clear(colEditShifts);
 
       Set(varLoadingMessage, "")
     Theme: =PowerAppsTheme

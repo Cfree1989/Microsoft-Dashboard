@@ -1,11 +1,3 @@
-# ************************************************************************************************
-# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
-# Use the maker portal to create and edit your Power Apps.
-# 
-# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
-# 
-# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
-# ************************************************************************************************
 App:
   Properties:
     OnStart: |-
@@ -15,7 +7,7 @@ App:
       Set(varMeName, User().FullName);
 
       // === SLICING COMPUTERS ===
-      // Loaded directly from SharePoint choices — adding a computer to the column auto-updates this
+      // Loaded directly from SharePoint choices - adding a computer to the column auto-updates this
       ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer), {Name: ThisRecord.Value}));
 
       // === STATUS DEFINITIONS ===
@@ -56,6 +48,16 @@ App:
       Set(varShowBuildPlatesModal, 0);
       Set(varShowExportModal, false);
 
+      // === SCHEDULE SCREEN STATE ===
+      Set(varSchedSelectedEmail, "");
+      Set(varSchedEditSaving, false);
+      Set(varSchedShowReorder, false);
+      Set(varSchedTotalsSortBy, "Total");
+      Set(varSchedTotalsSortDesc, true);
+      Set(varSchedScrollVersion, 0);
+      ClearCollect(colEditShifts, {RowKey: "x", Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"});
+      Clear(colEditShifts);
+
       // === BATCH PAYMENT MODE ===
       // Controls multi-select batch payment functionality
       Set(varBatchSelectMode, false);
@@ -74,7 +76,7 @@ App:
       Set(varBatchLastItemWeight, 0);
       Set(varBatchFinalCost, 0);
       Set(varBatchProcessedCount, 0);
-      // DateTime — use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
+      // DateTime - use Now() (not Blank()) so App Checker infers a type. Flow H / I still send PaymentDate from the modal; these are legacy scratch fields if anything in the app references them.
       Set(varBatchRecordedAt, Now());
       Set(varPaymentRecordedAt, Now());
 
@@ -102,10 +104,62 @@ App:
       // Load all SharePoint data in parallel to reduce startup time and avoid 429 throttling.
       // Concurrent() fires these as a single batched request instead of sequential calls.
       Concurrent(
-          ClearCollect(colStaff, ForAll(Filter(Staff, Active = true), {MemberName: Member.DisplayName, MemberEmail: Member.Email, Role: Role, Active: Active})),
+          ClearCollect(
+              colStaff,
+              ForAll(
+                  Filter(Staff, Active = true),
+                  {
+                      StaffID:        ID,
+                      MemberName:     Member.DisplayName,
+                      MemberEmail:    Member.Email,
+                      Role:           Role,
+                      Active:         Active,
+                      AidType:        AidType.Value,
+                      SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                  }
+              )
+          ),
           ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
           ClearCollect(colAllBuildPlates, BuildPlates),
           ClearCollect(colAllPayments, Payments)
+      );
+
+      // === SCHEDULE: TIME SLOTS ===
+      // 17 rows: Idx 0-15 = grid start-of-block (8:30 AM-4:00 PM); Idx 16 = 4:30 PM end boundary for lookups only
+      ClearCollect(colTimeSlots,
+          {Idx: 0,  Label: "8:30 AM",  Minutes: 510},
+          {Idx: 1,  Label: "9:00 AM",  Minutes: 540},
+          {Idx: 2,  Label: "9:30 AM",  Minutes: 570},
+          {Idx: 3,  Label: "10:00 AM", Minutes: 600},
+          {Idx: 4,  Label: "10:30 AM", Minutes: 630},
+          {Idx: 5,  Label: "11:00 AM", Minutes: 660},
+          {Idx: 6,  Label: "11:30 AM", Minutes: 690},
+          {Idx: 7,  Label: "12:00 PM", Minutes: 720},
+          {Idx: 8,  Label: "12:30 PM", Minutes: 750},
+          {Idx: 9,  Label: "1:00 PM",  Minutes: 780},
+          {Idx: 10, Label: "1:30 PM",  Minutes: 810},
+          {Idx: 11, Label: "2:00 PM",  Minutes: 840},
+          {Idx: 12, Label: "2:30 PM", Minutes: 870},
+          {Idx: 13, Label: "3:00 PM",  Minutes: 900},
+          {Idx: 14, Label: "3:30 PM", Minutes: 930},
+          {Idx: 15, Label: "4:00 PM",  Minutes: 960},
+          {Idx: 16, Label: "4:30 PM",  Minutes: 990}
+      );
+
+      // === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
+      ClearCollect(colSchedColors,
+          {Idx: 0,  Hex: "#7B3F2B", Light: "#E8C9B8"},
+          {Idx: 1,  Hex: "#4A7C59", Light: "#B8D9C4"},
+          {Idx: 2,  Hex: "#C87941", Light: "#F0D4B0"},
+          {Idx: 3,  Hex: "#8B5E3C", Light: "#D9C0A8"},
+          {Idx: 4,  Hex: "#2E6B4F", Light: "#A8D4BE"},
+          {Idx: 5,  Hex: "#B34A2A", Light: "#EAB89A"},
+          {Idx: 6,  Hex: "#5B7A3A", Light: "#C0D4A0"},
+          {Idx: 7,  Hex: "#9B4520", Light: "#E8B898"},
+          {Idx: 8,  Hex: "#3D7060", Light: "#AACCB8"},
+          {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
+          {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
+          {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
       );
 
       // Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
