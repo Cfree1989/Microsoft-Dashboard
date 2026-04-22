@@ -741,7 +741,23 @@ Screens:
                   Color: =If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))
                   Height: =28
                   Icon: =If(ThisItem.ID in colBatchItems.ID, Icon.Check, Icon.Add)
-                  OnSelect: =If(ThisItem.ID in colBatchItems.ID, Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)), Collect(colBatchItems, ThisItem))
+                  OnSelect: |-
+                    =If(
+                        ThisItem.ID in colBatchItems.ID,
+                        Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)),
+                        If(
+                            CountRows(colBatchItems) = 0,
+                            Collect(colBatchItems, ThisItem),
+                            If(
+                                ThisItem.Method.Value = First(colBatchItems).Method.Value,
+                                Collect(colBatchItems, ThisItem),
+                                Notify(
+                                    "Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.",
+                                    NotificationType.Warning
+                                )
+                            )
+                        )
+                    )
                   Visible: =varBatchSelectMode && ThisItem.Status.Value = "Completed"
                   Width: =28
                   X: =299

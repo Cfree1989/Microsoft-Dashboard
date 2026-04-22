@@ -12125,9 +12125,11 @@ Set(varLoadingMessage, "")
 | Height | `28` |
 | Color | `If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))` |
 | Visible | `varBatchSelectMode && ThisItem.Status.Value = "Completed"` |
-| OnSelect | `If(ThisItem.ID in colBatchItems.ID, Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)), Collect(colBatchItems, ThisItem))` |
+| OnSelect | `If(ThisItem.ID in colBatchItems.ID, Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)), If(CountRows(colBatchItems) = 0, Collect(colBatchItems, ThisItem), If(ThisItem.Method.Value = First(colBatchItems).Method.Value, Collect(colBatchItems, ThisItem), Notify("Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.", NotificationType.Warning))))` |
 
 > 💡 **Batch Selection Indicator:** This icon appears in the top-right corner of cards when batch select mode is active. Shows a filled checkmark for selected items and an empty circle for unselected items. Only appears on "Completed" status cards since batch payment only applies to those.
+
+> **Keep the guard in sync with `recCardBackground.OnSelect`.** The icon and the card body must enforce the same single-method batch rule. If the first selected item is `Filament`, the icon must refuse to add a `Resin` job (and vice versa) with the same warning notification instead of silently building an invalid mixed batch.
 
 ---
 
