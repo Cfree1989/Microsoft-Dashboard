@@ -448,7 +448,7 @@ Set(varShowStudentNoteModal, 0);
 Set(varShowRevertModal, 0);
 Set(varShowBatchPaymentModal, 0);
 Set(varShowBuildPlatesModal, 0);
-Set(varShowExportModal, false);
+Set(varShowExportModal, 0);
 
 // === SCHEDULE SCREEN STATE ===
 Set(varSchedSelectedEmail, "");
@@ -780,7 +780,7 @@ Set(varLoadingMessage, "")
 | `colRevertedPlates` | Snapshot of `BuildPlates` rows targeted by the revert cascade (used to drive the `ForAll` patch) | Table |
 | `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
-| `varShowExportModal` | Controls export modal visibility | Boolean |
+| `varShowExportModal` | Controls export modal visibility (`0` = hidden, `1` = visible) | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
 | `colBatchSucceededItems` | Batch items saved successfully in the current run | Table |
@@ -1319,7 +1319,7 @@ Collapsed version (containers closed) for quick reference:
 - `recHeader` — Header background (`Classic/Button` nav controls sit visually on top)
 - `lblAppTitle` — Title `Print Lab Dashboard`
 - `btnNavSchedule` — Navigates to `scrSchedule`
-- `btnNavAnalytics` — Label **Report** in Studio; `OnSelect` = `Set(varShowExportModal, true)`
+- `btnNavAnalytics` — Label **Report** in Studio; `OnSelect` = `Set(varShowExportModal, 1)`
 
 > **Removed in the live build:** `btnNavDashboard`, `btnNavAdmin`, and `lblUserName` are not present. `varCurrentPage` remains in `App.OnStart` for compatibility with older formulas but the header does not use multi-tab chrome.
 
@@ -1408,7 +1408,7 @@ Collapsed version (containers closed) for quick reference:
 | PressedFill | `varColorPrimaryPressed` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | Radius corners | `varBtnBorderRadius` (all four) |
-| OnSelect | `Set(varShowExportModal, true)` |
+| OnSelect | `Set(varShowExportModal, 1)` |
 
 > **Export modal:** See [Step 12G](#step-12g-building-the-export-modal). The header button does not use `Launch()`; it toggles `varShowExportModal`.
 
@@ -10627,7 +10627,7 @@ Before moving on, verify:
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0)` |
-| **Visible** | `varShowExportModal` |
+| **Visible** | `varShowExportModal <> 0` |
 
 > 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
 
@@ -10646,7 +10646,7 @@ Before moving on, verify:
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
 | Fill | `varColorOverlay` |
-| OnSelect | `Set(varShowExportModal, false)` |
+| OnSelect | `Set(varShowExportModal, 0)` |
 
 ---
 
@@ -10705,7 +10705,7 @@ Before moving on, verify:
 | HoverFill | `RGBA(0, 0, 0, 0.05)` |
 | BorderThickness | `0` |
 | Size | `14` |
-| OnSelect | `Set(varShowExportModal, false)` |
+| OnSelect | `Set(varShowExportModal, 0)` |
 
 ---
 
@@ -10963,7 +10963,7 @@ Set(varLoadingMessage, "");
 
 ### ✅ Step 12G Checklist
 
-- [ ] `conExportModal` container created with `Visible: varShowExportModal`
+- [ ] `conExportModal` container created with `Visible: varShowExportModal <> 0`
 - [ ] Overlay closes modal on click
 - [ ] Close button (✕) closes modal
 - [ ] Month dropdown defaults to current month

@@ -133,7 +133,7 @@ Screens:
             HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
             HoverColor: =RGBA(255, 255, 255, 1)
             HoverFill: =varColorPrimaryHover
-            OnSelect: =Set(varShowExportModal, true)
+            OnSelect: =Set(varShowExportModal, 1)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
             PressedFill: =varColorPrimaryPressed
@@ -8055,7 +8055,7 @@ Screens:
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
-            Visible: =varShowExportModal
+            Visible: =varShowExportModal <> 0
             Width: =Parent.Width
           Children:
             - recExportOverlay:
@@ -8063,7 +8063,7 @@ Screens:
                 Properties:
                   Fill: =varColorOverlay
                   Height: =Parent.Height
-                  OnSelect: =Set(varShowExportModal, false)
+                  OnSelect: =Set(varShowExportModal, 0)
                   Width: =Parent.Width
             - recExportBox:
                 Control: Rectangle
@@ -8097,7 +8097,7 @@ Screens:
                   HoverBorderColor: =RGBA(0, 0, 0, 0)
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =varColorDangerHover
-                  OnSelect: =Set(varShowExportModal, false)
+                  OnSelect: =Set(varShowExportModal, 0)
                   PaddingBottom: =0
                   PaddingLeft: =0
                   PaddingRight: =0

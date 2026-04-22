@@ -67,7 +67,7 @@ App:
       Set(varShowRevertModal, 0);
       Set(varShowBatchPaymentModal, 0);
       Set(varShowBuildPlatesModal, 0);
-      Set(varShowExportModal, false);
+      Set(varShowExportModal, 0);
 
       // === SCHEDULE SCREEN STATE ===
       Set(varSchedSelectedEmail, "");
