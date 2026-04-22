@@ -121,7 +121,7 @@ ClearCollect(
         {
             StaffID:        ID,
             MemberName:     Member.DisplayName,
-            MemberEmail:    Member.Email,
+            MemberEmail:    Lower(Trim(Member.Email)),
             Role:           Role,
             Active:         Active,
             AidType:        AidType.Value,
@@ -301,12 +301,12 @@ ClearCollect(colShifts,
     ForAll(
         Filter(
             StaffShifts,
-            StaffEmail <> "" &&
-            !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
+            Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
+            !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
         ),
         {
             ShiftID:    ID,
-            Email:      StaffEmail,
+            Email:      Lower(Trim(StaffEmail)),
             Day:        Day.Value,
             ShiftStart: ShiftStart.Value,
             ShiftEnd:   ShiftEnd.Value
@@ -490,7 +490,7 @@ If(
     Set(varSchedSelectedEmail, "");
     Clear(colEditShifts),
     With(
-        {em: drpSchedName.Selected.MemberEmail},
+        {em: Lower(Trim(drpSchedName.Selected.MemberEmail))},
         Set(varSchedSelectedEmail, em);
         ClearCollect(
             colEditShifts,
@@ -756,7 +756,7 @@ If(
     Set(
         varSchedSaved,
         IfError(
-            RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+            RemoveIf(StaffShifts, Lower(Trim(StaffEmail)) = varSchedSelectedEmail);
             IfError(
                 Patch(
                     StaffShifts,
@@ -806,7 +806,7 @@ If(
                                     First(Split(Trim(Member.DisplayName), " ")).Value & " " &
                                     Last(Split(Trim(Member.DisplayName), " ")).Value
                                 ),
-                MemberEmail:    Member.Email,
+                MemberEmail:    Lower(Trim(Member.Email)),
                 Role:           Role,
                 Active:         Active,
                 AidType:        AidType.Value,
@@ -819,12 +819,12 @@ If(
         ForAll(
             Filter(
                 StaffShifts,
-                StaffEmail <> "" &&
-                !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
+                Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
+                !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
             ),
             {
                 ShiftID:    ID,
-                Email:      StaffEmail,
+                Email:      Lower(Trim(StaffEmail)),
                 Day:        Day.Value,
                 ShiftStart: ShiftStart.Value,
                 ShiftEnd:   ShiftEnd.Value
