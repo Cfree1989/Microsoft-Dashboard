@@ -3472,84 +3472,94 @@ Set(varRejectionReasonsTable,
 
 // Update the SharePoint item
 // Using LookUp to get fresh record avoids concurrency conflicts
-Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
-    NeedsAttention: false,
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
-        Discipline: "",
-        DisplayName: ddRejectStaff.Selected.MemberName,
-        Email: ddRejectStaff.Selected.MemberEmail,
-        JobTitle: "",
-        Picture: ""
-    },
-    LastActionAt: Now(),
-    RejectionReason: varRejectionReasonsTable,
-    RejectionComment: txtRejectComments.Text,
-    StaffNotes: Concatenate(
-        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-        "REJECTED by " &
-        With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": [Summary] " & Concat(varRejectionReasonsTable, Value, "; ") & " [Changes] [Reason] [Context] " &
-        " [Comment] " &
-        Trim(
-            Substitute(
-                Substitute(
+Set(
+    varRejectSaved,
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+            Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
+            NeedsAttention: false,
+            LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
+            LastActionBy: {
+                Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
+                Discipline: "",
+                DisplayName: ddRejectStaff.Selected.MemberName,
+                Email: ddRejectStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            LastActionAt: Now(),
+            RejectionReason: varRejectionReasonsTable,
+            RejectionComment: txtRejectComments.Text,
+            StaffNotes: Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "REJECTED by " &
+                With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": [Summary] " & Concat(varRejectionReasonsTable, Value, "; ") & " [Changes] [Reason] [Context] " &
+                " [Comment] " &
+                Trim(
                     Substitute(
                         Substitute(
                             Substitute(
                                 Substitute(
-                                    Substitute(txtRejectComments.Text, " | ", "; "),
-                                    " ~~ ",
-                                    "; "
+                                    Substitute(
+                                        Substitute(
+                                            Substitute(txtRejectComments.Text, " | ", "; "),
+                                            " ~~ ",
+                                            "; "
+                                        ),
+                                        "[Summary]",
+                                        "(Summary)"
+                                    ),
+                                    "[Changes]",
+                                    "(Changes)"
                                 ),
-                                "[Summary]",
-                                "(Summary)"
+                                "[Reason]",
+                                "(Reason)"
                             ),
-                            "[Changes]",
-                            "(Changes)"
+                            "[Context]",
+                            "(Context)"
                         ),
-                        "[Reason]",
-                        "(Reason)"
-                    ),
-                    "[Context]",
-                    "(Context)"
-                ),
-                "[Comment]",
-                "(Comment)"
+                        "[Comment]",
+                        "(Comment)"
+                    )
+                ) &
+                " - " & Text(Now(), "m/d h:mmam/pm")
             )
-        ) &
-        " - " & Text(Now(), "m/d h:mmam/pm")
+        }),
+        Blank()
     )
-});
-
-// Log to AuditLog via Flow C
-IfError(
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),              // RequestID
-        "Rejected",                            // Action
-        "Status",                              // FieldName
-        "Rejected",                            // NewValue
-        ddRejectStaff.Selected.MemberEmail     // ActorEmail
-    ),
-    Notify("Could not log rejection.", NotificationType.Error)
 );
 
-Notify("Request rejected. Student will be notified.", NotificationType.Success);
+If(
+    !IsBlank(varRejectSaved),
+    // Log to AuditLog via Flow C
+    IfError(
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(varSelectedItem.ID),              // RequestID
+            "Rejected",                            // Action
+            "Status",                              // FieldName
+            "Rejected",                            // NewValue
+            ddRejectStaff.Selected.MemberEmail     // ActorEmail
+        ),
+        Notify("Could not log rejection.", NotificationType.Error)
+    );
 
-// Close modal and reset
-Set(varShowRejectModal, 0);
-Set(varSelectedItem, Blank());
-Reset(txtRejectComments);
-Reset(ddRejectStaff);
-Reset(chkTooSmall);
-Reset(chkGeometry);
-Reset(chkNotSolid);
-Reset(chkScale);
-Reset(chkMessy);
-Reset(chkOverhangs);
-Reset(chkNotJoined);
+    Notify("Request rejected. Student will be notified.", NotificationType.Success);
+
+    // Close modal and reset
+    Set(varShowRejectModal, 0);
+    Set(varSelectedItem, Blank());
+    Reset(txtRejectComments);
+    Reset(ddRejectStaff);
+    Reset(chkTooSmall);
+    Reset(chkGeometry);
+    Reset(chkNotSolid);
+    Reset(chkScale);
+    Reset(chkMessy);
+    Reset(chkOverhangs);
+    Reset(chkNotJoined),
+    Notify("Request could not be rejected. No changes were saved.", NotificationType.Error)
+);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
@@ -4762,75 +4772,85 @@ Set(varLoadingMessage, "Archiving request...");
 
 // Update SharePoint item
 // Using LookUp to get fresh record avoids concurrency conflicts
-Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-    Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
-    NeedsAttention: false,
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.MemberEmail,
-        Discipline: "",
-        DisplayName: ddArchiveStaff.Selected.MemberName,
-        Email: ddArchiveStaff.Selected.MemberEmail,
-        JobTitle: "",
-        Picture: ""
-    },
-    LastActionAt: Now(),
-    StaffNotes: Concatenate(
-        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-        "ARCHIVED by " & 
-        With({n: ddArchiveStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": [Summary] " &
-        Trim(
-            Substitute(
-                Substitute(
+Set(
+    varArchiveSaved,
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+            Status: LookUp(Choices(PrintRequests.Status), Value = "Archived"),
+            NeedsAttention: false,
+            LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+            LastActionBy: {
+                Claims: "i:0#.f|membership|" & ddArchiveStaff.Selected.MemberEmail,
+                Discipline: "",
+                DisplayName: ddArchiveStaff.Selected.MemberName,
+                Email: ddArchiveStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            LastActionAt: Now(),
+            StaffNotes: Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "ARCHIVED by " & 
+                With({n: ddArchiveStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": [Summary] " &
+                Trim(
                     Substitute(
                         Substitute(
                             Substitute(
                                 Substitute(
-                                    Substitute(txtArchiveReason.Text, " | ", "; "),
-                                    " ~~ ",
-                                    "; "
+                                    Substitute(
+                                        Substitute(
+                                            Substitute(txtArchiveReason.Text, " | ", "; "),
+                                            " ~~ ",
+                                            "; "
+                                        ),
+                                        "[Summary]",
+                                        "(Summary)"
+                                    ),
+                                    "[Changes]",
+                                    "(Changes)"
                                 ),
-                                "[Summary]",
-                                "(Summary)"
+                                "[Reason]",
+                                "(Reason)"
                             ),
-                            "[Changes]",
-                            "(Changes)"
+                            "[Context]",
+                            "(Context)"
                         ),
-                        "[Reason]",
-                        "(Reason)"
-                    ),
-                    "[Context]",
-                    "(Context)"
-                ),
-                "[Comment]",
-                "(Comment)"
+                        "[Comment]",
+                        "(Comment)"
+                    )
+                ) &
+                " [Changes] [Reason] [Context] " &
+                " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
             )
-        ) &
-        " [Changes] [Reason] [Context] " &
-        " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+        }),
+        Blank()
     )
-});
-
-// Log action via Flow C
-IfError(
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(varSelectedItem.ID),              // RequestID
-        "Archived",                            // Action
-        "Status",                              // FieldName
-        "Archived",                            // NewValue
-        ddArchiveStaff.Selected.MemberEmail    // ActorEmail
-    ),
-    Notify("Could not log archive.", NotificationType.Error)
 );
 
-Notify("Request archived successfully.", NotificationType.Success);
+If(
+    !IsBlank(varArchiveSaved),
+    // Log action via Flow C
+    IfError(
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(varSelectedItem.ID),              // RequestID
+            "Archived",                            // Action
+            "Status",                              // FieldName
+            "Archived",                            // NewValue
+            ddArchiveStaff.Selected.MemberEmail    // ActorEmail
+        ),
+        Notify("Could not log archive.", NotificationType.Error)
+    );
 
-// Close modal and reset
-Set(varShowArchiveModal, 0);
-Set(varSelectedItem, Blank());
-Reset(txtArchiveReason);
-Reset(ddArchiveStaff);
+    Notify("Request archived successfully.", NotificationType.Success);
+
+    // Close modal and reset
+    Set(varShowArchiveModal, 0);
+    Set(varSelectedItem, Blank());
+    Reset(txtArchiveReason);
+    Reset(ddArchiveStaff),
+    Notify("Request could not be archived. No changes were saved.", NotificationType.Error)
+);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
@@ -8238,145 +8258,170 @@ If(
 Set(varRevertedPlateCount, CountRows(colRevertedPlates));
 
 // Update SharePoint item
-Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-    Status: LookUp(Choices(PrintRequests.Status), Value = ddRevertTarget.Selected.Value),
-    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-    LastActionAt: Now(),
-    LastActionBy: {
-        Claims: "i:0#.f|membership|" & ddRevertStaff.Selected.MemberEmail,
-        Discipline: "",
-        DisplayName: ddRevertStaff.Selected.MemberName,
-        Email: ddRevertStaff.Selected.MemberEmail,
-        JobTitle: "",
-        Picture: ""
-    },
-    StaffNotes: Concatenate(
-        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-        "REVERTED by " &
-        With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-        ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
-        " [Changes] " &
-        If(
-            varRevertPlatesNeeded && varRevertedPlateCount > 0,
-            Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " Picked Up -> Completed",
-            ""
-        ) &
-        " [Reason] " &
-        Trim(
-            Substitute(
-                Substitute(
+Set(
+    varRevertSaved,
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+            Status: LookUp(Choices(PrintRequests.Status), Value = ddRevertTarget.Selected.Value),
+            LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+            LastActionAt: Now(),
+            LastActionBy: {
+                Claims: "i:0#.f|membership|" & ddRevertStaff.Selected.MemberEmail,
+                Discipline: "",
+                DisplayName: ddRevertStaff.Selected.MemberName,
+                Email: ddRevertStaff.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            StaffNotes: Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "REVERTED by " &
+                With({n: ddRevertStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": [Summary] " & varSelectedItem.Status.Value & " -> " & ddRevertTarget.Selected.Value &
+                " [Changes] " &
+                If(
+                    varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                    Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " Picked Up -> Completed",
+                    ""
+                ) &
+                " [Reason] " &
+                Trim(
                     Substitute(
                         Substitute(
                             Substitute(
                                 Substitute(
-                                    Substitute(txtRevertReason.Text, " | ", "; "),
-                                    " ~~ ",
-                                    "; "
+                                    Substitute(
+                                        Substitute(
+                                            Substitute(txtRevertReason.Text, " | ", "; "),
+                                            " ~~ ",
+                                            "; "
+                                        ),
+                                        "[Summary]",
+                                        "(Summary)"
+                                    ),
+                                    "[Changes]",
+                                    "(Changes)"
                                 ),
-                                "[Summary]",
-                                "(Summary)"
+                                "[Reason]",
+                                "(Reason)"
                             ),
-                            "[Changes]",
-                            "(Changes)"
+                            "[Context]",
+                            "(Context)"
                         ),
-                        "[Reason]",
-                        "(Reason)"
-                    ),
-                    "[Context]",
-                    "(Context)"
-                ),
-                "[Comment]",
-                "(Comment)"
+                        "[Comment]",
+                        "(Comment)"
+                    )
+                ) &
+                " [Context] " &
+                " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
             )
-        ) &
-        " [Context] " &
-        " [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-    )
-});
-
-// Cascade revert to plates when returning from "Paid & Picked Up"
-// to "Completed". Preserves required fields to match the rest of
-// the app's BuildPlates patch pattern.
-If(
-    varRevertPlatesNeeded && varRevertedPlateCount > 0,
-    ForAll(
-        colRevertedPlates As wSnapPlate,
-        With(
-            { wFreshPlate: LookUp(BuildPlates, ID = wSnapPlate.ID) },
-            If(
-                !IsBlank(wFreshPlate),
-                Patch(
-                    BuildPlates,
-                    wFreshPlate,
-                    {
-                        Status: { Value: "Completed" },
-                        RequestID: wFreshPlate.RequestID,
-                        ReqKey: wFreshPlate.ReqKey,
-                        PlateKey: wFreshPlate.PlateKey,
-                        Machine: wFreshPlate.Machine,
-                        Title: wFreshPlate.Title
-                    }
-                )
-            )
-        )
-    );
-    ClearCollect(colAllBuildPlates, BuildPlates)
-);
-
-// Clear the stale payment fields on the request row when reverting
-// "Paid & Picked Up" -> "Completed". Without this, Flow-(H) and
-// Flow-(I) use additive math on the existing FinalWeight/FinalCost
-// values (coalesce(existing, 0) + new), so re-paying the same
-// request double-counts the previously recorded amounts.
-// Payments ledger rows are intentionally left alone — a single
-// request may have multiple Payments rows from prior partial
-// pickups, and batch rows are still referenced by sibling
-// requests. Staff delete orphaned Payments rows manually in
-// SharePoint when a full-price refund needs to leave the ledger.
-If(
-    varRevertPlatesNeeded,
-    Patch(
-        PrintRequests,
-        LookUp(PrintRequests, ID = varSelectedItem.ID),
-        {
-            FinalWeight: Blank(),
-            FinalCost: Blank(),
-            PaymentDate: Blank(),
-            PaymentType: Blank(),
-            PayerName: Blank(),
-            PayerTigerCard: Blank(),
-            TransactionNumber: Blank(),
-            PaymentNotes: Blank()
-        }
+        }),
+        Blank()
     )
 );
 
-// Log to audit flow
-'Flow-(C)-Action-LogAction'.Run(
-    Text(varSelectedItem.ID),                    // RequestID
-    "Status Change",                             // Action
-    "Status",                                    // FieldName
-    ddRevertTarget.Selected.Value &
-        If(
-            varRevertPlatesNeeded && varRevertedPlateCount > 0,
-            " (+" & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " reverted Picked Up->Completed)",
-            ""
-        ),                                       // NewValue
-    ddRevertStaff.Selected.MemberEmail           // ActorEmail
-);
-
-Notify(
-    "Status reverted to " & ddRevertTarget.Selected.Value &
+If(
+    !IsBlank(varRevertSaved),
+    // Cascade revert to plates when returning from "Paid & Picked Up"
+    // to "Completed". Preserves required fields to match the rest of
+    // the app's BuildPlates patch pattern.
     If(
         varRevertPlatesNeeded && varRevertedPlateCount > 0,
-        " — " & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " also reverted to Completed.",
+        ForAll(
+            colRevertedPlates As wSnapPlate,
+            With(
+                { wFreshPlate: LookUp(BuildPlates, ID = wSnapPlate.ID) },
+                If(
+                    !IsBlank(wFreshPlate),
+                    Patch(
+                        BuildPlates,
+                        wFreshPlate,
+                        {
+                            Status: { Value: "Completed" },
+                            RequestID: wFreshPlate.RequestID,
+                            ReqKey: wFreshPlate.ReqKey,
+                            PlateKey: wFreshPlate.PlateKey,
+                            Machine: wFreshPlate.Machine,
+                            Title: wFreshPlate.Title
+                        }
+                    )
+                )
+            )
+        );
+        ClearCollect(colAllBuildPlates, BuildPlates)
+    );
+
+    // Clear the stale payment fields on the request row when reverting
+    // "Paid & Picked Up" -> "Completed". Without this, Flow-(H) and
+    // Flow-(I) use additive math on the existing FinalWeight/FinalCost
+    // values (coalesce(existing, 0) + new), so re-paying the same
+    // request double-counts the previously recorded amounts.
+    // Payments ledger rows are intentionally left alone — a single
+    // request may have multiple Payments rows from prior partial
+    // pickups, and batch rows are still referenced by sibling
+    // requests. Staff delete orphaned Payments rows manually in
+    // SharePoint when a full-price refund needs to leave the ledger.
+    Set(
+        varRevertPaymentFieldsCleared,
         If(
-            CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
-            ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
-            ""
+            varRevertPlatesNeeded,
+            !IsBlank(
+                IfError(
+                    Patch(
+                        PrintRequests,
+                        LookUp(PrintRequests, ID = varSelectedItem.ID),
+                        {
+                            FinalWeight: Blank(),
+                            FinalCost: Blank(),
+                            PaymentDate: Blank(),
+                            PaymentType: Blank(),
+                            PayerName: Blank(),
+                            PayerTigerCard: Blank(),
+                            TransactionNumber: Blank(),
+                            PaymentNotes: Blank()
+                        }
+                    ),
+                    Blank()
+                )
+            ),
+            true
         )
+    );
+
+    IfError(
+        'Flow-(C)-Action-LogAction'.Run(
+            Text(varSelectedItem.ID),                    // RequestID
+            "Status Change",                             // Action
+            "Status",                                    // FieldName
+            ddRevertTarget.Selected.Value &
+                If(
+                    varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                    " (+" & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " reverted Picked Up->Completed)",
+                    ""
+                ),                                       // NewValue
+            ddRevertStaff.Selected.MemberEmail           // ActorEmail
+        ),
+        Notify("Could not log status revert.", NotificationType.Error)
+    );
+
+    Notify(
+        "Status reverted to " & ddRevertTarget.Selected.Value &
+        If(
+            !varRevertPaymentFieldsCleared,
+            ". Request reopened, but payment fields could not be cleared automatically. Review the request before taking payment again.",
+            If(
+                varRevertPlatesNeeded && varRevertedPlateCount > 0,
+                " — " & Text(varRevertedPlateCount) & " plate" & If(varRevertedPlateCount = 1, "", "s") & " also reverted to Completed.",
+                If(
+                    CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) > 0,
+                    ". Note: plate statuses are unchanged — adjust in Build Plates if needed.",
+                    ""
+                )
+            )
+        ),
+        NotificationType.Success
     ),
-    NotificationType.Success
+    Notify("Status could not be reverted. No changes were saved.", NotificationType.Error)
 );
 
 // Close modal and reset
