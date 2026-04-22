@@ -676,9 +676,9 @@ High-confidence findings from one or two models with clear impact.
 
 ### Additional Risk — Z-order (Single Model, Easy Fix)
 
-`conExportModal` is declared after `conLoadingOverlay` in `scrDashboard.pa.yaml`. The export modal renders on top of the loading spinner, making the loading overlay invisible to the user while "Download Report" is in progress. Fix: move `conLoadingOverlay` to be declared after `conExportModal` so it gets the higher z-order.
+~~`conExportModal` is declared after `conLoadingOverlay` in `scrDashboard.pa.yaml`. The export modal renders on top of the loading spinner, making the loading overlay invisible to the user while "Download Report" is in progress. Fix: move `conLoadingOverlay` to be declared after `conExportModal` so it gets the higher z-order.~~
 
-*(Raised by Claude Opus 4.6 only. ✅ Verified — `scrDashboard.pa.yaml`: `conLoadingOverlay` at line 8010, `conExportModal` at line 8060. Export modal renders on top.)*
+*(Raised by Claude Opus 4.6 only. ~~✅ Verified~~ **Fixed Apr 22, 2026** — `conExportModal` is now declared before `conLoadingOverlay` in both `canvas-coauthor` and `canvas-sync`, so the loading overlay holds the higher z-order during export. **Pushed to live coauthoring session via `compile_canvas` + verification `sync_canvas`.** Compiler verified: warnings only, no blocking errors.)*
 
 ---
 

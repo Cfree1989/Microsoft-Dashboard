@@ -8000,56 +8000,6 @@ Screens:
                   Width: =560
                   X: =recViewMsgModal.X + 20
                   Y: =54
-      - conLoadingOverlay:
-          Control: GroupContainer
-          Variant: ManualLayout
-          Properties:
-            Height: =Parent.Height
-            Visible: =varIsLoading
-            Width: =Parent.Width
-          Children:
-            - recLoadingOverlay:
-                Control: Rectangle
-                Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Fill: =varColorOverlay
-                  Height: =Parent.Height
-                  Width: =Parent.Width
-            - recLoadingBox:
-                Control: Rectangle
-                Properties:
-                  BorderColor: =varColorPrimary
-                  BorderThickness: =2
-                  Fill: =Color.White
-                  Height: =112
-                  Width: =200
-                  X: =(Parent.Width - 200) / 2
-                  Y: =(Parent.Height - 100) / 2
-            - lblLoadingSpinner:
-                Control: Label
-                Properties:
-                  Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Font: =varAppFont
-                  Size: =24
-                  Text: ="⏳"
-                  Width: =50
-                  X: =(Parent.Width - 50) / 2
-                  Y: =(Parent.Height - 100) / 2 + 15
-            - lblLoadingMessage:
-                Control: Label
-                Properties:
-                  Align: =Align.Center
-                  AutoHeight: =true
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =varColorText
-                  Font: =varAppFont
-                  Height: =30
-                  Size: =12
-                  Text: =If(IsBlank(varLoadingMessage), "Processing...", varLoadingMessage)
-                  Width: =200
-                  X: =(Parent.Width - 200) / 2
-                  Y: =385
       - conExportModal:
           Control: GroupContainer
           Variant: ManualLayout
@@ -8298,3 +8248,53 @@ Screens:
                   Width: =460
                   X: =recExportBox.X + 20
                   Y: =recExportBox.Y + recExportBox.Height - 50
+      - conLoadingOverlay:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Height: =Parent.Height
+            Visible: =varIsLoading
+            Width: =Parent.Width
+          Children:
+            - recLoadingOverlay:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =varColorOverlay
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recLoadingBox:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =varColorPrimary
+                  BorderThickness: =2
+                  Fill: =Color.White
+                  Height: =112
+                  Width: =200
+                  X: =(Parent.Width - 200) / 2
+                  Y: =(Parent.Height - 100) / 2
+            - lblLoadingSpinner:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Font: =varAppFont
+                  Size: =24
+                  Text: ="⏳"
+                  Width: =50
+                  X: =(Parent.Width - 50) / 2
+                  Y: =(Parent.Height - 100) / 2 + 15
+            - lblLoadingMessage:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  Height: =30
+                  Size: =12
+                  Text: =If(IsBlank(varLoadingMessage), "Processing...", varLoadingMessage)
+                  Width: =200
+                  X: =(Parent.Width - 200) / 2
+                  Y: =385
