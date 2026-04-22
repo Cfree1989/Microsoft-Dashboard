@@ -163,7 +163,7 @@ Screens:
                   Font: =varAppFont
                   Height: =36
                   HoverFill: =varDropdownHoverFill
-                  InputTextPlaceholder: ="Select a student..."
+                  InputTextPlaceholder: ="Select Your Name"
                   IsSearchable: =false
                   Items: =Sort(colSchedStaff, MemberName, SortOrder.Ascending)
                   OnChange: |-
