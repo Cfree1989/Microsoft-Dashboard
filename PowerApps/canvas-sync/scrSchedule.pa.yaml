@@ -210,7 +210,12 @@ Screens:
                         {
                             maxHrs: Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
                             hrs:    Sum(
-                                Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                                Filter(
+                                    colEditShifts,
+                                    !IsBlank(ShiftStart) &&
+                                    !IsBlank(ShiftEnd) &&
+                                    LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                ),
                                 (LookUp(colTimeSlots, Label = ShiftEnd).Idx - LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30 / 60
                             )
                         },
@@ -225,7 +230,12 @@ Screens:
                             aidType: drpSchedName.Selected.AidType,
                             maxHrs:  Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
                             hrs:     Sum(
-                                Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                                Filter(
+                                    colEditShifts,
+                                    !IsBlank(ShiftStart) &&
+                                    !IsBlank(ShiftEnd) &&
+                                    LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                ),
                                 (LookUp(colTimeSlots, Label = ShiftEnd).Idx - LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30 / 60
                             )
                         },
@@ -344,32 +354,50 @@ Screens:
                   OnSelect: |-
                     =Set(varSchedEditSaving, true);
 
-                    // Remove existing shifts, then patch new ones.
-                    // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
-                    // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
-                    Set(
-                        varSchedSaved,
-                        IfError(
-                            RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+                    If(
+                        CountRows(
+                            Filter(
+                                colEditShifts,
+                                !IsBlank(ShiftStart) &&
+                                !IsBlank(ShiftEnd) &&
+                                LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
+                            )
+                        ) > 0,
+                        Set(varSchedSaved, false);
+                        Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+
+                        // Remove existing shifts, then patch new ones.
+                        // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
+                        // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
+                        Set(
+                            varSchedSaved,
                             IfError(
-                                Patch(
-                                    StaffShifts,
-                                    ForAll(
-                                        Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
-                                        {
-                                            StaffEmail: varSchedSelectedEmail,
-                                            Day:        {Value: Day},
-                                            ShiftStart: {Value: ShiftStart},
-                                            ShiftEnd:   {Value: ShiftEnd}
-                                        }
-                                    )
-                                );
-                                true,
-                                Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+                                RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+                                IfError(
+                                    Patch(
+                                        StaffShifts,
+                                        ForAll(
+                                            Filter(
+                                                colEditShifts,
+                                                !IsBlank(ShiftStart) &&
+                                                !IsBlank(ShiftEnd) &&
+                                                LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                            ),
+                                            {
+                                                StaffEmail: varSchedSelectedEmail,
+                                                Day:        {Value: Day},
+                                                ShiftStart: {Value: ShiftStart},
+                                                ShiftEnd:   {Value: ShiftEnd}
+                                            }
+                                        )
+                                    );
+                                    true,
+                                    Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+                                    false
+                                ),
+                                Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
                                 false
-                            ),
-                            Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
-                            false
+                            )
                         )
                     );
 

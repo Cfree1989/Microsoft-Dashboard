@@ -528,7 +528,7 @@ If(
 | Text | *(formula below)* |
 | Color | *(formula below)* |
 
-**Text formula** — sums all **complete** rows in `colEditShifts` (both start and end filled):
+**Text formula** — sums all **valid complete** rows in `colEditShifts` (both start and end filled, and end after start):
 
 ```
 =With(
@@ -542,7 +542,12 @@ If(
         ),
         mins: Sum(
             AddColumns(
-                Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                Filter(
+                    colEditShifts,
+                    !IsBlank(ShiftStart) &&
+                    !IsBlank(ShiftEnd) &&
+                    LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                ),
                 "SlotMins",
                 (LookUp(colTimeSlots, Label = ShiftEnd).Idx -
                  LookUp(colTimeSlots, Label = ShiftStart).Idx) * 30
@@ -726,39 +731,57 @@ Older drafts of this document inlined a **CSS class + `<style>`** grid formula. 
 
 ## Step 7: Save Logic
 
-Wire the `OnSelect` of `btnSchedSave` with this formula. It **replaces** all `StaffShifts` rows for the selected email with the current gallery rows (complete rows only), then rebuilds collections so the grid updates without leaving the screen.
+Wire the `OnSelect` of `btnSchedSave` with this formula. It first blocks any row whose end time is not later than its start time, then **replaces** all `StaffShifts` rows for the selected email with the current **valid complete** gallery rows and rebuilds collections so the grid updates without leaving the screen.
 
-The save uses nested `IfError` guards — the same `IfError(...; true, Notify(...); false)` pattern used by `btnCompleteConfirm` and `btnApprovalConfirm` throughout the app. The result is stored in `varSchedSaved`. The collection rebuild and state reset only run when both operations succeed. `varSchedEditSaving` resets unconditionally so the button can never get stuck in "Saving…" state.
+The save uses an upfront invalid-range guard plus nested `IfError` handlers — the same `IfError(...; true, Notify(...); false)` pattern used by `btnCompleteConfirm` and `btnApprovalConfirm` throughout the app. The result is stored in `varSchedSaved`. The collection rebuild and state reset only run when validation passes and both data operations succeed. `varSchedEditSaving` resets unconditionally so the button can never get stuck in "Saving…" state.
 
 ```
 Set(varSchedEditSaving, true);
 
-// Remove existing shifts, then patch new ones.
-// Outer IfError catches RemoveIf failure (no data changed — safe to retry).
-// Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
-Set(
-    varSchedSaved,
-    IfError(
-        RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+If(
+    CountRows(
+        Filter(
+            colEditShifts,
+            !IsBlank(ShiftStart) &&
+            !IsBlank(ShiftEnd) &&
+            LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
+        )
+    ) > 0,
+    Set(varSchedSaved, false);
+    Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+
+    // Remove existing shifts, then patch new ones.
+    // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
+    // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
+    Set(
+        varSchedSaved,
         IfError(
-            Patch(
-                StaffShifts,
-                ForAll(
-                    Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
-                    {
-                        StaffEmail: varSchedSelectedEmail,
-                        Day:        {Value: Day},
-                        ShiftStart: {Value: ShiftStart},
-                        ShiftEnd:   {Value: ShiftEnd}
-                    }
-                )
-            );
-            true,
-            Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+            RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+            IfError(
+                Patch(
+                    StaffShifts,
+                    ForAll(
+                        Filter(
+                            colEditShifts,
+                            !IsBlank(ShiftStart) &&
+                            !IsBlank(ShiftEnd) &&
+                            LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                        ),
+                        {
+                            StaffEmail: varSchedSelectedEmail,
+                            Day:        {Value: Day},
+                            ShiftStart: {Value: ShiftStart},
+                            ShiftEnd:   {Value: ShiftEnd}
+                        }
+                    )
+                );
+                true,
+                Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+                false
+            ),
+            Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
             false
-        ),
-        Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
-        false
+        )
     )
 );
 
@@ -845,6 +868,8 @@ Set(varSchedEditSaving, false)
 ```
 
 > **Why filter `colShifts` by `LookUp(colSchedStaff, …)`?** If a manager, full-time staffer, or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active student-worker staff appear.
+
+> **Why validate `ShiftEnd > ShiftStart` before `RemoveIf`?** The schedule grid and totals assume every saved row spans at least one half-hour block. Blocking invalid ranges before deleting anything prevents negative hour totals, empty grid spans, and accidental replacement of good saved data with bad rows.
 
 > **Why not `ForAll(..., Patch(Defaults(StaffShifts), …))`?** That pattern often creates **only one** new row when several are needed (concurrent evaluation). **`Patch(StaffShifts, ForAll(..., { ... }))`** performs a **batch create** in one call — reliable for multiple shifts.
 
