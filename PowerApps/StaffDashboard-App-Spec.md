@@ -523,7 +523,8 @@ Concurrent(
     ),
     ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
     ClearCollect(colAllBuildPlates, BuildPlates),
-    ClearCollect(colAllPayments, Payments)
+    ClearCollect(colAllPayments, Payments),
+    ClearCollect(colAllRequestComments, RequestComments)
 );
 
 // === SCHEDULE: TIME SLOTS ===
@@ -564,8 +565,8 @@ ClearCollect(colSchedColors,
     {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
 );
 
-// Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
-ClearCollect(colBuildPlateSummary,
+// Named formula (App.Formulas): always stays in sync with colAllBuildPlates
+BuildPlateSummary =
     ForAll(
         Distinct(colAllBuildPlates, RequestID) As grp,
         {
@@ -575,8 +576,17 @@ ClearCollect(colBuildPlateSummary,
             ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
             ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
         }
-    )
-);
+    );
+
+RequestCommentSummary =
+    ForAll(
+        Distinct(colAllRequestComments, RequestID) As grp,
+        {
+            RequestID: grp.Value,
+            TotalCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value)),
+            UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
+        }
+    );
 
 // Check if current user is a staff member (uses colStaff loaded above)
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
@@ -745,6 +755,7 @@ Set(varLoadingMessage, "")
 | `varExpandAll` | Reserved (expand/collapse removed; cards always expanded) | Boolean |
 | `varSchedSelectedEmail` | Schedule screen: staff member email selected for editing | Text |
 | `varSchedEditSaving` | Schedule screen: true while save is in progress | Boolean |
+| `varSchedConfirmSave` | Schedule screen: true after first save click, while waiting for the destructive replace confirmation click | Boolean |
 | `varSchedShowReorder` | Schedule screen: UI flag for totals row reorder mode | Boolean |
 | `varSchedTotalsSortBy` | Schedule screen: totals gallery sort column (`Total`, day names, etc.) | Text |
 | `varSchedTotalsSortDesc` | Schedule screen: totals sort descending when true | Boolean |
@@ -790,8 +801,10 @@ Set(varLoadingMessage, "")
 | `varCurrentAttentionCount` | Current count of NeedsAttention items on the latest timer/on-start refresh | Number |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
-| `colBuildPlateSummary` | Pre-aggregated build plate counts per `RequestID` (`TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`) — rebuilt after every `colAllBuildPlates` refresh | Table |
+| `BuildPlateSummary` | Named formula that pre-aggregates build plate counts per `RequestID` (`TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`) from `colAllBuildPlates` | Table |
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
+| `colAllRequestComments` | All `RequestComments` rows cached locally for dashboard badges and the message thread gallery | Table |
+| `RequestCommentSummary` | Named formula keyed by `RequestID` with `TotalCount` and `UnreadInboundCount` derived from `colAllRequestComments` | Table |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
@@ -2044,7 +2057,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 
 | Property | Value |
 |----------|-------|
-| Text | `With({wSummary: LookUp(colBuildPlateSummary, RequestID = ThisItem.ID)}, If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0)) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(Coalesce(wSummary.ReprintTotal, 0) > 0, " · R " & Text(Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.ReprintTotal, 0)), ""), "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0) + Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.TotalCount, 0) + Coalesce(wSummary.ReprintTotal, 0)) & " done"))` |
+| Text | `With({wSummary: LookUp(BuildPlateSummary, RequestID = ThisItem.ID)}, If(Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0, "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0)) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" & If(Coalesce(wSummary.ReprintTotal, 0) > 0, " · R " & Text(Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.ReprintTotal, 0)), ""), "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0) + Coalesce(wSummary.ReprintCompleted, 0)) & "/" & Text(Coalesce(wSummary.TotalCount, 0) + Coalesce(wSummary.ReprintTotal, 0)) & " done"))` |
 | X | `8` |
 | Y | `0` |
 | Width | `100` |
@@ -2054,7 +2067,7 @@ Because approved jobs default to at least one build plate, single-plate jobs sho
 | Color | `varColorTextMuted` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-> 💡 **Formula:** Uses a single `LookUp` into `colBuildPlateSummary` (pre-aggregated at each data refresh) instead of scanning `colAllBuildPlates` inline per card. Before labels lock, shows completed plates against the live total, such as `🖨 3/5 done`. After labels lock, it preserves the original denominator and shows reprints separately, such as `🖨 3/5 done · R 0/1`.
+> 💡 **Formula:** Uses a single `LookUp` into `BuildPlateSummary` (a named formula driven from `colAllBuildPlates`) instead of scanning `colAllBuildPlates` inline per card. Before labels lock, shows completed plates against the live total, such as `🖨 3/5 done`. After labels lock, it preserves the original denominator and shows reprints separately, such as `🖨 3/5 done · R 0/1`.
 >
 > For single-plate jobs, this should read `🖨 0/1 done` while queued/printing and `🖨 1/1 done` once the plate is completed or picked up. This is preferred over hiding the summary for one-plate jobs.
 
@@ -4413,7 +4426,7 @@ If(
     );
     // Refresh plate collections for job cards
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     
     // Close modal and reset
     Set(varShowApprovalModal, 0);
@@ -7683,7 +7696,7 @@ If(
         Refresh(Payments)
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     ClearCollect(colAllPayments, Payments);
     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
@@ -9332,7 +9345,7 @@ If(
         Refresh(Payments)
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     ClearCollect(colAllPayments, Payments);
 
     ForAll(
@@ -9910,7 +9923,7 @@ If(
         )
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
     Notify("Machine updated", NotificationType.Success, 2000)
 );
@@ -10056,7 +10069,7 @@ ClearCollect(colBuildPlatesIndexed,
     )
 );
 ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
+// BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
 > 💡 **Parent status gate:** Staff should not mark an individual plate as `Printing` until the parent request itself has been moved to `Printing` from the job card. This keeps plate-level progress aligned with the request's overall status.
@@ -10204,7 +10217,7 @@ ClearCollect(colBuildPlatesIndexed,
     )
 );
 ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
+// BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
 > 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
@@ -10291,7 +10304,7 @@ If(
         )
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}))
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
 )
 ```
 
@@ -10476,7 +10489,7 @@ If(
         )
     );
     ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     Notify("Plate added", NotificationType.Success, 2000)
 );
 
@@ -12047,7 +12060,7 @@ Concurrent(
     Refresh(Payments)
 );
 ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+// BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ClearCollect(colAllPayments, Payments)
 ```
 
@@ -12825,7 +12838,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 | Property | Value |
 |----------|-------|
-| Text | `"Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"` |
+| Text | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, "Messages (" & Text(Coalesce(wSummary.TotalCount, 0)) & ")")` |
 | X | `12` |
 | Y | `260` |
 | Width | `200` |
@@ -12870,12 +12883,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `317` |
 | Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 46, 46, 1), Color.White)` |
-| Color | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 255, 255, 1), varColorPrimary)` |
+| Fill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))` |
+| Color | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))` |
 | HoverColor | `Color.White` |
-| HoverFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(220, 40, 40, 1), varColorPrimary)` |
-| PressedFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
-| BorderColor | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(184, 0, 0, 1), varColorPrimary)` |
+| HoverFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))` |
+| PressedFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))` |
+| BorderColor | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12904,7 +12917,7 @@ Set(varSelectedItem, ThisItem)
 
 | Property | Value |
 |----------|-------|
-| Text | `Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))` |
+| Text | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Text(Coalesce(wSummary.UnreadInboundCount, 0)))` |
 | X | `120` |
 | Y | `258` |
 | Width | `20` |
@@ -12913,7 +12926,7 @@ Set(varSelectedItem, ThisItem)
 | Fill | `RGBA(209, 52, 56, 1)` |
 | Color | `Color.White` |
 | Align | `Align.Center` |
-| Visible | `!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+| Visible | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)` |
 
 > **Note:** The unread badge uses two layered controls: a rounded rectangle (`recUnreadBadge`) for the circular red background, and a label (`lblUnreadBadge`) for the white text on top. Both share the same visibility condition so they appear/disappear together.
 
@@ -12937,7 +12950,7 @@ The **live app** uses a single compact control **`btnViewMessages`** (label **Me
 
 > **Legacy docs:** Earlier versions added `btnCardSendMessage` beside **Files** / **Archive**. If you still have that control, you can delete it and rely on `btnViewMessages` only.
 
-> **Unread-only alert state:** Keep the red button styling keyed to unread inbound comments only (`Direction.Value = "Inbound"` and `ReadByStaff = false`). Historical read messages should still count toward the `"Messages (n)"` label, but they should not keep the button highlighted once staff has caught up.
+> **Unread-only alert state:** Keep the red button styling keyed to unread inbound comments only (`Direction.Value = "Inbound"` and `ReadByStaff = false`). Historical read messages should still count toward the `"Messages (n)"` label, but they should not keep the button highlighted once staff has caught up. The live app now drives these card-level counts from `RequestCommentSummary` instead of filtering the SharePoint list on every card render.
 
 ---
 
@@ -13151,7 +13164,7 @@ Reset(ddViewMsgStaff)
 
 | Property | Value |
 |----------|-------|
-| Items | `Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)` |
+| Items | `Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)` |
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 75` |
 | Width | `560` |
@@ -13585,6 +13598,7 @@ Patch(
         StudentEmail: varSelectedItem.StudentEmail
     }
 );
+ClearCollect(colAllRequestComments, RequestComments);
 
 // Update PrintRequest to mark last action
 Patch(
@@ -13646,7 +13660,7 @@ Notify("Message sent! Student will receive email notification.", NotificationTyp
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
-| Visible | `!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))` |
+| Visible | `With({wSummary: LookUp(RequestCommentSummary, RequestID = varSelectedItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)` |
 | DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 75. Set **OnSelect:**
@@ -13663,6 +13677,7 @@ UpdateIf(
     ReadByStaff = false,
     { ReadByStaff: true }
 );
+ClearCollect(colAllRequestComments, RequestComments);
 
 // Clear the NeedsAttention flag on the request
 Set(
@@ -13987,7 +14002,7 @@ Concurrent(
 
 // Reload local collections used by job-card summaries
 ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colBuildPlateSummary, ForAll(Distinct(colAllBuildPlates, RequestID) As grp, {RequestID: grp.Value, TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))), ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))), ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))}));
+// BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ClearCollect(colAllPayments, Payments);
 
 // Reload NeedsAttention items into local collection (avoids delegation)
@@ -14188,7 +14203,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 - **Header bar** (`recSchedHeader`, `lblSchedTitle`, `btnSchedBack` → Dashboard).
 - **Scroll body** (`conSchedScrollBody`) — single-item vertical gallery that wraps the edit bar, grid, and totals card so the whole page shares one vertical scrollbar below the header.
 - **Edit bar** (`recSchedEditBar`) — grows vertically with the number of rows the current user is editing.
-  - Row 1 (`Y = 30`, height `36`): `drpSchedName` (ComboBox, `X=16`, `Width=227`) · `lblSchedAidInfo` (aid type + hour counter, red when over cap, `X=257`) · **`btnSchedAddShift`** (solid primary, `X=905`, `Width=120`, `Height=varBtnHeight`) · `btnSchedSave` (`X=Parent.Width-330`, `Width=130`) · `btnSchedClear` (cancel, `X=Parent.Width-190`, `Width=80`). Keeping **`btnSchedAddShift`** on this top row guarantees it never shifts position when new shift rows are appended.
+  - Row 1 (`Y = 30`, height `36`): `drpSchedName` (ComboBox, `X=16`, `Width=227`) · `lblSchedAidInfo` (aid type + hour counter, red when over cap, `X=257`) · **`btnSchedAddShift`** (solid primary, `X=905`, `Width=120`, `Height=varBtnHeight`) · `btnSchedSave` (`X=Parent.Width-330`, `Width=130`, text toggles `Save Schedule` → `Confirm Replace`, fill toggles success green → warning orange when `varSchedConfirmSave = true`) · `btnSchedClear` (cancel, `X=Parent.Width-190`, `Width=80`). Keeping **`btnSchedAddShift`** on this top row guarantees it never shifts position when new shift rows are appended.
   - Row 2 (`Y = btnSchedAddShift.Y + btnSchedAddShift.Height + 8` ≈ `74`): **`galEditShifts`** — Day (`Width=166`) / Start (`Width=132`) / End (`Width=130`) DropDowns + ✕ remove per shift (`X=463`, `Width=32`); gallery height = `Max(CountRows(colEditShifts), 1) * 36`.
   - Bar height: `=If(varSchedSelectedEmail <> "", 116 + Max(CountRows(colEditShifts), 1) * 36 + 12, 76)`.
 - **HtmlViewer grid** (`htmlSchedGrid`) — `Y = recSchedEditBar.Y + recSchedEditBar.Height + 12`, `Height = 80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28` (two 28px header rows plus one row per visible slot) so it always shows the full week grid without its own scrollbar. Renders Mon–Fri columns with per-day filtering (only staff who have shifts on that day appear). Markup is a **single master table** with `border-collapse:collapse` (see `PowerApps/canvas-coauthor/scrSchedule.pa.yaml`).
@@ -14198,7 +14213,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 
 1. **Seed real default times, never blank.** `btnSchedAddShift.OnSelect` and the fallback blank row in `drpSchedName.OnChange` must use `ShiftStart: "8:30 AM"`, `ShiftEnd: "9:00 AM"` — not `""`. Classic `DropDown` does **not** fire `OnChange` on first render, so a blank-seeded row looks valid in the UI but the record stays blank and `btnSchedSave` filters it out with `!IsBlank(ShiftStart) && !IsBlank(ShiftEnd)`. If you ever change the first item in `drpGalShiftStart.Items` / `drpGalShiftEnd.Items`, update these seeds too.
 2. **Initials = first + last name.** Use `Left(First(Split(name, " ")).Value, 1) & Left(Last(Split(name, " ")).Value, 1)` — **not** `Left(name, 1) & Mid(name, Find(" ", name)+1, 1)` (the old formula returned the middle initial for `Francisco A Gonzalez-Hernandez` → `FA` instead of `FG`). `Split` returns a single-column table whose column is `Value` (not `Result` — a common gotcha in older Power Fx docs).
-3. **Batch-create shifts on save — but only for valid time ranges, and with error guards.** Before `RemoveIf`, block any row where `ShiftEnd <= ShiftStart`; otherwise the app can save negative-duration shifts that break totals and render as empty spans in the HTML grid. After that validation, use nested `IfError` guards around both `RemoveIf` and `Patch`, store the result in `varSchedSaved`, and gate the collection rebuild on `If(varSchedSaved, ...)`. `varSchedEditSaving` must reset unconditionally after the `If` block so the button can never get stuck. See `StaffDashboard-Schedule-Screen.md` Step 7 for the full formula. Do **not** use `ForAll(..., Patch(Defaults(StaffShifts), …))` — that pattern often produces only one new row when multiple were needed (concurrent evaluation). Do **not** call `Patch` without `IfError` — if `RemoveIf` succeeds but `Patch` fails, shifts are permanently deleted with no user feedback.
+3. **Batch-create shifts on save — but only after a destructive-save confirmation, and only for valid time ranges.** `btnSchedSave` must first guard `IsBlank(Trim(varSchedSelectedEmail))`, then use a two-step confirmation (`varSchedConfirmSave`) because the save flow deletes every existing `StaffShifts` row for that email before recreating the new set. Once confirmed, block any row where `ShiftEnd <= ShiftStart`; otherwise the app can save negative-duration shifts that break totals and render as empty spans in the HTML grid. After that validation, use nested `IfError` guards around both `RemoveIf` and `Patch`, store the result in `varSchedSaved`, and gate the collection rebuild on `If(varSchedSaved, ...)`. `varSchedEditSaving` must reset unconditionally after the `If` block, and any edit/cancel/name-change action must reset `varSchedConfirmSave` so confirmation only applies to the current draft. See `StaffDashboard-Schedule-Screen.md` Step 7 for the full formula. Do **not** use `ForAll(..., Patch(Defaults(StaffShifts), …))` — that pattern often produces only one new row when multiple were needed (concurrent evaluation). Do **not** call `Patch` without `IfError` — if `RemoveIf` succeeds but `Patch` fails, shifts are permanently deleted with no user feedback.
 4. **Normalize schedule emails at every join point.** Store `colSchedStaff.MemberEmail`, `colShifts.Email`, and `varSchedSelectedEmail` as `Lower(Trim(...))`, and compare/de-duplicate `StaffShifts.StaffEmail` with the same normalization. Without that, case or stray whitespace differences can hide saved shifts on load or leave orphaned rows behind on save.
 5. **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 6. **Reorder panel sizes to content, not to screen.** Don't revert `Height` to `Parent.Height - Self.Y`; use `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` so the background hugs the last row instead of stretching to the bottom.

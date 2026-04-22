@@ -199,6 +199,7 @@ Add these alongside the other `Set()` calls in `App.OnStart` (immediately after 
 // === SCHEDULE SCREEN STATE ===
 Set(varSchedSelectedEmail, "");     // Email of the person being edited ("" = no one)
 Set(varSchedEditSaving, false);
+Set(varSchedConfirmSave, false);    // Two-step save guard; true = waiting for confirmation click
 Set(varSchedShowReorder, false);    // Legacy flag from the retired reorder panel — kept for back-compat
 Set(varSchedTotalsSortBy, "Total"); // Current sort column in galSchedTotals
 Set(varSchedTotalsSortDesc, true); // Sort direction toggle (btnSchedTotalsSortDir); true = descending by default
@@ -731,143 +732,160 @@ Older drafts of this document inlined a **CSS class + `<style>`** grid formula. 
 
 ## Step 7: Save Logic
 
-Wire the `OnSelect` of `btnSchedSave` with this formula. It first blocks any row whose end time is not later than its start time, then **replaces** all `StaffShifts` rows for the selected email with the current **valid complete** gallery rows and rebuilds collections so the grid updates without leaving the screen.
+Wire the `OnSelect` of `btnSchedSave` with this formula. It now has a **two-click confirmation flow**: the first click turns the button into **`Confirm Replace`** and warns that the save will overwrite every existing `StaffShifts` row for the selected email; the second click performs the replace. It also hard-blocks blank `varSchedSelectedEmail`, still rejects invalid time ranges, and then rebuilds the schedule collections so the grid updates without leaving the screen.
 
-The save uses an upfront invalid-range guard plus nested `IfError` handlers — the same `IfError(...; true, Notify(...); false)` pattern used by `btnCompleteConfirm` and `btnApprovalConfirm` throughout the app. The result is stored in `varSchedSaved`. The collection rebuild and state reset only run when validation passes and both data operations succeed. `varSchedEditSaving` resets unconditionally so the button can never get stuck in "Saving…" state.
+The save uses a blank-selection guard, a confirmation flag (`varSchedConfirmSave`), an upfront invalid-range guard, and nested `IfError` handlers — the same `IfError(...; true, Notify(...); false)` pattern used by `btnCompleteConfirm` and `btnApprovalConfirm` throughout the app. The result is stored in `varSchedSaved`. The collection rebuild and state reset only run when validation passes and both data operations succeed. `varSchedEditSaving` resets unconditionally so the button can never get stuck in "Saving..." state, and any edit/change/cancel action resets `varSchedConfirmSave` so confirmation only applies to the current draft.
 
 ```
-Set(varSchedEditSaving, true);
-
 If(
-    CountRows(
-        Filter(
-            colEditShifts,
-            !IsBlank(ShiftStart) &&
-            !IsBlank(ShiftEnd) &&
-            LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
-        )
-    ) > 0,
+    IsBlank(Trim(varSchedSelectedEmail)),
     Set(varSchedSaved, false);
-    Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+    Set(varSchedConfirmSave, false);
+    Notify("Select your name before saving your schedule.", NotificationType.Error),
+    If(
+        !varSchedConfirmSave,
+        Set(varSchedSaved, false);
+        Set(varSchedConfirmSave, true);
+        Notify("Click Confirm Replace to overwrite your saved schedule with the rows shown here.", NotificationType.Warning),
+        Set(varSchedEditSaving, true);
 
-    // Remove existing shifts, then patch new ones.
-    // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
-    // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
-    Set(
-        varSchedSaved,
-        IfError(
-            RemoveIf(StaffShifts, Lower(Trim(StaffEmail)) = varSchedSelectedEmail);
-            IfError(
-                Patch(
-                    StaffShifts,
-                    ForAll(
-                        Filter(
-                            colEditShifts,
-                            !IsBlank(ShiftStart) &&
-                            !IsBlank(ShiftEnd) &&
-                            LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
-                        ),
+        If(
+            CountRows(
+                Filter(
+                    colEditShifts,
+                    !IsBlank(ShiftStart) &&
+                    !IsBlank(ShiftEnd) &&
+                    LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
+                )
+            ) > 0,
+            Set(varSchedSaved, false);
+            Set(varSchedConfirmSave, false);
+            Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+
+            // Remove existing shifts, then patch new ones.
+            // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
+            // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
+            Set(
+                varSchedSaved,
+                IfError(
+                    RemoveIf(StaffShifts, Lower(Trim(StaffEmail)) = varSchedSelectedEmail);
+                    IfError(
+                        Patch(
+                            StaffShifts,
+                            ForAll(
+                                Filter(
+                                    colEditShifts,
+                                    !IsBlank(ShiftStart) &&
+                                    !IsBlank(ShiftEnd) &&
+                                    LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                ),
+                                {
+                                    StaffEmail: varSchedSelectedEmail,
+                                    Day:        {Value: Day},
+                                    ShiftStart: {Value: ShiftStart},
+                                    ShiftEnd:   {Value: ShiftEnd}
+                                }
+                            )
+                        );
+                        true,
+                        Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+                        false
+                    ),
+                    Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
+                    false
+                )
+            )
+        );
+
+        If(
+            varSchedSaved,
+            ClearCollect(
+                colSchedStaff,
+                ForAll(
+                    Filter(
+                        Staff,
+                        Active = true &&
+                        Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                        (
+                            AidType.Value = "Work Study" ||
+                            AidType.Value = "Graduate Assistant" ||
+                            AidType.Value = "President's Aid"
+                        )
+                    ),
+                    {
+                        StaffID:        ID,
+                        MemberName:     Trim(
+                                            First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                            Last(Split(Trim(Member.DisplayName), " ")).Value
+                                        ),
+                        MemberEmail:    Lower(Trim(Member.Email)),
+                        Role:           Role,
+                        Active:         Active,
+                        AidType:        AidType.Value,
+                        SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                    }
+                )
+            );
+            ClearCollect(
+                colShifts,
+                ForAll(
+                    Filter(
+                        StaffShifts,
+                        Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
+                        !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+                    ),
+                    {
+                        ShiftID:    ID,
+                        Email:      Lower(Trim(StaffEmail)),
+                        Day:        Day.Value,
+                        ShiftStart: ShiftStart.Value,
+                        ShiftEnd:   ShiftEnd.Value
+                    }
+                )
+            );
+            ClearCollect(
+                colSchedLookup,
+                ForAll(
+                    colShifts As sh,
+                    With(
                         {
-                            StaffEmail: varSchedSelectedEmail,
-                            Day:        {Value: Day},
-                            ShiftStart: {Value: ShiftStart},
-                            ShiftEnd:   {Value: ShiftEnd}
+                            sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
+                            cr: LookUp(
+                                colSchedColors,
+                                Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
+                            )
+                        },
+                        {
+                            ShiftID:    sh.ShiftID,
+                            Email:      sh.Email,
+                            Name:       sr.MemberName,
+                            Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                        Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                            Day:        sh.Day,
+                            StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                            EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                            ColorHex:   cr.Hex,
+                            ColorLight: cr.Light,
+                            SortOrder:  sr.SchedSortOrder
                         }
                     )
-                );
-                true,
-                Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
-                false
-            ),
-            Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
-            false
-        )
+                )
+            );
+            Set(varSchedSelectedEmail, "");
+            Set(varSchedConfirmSave, false);
+            Clear(colEditShifts);
+            Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1),
+            Set(varSchedConfirmSave, false)
+        );
+
+        Set(varSchedEditSaving, false)
     )
 );
-
-If(
-    varSchedSaved,
-    ClearCollect(
-        colSchedStaff,
-        ForAll(
-            Filter(
-                Staff,
-                Active = true &&
-                Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
-                (
-                    AidType.Value = "Work Study" ||
-                    AidType.Value = "Graduate Assistant" ||
-                    AidType.Value = "President's Aid"
-                )
-            ),
-            {
-                StaffID:        ID,
-                MemberName:     Trim(
-                                    First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                    Last(Split(Trim(Member.DisplayName), " ")).Value
-                                ),
-                MemberEmail:    Lower(Trim(Member.Email)),
-                Role:           Role,
-                Active:         Active,
-                AidType:        AidType.Value,
-                SchedSortOrder: Coalesce(SchedSortOrder, 10)
-            }
-        )
-    );
-    ClearCollect(
-        colShifts,
-        ForAll(
-            Filter(
-                StaffShifts,
-                Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-                !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
-            ),
-            {
-                ShiftID:    ID,
-                Email:      Lower(Trim(StaffEmail)),
-                Day:        Day.Value,
-                ShiftStart: ShiftStart.Value,
-                ShiftEnd:   ShiftEnd.Value
-            }
-        )
-    );
-    ClearCollect(
-        colSchedLookup,
-        ForAll(
-            colShifts As sh,
-            With(
-                {
-                    sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                    cr: LookUp(
-                        colSchedColors,
-                        Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
-                    )
-                },
-                {
-                    ShiftID:    sh.ShiftID,
-                    Email:      sh.Email,
-                    Name:       sr.MemberName,
-                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                    Day:        sh.Day,
-                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                    ColorHex:   cr.Hex,
-                    ColorLight: cr.Light,
-                    SortOrder:  sr.SchedSortOrder
-                }
-            )
-        )
-    );
-    Set(varSchedSelectedEmail, "");
-    Clear(colEditShifts);
-    Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
-);
-
-Set(varSchedEditSaving, false)
 ```
 
 > **Why filter `colShifts` by `LookUp(colSchedStaff, …)`?** If a manager, full-time staffer, or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active student-worker staff appear.
+
+> **Why require a second click?** `btnSchedSave` is destructive by design: it deletes every saved `StaffShifts` row for that email and replaces them with the current edit collection. The first click turns the button orange and changes the label to `Confirm Replace`, which gives users one explicit checkpoint before wiping their previously saved schedule.
 
 > **Why validate `ShiftEnd > ShiftStart` before `RemoveIf`?** The schedule grid and totals assume every saved row spans at least one half-hour block. Blocking invalid ranges before deleting anything prevents negative hour totals, empty grid spans, and accidental replacement of good saved data with bad rows.
 

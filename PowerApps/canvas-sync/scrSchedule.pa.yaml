@@ -73,6 +73,7 @@ Screens:
             )
         );
         Set(varSchedSelectedEmail, "");
+        Set(varSchedConfirmSave, false);
         Clear(colEditShifts);
         Set(varSchedTotalsSortBy, "Total");
         Set(varSchedTotalsSortDesc, true);
@@ -170,10 +171,12 @@ Screens:
                     =If(
                         IsBlank(drpSchedName.Selected),
                         Set(varSchedSelectedEmail, "");
+                        Set(varSchedConfirmSave, false);
                         Clear(colEditShifts),
                         With(
                             {em: Lower(Trim(drpSchedName.Selected.MemberEmail))},
                             Set(varSchedSelectedEmail, em);
+                            Set(varSchedConfirmSave, false);
                             ClearCollect(
                                 colEditShifts,
                                 ForAll(
@@ -267,7 +270,8 @@ Screens:
                         Items: =["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
                         Items.Value: =Value
                         OnChange: |-
-                          =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})
+                          =Set(varSchedConfirmSave, false);
+                          UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {Day: drpGalShiftDay.Selected.Value})
                         Width: =166
                         Y: =4
                   - drpGalShiftStart:
@@ -278,7 +282,8 @@ Screens:
                         Items: =["8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM"]
                         Items.Value: =Value
                         OnChange: |-
-                          =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})
+                          =Set(varSchedConfirmSave, false);
+                          UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftStart: drpGalShiftStart.Selected.Value})
                         Width: =132
                         X: =drpGalShiftDay.X + drpGalShiftDay.Width + 11
                         Y: =4
@@ -290,7 +295,8 @@ Screens:
                         Items: =["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM"]
                         Items.Value: =Value
                         OnChange: |-
-                          =UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})
+                          =Set(varSchedConfirmSave, false);
+                          UpdateIf(colEditShifts, RowKey = ThisItem.RowKey, {ShiftEnd: drpGalShiftEnd.Selected.Value})
                         Width: =130
                         X: =drpGalShiftStart.X + drpGalShiftStart.Width + 11
                         Y: =4
@@ -303,7 +309,7 @@ Screens:
                         Height: =28
                         HoverColor: =Color.White
                         HoverFill: =varColorDanger
-                        OnSelect: =Remove(colEditShifts, ThisItem)
+                        OnSelect: =Set(varSchedConfirmSave, false); Remove(colEditShifts, ThisItem)
                         PressedFill: =ColorFade(varColorDanger, -20%)
                         Size: =12
                         Text: ="✕"
@@ -324,7 +330,8 @@ Screens:
                   HoverColor: =Color.White
                   HoverFill: =varColorPrimaryHover
                   OnSelect: |-
-                    =Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
+                    =Set(varSchedConfirmSave, false);
+                    Collect(colEditShifts, {RowKey: Text(GUID()), Day: "Monday", ShiftStart: "8:30 AM", ShiftEnd: "9:00 AM"})
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =varColorPrimaryPressed
@@ -345,148 +352,163 @@ Screens:
                   BorderThickness: =0
                   Color: =Color.White
                   DisplayMode: =If(varSchedEditSaving, DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =varColorSuccess
+                  Fill: =If(varSchedConfirmSave, varColorWarning, varColorSuccess)
                   Font: =varAppFont
                   Height: =36
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =Color.White
-                  HoverFill: =varColorSuccessHover
+                  HoverFill: =If(varSchedConfirmSave, ColorFade(varColorWarning, 15%), varColorSuccessHover)
                   OnSelect: |-
-                    =Set(varSchedEditSaving, true);
-
-                    If(
-                        CountRows(
-                            Filter(
-                                colEditShifts,
-                                !IsBlank(ShiftStart) &&
-                                !IsBlank(ShiftEnd) &&
-                                LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
-                            )
-                        ) > 0,
+                    =If(
+                        IsBlank(Trim(varSchedSelectedEmail)),
                         Set(varSchedSaved, false);
-                        Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+                        Set(varSchedConfirmSave, false);
+                        Notify("Select your name before saving your schedule.", NotificationType.Error),
+                        If(
+                            !varSchedConfirmSave,
+                            Set(varSchedSaved, false);
+                            Set(varSchedConfirmSave, true);
+                            Notify("Click Confirm Replace to overwrite your saved schedule with the rows shown here.", NotificationType.Warning),
+                            Set(varSchedEditSaving, true);
 
-                        // Remove existing shifts, then patch new ones.
-                        // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
-                        // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
-                        Set(
-                            varSchedSaved,
-                            IfError(
-                                RemoveIf(StaffShifts, Lower(Trim(StaffEmail)) = varSchedSelectedEmail);
-                                IfError(
-                                    Patch(
-                                        StaffShifts,
-                                        ForAll(
-                                            Filter(
-                                                colEditShifts,
-                                                !IsBlank(ShiftStart) &&
-                                                !IsBlank(ShiftEnd) &&
-                                                LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
-                                            ),
+                            If(
+                                CountRows(
+                                    Filter(
+                                        colEditShifts,
+                                        !IsBlank(ShiftStart) &&
+                                        !IsBlank(ShiftEnd) &&
+                                        LookUp(colTimeSlots, Label = ShiftEnd).Idx <= LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                    )
+                                ) > 0,
+                                Set(varSchedSaved, false);
+                                Set(varSchedConfirmSave, false);
+                                Notify("Each shift must end after it starts. Fix the invalid time range and try again.", NotificationType.Error),
+
+                                // Remove existing shifts, then patch new ones.
+                                // Outer IfError catches RemoveIf failure (no data changed — safe to retry).
+                                // Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
+                                Set(
+                                    varSchedSaved,
+                                    IfError(
+                                        RemoveIf(StaffShifts, Lower(Trim(StaffEmail)) = varSchedSelectedEmail);
+                                        IfError(
+                                            Patch(
+                                                StaffShifts,
+                                                ForAll(
+                                                    Filter(
+                                                        colEditShifts,
+                                                        !IsBlank(ShiftStart) &&
+                                                        !IsBlank(ShiftEnd) &&
+                                                        LookUp(colTimeSlots, Label = ShiftEnd).Idx > LookUp(colTimeSlots, Label = ShiftStart).Idx
+                                                    ),
+                                                    {
+                                                        StaffEmail: varSchedSelectedEmail,
+                                                        Day:        {Value: Day},
+                                                        ShiftStart: {Value: ShiftStart},
+                                                        ShiftEnd:   {Value: ShiftEnd}
+                                                    }
+                                                )
+                                            );
+                                            true,
+                                            Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+                                            false
+                                        ),
+                                        Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
+                                        false
+                                    )
+                                )
+                            );
+
+                            If(
+                                varSchedSaved,
+                                ClearCollect(
+                                    colSchedStaff,
+                                    ForAll(
+                                        Filter(
+                                            Staff,
+                                            Active = true &&
+                                            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                                            (
+                                                AidType.Value = "Work Study" ||
+                                                AidType.Value = "Graduate Assistant" ||
+                                                AidType.Value = "President's Aid"
+                                            )
+                                        ),
+                                        {
+                                            StaffID:        ID,
+                                            MemberName:     Trim(
+                                                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                                                            ),
+                                            MemberEmail:    Lower(Trim(Member.Email)),
+                                            Role:           Role,
+                                            Active:         Active,
+                                            AidType:        AidType.Value,
+                                            SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                                        }
+                                    )
+                                );
+                                ClearCollect(
+                                    colShifts,
+                                    ForAll(
+                                        Filter(
+                                            StaffShifts,
+                                            Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
+                                            !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+                                        ),
+                                        {
+                                            ShiftID:    ID,
+                                            Email:      Lower(Trim(StaffEmail)),
+                                            Day:        Day.Value,
+                                            ShiftStart: ShiftStart.Value,
+                                            ShiftEnd:   ShiftEnd.Value
+                                        }
+                                    )
+                                );
+                                ClearCollect(
+                                    colSchedLookup,
+                                    ForAll(
+                                        colShifts As sh,
+                                        With(
                                             {
-                                                StaffEmail: varSchedSelectedEmail,
-                                                Day:        {Value: Day},
-                                                ShiftStart: {Value: ShiftStart},
-                                                ShiftEnd:   {Value: ShiftEnd}
+                                                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
+                                                cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
+                                            },
+                                            {
+                                                ShiftID:    sh.ShiftID,
+                                                Email:      sh.Email,
+                                                Name:       sr.MemberName,
+                                                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                                                Day:        sh.Day,
+                                                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                                                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                                                ColorHex:   cr.Hex,
+                                                ColorLight: cr.Light,
+                                                SortOrder:  sr.SchedSortOrder
                                             }
                                         )
-                                    );
-                                    true,
-                                    Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
-                                    false
-                                ),
-                                Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
-                                false
-                            )
-                        )
-                    );
-
-                    If(
-                        varSchedSaved,
-                        ClearCollect(
-                            colSchedStaff,
-                            ForAll(
-                                Filter(
-                                    Staff,
-                                    Active = true &&
-                                    Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
-                                    (
-                                        AidType.Value = "Work Study" ||
-                                        AidType.Value = "Graduate Assistant" ||
-                                        AidType.Value = "President's Aid"
                                     )
-                                ),
-                                {
-                                    StaffID:        ID,
-                                    MemberName:     Trim(
-                                                        First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                                        Last(Split(Trim(Member.DisplayName), " ")).Value
-                                                    ),
-                                    MemberEmail:    Lower(Trim(Member.Email)),
-                                    Role:           Role,
-                                    Active:         Active,
-                                    AidType:        AidType.Value,
-                                    SchedSortOrder: Coalesce(SchedSortOrder, 10)
-                                }
-                            )
-                        );
-                        ClearCollect(
-                            colShifts,
-                            ForAll(
-                                Filter(
-                                    StaffShifts,
-                                    Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-                                    !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
-                                ),
-                                {
-                                    ShiftID:    ID,
-                                    Email:      Lower(Trim(StaffEmail)),
-                                    Day:        Day.Value,
-                                    ShiftStart: ShiftStart.Value,
-                                    ShiftEnd:   ShiftEnd.Value
-                                }
-                            )
-                        );
-                        ClearCollect(
-                            colSchedLookup,
-                            ForAll(
-                                colShifts As sh,
-                                With(
-                                    {
-                                        sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
-                                    },
-                                    {
-                                        ShiftID:    sh.ShiftID,
-                                        Email:      sh.Email,
-                                        Name:       sr.MemberName,
-                                        Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                                    Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                                        Day:        sh.Day,
-                                        StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                                        EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                                        ColorHex:   cr.Hex,
-                                        ColorLight: cr.Light,
-                                        SortOrder:  sr.SchedSortOrder
-                                    }
-                                )
-                            )
-                        );
-                        Set(varSchedSelectedEmail, "");
-                        Clear(colEditShifts);
-                        Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
-                    );
+                                );
+                                Set(varSchedSelectedEmail, "");
+                                Set(varSchedConfirmSave, false);
+                                Clear(colEditShifts);
+                                Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1),
+                                Set(varSchedConfirmSave, false)
+                            );
 
-                    Set(varSchedEditSaving, false)
+                            Set(varSchedEditSaving, false)
+                        )
+                    )
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: =ColorFade(varColorSuccess, -25%)
+                  PressedFill: =If(varSchedConfirmSave, ColorFade(varColorWarning, -25%), ColorFade(varColorSuccess, -25%))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
                   RadiusTopRight: =varBtnBorderRadius
                   Size: =11
-                  Text: =If(varSchedEditSaving, "Saving...", "Save Schedule")
+                  Text: =If(varSchedEditSaving, "Saving...", If(varSchedConfirmSave, "Confirm Replace", "Save Schedule"))
                   Visible: =varSchedSelectedEmail <> ""
                   Width: =130
                   X: =Parent.Width - 330
@@ -501,7 +523,7 @@ Screens:
                   Font: =varAppFont
                   Height: =36
                   HoverFill: =RGBA(220, 220, 220, 1)
-                  OnSelect: =Set(varSchedSelectedEmail, ""); Clear(colEditShifts); Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
+                  OnSelect: =Set(varSchedSelectedEmail, ""); Set(varSchedConfirmSave, false); Clear(colEditShifts); Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
                   PressedBorderColor: =Self.BorderColor
                   PressedFill: =RGBA(200, 200, 200, 1)
                   Size: =11

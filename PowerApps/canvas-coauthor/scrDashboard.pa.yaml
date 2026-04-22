@@ -40,19 +40,7 @@ Screens:
               // Reload local collections used by job-card summaries
               ClearCollect(colAllBuildPlates, BuildPlates);
               ClearCollect(colAllPayments, Payments);
-              ClearCollect(colBuildPlateSummary,
-                  ForAll(
-                      Distinct(colAllBuildPlates, RequestID) As grp,
-                      {
-                          RequestID: grp.Value,
-                          TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                          CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                          ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                          ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                      }
-                  )
-              );
-
+              ClearCollect(colAllRequestComments, RequestComments);
               // Reload NeedsAttention items into local collection (avoids delegation)
               ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 
@@ -451,7 +439,7 @@ Screens:
                   Size: =10
                   Text: |-
                     =With(
-                        {wSummary: LookUp(colBuildPlateSummary, RequestID = ThisItem.ID)},
+                        {wSummary: LookUp(BuildPlateSummary, RequestID = ThisItem.ID)},
                         If(
                             Coalesce(ThisItem.BuildPlateLabelsLocked, false) && Coalesce(ThisItem.BuildPlateOriginalTotal, 0) > 0,
                             "🖨 " & Text(Coalesce(wSummary.CompletedCount, 0)) & "/" & Text(ThisItem.BuildPlateOriginalTotal) & " done" &
@@ -1172,30 +1160,36 @@ Screens:
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
-                  Text: ="Messages (" & CountRows(Filter(RequestComments, RequestID = ThisItem.ID)) & ")"
+                  Text: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, "Messages (" & Text(Coalesce(wSummary.TotalCount, 0)) & ")")
                   Width: =96
                   X: =13
                   Y: =330
             - btnViewMessages:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(184, 0, 0, 1), varColorPrimary)
+                  BorderColor: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))
                   BorderThickness: =varInputBorderThickness
-                  Color: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 255, 255, 1), varColorPrimary)
+                  Color: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 46, 46, 1), Color.White)
+                  Fill: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(220, 40, 40, 1), varColorPrimary)
+                  HoverFill: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
+                  PressedFill: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1220,8 +1214,10 @@ Screens:
                   PaddingRight: =0
                   PaddingTop: =0
                   Size: =7
-                  Text: =Text(CountRows(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)))
-                  Visible: =!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
+                  Text: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Text(Coalesce(wSummary.UnreadInboundCount, 0)))
+                  Visible: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)
                   Width: =10
                   X: =94
                   Y: =363
@@ -1525,22 +1521,13 @@ Screens:
               =Concurrent(
                   Refresh(PrintRequests),
                   Refresh(BuildPlates),
-                  Refresh(Payments)
+                  Refresh(Payments),
+                  Refresh(RequestComments)
               );
               ClearCollect(colAllBuildPlates, BuildPlates);
               ClearCollect(colAllPayments, Payments);
-              ClearCollect(colBuildPlateSummary,
-                  ForAll(
-                      Distinct(colAllBuildPlates, RequestID) As grp,
-                      {
-                          RequestID: grp.Value,
-                          TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                          CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                          ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                          ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                      }
-                  )
-              )
+              ClearCollect(colAllRequestComments, RequestComments);
+              
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
             PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -5096,18 +5083,6 @@ Screens:
                         );
                         ClearCollect(colAllBuildPlates, BuildPlates);
                         ClearCollect(colAllPayments, Payments);
-                        ClearCollect(colBuildPlateSummary,
-                            ForAll(
-                                Distinct(colAllBuildPlates, RequestID) As grp,
-                                {
-                                    RequestID: grp.Value,
-                                    TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                                    ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                                }
-                            )
-                        );
                         Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
                         With(
@@ -5744,18 +5719,6 @@ Screens:
                                   )
                               );
                               ClearCollect(colAllBuildPlates, BuildPlates);
-                              ClearCollect(colBuildPlateSummary,
-                                  ForAll(
-                                      Distinct(colAllBuildPlates, RequestID) As grp,
-                                      {
-                                          RequestID: grp.Value,
-                                          TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                          CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                                          ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                          ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                                      }
-                                  )
-                              );
                               ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
                               Notify("Machine updated", NotificationType.Success, 2000)
                           );
@@ -5901,18 +5864,7 @@ Screens:
                                   )
                               );
                               ClearCollect(colAllBuildPlates, BuildPlates);
-                              ClearCollect(colBuildPlateSummary,
-                                  ForAll(
-                                      Distinct(colAllBuildPlates, RequestID) As grp,
-                                      {
-                                          RequestID: grp.Value,
-                                          TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                          CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                                          ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                          ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                                      }
-                                  )
-                              )
+                              
                           )
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
@@ -6059,18 +6011,6 @@ Screens:
                             )
                         );
                         ClearCollect(colAllBuildPlates, BuildPlates);
-                        ClearCollect(colBuildPlateSummary,
-                            ForAll(
-                                Distinct(colAllBuildPlates, RequestID) As grp,
-                                {
-                                    RequestID: grp.Value,
-                                    TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                                    ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                                }
-                            )
-                        );
                         Notify("Plate added", NotificationType.Success, 2000)
                     );
 
@@ -6610,19 +6550,6 @@ Screens:
                         );
                         ClearCollect(colAllBuildPlates, BuildPlates);
                         ClearCollect(colAllPayments, Payments);
-                        ClearCollect(colBuildPlateSummary,
-                            ForAll(
-                                Distinct(colAllBuildPlates, RequestID) As grp,
-                                {
-                                    RequestID: grp.Value,
-                                    TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                                    ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                                    ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-                                }
-                            )
-                        );
-
                         ForAll(
                             colBatchItems As BatchItem,
                             IfError(
@@ -7637,7 +7564,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Height: =335
-                  Items: =Sort(Filter(RequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
+                  Items: =Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =8
                   TemplateSize: =80
                   Width: =560
@@ -7895,6 +7822,7 @@ Screens:
                         ReadByStaff = false,
                         { ReadByStaff: true }
                     );
+                    ClearCollect(colAllRequestComments, RequestComments);
 
                     // Clear the NeedsAttention flag on the request
                     Set(
@@ -7924,7 +7852,8 @@ Screens:
                   RadiusTopRight: =varRadiusSmall
                   Size: =10
                   Text: ="Mark All Read"
-                  Visible: =!IsEmpty(Filter(RequestComments, RequestID = varSelectedItem.ID, Direction.Value = "Inbound", ReadByStaff = false))
+                  Visible: |-
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = varSelectedItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)
                   Width: =120
                   X: =recViewMsgModal.X + 20
                   Y: =recViewMsgModal.Y + recViewMsgModal.Height - 50
@@ -8015,6 +7944,7 @@ Screens:
                             StudentEmail: varSelectedItem.StudentEmail
                         }
                     );
+                    ClearCollect(colAllRequestComments, RequestComments);
 
                     // Update PrintRequest to mark last action
                     Patch(
