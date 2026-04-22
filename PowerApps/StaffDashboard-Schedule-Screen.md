@@ -728,96 +728,119 @@ Older drafts of this document inlined a **CSS class + `<style>`** grid formula. 
 
 Wire the `OnSelect` of `btnSchedSave` with this formula. It **replaces** all `StaffShifts` rows for the selected email with the current gallery rows (complete rows only), then rebuilds collections so the grid updates without leaving the screen.
 
+The save uses nested `IfError` guards — the same `IfError(...; true, Notify(...); false)` pattern used by `btnCompleteConfirm` and `btnApprovalConfirm` throughout the app. The result is stored in `varSchedSaved`. The collection rebuild and state reset only run when both operations succeed. `varSchedEditSaving` resets unconditionally so the button can never get stuck in "Saving…" state.
+
 ```
 Set(varSchedEditSaving, true);
-RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
-Patch(
-    StaffShifts,
-    ForAll(
-        Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
-        {
-            StaffEmail: varSchedSelectedEmail,
-            Day:        {Value: Day},
-            ShiftStart: {Value: ShiftStart},
-            ShiftEnd:   {Value: ShiftEnd}
-        }
-    )
-);
-ClearCollect(
-    colSchedStaff,
-    ForAll(
-        Filter(
-            Staff,
-            Active = true &&
-            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
-            (
-                AidType.Value = "Work Study" ||
-                AidType.Value = "Graduate Assistant" ||
-                AidType.Value = "President's Aid"
-            )
-        ),
-        {
-            StaffID:        ID,
-            MemberName:     Trim(
-                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                Last(Split(Trim(Member.DisplayName), " ")).Value
-                            ),
-            MemberEmail:    Member.Email,
-            Role:           Role,
-            Active:         Active,
-            AidType:        AidType.Value,
-            SchedSortOrder: Coalesce(SchedSortOrder, 10)
-        }
-    )
-);
-ClearCollect(
-    colShifts,
-    ForAll(
-        Filter(
-            StaffShifts,
-            StaffEmail <> "" &&
-            !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
-        ),
-        {
-            ShiftID:    ID,
-            Email:      StaffEmail,
-            Day:        Day.Value,
-            ShiftStart: ShiftStart.Value,
-            ShiftEnd:   ShiftEnd.Value
-        }
-    )
-);
-ClearCollect(
-    colSchedLookup,
-    ForAll(
-        colShifts As sh,
-        With(
-            {
-                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                cr: LookUp(
-                    colSchedColors,
-                    Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
+
+// Remove existing shifts, then patch new ones.
+// Outer IfError catches RemoveIf failure (no data changed — safe to retry).
+// Inner IfError catches Patch failure (shifts were removed — user warned to re-enter).
+Set(
+    varSchedSaved,
+    IfError(
+        RemoveIf(StaffShifts, StaffEmail = varSchedSelectedEmail);
+        IfError(
+            Patch(
+                StaffShifts,
+                ForAll(
+                    Filter(colEditShifts, !IsBlank(ShiftStart) && !IsBlank(ShiftEnd)),
+                    {
+                        StaffEmail: varSchedSelectedEmail,
+                        Day:        {Value: Day},
+                        ShiftStart: {Value: ShiftStart},
+                        ShiftEnd:   {Value: ShiftEnd}
+                    }
                 )
-            },
+            );
+            true,
+            Notify("New shifts could not be saved after existing shifts were removed. Please re-enter your shifts and try again.", NotificationType.Error);
+            false
+        ),
+        Notify("Schedule could not be saved. Your existing shifts were not changed. Please try again.", NotificationType.Error);
+        false
+    )
+);
+
+If(
+    varSchedSaved,
+    ClearCollect(
+        colSchedStaff,
+        ForAll(
+            Filter(
+                Staff,
+                Active = true &&
+                Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
+                (
+                    AidType.Value = "Work Study" ||
+                    AidType.Value = "Graduate Assistant" ||
+                    AidType.Value = "President's Aid"
+                )
+            ),
             {
-                ShiftID:    sh.ShiftID,
-                Email:      sh.Email,
-                Name:       sr.MemberName,
-                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                Day:        sh.Day,
-                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                ColorHex:   cr.Hex,
-                ColorLight: cr.Light,
-                SortOrder:  sr.SchedSortOrder
+                StaffID:        ID,
+                MemberName:     Trim(
+                                    First(Split(Trim(Member.DisplayName), " ")).Value & " " &
+                                    Last(Split(Trim(Member.DisplayName), " ")).Value
+                                ),
+                MemberEmail:    Member.Email,
+                Role:           Role,
+                Active:         Active,
+                AidType:        AidType.Value,
+                SchedSortOrder: Coalesce(SchedSortOrder, 10)
             }
         )
-    )
+    );
+    ClearCollect(
+        colShifts,
+        ForAll(
+            Filter(
+                StaffShifts,
+                StaffEmail <> "" &&
+                !IsBlank(LookUp(colSchedStaff, MemberEmail = StaffEmail))
+            ),
+            {
+                ShiftID:    ID,
+                Email:      StaffEmail,
+                Day:        Day.Value,
+                ShiftStart: ShiftStart.Value,
+                ShiftEnd:   ShiftEnd.Value
+            }
+        )
+    );
+    ClearCollect(
+        colSchedLookup,
+        ForAll(
+            colShifts As sh,
+            With(
+                {
+                    sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
+                    cr: LookUp(
+                        colSchedColors,
+                        Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
+                    )
+                },
+                {
+                    ShiftID:    sh.ShiftID,
+                    Email:      sh.Email,
+                    Name:       sr.MemberName,
+                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                    Day:        sh.Day,
+                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                    ColorHex:   cr.Hex,
+                    ColorLight: cr.Light,
+                    SortOrder:  sr.SchedSortOrder
+                }
+            )
+        )
+    );
+    Set(varSchedSelectedEmail, "");
+    Clear(colEditShifts);
+    Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 );
-Set(varSchedSelectedEmail, "");
-Clear(colEditShifts);
-Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1);
+
 Set(varSchedEditSaving, false)
 ```
 
@@ -826,6 +849,8 @@ Set(varSchedEditSaving, false)
 > **Why not `ForAll(..., Patch(Defaults(StaffShifts), …))`?** That pattern often creates **only one** new row when several are needed (concurrent evaluation). **`Patch(StaffShifts, ForAll(..., { ... }))`** performs a **batch create** in one call — reliable for multiple shifts.
 
 > **Why `RemoveIf` + `Patch`?** SharePoint has no "replace collection" in one call. Deleting all rows for that email then inserting the current set keeps unlimited shifts per day without orphaned rows.
+
+> **Why nested `IfError`?** The two operations are not atomic. If `RemoveIf` fails, no data has changed and the user can safely retry (outer `IfError`). If `RemoveIf` succeeds but `Patch` fails, the staff member's shifts are already deleted — the inner `IfError` catches this and tells the user to re-enter their shifts. In both error cases `varSchedSaved` is `false`, the collection rebuild is skipped, and `varSchedEditSaving` unconditionally resets to `false`.
 
 > **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 
