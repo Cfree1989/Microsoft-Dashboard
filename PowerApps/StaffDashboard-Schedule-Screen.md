@@ -4,6 +4,8 @@
 **🎯 Goal:** A live color-coded semester schedule showing all active student workers, with inline editing so each person can enter their own hours
 
 > 📚 **This is a screen addition to the existing Staff Dashboard app.** Complete the SharePoint update before starting here.
+>
+> Dashboard note: the shared `scrDashboard` search bar now matches printer text too, so staff can type tokens like `xl` or `mk4s` and see both the card list and status counts narrow to that printer subset. This schedule screen's totals sorting is unchanged by that dashboard update.
 
 **Live YAML (coauthor):** [PowerApps/canvas-coauthor/scrSchedule.pa.yaml](canvas-coauthor/scrSchedule.pa.yaml) — run **`sync_canvas`** before comparing Studio to this repo.
 

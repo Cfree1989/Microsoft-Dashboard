@@ -170,14 +170,25 @@ Screens:
               =With(
                   {
                       filteredJobs: Filter(
-                          PrintRequests,
-                          Status.Value = varSelectedStatus,
+                          PrintRequests As req,
+                          req.Status.Value = varSelectedStatus,
                           If(
-                              IsBlank(varSearchText), 
-                              true, 
-                              varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value
+                              IsBlank(varSearchText),
+                              true,
+                              varSearchText in req.Student.DisplayName ||
+                              varSearchText in req.StudentEmail ||
+                              varSearchText in req.ReqKey ||
+                              varSearchText in req.SlicedOnComputer.Value ||
+                              varSearchText in req.Printer.Value ||
+                              CountRows(
+                                  Filter(
+                                      colAllBuildPlates,
+                                      RequestID = req.ID &&
+                                      varSearchText in Machine.Value
+                                  )
+                              ) > 0
                           ),
-                          If(varNeedsAttention, NeedsAttention = true, true)
+                          If(varNeedsAttention, req.NeedsAttention = true, true)
                       )
                   },
                   Switch(
@@ -1584,7 +1595,7 @@ Screens:
                   PressedColor: =If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)
                   PressedFill: =ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)
                   Size: =10
-                  Text: =ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value), If(varNeedsAttention, NeedsAttention = true, true))))
+                  Text: =ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests As req, req.Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in req.Student.DisplayName || varSearchText in req.StudentEmail || varSearchText in req.ReqKey || varSearchText in req.SlicedOnComputer.Value || varSearchText in req.Printer.Value || CountRows(Filter(colAllBuildPlates, RequestID = req.ID && varSearchText in Machine.Value)) > 0), If(varNeedsAttention, req.NeedsAttention = true, true))))
                   Width: =141
                   X: =5
                   Y: =4

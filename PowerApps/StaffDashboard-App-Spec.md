@@ -1478,7 +1478,7 @@ Table(
 | Y | `4` |
 | Width | `141` |
 | Size | `10` |
-| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests, Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value), If(varNeedsAttention, NeedsAttention = true, true))))` |
+| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests As req, req.Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in req.Student.DisplayName || varSearchText in req.StudentEmail || varSearchText in req.ReqKey || varSearchText in req.SlicedOnComputer.Value || varSearchText in req.Printer.Value || CountRows(Filter(colAllBuildPlates, RequestID = req.ID && varSearchText in Machine.Value)) > 0), If(varNeedsAttention, req.NeedsAttention = true, true))))` |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
@@ -1498,7 +1498,7 @@ Table(
 >
 > ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
 >
-> 💡 **Filtered count behavior:** Each tab count intentionally uses the same search text and Needs Attention filters as the main gallery. In this low-volume app, that keeps the badges aligned with the visible result set across all statuses, including Archived.
+> 💡 **Filtered count behavior:** Each tab count intentionally uses the same search text and Needs Attention filters as the main gallery. Search now includes student name, email, request key, slicing computer, requested printer, and any build-plate machine already assigned to the job. In this low-volume app, that keeps the badges aligned with the visible result set across all statuses, including Archived.
 
 ### ✅ Step 5 Checklist
 
@@ -1546,14 +1546,25 @@ Your Tree view should now include:
 With(
     {
         filteredJobs: Filter(
-            PrintRequests,
-            Status.Value = varSelectedStatus,
+            PrintRequests As req,
+            req.Status.Value = varSelectedStatus,
             If(
-                IsBlank(varSearchText), 
-                true, 
-                varSearchText in Student.DisplayName || varSearchText in StudentEmail || varSearchText in ReqKey || varSearchText in SlicedOnComputer.Value
+                IsBlank(varSearchText),
+                true,
+                varSearchText in req.Student.DisplayName ||
+                varSearchText in req.StudentEmail ||
+                varSearchText in req.ReqKey ||
+                varSearchText in req.SlicedOnComputer.Value ||
+                varSearchText in req.Printer.Value ||
+                CountRows(
+                    Filter(
+                        colAllBuildPlates,
+                        RequestID = req.ID &&
+                        varSearchText in Machine.Value
+                    )
+                ) > 0
             ),
-            If(varNeedsAttention, NeedsAttention = true, true)
+            If(varNeedsAttention, req.NeedsAttention = true, true)
         )
     },
     Switch(
@@ -1583,7 +1594,7 @@ With(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. `Queue Order` preserves the operational default: attention items first, then oldest requests (longest in queue).
 >
-> 💡 **Sort modes:** Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, and `Printer A-Z` from the filter bar.
+> 💡 **Search + sort behavior:** The search bar can now match student name, email, request key, slicing computer, requested printer, or assigned build-plate machine values like `XL` or `MK4S`. Staff can still switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, and `Printer A-Z` from the filter bar.
 >
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
@@ -11916,6 +11927,8 @@ scrDashboard
 Set(varSearchText, Self.Text)
 ```
 
+> Typing a printer token such as `xl` or `mk4s` now filters the dashboard the same way a student name does. The search predicate checks student name, email, request key, slicing computer, requested printer, and any assigned build-plate machine.
+
 ---
 
 ### Needs Attention Checkbox (chkNeedsAttention)
@@ -14266,7 +14279,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 - [ ] App loads without errors
 - [ ] Status tabs show correct counts
 - [ ] Clicking a tab filters the gallery
-- [ ] Search filters by name/email/ReqKey/computer
+- [ ] Search filters by name/email/ReqKey/computer/printer
+- [ ] Typing a printer like `xl` or `mk4s` updates both the visible cards and the status-tab counts
 - [ ] "Needs Attention" checkbox filters correctly
 - [ ] Refresh button reloads data and updates tab counts
 

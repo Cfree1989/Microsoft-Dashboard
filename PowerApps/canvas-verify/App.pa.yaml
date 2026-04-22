@@ -1,5 +1,26 @@
 App:
   Properties:
+    Formulas: |-
+      =BuildPlateSummary =
+          ForAll(
+              Distinct(colAllBuildPlates, RequestID) As grp,
+              {
+                  RequestID: grp.Value,
+                  TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                  ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
+              }
+          );
+      RequestCommentSummary =
+          ForAll(
+              Distinct(colAllRequestComments, RequestID) As grp,
+              {
+                  RequestID: grp.Value,
+                  TotalCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value)),
+                  UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
+              }
+          );
     OnStart: |-
       =// === USER IDENTIFICATION ===
       // Cache user info for performance
@@ -46,11 +67,12 @@ App:
       Set(varShowRevertModal, 0);
       Set(varShowBatchPaymentModal, 0);
       Set(varShowBuildPlatesModal, 0);
-      Set(varShowExportModal, false);
+      Set(varShowExportModal, 0);
 
       // === SCHEDULE SCREEN STATE ===
       Set(varSchedSelectedEmail, "");
       Set(varSchedEditSaving, false);
+      Set(varSchedConfirmSave, false);
       Set(varSchedShowReorder, false);
       Set(varSchedTotalsSortBy, "Total");
       Set(varSchedTotalsSortDesc, true);
@@ -121,7 +143,8 @@ App:
           ),
           ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
           ClearCollect(colAllBuildPlates, BuildPlates),
-          ClearCollect(colAllPayments, Payments)
+          ClearCollect(colAllPayments, Payments),
+          ClearCollect(colAllRequestComments, RequestComments)
       );
 
       // === SCHEDULE: TIME SLOTS ===
@@ -160,20 +183,6 @@ App:
           {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
           {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
           {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
-      );
-
-      // Pre-aggregate build plate counts per request (avoids per-card inline filtering on the dashboard)
-      ClearCollect(colBuildPlateSummary,
-          ForAll(
-              Distinct(colAllBuildPlates, RequestID) As grp,
-              {
-                  RequestID: grp.Value,
-                  TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                  CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                  ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                  ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-              }
-          )
       );
 
       // Check if current user is a staff member (uses colStaff loaded above)
