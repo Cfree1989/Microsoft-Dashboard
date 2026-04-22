@@ -12867,12 +12867,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `317` |
 | Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 46, 46, 1), Color.White)` |
-| Color | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 255, 255, 1), varColorPrimary)` |
+| Fill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 46, 46, 1), Color.White)` |
+| Color | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 255, 255, 1), varColorPrimary)` |
 | HoverColor | `Color.White` |
-| HoverFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(220, 40, 40, 1), varColorPrimary)` |
-| PressedFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
-| BorderColor | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(184, 0, 0, 1), varColorPrimary)` |
+| HoverFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(220, 40, 40, 1), varColorPrimary)` |
+| PressedFill | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
+| BorderColor | `If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(184, 0, 0, 1), varColorPrimary)` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12933,6 +12933,8 @@ The full messaging functionality (view history AND compose) is in the unified Me
 The **live app** uses a single compact control **`btnViewMessages`** (label **Messages**) plus **`lblUnreadBadge`** — there is **no** separate `btnCardSendMessage` on the card. Compose/reply happens inside **Step 17D** (`conViewMessagesModal`).
 
 > **Legacy docs:** Earlier versions added `btnCardSendMessage` beside **Files** / **Archive**. If you still have that control, you can delete it and rely on `btnViewMessages` only.
+
+> **Unread-only alert state:** Keep the red button styling keyed to unread inbound comments only (`Direction.Value = "Inbound"` and `ReadByStaff = false`). Historical read messages should still count toward the `"Messages (n)"` label, but they should not keep the button highlighted once staff has caught up.
 
 ---
 

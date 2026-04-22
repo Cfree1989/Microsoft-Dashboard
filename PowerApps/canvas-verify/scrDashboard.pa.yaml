@@ -1179,23 +1179,23 @@ Screens:
             - btnViewMessages:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(184, 0, 0, 1), varColorPrimary)
+                  BorderColor: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(184, 0, 0, 1), varColorPrimary)
                   BorderThickness: =varInputBorderThickness
-                  Color: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 255, 255, 1), varColorPrimary)
+                  Color: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 255, 255, 1), varColorPrimary)
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(255, 46, 46, 1), Color.White)
+                  Fill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(255, 46, 46, 1), Color.White)
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(220, 40, 40, 1), varColorPrimary)
+                  HoverFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(220, 40, 40, 1), varColorPrimary)
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
+                  PressedFill: =If(!IsEmpty(Filter(RequestComments, RequestID = ThisItem.ID, Direction.Value = "Inbound", ReadByStaff = false)), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
