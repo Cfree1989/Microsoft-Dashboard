@@ -668,12 +668,9 @@ High-confidence findings from one or two models with clear impact.
 | Reference | What to Improve | Models | Live YAML |
 |-----------|-----------------|--------|-----------|
 | `colBuildPlateSummary` rebuild — **8 locations** *(report said 5)* | Identical 10-line `ForAll/Distinct` formula in `App.OnStart`, `tmrAutoRefresh`, `btnRefresh`, `btnApproveConfirm` success, `btnPickedUp` partial path, `btnPickedUp` full path, `btnPaymentConfirm` success, `btnBatchPaymentConfirm` success. Extract to a named formula. | Claude Opus 4.6, GPT-5.4 | ✅ Open — `App.pa.yaml` line 166; `scrDashboard.pa.yaml` lines 42, 1515, 5037, 5685, 5842, 6000, 6550 |
-| Accessibility — both screens | Nearly all interactive controls lack `AccessibleLabel`. Only `ddSortOrder` and `drpSchedTotalsSort` have them. Significant WCAG gap across the entire app. | Claude Opus 4.6, Composer 2, GPT-5.4 | ✅ Open |
 | Per-card `RequestComments` filtering | `lblMessagesHeader`, `btnViewMessages`, `lblUnreadBadge` each query the live SharePoint list per card. Precompute a keyed summary collection (like `colBuildPlateSummary`) to reduce SharePoint calls. | Claude Opus 4.6, GPT-5.4 | ✅ Open — `scrDashboard.pa.yaml` lines 1158, 1165, 1206–1207 |
 | `varShowExportModal` type inconsistency | Export modal uses `Boolean`; all others use `Int` (record ID). Migrate to `0`/`ID` pattern for one consistent mental model and simpler "close all modals" helpers. | Gemini, Composer 2 | ✅ Open — `App.pa.yaml` line 49 |
 | `btnSchedSave` — destructive `RemoveIf` with no confirmation | No guard on `varSchedSelectedEmail` being blank, no confirmation step before wiping all rows. Minimum: a blank check guard; ideally a confirm dialog. | Gemini, Composer 2 | ✅ Open — `scrSchedule.pa.yaml` line 346 *(error handling added in P1 fix #1; blank guard + confirm dialog still outstanding)* |
-| Staff picker auto-select current user | The "Performing Action As" dropdown requires a manual selection on every modal. Pre-populate `DefaultSelectedItems` with the record matching `varMeEmail` to save a click on every action. | Claude Opus 4.6 | ✅ Open |
-| `btnStartPrint` — missing confirmation modal and staff attribution | Only status-transition without a confirmation step. Hardcodes `User().Email` instead of a staff picker, breaking the acting-as audit pattern used everywhere else. | Claude Opus 4.6 | ✅ Open |
 
 ---
 
