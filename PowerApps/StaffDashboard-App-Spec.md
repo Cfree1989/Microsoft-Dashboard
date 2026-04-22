@@ -581,8 +581,9 @@ ClearCollect(colBuildPlateSummary,
 // Check if current user is a staff member (uses colStaff loaded above)
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
 
-// Track count for change detection (CountRows on local collection is safe)
-Set(varPrevAttentionCount, CountRows(colNeedsAttention));
+// Seed both attention counters before the timer starts so the first comparison is typed and stable
+Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+Set(varPrevAttentionCount, varCurrentAttentionCount);
 
 // === WORKING COLLECTIONS ===
 // Initialize typed empty tables from already-loaded collections (no additional SharePoint calls)
@@ -786,6 +787,7 @@ Set(varLoadingMessage, "")
 | `varIsLoading` | Shows loading overlay during operations | Boolean |
 | `varLoadingMessage` | Custom message shown during loading | Text |
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
+| `varCurrentAttentionCount` | Current count of NeedsAttention items on the latest timer/on-start refresh | Number |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
 | `colBuildPlateSummary` | Pre-aggregated build plate counts per `RequestID` (`TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`) — rebuilt after every `colAllBuildPlates` refresh | Table |
@@ -14365,12 +14367,13 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 **Cause:** Initial count comparison detecting existing items as "new".
 
 **Solution:**
-1. Ensure `varPrevAttentionCount` and `varPlaySound` are set in `App.OnStart` before the timer starts
+1. Ensure `varCurrentAttentionCount`, `varPrevAttentionCount`, and `varPlaySound` are set in `App.OnStart` before the timer starts
 2. The OnStart formula should include:
    ```powerfx
    Set(varPlaySound, false);
    ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
-   Set(varPrevAttentionCount, CountRows(colNeedsAttention));
+   Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+   Set(varPrevAttentionCount, varCurrentAttentionCount);
    ```
 
 ---
