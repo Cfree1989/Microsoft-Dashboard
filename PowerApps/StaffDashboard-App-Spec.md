@@ -9274,7 +9274,8 @@ Reset(ddBatchPaymentType)
 ```powerfx
 If(
     !IsBlank(ddBatchStaff.Selected) && 
-    !IsBlank(txtBatchTransaction.Text) &&
+    !IsBlank(ddBatchPaymentType.Selected.Value) &&
+    !(ddBatchPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtBatchTransaction.Text))) &&
     !IsBlank(Trim(txtBatchPayerName.Text)) &&
     !IsBlank(dpBatchPaymentDate.SelectedDate) &&
     !IsBlank(txtBatchWeight.Text) && 
@@ -9285,6 +9286,8 @@ If(
     DisplayMode.Disabled
 )
 ```
+
+> Transaction number is required for `TigerCASH` but optional for `Check` and `Grant/Program Code`. A blank `txtBatchTransaction` should be treated as valid for non-TigerCASH batch payments so staff can save pending grant/program-code pickups.
 
 73. Set **OnSelect:**
 

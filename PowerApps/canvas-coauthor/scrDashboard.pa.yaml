@@ -6550,7 +6550,8 @@ Screens:
                   DisplayMode: |-
                     =If(
                         !IsBlank(ddBatchStaff.Selected) && 
-                        !IsBlank(txtBatchTransaction.Text) &&
+                        !IsBlank(ddBatchPaymentType.Selected.Value) &&
+                        !(ddBatchPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtBatchTransaction.Text))) &&
                         !IsBlank(Trim(txtBatchPayerName.Text)) &&
                         !IsBlank(dpBatchPaymentDate.SelectedDate) &&
                         !IsBlank(txtBatchWeight.Text) && 
