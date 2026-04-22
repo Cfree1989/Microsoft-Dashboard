@@ -1,0 +1,547 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "fablab_sharedsharepointonline_c2ffc"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365": {
+        "api": {
+          "name": "shared_office365"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "fablab_sharedoffice365_682a6"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+              "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnNewItems",
+              "connectionName": "shared_sharepointonline"
+            }
+          },
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 1
+          },
+          "splitOn": "@triggerOutputs()?['body/value']"
+        }
+      },
+      "actions": {
+        "Generate_ReqKey": {
+          "type": "Compose",
+          "inputs": "@concat('REQ-', formatNumber(triggerOutputs()?['body/ID'], '00000'))",
+          "runAfter": {}
+        },
+        "Generate_Standardized_Display_Name": {
+          "type": "Compose",
+          "inputs": "@concat(\r\n  replace(replace(replace(replace(replace(\r\n    concat(\r\n      first(split(coalesce(triggerOutputs()?['body/Student/DisplayName'], triggerOutputs()?['body/Author/DisplayName']), ' ')),\r\n      last(split(coalesce(triggerOutputs()?['body/Student/DisplayName'], triggerOutputs()?['body/Author/DisplayName']), ' '))\r\n    ),\r\n    ' ', ''), '-', ''), '''', ''), '.', ''), ',', ''),\r\n  '_',\r\n  coalesce(string(triggerOutputs()?['body/Method/Value']), string(triggerOutputs()?['body/Method']), 'Unknown'),\r\n  '_',\r\n  coalesce(string(triggerOutputs()?['body/Color/Value']), string(triggerOutputs()?['body/Color']), 'Unknown'),\r\n  '_',\r\n  formatNumber(triggerOutputs()?['body/ID'], '00000')\r\n)",
+          "runAfter": {
+            "Generate_ReqKey": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Get_attachments": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+              "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+              "itemId": "@triggerBody()?['ID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItemAttachments",
+              "connectionName": "shared_sharepointonline"
+            }
+          },
+          "runAfter": {
+            "Generate_Standardized_Display_Name": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Check_for_No_Attachments": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@   equals(length(body('Get_attachments')), 0)",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Reject_Request_-_No_Files": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                  "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                  "id": "@triggerBody()?['ID']",
+                  "item/TigerCardNumber": "@   triggerOutputs()?['body/TigerCardNumber']",
+                  "item/Status/Value": "Rejected",
+                  "item/LastAction/Value": "Rejected",
+                  "item/LastActionBy/Claims": "System",
+                  "item/LastActionAt": "@utcNow()",
+                  "item/NeedsAttention": true
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PatchItem",
+                  "connectionName": "shared_sharepointonline"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT1M",
+                  "minimumInterval": "PT20S",
+                  "maximumInterval": "PT1H"
+                }
+              }
+            },
+            "Log_No_Files_Rejection": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                  "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                  "item/Title": "Rejected: No files attached",
+                  "item/ReqKey": "@outputs('Generate_ReqKey')",
+                  "item/ActionAt": "@utcNow()",
+                  "item/Action/Value": "Rejected",
+                  "item/Notes": "Request rejected: No files were attached to the submission",
+                  "item/ActorRole/Value": "System",
+                  "item/NewValue": "No files attached",
+                  "item/FieldName": "Attachments",
+                  "item/ClientApp/Value": "Power Automate",
+                  "item/FlowRunId": "@workflow()['run']['name']",
+                  "item/RequestID": "@triggerOutputs()?['body/ID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "connectionName": "shared_sharepointonline"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT1M",
+                  "minimumInterval": "PT20S",
+                  "maximumInterval": "PT1H"
+                }
+              },
+              "runAfter": {
+                "Reject_Request_-_No_Files": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Send_No_Files_Email": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                  "emailMessage/To": "@triggerOutputs()?['body/Author/Email']",
+                  "emailMessage/Subject": "Action needed: attach your 3D print file",
+                  "emailMessage/Body": "<p class=\"editor-paragraph\">We're unable to process your 3D print request because no files were attached.</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Required:</strong></b> At least one 3D model file must be attached</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Accepted formats:</strong></b> .stl, .obj, .3mf, .idea, .form</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">File naming:</strong></b> FirstLast_Method_Color.ext</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Example:</strong></b> JaneDoe_Resin_Clear.3mf</p><br><p class=\"editor-paragraph\">Please attach your file and submit a new request. Thank you!</p><br><p class=\"editor-paragraph\">This is an automated message from the LSU Digital Fabrication Lab.</p>",
+                  "emailMessage/Importance": "Normal"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "operationId": "SharedMailboxSendEmailV2",
+                  "connectionName": "shared_office365"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT1M",
+                  "minimumInterval": "PT20S",
+                  "maximumInterval": "PT1H"
+                }
+              },
+              "runAfter": {
+                "Log_No_Files_Rejection": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Stop_Flow_-_No_Files": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Cancelled"
+              },
+              "runAfter": {
+                "Send_No_Files_Email": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Get_attachments": [
+              "Succeeded"
+            ]
+          }
+        },
+        "File_Validation_Gate": {
+          "type": "Foreach",
+          "foreach": "@body('Get_attachments')",
+          "actions": {
+            "Validate_Filename_Format": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@and(\r\n  or(\r\n    equals(toLower(last(split(items('File_Validation_Gate')?['DisplayName'], '.'))), 'stl'),\r\n    equals(toLower(last(split(items('File_Validation_Gate')?['DisplayName'], '.'))), 'obj'),\r\n    equals(toLower(last(split(items('File_Validation_Gate')?['DisplayName'], '.'))), '3mf'),\r\n    equals(toLower(last(split(items('File_Validation_Gate')?['DisplayName'], '.'))), 'idea'),\r\n    equals(toLower(last(split(items('File_Validation_Gate')?['DisplayName'], '.'))), 'form')\r\n  ),\r\n  equals(length(split(first(split(items('File_Validation_Gate')?['DisplayName'], '.')), '_')), 3),\r\n  greater(length(first(split(first(split(items('File_Validation_Gate')?['DisplayName'], '.')), '_'))), 0),\r\n  greater(length(first(skip(split(first(split(items('File_Validation_Gate')?['DisplayName'], '.')), '_'), 1))), 0),\r\n  greater(length(last(split(first(split(items('File_Validation_Gate')?['DisplayName'], '.')), '_'))), 0)\r\n)",
+                      true
+                    ]
+                  }
+                ]
+              },
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Reject_Request_-_Invalid_Filename": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                        "id": "@triggerBody()?['ID']",
+                        "item/TigerCardNumber": "@   triggerOutputs()?['body/TigerCardNumber']",
+                        "item/Status/Value": "Rejected",
+                        "item/LastAction/Value": "Rejected",
+                        "item/LastActionBy/Claims": "System",
+                        "item/LastActionAt": "@utcNow()",
+                        "item/NeedsAttention": true
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PatchItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M",
+                        "minimumInterval": "PT20S",
+                        "maximumInterval": "PT1H"
+                      }
+                    }
+                  },
+                  "Log_Invalid_Filename_Rejection": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Rejected: Invalid filename",
+                        "item/ReqKey": "@outputs('Generate_ReqKey')",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Action/Value": "Rejected",
+                        "item/Notes": "File rejected: @{items('File_Validation_Gate')['DisplayName']} does not follow naming policy",
+                        "item/ActorRole/Value": "System",
+                        "item/NewValue": "Invalid filename format",
+                        "item/FieldName": "Attachments",
+                        "item/ClientApp/Value": "Power Automate",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M",
+                        "minimumInterval": "PT20S",
+                        "maximumInterval": "PT1H"
+                      }
+                    },
+                    "runAfter": {
+                      "Reject_Request_-_Invalid_Filename": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Send_Invalid_Filename_Email": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                        "emailMessage/To": "@triggerOutputs()?['body/Author/Email']",
+                        "emailMessage/Subject": "Action needed: rename your 3D print file",
+                        "emailMessage/Body": "<p class=\"editor-paragraph\">We're unable to process your request because the attached file name doesn't follow our format.</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Required format:</strong></b> FirstLast_Method_Color</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Examples:</strong></b> JaneDoe_Resin_Clear (with .stl, .obj, .3mf, .idea, or .form extension)</p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Accepted file types:</strong></b> .stl, .obj, .3mf, .idea, .form</p><br><p class=\"editor-paragraph\">Please rename your file accordingly and submit a new request. Thank you!</p><br><p class=\"editor-paragraph\">This is an automated message from the LSU Digital Fabrication Lab<i><em class=\"editor-text-italic\">.</em></i></p>",
+                        "emailMessage/Importance": "Normal"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                        "operationId": "SharedMailboxSendEmailV2",
+                        "connectionName": "shared_office365"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M",
+                        "minimumInterval": "PT20S",
+                        "maximumInterval": "PT1H"
+                      }
+                    },
+                    "runAfter": {
+                      "Log_Invalid_Filename_Rejection": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Set_variable": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "HasInvalidAttachment",
+                      "value": true
+                    },
+                    "runAfter": {
+                      "Send_Invalid_Filename_Email": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_HasInvalidAttachment": [
+              "Succeeded"
+            ]
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Initialize_HasInvalidAttachment": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "HasInvalidAttachment",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Check_for_No_Attachments": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Check_Invalid_Attachments": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@variables('HasInvalidAttachment')",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Terminate": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Cancelled"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Update_Request_-_Valid_File": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                    "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                    "id": "@triggerBody()?['ID']",
+                    "item/TigerCardNumber": "@   triggerOutputs()?['body/TigerCardNumber']",
+                    "item/Title": "@outputs('Generate_Standardized_Display_Name')",
+                    "item/StudentEmail": "@toLower(triggerOutputs()?['body/Author/Email'])",
+                    "item/ReqKey": "@outputs('Generate_ReqKey')",
+                    "item/Status/Value": "Uploaded",
+                    "item/LastAction/Value": "Created",
+                    "item/LastActionBy/Claims": "@triggerBody()?['Student/Claims']",
+                    "item/LastActionAt": "@utcNow()",
+                    "item/NeedsAttention": false
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "PatchItem",
+                    "connectionName": "shared_sharepointonline"
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 4,
+                    "interval": "PT1M",
+                    "minimumInterval": "PT20S",
+                    "maximumInterval": "PT1H"
+                  }
+                }
+              },
+              "Log_Request_Creation": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                    "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                    "item/Title": "Request Created",
+                    "item/ReqKey": "@outputs('Generate_ReqKey')",
+                    "item/ActionAt": "@utcNow()",
+                    "item/Actor/Claims": "@triggerBody()?['Student/Claims']",
+                    "item/Action/Value": "Created",
+                    "item/Notes": "New 3D print request submitted with standardized display name",
+                    "item/ActorRole/Value": "Student",
+                    "item/NewValue": "@outputs('Generate_Standardized_Display_Name')",
+                    "item/ClientApp/Value": "Sharepoint Form",
+                    "item/FlowRunId": "@workflow()['run']['name']",
+                    "item/RequestID": "@triggerOutputs()?['body/ID']"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "PostItem",
+                    "connectionName": "shared_sharepointonline"
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 4,
+                    "interval": "PT1M",
+                    "minimumInterval": "PT20S",
+                    "maximumInterval": "PT1H"
+                  }
+                },
+                "runAfter": {
+                  "Update_Request_-_Valid_File": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Send_confirmation_email": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                    "emailMessage/To": "@outputs('Update_Request_-_Valid_File')?['body/Student/Email']",
+                    "emailMessage/Subject": "@concat('We received your 3D Print request – ', outputs('Generate_ReqKey'))",
+                    "emailMessage/Body": "<p class=\"editor-paragraph\">We received your 3D Print request.<br><br>REQUEST DETAILS:<br>- Request: @{outputs('Generate_Standardized_Display_Name')}<br>- Request ID: @{outputs('Generate_ReqKey')}<br>- Method: @{triggerOutputs()?['body/Method']?['Value']}<br>- Printer: @{triggerOutputs()?['body/Printer']?['Value']}<br>- Color: @{triggerOutputs()?['body/Color']?['Value']}<br><br>NEXT STEPS:<br>• Our team will review your request for technical feasibility<br>• You'll receive updates as your request progresses through our queue<br>• Estimated review time: 1-2 business days<br><br><a href=\"https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8\">View all your requests</a><br><br>---<br>This is an automated message from the Digital Fabrication Lab.</p>",
+                    "emailMessage/Importance": "Normal"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                    "operationId": "SharedMailboxSendEmailV2",
+                    "connectionName": "shared_office365"
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 4,
+                    "interval": "PT1M",
+                    "minimumInterval": "PT20S",
+                    "maximumInterval": "PT1H"
+                  }
+                },
+                "runAfter": {
+                  "Log_Request_Creation": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Log_email_sent": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                    "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                    "item/Title": "Email Sent: Confirmation",
+                    "item/ReqKey": "@outputs('Generate_ReqKey')",
+                    "item/ActionAt": "@utcNow()",
+                    "item/Action/Value": "Email Sent",
+                    "item/Notes": "Confirmation email sent to student",
+                    "item/ActorRole/Value": "System",
+                    "item/NewValue": "@toLower(triggerOutputs()?['body/Author/Email'])",
+                    "item/FieldName": "StudentEmail",
+                    "item/ClientApp/Value": "Power Automate",
+                    "item/FlowRunId": "@workflow()['run']['name']",
+                    "item/RequestID": "@triggerOutputs()?['body/ID']"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "PostItem",
+                    "connectionName": "shared_sharepointonline"
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 4,
+                    "interval": "PT1M",
+                    "minimumInterval": "PT20S",
+                    "maximumInterval": "PT1H"
+                  }
+                },
+                "runAfter": {
+                  "Send_confirmation_email": [
+                    "Succeeded"
+                  ]
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "File_Validation_Gate": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

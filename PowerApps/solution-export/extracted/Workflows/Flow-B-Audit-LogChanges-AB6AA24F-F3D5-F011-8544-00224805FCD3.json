@@ -1,0 +1,1033 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "fablab_sharedsharepointonline_c2ffc"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365": {
+        "api": {
+          "name": "shared_office365"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "fablab_sharedoffice365_682a6"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created_or_modified": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+              "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnUpdatedItems",
+              "connectionName": "shared_sharepointonline"
+            }
+          },
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 1
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "splitOn": "@triggerOutputs()?['body/value']"
+        }
+      },
+      "actions": {
+        "Skip_if_System_Update": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/LastActionBy']",
+                  "System"
+                ]
+              }
+            ]
+          },
+          "actions": {},
+          "else": {
+            "actions": {
+              "Get_Item_Changes": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                    "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                    "id": "@triggerOutputs()?['body/ID']",
+                    "since": "@triggerOutputs()?['body/{TriggerWindowStartToken}']",
+                    "includeDrafts": true
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "GetItemChanges",
+                    "connectionName": "shared_sharepointonline"
+                  }
+                }
+              },
+              "Check_Status_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Status'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Status_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Status Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Status Change",
+                        "item/Notes": "@concat('Status updated to ', triggerOutputs()?['body/Status']?['Value'])",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Status']?['Value']",
+                        "item/FieldName": "Status",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  },
+                  "Check_Status_Rejected": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@triggerOutputs()?['body/Status']?['Value']",
+                            "Rejected"
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Get_Current_Rejected_Data": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                            "id": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "GetItem",
+                            "connectionName": "shared_sharepointonline"
+                          }
+                        }
+                      },
+                      "Send_Rejection_Email": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                            "emailMessage/To": "@outputs('Get_Current_Rejected_Data')?['body/StudentEmail']",
+                            "emailMessage/Subject": "@concat('[', outputs('Get_Current_Rejected_Data')?['body/ReqKey'], '] Your 3D Print request has been rejected')",
+                            "emailMessage/Body": "<p class=\"editor-paragraph\">Unfortunately, your 3D Print request has been rejected by our staff.<br><br>REQUEST DETAILS:<br>- Request ID: @{outputs('Get_Current_Rejected_Data')?['body/ReqKey']}<br>- Method: @{outputs('Get_Current_Rejected_Data')?['body/Method']?['Value']}<br>- Color: @{outputs('Get_Current_Rejected_Data')?['body/Color']?['Value']}<br>- Printer: @{outputs('Get_Current_Rejected_Data')?['body/Printer']?['Value']}<br><br>REASON FOR REJECTION:<br>@{outputs('Compose_Formatted_Reasons_Text')}@{if(empty(outputs('Get_Current_Rejected_Data')?['body/RejectionComment']), '', concat('<br><br>STAFF COMMENTS<br>(', outputs('Get_Current_Rejected_Data')?['body/LastActionBy/DisplayName'], '):<br>', outputs('Get_Current_Rejected_Data')?['body/RejectionComment']))}<br><br>NEXT STEPS:<br>• Review the specific rejection reason above<br>• Make necessary adjustments to your design or request<br>• Submit a new corrected request through the Submission Portal<br>• Come by the lab and ask us!<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>",
+                            "emailMessage/Importance": "Normal"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "SharedMailboxSendEmailV2",
+                            "connectionName": "shared_office365"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Compose_Formatted_Reasons_Text": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Log_Rejection_Email_Sent": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                            "item/Title": "Email Sent: Rejection",
+                            "item/ReqKey": "@ outputs('Get_Current_Rejected_Data')?['body/ReqKey']",
+                            "item/ActionAt": "@utcNow()",
+                            "item/Action/Value": "Email Sent",
+                            "item/Notes": "Rejection notification sent to student",
+                            "item/ActorRole/Value": "System",
+                            "item/NewValue": "@outputs('Get_Current_Rejected_Data')?['body/StudentEmail']",
+                            "item/FieldName": "StudentEmail",
+                            "item/ClientApp/Value": "Power Automate",
+                            "item/FlowRunId": "@workflow()['run']['name']",
+                            "item/RequestID": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "PostItem",
+                            "connectionName": "shared_sharepointonline"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Send_Rejection_Email": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Format_Rejection_Reasons": {
+                        "type": "Select",
+                        "inputs": {
+                          "from": "@outputs('Get_Current_Rejected_Data')?['body/RejectionReason']",
+                          "select": "@item()?['Value']"
+                        },
+                        "runAfter": {
+                          "Get_Current_Rejected_Data": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Compose_Formatted_Reasons_Text": {
+                        "type": "Compose",
+                        "inputs": "@concat('• ', join(body('Format_Rejection_Reasons'), '<br>• '))",
+                        "runAfter": {
+                          "Format_Rejection_Reasons": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "Log_Status_Change": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Check_Status_Pending": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@triggerOutputs()?['body/Status']?['Value']",
+                            "Pending"
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Get_Current_Pending_Data": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                            "id": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "GetItem",
+                            "connectionName": "shared_sharepointonline"
+                          }
+                        }
+                      },
+                      "Send_Estimate_Email": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                            "emailMessage/To": "@outputs('Get_Current_Pending_Data')?['body/StudentEmail']",
+                            "emailMessage/Subject": "@concat('[', outputs('Get_Current_Pending_Data')?['body/ReqKey'], '] Estimate ready for your 3D print')",
+                            "emailMessage/Body": "<p class=\"editor-paragraph\">Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},<br><br>Your 3D print estimate is Approved! Before we start printing, please review and confirm the details below.<br><br>⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.<br><br>ESTIMATE DETAILS:<br>- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}<br>- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}<br>- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}<br>- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}@{if(empty(outputs('Get_Current_Pending_Data')?['body/ApprovalComment']), '', concat('<br><br>STAFF NOTE:<br>', outputs('Get_Current_Pending_Data')?['body/ApprovalComment']))}<br><br>TO CONFIRM THIS ESTIMATE:</p><br><p class=\"editor-paragraph\"><a href=\"https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8\" class=\"editor-link\">Open Student Portal</a><br><br>1. Click the link above to open the Student Portal<br>2. Click \"VIEW REQUESTS\" to see your print requests<br>3. Find your request showing \"Pending\" status with the estimate<br>4. Click the green \"CONFIRM ESTIMATE\" button on your request card<br>5. Review the estimate details and click \"I CONFIRM THIS ESTIMATE\"<br><br>If you have any questions or concerns about the estimate, please contact us before confirming.<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br>Email: coad-fablab@lsu.edu<br>Location: Room 145 Atkinson Hall<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "SharedMailboxSendEmailV2",
+                            "connectionName": "shared_office365"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Get_Current_Pending_Data": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Log_Estimate_Email_Sent": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                            "item/Title": "Email Sent: Estimate",
+                            "item/ReqKey": "@outputs('Get_Current_Pending_Data')?['body/ReqKey']",
+                            "item/ActionAt": "@utcNow()",
+                            "item/Action/Value": "Email Sent",
+                            "item/Notes": "Estimate notification sent to student with confirmation link",
+                            "item/ActorRole/Value": "System",
+                            "item/NewValue": "@outputs('Get_Current_Pending_Data')?['body/StudentEmail']",
+                            "item/FieldName": "StudentEmail",
+                            "item/ClientApp/Value": "Power Automate",
+                            "item/FlowRunId": "@workflow()['run']['name']",
+                            "item/RequestID": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "PostItem",
+                            "connectionName": "shared_sharepointonline"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Send_Estimate_Email": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "Log_Status_Change": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Check_Status_Completed": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@triggerOutputs()?['body/Status']?['Value']",
+                            "Completed"
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Get_Current_Completed_Data": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                            "id": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "GetItem",
+                            "connectionName": "shared_sharepointonline"
+                          }
+                        }
+                      },
+                      "Send_Completion_Email": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "emailMessage/MailboxAddress": "coad-fablab@lsu.edu",
+                            "emailMessage/To": "@outputs('Get_Current_Completed_Data')?['body/StudentEmail']",
+                            "emailMessage/Subject": "@concat('[', outputs('Get_Current_Completed_Data')?['body/ReqKey'], '] Your 3D print is ready for pickup')",
+                            "emailMessage/Body": "<p class=\"editor-paragraph\">Your print is ready for pick up in the Fabrication Lab!<br><br>PICKUP INFORMATION:<br>📍 Location: Room 145 Atkinson Hall<br>💳 Payment: TigerCASH only<br>🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br><br>WHAT TO BRING:<br>• Your student ID<br>• TigerCASH for payment<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>",
+                            "emailMessage/Importance": "Normal"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "SharedMailboxSendEmailV2",
+                            "connectionName": "shared_office365"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Get_Current_Completed_Data": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Log_Completion_Email_Sent": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                            "item/Title": "Email Sent: Completed",
+                            "item/ReqKey": "@outputs('Get_Current_Completed_Data')?['body/ReqKey']",
+                            "item/ActionAt": "@utcNow()",
+                            "item/Action/Value": "Email Sent",
+                            "item/Notes": "Completion notification sent to student",
+                            "item/ActorRole/Value": "System",
+                            "item/NewValue": "@outputs('Get_Current_Completed_Data')?['body/StudentEmail']",
+                            "item/FieldName": "StudentEmail",
+                            "item/ClientApp/Value": "Power Automate",
+                            "item/FlowRunId": "@workflow()['run']['name']",
+                            "item/RequestID": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "PostItem",
+                            "connectionName": "shared_sharepointonline"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Send_Completion_Email": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "Log_Status_Change": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_Printer_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Printer'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Printer_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Printer Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('Printer updated to ', triggerOutputs()?['body/Printer']?['Value'])",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Printer']?['Value']",
+                        "item/FieldName": "Printer",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_Method_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Method'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Method_Changed": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Method Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('Method updated to ', triggerOutputs()?['body/Method']?['Value'])",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Method']?['Value']",
+                        "item/FieldName": "Method",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_Color_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Color'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Color_Changed": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Color Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('Color updated to ', triggerOutputs()?['body/Color']?['Value'])",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Color']?['Value']",
+                        "item/FieldName": "Color",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_Priority_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Priority'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Priority_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Priority Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('Priority updated to ', triggerOutputs()?['body/Priority']?['Value'])",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Priority']?['Value']",
+                        "item/FieldName": "Priority",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_EstimatedTime_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstHours'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_EstimatedTime_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "EstimatedTime Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@ concat('EstimatedTime updated to ', if(equals(triggerOutputs()?['body/EstHours'], null), 'empty', string(triggerOutputs()?['body/EstHours'])))",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@if(equals(triggerOutputs()?['body/EstHours'], null), '', string(triggerOutputs()?['body/EstHours']))",
+                        "item/FieldName": "EstimatedTime",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_EstimatedWeight_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstWeight'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_EstimatedWeight_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "EstimatedWeight Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('EstimatedWeight updated to ', if(equals(triggerOutputs()?['body/EstWeight'], null), 'empty', string(triggerOutputs()?['body/EstWeight'])))",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@if(equals(triggerOutputs()?['body/EstWeight'], null), '', string(triggerOutputs()?['body/EstWeight']))",
+                        "item/FieldName": "EstimatedWeight",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_EstimatedCost_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['EstimatedCost'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_EstimatedCost_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "EstimatedCost Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Field Change",
+                        "item/Notes": "@concat('EstimatedCost updated to ', if(equals(triggerOutputs()?['body/EstimatedCost'], null), 'empty', string(triggerOutputs()?['body/EstimatedCost'])))",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@if(equals(triggerOutputs()?['body/EstimatedCost'], null), '', string(triggerOutputs()?['body/EstimatedCost']))",
+                        "item/FieldName": "EstimatedCost",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_Notes_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['Notes'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Log_Notes_Change": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                        "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                        "item/Title": "Notes Change",
+                        "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                        "item/ActionAt": "@utcNow()",
+                        "item/Actor/Claims": "@triggerOutputs()?['body/Modified By Claims']",
+                        "item/Action/Value": "Status Change",
+                        "item/Notes": "@'Notes field updated'",
+                        "item/ActorRole/Value": "Staff",
+                        "item/NewValue": "@triggerOutputs()?['body/Notes']",
+                        "item/FieldName": "Notes",
+                        "item/ClientApp/Value": "Sharepoint Form",
+                        "item/FlowRunId": "@workflow()['run']['name']",
+                        "item/RequestID": "@triggerOutputs()?['body/ID']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "connectionName": "shared_sharepointonline"
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 4,
+                        "interval": "PT1M"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "Check_StudentConfirmed_Changed": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@equals(outputs('Get_Item_Changes')?['body']?['ColumnHasChanged']?['StudentConfirmed'], true)",
+                        "@true"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "Validate_StudentConfirmed_is_Yes": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@triggerOutputs()?['body/StudentConfirmed']",
+                            "@true"
+                          ]
+                        },
+                        {
+                          "equals": [
+                            "@triggerOutputs()?['body/Status']?['Value']",
+                            "Pending"
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Update_to_Ready_to_Print": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+                            "id": "@triggerOutputs()?['body/ID']",
+                            "item/TigerCardNumber": "@triggerOutputs()?['body/TigerCardNumber']",
+                            "item/Status/Value": "Ready to Print",
+                            "item/LastAction/Value": "Student Confirmed Estimate",
+                            "item/LastActionAt": "@utcNow()"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "PatchItem",
+                            "connectionName": "shared_sharepointonline"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M"
+                          }
+                        }
+                      },
+                      "Log_Student_Confirmation": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                            "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                            "item/Title": "Student Confirmed Estimate via SharePoint",
+                            "item/ReqKey": "@triggerOutputs()?['body/ReqKey']",
+                            "item/ActionAt": "@utcNow()",
+                            "item/Actor/Claims": "@triggerOutputs()?['body/Student']?['Claims']",
+                            "item/Action/Value": "Estimate Confirmed",
+                            "item/Notes": "@concat('Student confirmed estimate via SharePoint for request ', triggerOutputs()?['body/ReqKey'], '. Status changed from Pending to Ready to Print.')",
+                            "item/ActorRole/Value": "Student",
+                            "item/NewValue": "Yes",
+                            "item/FieldName": "StudentConfirmed",
+                            "item/OldValue": "No",
+                            "item/ClientApp/Value": "Sharepoint",
+                            "item/FlowRunId": "@workflow()['run']['name']",
+                            "item/RequestID": "@triggerOutputs()?['body/ID']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "PostItem",
+                            "connectionName": "shared_sharepointonline"
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 4,
+                            "interval": "PT1M",
+                            "minimumInterval": "PT20S",
+                            "maximumInterval": "PT1H"
+                          }
+                        },
+                        "runAfter": {
+                          "Update_to_Ready_to_Print": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Get_Item_Changes": [
+                    "Succeeded"
+                  ]
+                }
+              }
+            }
+          },
+          "runAfter": {}
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

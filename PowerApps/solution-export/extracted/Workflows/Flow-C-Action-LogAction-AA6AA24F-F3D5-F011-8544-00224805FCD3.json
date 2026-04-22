@@ -1,0 +1,213 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "fablab_sharedsharepointonline_c2ffc"
+        },
+        "runtimeSource": "invoker"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "The ID of the request being modified",
+                  "title": "RequestID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "The action being performed (e.g., Status Change, Approved, Rejected)",
+                  "title": "Action",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "The field being changed (e.g., Status, Priority, StaffNotes)",
+                  "title": "FieldName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "New value of the field",
+                  "title": "NewValue",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "Email of the staff member performing the action",
+                  "title": "ActorEmail",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_Request_Item": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+              "table": "7500c1a4-0b3a-4d05-87a5-07dc121c59d2",
+              "id": "@   triggerBody()['text']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline"
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT30S"
+            }
+          },
+          "runAfter": {}
+        },
+        "Validate_Required_Inputs": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@and(not(empty(triggerBody()['text'])), not(empty(triggerBody()['text_1'])), not(empty(triggerBody()['text_3'])), not(empty(triggerBody()['text_4'])))",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Create_Audit_Log_Entry": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab",
+                  "table": "b1ee8dbe-a72f-451a-abdb-d8dac6bdd132",
+                  "item/Title": "@concat('Staff Action: ', triggerBody()['text_1'])",
+                  "item/ReqKey": "@outputs('Get_Request_Item')?['body/ReqKey']",
+                  "item/ActionAt": "@utcNow()",
+                  "item/Actor/Claims": "@triggerBody()?['text_4']",
+                  "item/Action/Value": "@triggerBody()?['text_1']",
+                  "item/ActorRole/Value": "Staff",
+                  "item/Notes": "@concat('Staff action via Power Apps: ', triggerBody()['text_1'])",
+                  "item/NewValue": "@triggerBody()?['text_3']",
+                  "item/FieldName": "@triggerBody()?['text_2']",
+                  "item/ClientApp/Value": "Power Apps",
+                  "item/FlowRunId": "@workflow()['run']['name']",
+                  "item/RequestID": "@outputs('Get_Request_Item')?['body/ID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "connectionName": "shared_sharepointonline"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT30S"
+                }
+              }
+            },
+            "Send_Success_Response": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "title": "Response",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "response": "{\n  \"success\": true,\n  \"message\": \"Action logged successfully\",\n  \"auditId\": \"@{outputs('Create_Audit_Log_Entry')?['body/ID']}\",\n  \"timestamp\": \"@{utcNow()}\"\n}"
+                }
+              },
+              "runAfter": {
+                "Create_Audit_Log_Entry": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Send_Error_Response": {
+                "type": "Response",
+                "kind": "PowerApp",
+                "inputs": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "response": {
+                        "title": "Response",
+                        "type": "string",
+                        "x-ms-content-hint": "TEXT",
+                        "x-ms-dynamically-added": true
+                      }
+                    },
+                    "additionalProperties": {}
+                  },
+                  "statusCode": 200,
+                  "body": {
+                    "response": "{\n  \"success\": false,\n  \"message\": \"Missing required parameters: RequestID, Action, NewValue, or ActorEmail\",\n  \"timestamp\": \"@{utcNow()}\"\n}"
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Get_Request_Item": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
