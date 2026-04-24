@@ -103,7 +103,7 @@ Examples of `ACTION` without `by Short Name`: `STATUS` (Start Print: Ready to Pr
 Storage rules:
 
 - Keep the outer entry delimiter as `" | "`.
-- Keep `[NOTE]` on manual notes so the existing note counter still works.
+- Keep `[NOTE]` on manual notes so they remain easy to distinguish in storage and legacy parsing.
 - Keep token blocks in storage if needed for parsing, but do not force all of them to display.
 - Use ` ~~ ` inside stored blocks when multiple items are needed.
 - Sanitize free text so it cannot inject `" | "`, ` ~~ `, or token markers.
@@ -281,6 +281,14 @@ Only include extra detail if the note becomes ambiguous without it.
 - Legacy `[NOTE]` entries should remain simple and quoted where appropriate.
 - Do not rewrite historical notes in place.
 - Older `STATUS by Short Name:` and `BUILD PLATE by Short Name:` entries (if any) still parse and display the embedded name; new app-triggered entries use `STATUS:` and `BUILD PLATE:` without `by Short Name`.
+
+## Dashboard Card Behavior
+
+The job card now treats any non-blank `StaffNotes` content as "notes exist" for summary/highlight purposes.
+
+- The `Notes` button turns red when `StaffNotes` has any content.
+- The `Notes (n)` header counts all stored timeline entries separated by `" | "`, not just manual `[NOTE]` entries.
+- `[NOTE]` is still preserved for manual-note storage and rendering, but it is no longer the thing that powers the card count/highlight by itself.
 
 ## **Modal Layout Implications**
 

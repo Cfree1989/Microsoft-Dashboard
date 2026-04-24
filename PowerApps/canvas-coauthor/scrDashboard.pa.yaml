@@ -207,6 +207,10 @@ Screens:
                       Sort(filteredJobs, SlicedOnComputer.Value, SortOrder.Ascending),
                       "Printer A-Z",
                       Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
+                      "Print Time Low-High",
+                      SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, 999999)), "SortEstimatedTime", SortOrder.Ascending),
+                      "Print Time High-Low",
+                      SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, -1)), "SortEstimatedTime", SortOrder.Descending),
                       SortByColumns(
                           filteredJobs,
                           "NeedsAttention", SortOrder.Descending,
@@ -530,23 +534,23 @@ Screens:
             - btnViewNotes:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(184, 0, 0, 1), varColorPrimary)
+                  BorderColor: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(184, 0, 0, 1), varColorPrimary)
                   BorderThickness: =varInputBorderThickness
-                  Color: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 255, 255, 1), varColorPrimary)
+                  Color: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 255, 255, 1), varColorPrimary)
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 46, 46, 1), Color.White)
+                  Fill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 46, 46, 1), Color.White)
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(220, 40, 40, 1), varColorPrimary)
+                  HoverFill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(220, 40, 40, 1), varColorPrimary)
                   OnSelect: |-
                     =Set(varShowNotesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: =If("[NOTE]" in ThisItem.StaffNotes, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
+                  PressedFill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1180,27 +1184,27 @@ Screens:
                 Control: Classic/Button
                 Properties:
                   BorderColor: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))
                   BorderThickness: =varInputBorderThickness
                   Color: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
                   HoverFill: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))
+                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1381,7 +1385,7 @@ Screens:
                   Height: =20
                   OnSelect: =Select(Parent)
                   Size: =8
-                  Text: ="Notes (" & If(IsBlank(ThisItem.StaffNotes), 0, CountRows(Split(ThisItem.StaffNotes, "[NOTE]")) - 1) & ")"
+                  Text: ="Notes (" & If(IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), 0, CountRows(Filter(Split(ThisItem.StaffNotes, " | "), !IsBlank(Trim(Value))))) & ")"
                   Width: =97
                   X: =117
                   Y: =330
@@ -1470,7 +1474,7 @@ Screens:
             Font: =varAppFont
             Height: =26
             HoverFill: =varDropdownHoverFill
-            Items: =["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Computer A-Z", "Printer A-Z"]
+            Items: =["Queue Order", "Student Name A-Z", "Student Name Z-A", "Oldest First", "Newest First", "Color A-Z", "Computer A-Z", "Printer A-Z", "Print Time Low-High", "Print Time High-Low"]
             Items.Value: =Value
             OnChange: =Set(varSortOrder, Self.Selected.Value)
             PressedColor: =varDropdownPressedColor
@@ -4221,6 +4225,26 @@ Screens:
                         )
                     );
                     Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
+                    Set(varExistingBuildPlateCount, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)));
+                    Set(
+                        varSyncedBuildPlateMachine,
+                        Coalesce(
+                            LookUp(Choices([@BuildPlates].Machine), Value = varNewPrinter.Value),
+                            LookUp(
+                                Filter(
+                                    Choices([@BuildPlates].Machine),
+                                    If(
+                                        varNewMethod = "Filament",
+                                        StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                                        varNewMethod = "Resin",
+                                        Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
+                                        true
+                                    )
+                                ),
+                                true
+                            )
+                        )
+                    );
                     Set(varNewCost, If(
                         IsBlank(varNewWeight),
                         varSelectedItem.EstimatedCost,
@@ -4292,6 +4316,39 @@ Screens:
                             )
                         }
                     );
+
+                    // Keep a single existing build plate aligned with Details printer changes.
+                    If(
+                        varExistingBuildPlateCount = 1 &&
+                        Coalesce(varNewPrinter.Value, "") <> Coalesce(varSelectedItem.Printer.Value, "") &&
+                        !IsBlank(varSyncedBuildPlateMachine),
+                        With(
+                            {
+                                wOnlyPlate: LookUp(BuildPlates, RequestID = varSelectedItem.ID)
+                            },
+                            Patch(
+                                BuildPlates,
+                                wOnlyPlate,
+                                {
+                                    Machine: varSyncedBuildPlateMachine,
+                                    RequestID: wOnlyPlate.RequestID,
+                                    ReqKey: wOnlyPlate.ReqKey,
+                                    PlateKey: wOnlyPlate.PlateKey,
+                                    Title: wOnlyPlate.Title
+                                }
+                            )
+                        )
+                    );
+
+                    Concurrent(
+                        Refresh(PrintRequests),
+                        Refresh(BuildPlates),
+                        Refresh(Payments),
+                        Refresh(RequestComments)
+                    );
+                    ClearCollect(colAllBuildPlates, BuildPlates);
+                    ClearCollect(colAllPayments, Payments);
+                    ClearCollect(colAllRequestComments, RequestComments);
 
                     // Log to audit via Flow C
                     IfError(

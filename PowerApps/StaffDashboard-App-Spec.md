@@ -1583,6 +1583,10 @@ With(
         Sort(filteredJobs, SlicedOnComputer.Value, SortOrder.Ascending),
         "Printer A-Z",
         Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
+        "Print Time Low-High",
+        SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, 999999)), "SortEstimatedTime", SortOrder.Ascending),
+        "Print Time High-Low",
+        SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, -1)), "SortEstimatedTime", SortOrder.Descending),
         SortByColumns(
             filteredJobs,
             "NeedsAttention", SortOrder.Descending,
@@ -1594,7 +1598,7 @@ With(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. `Queue Order` preserves the operational default: attention items first, then oldest requests (longest in queue).
 >
-> 💡 **Search + sort behavior:** The search bar can now match student name, email, request key, slicing computer, requested printer, or assigned build-plate machine values like `XL` or `MK4S`. Staff can still switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, and `Printer A-Z` from the filter bar.
+> 💡 **Search + sort behavior:** The search bar can now match student name, email, request key, slicing computer, requested printer, or assigned build-plate machine values like `XL` or `MK4S`. Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, `Printer A-Z`, `Print Time Low-High`, and `Print Time High-Low` from the filter bar. The print-time options sort by `EstimatedTime`, pushing blanks to the bottom in either direction.
 >
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
@@ -1991,12 +1995,12 @@ If(
 | Y | `73` |
 | Width | `75` |
 | Height | `25` |
-| Fill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 46, 46, 1), Color.White)` |
-| Color | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(255, 255, 255, 1), varColorPrimary)` |
-| HoverFill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(220, 40, 40, 1), varColorPrimary)` |
+| Fill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 46, 46, 1), Color.White)` |
+| Color | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 255, 255, 1), varColorPrimary)` |
+| HoverFill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(220, 40, 40, 1), varColorPrimary)` |
 | HoverColor | `Color.White` |
-| PressedFill | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
-| BorderColor | `If("[NOTE]" in ThisItem.StaffNotes, RGBA(184, 0, 0, 1), varColorPrimary)` |
+| PressedFill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
+| BorderColor | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(184, 0, 0, 1), varColorPrimary)` |
 | BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -6168,6 +6172,26 @@ Set(
     )
 );
 Set(varNewWeight, If(IsNumeric(txtDetailsWeight.Text) && Value(txtDetailsWeight.Text) > 0, Value(txtDetailsWeight.Text), varSelectedItem.EstimatedWeight));
+Set(varExistingBuildPlateCount, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)));
+Set(
+    varSyncedBuildPlateMachine,
+    Coalesce(
+        LookUp(Choices([@BuildPlates].Machine), Value = varNewPrinter.Value),
+        LookUp(
+            Filter(
+                Choices([@BuildPlates].Machine),
+                If(
+                    varNewMethod = "Filament",
+                    StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"),
+                    varNewMethod = "Resin",
+                    Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")),
+                    true
+                )
+            ),
+            true
+        )
+    )
+);
 Set(varNewCost, If(
     IsBlank(varNewWeight),
     varSelectedItem.EstimatedCost,
@@ -6240,6 +6264,40 @@ Patch(
     }
 );
 
+// If the job currently has exactly one build plate, keep that plate's Machine
+// aligned with the Details modal printer so the job card updates immediately.
+If(
+    varExistingBuildPlateCount = 1 &&
+    Coalesce(varNewPrinter.Value, "") <> Coalesce(varSelectedItem.Printer.Value, "") &&
+    !IsBlank(varSyncedBuildPlateMachine),
+    With(
+        {
+            wOnlyPlate: LookUp(BuildPlates, RequestID = varSelectedItem.ID)
+        },
+        Patch(
+            BuildPlates,
+            wOnlyPlate,
+            {
+                Machine: varSyncedBuildPlateMachine,
+                RequestID: wOnlyPlate.RequestID,
+                ReqKey: wOnlyPlate.ReqKey,
+                PlateKey: wOnlyPlate.PlateKey,
+                Title: wOnlyPlate.Title
+            }
+        )
+    )
+);
+
+Concurrent(
+    Refresh(PrintRequests),
+    Refresh(BuildPlates),
+    Refresh(Payments),
+    Refresh(RequestComments)
+);
+ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllPayments, Payments);
+ClearCollect(colAllRequestComments, RequestComments);
+
 // Log to audit via Flow C
 IfError(
     'Flow-(C)-Action-LogAction'.Run(
@@ -6272,6 +6330,10 @@ Set(varDetailsComputerChanged, false);
 Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
+
+> 💡 **Build plate sync:** The job card printer line is build-plate-driven whenever plates exist. Because of that, the Details save flow now syncs the lone existing build plate's `Machine` when there is exactly one plate and the printer changes.
+
+> 💡 **Immediate refresh:** After a Details save, the app refreshes `PrintRequests`, `BuildPlates`, `Payments`, and `RequestComments`, then reloads `colAllBuildPlates`, `colAllPayments`, and `colAllRequestComments` so the card no longer waits for the Build Plates modal path to show updated data.
 
 > 💡 **Cost recalculation:** When material usage or method changes, cost is automatically recalculated using: `Max(varMinimumCost, usage × rate)` where rate is `varFilamentRate` for Filament ($/g) and `varResinRate` for Resin ($/mL).
 
@@ -12870,7 +12932,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 | Property | Value |
 |----------|-------|
-| Text | `"Notes (" & If(IsBlank(ThisItem.StaffNotes), 0, CountRows(Split(ThisItem.StaffNotes, "[NOTE]")) - 1) & ")"` |
+| Text | `"Notes (" & If(IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), 0, CountRows(Filter(Split(ThisItem.StaffNotes, " | "), !IsBlank(Trim(Value))))) & ")"` |
 | X | `lblMessagesHeader.X + lblMessagesHeader.Width + 20` |
 | Y | `lblMessagesHeader.Y` |
 | Width | `200` |
@@ -12881,7 +12943,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Color | `varColorText` |
 | Visible | `true` |
 
-> 💡 **Note:** This counts only **manual staff notes** (tagged with `[NOTE]`), not automated audit entries like approvals, rejections, or payments. The formula splits on `[NOTE]` and subtracts 1 (since splitting "A[NOTE]B" returns 2 parts). Automated entries are still visible in the Notes modal but don't increment this counter.
+> 💡 **Note:** This counts all stored staff-note timeline entries, not just manual `[NOTE]` entries. The card now highlights and counts whenever `StaffNotes` has any non-blank content, including audit-style entries such as approvals, rejections, detail changes, payments, and build-plate events.
 
 #### View Messages Button (btnViewMessages)
 
@@ -12896,12 +12958,12 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Y | `317` |
 | Width | `100` |
 | Height | `varBtnHeight` |
-| Fill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))` |
-| Color | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))` |
+| Fill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))` |
+| Color | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))` |
 | HoverColor | `Color.White` |
-| HoverFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))` |
-| PressedFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))` |
-| BorderColor | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.UnreadInboundCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))` |
+| HoverFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))` |
+| PressedFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))` |
+| BorderColor | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -12949,7 +13011,7 @@ Set(varSelectedItem, ThisItem)
 
 With these controls, each job card shows:
 - **Messages (X)** header with total message count
-- **Notes (X)** header with manual note count
+- **Notes (X)** header with total internal timeline entry count
 - **View Messages** button to open the full conversation modal
 - **Red unread badge** with count of unread student replies
 
@@ -12963,7 +13025,7 @@ The **live app** uses a single compact control **`btnViewMessages`** (label **Me
 
 > **Legacy docs:** Earlier versions added `btnCardSendMessage` beside **Files** / **Archive**. If you still have that control, you can delete it and rely on `btnViewMessages` only.
 
-> **Unread-only alert state:** Keep the red button styling keyed to unread inbound comments only (`Direction.Value = "Inbound"` and `ReadByStaff = false`). Historical read messages should still count toward the `"Messages (n)"` label, but they should not keep the button highlighted once staff has caught up. The live app now drives these card-level counts from `RequestCommentSummary` instead of filtering the SharePoint list on every card render.
+> **Alert state:** Keep the `"Messages (n)"` label and the red button styling keyed to `RequestCommentSummary.TotalCount`, so any existing student/staff message thread makes the card visually stand out. The unread badge still uses `UnreadInboundCount` only, so staff can distinguish "has messages" from "has unread student replies".
 
 ---
 

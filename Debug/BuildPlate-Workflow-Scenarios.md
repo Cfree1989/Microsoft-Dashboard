@@ -45,6 +45,10 @@ Queued → Printing → Completed → Picked Up
 - `PrintRequests.ActualPrinter`: [MK4S]
 - `BuildPlates`: 1 record (Picked Up)
 
+**Details modal sync note:**
+- If staff changes the printer in the Details modal while the job still has exactly one build plate, the app now syncs that plate's `Machine` value as part of the save.
+- This keeps the job card printer text aligned immediately, because the card summarizes build-plate machine values whenever plates exist.
+
 ---
 
 ### Typical 2: Multi-Plate Job, Same Printer
@@ -195,6 +199,8 @@ Finance needs each transaction recorded separately while also seeing the total j
 
 **Key insight:** Machine can be edited on Queued or Printing plates. Once a plate is Completed or Picked Up, the Machine is locked (history preserved).
 
+**Related UI rule:** The job card printer line should be treated as build-plate-driven. If a job already has plates, opening the Build Plates modal remains the authoritative place to inspect or adjust the machine assignment across multiple plates.
+
 ---
 
 ### Edge Case 5: Zero-Plate Legacy Job
@@ -235,6 +241,8 @@ Finance needs each transaction recorded separately while also seeing the total j
 **Outcome:** Last write wins, but since both are moving forward in the same direction, no data corruption occurs. The main issue is **stale UI** — Staff B's modal doesn't reflect Staff A's changes until they close/reopen.
 
 **Mitigation:** After each Patch, the modal refreshes `colBuildPlates` from SharePoint. But if Staff B never clicks anything, their view stays stale.
+
+For the common single-plate case, the Details modal now also refreshes the dashboard collections after save and syncs the lone plate's machine when the printer changes, so the card does not stay stale until someone reopens Build Plates.
 
 **Possible enhancement:** Add refresh button to modal, or auto-refresh on a timer.
 
