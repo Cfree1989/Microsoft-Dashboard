@@ -263,7 +263,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =24
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =14
                   Text: =ThisItem.Student.DisplayName
                   Width: =315
@@ -277,7 +277,7 @@ Screens:
                   Color: =varColorDanger
                   Font: =varAppFont
                   Height: =22
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: |-
                     =With(
@@ -312,7 +312,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =9
                   Text: =Lower(First(Split(ThisItem.Student.DisplayName, " ")).Value & Last(Split(ThisItem.Student.DisplayName, " ")).Value) & "_" & Lower(ThisItem.Method.Value) & "_" & Lower(ThisItem.Color.Value)
                   Width: =Parent.TemplateWidth - 24
@@ -325,7 +325,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =22
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =9
                   Text: ="✉ " & ThisItem.StudentEmail
                   Width: =312
@@ -338,7 +338,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: |-
                     ="🖨 " & If(CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0, Concat(Distinct(Filter(colAllBuildPlates, RequestID = ThisItem.ID), Machine.Value), Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)), ", "), Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)))
@@ -351,7 +351,7 @@ Screens:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =RGBA(149, 149, 149, 1)
                   Height: =16
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Visible: =ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"
                   Width: =16
                   X: =16
@@ -397,7 +397,7 @@ Screens:
                         RGBA(153, 153, 153, 1)
                     )
                   Height: =12
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Width: =12
                   X: =18
                   Y: =105
@@ -408,7 +408,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =10
                   Text: =ThisItem.Color.Value
                   Width: =123
@@ -421,7 +421,7 @@ Screens:
                   Color: =varColorTextMuted
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =10
                   Text: |-
                     =If(
@@ -567,7 +567,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =ThisItem.ReqKey
                   Width: =120
@@ -580,7 +580,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =28
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =Text(ThisItem.Created, varDateTimeShort)
                   Width: =98
@@ -594,7 +594,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =11
                   Text: ="Details"
                   X: =12
@@ -606,7 +606,7 @@ Screens:
                   Color: =varColorTextLight
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Job ID"
                   Width: =65
@@ -619,7 +619,7 @@ Screens:
                   Color: =varColorTextLight
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Created:"
                   Width: =55
@@ -644,7 +644,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =25
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =ThisItem.Discipline.Value
                   Width: =120
@@ -657,7 +657,7 @@ Screens:
                   Color: =varColorTextLight
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Project:"
                   Width: =50
@@ -670,7 +670,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =ThisItem.ProjectType.Value
                   Width: =99
@@ -683,7 +683,7 @@ Screens:
                   Color: =varColorTextLight
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Course:"
                   Width: =65
@@ -696,7 +696,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =Coalesce(Text(ThisItem.'Course Number'), "")
                   X: =80
@@ -1173,7 +1173,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: |-
                     =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, "Messages (" & Text(Coalesce(wSummary.TotalCount, 0)) & ")")
@@ -1223,7 +1223,7 @@ Screens:
                   Fill: =varColorDanger
                   Font: =varAppFont
                   Height: =10
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   PaddingBottom: =0
                   PaddingLeft: =0
                   PaddingRight: =0
@@ -1257,7 +1257,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =ThisItem.TransactionNumber
                   Visible: |
@@ -1306,7 +1306,7 @@ Screens:
                   Color: =varColorTextLight
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Prior Payments:"
                   Visible: =CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) > 0 Or (CountRows(Filter(colAllPayments, RequestID = ThisItem.ID Or Text(ThisItem.ID) in Split(Coalesce(BatchRequestIDs, ""), ", ").Value)) = 0 And !IsBlank(ThisItem.PaymentDate) And Coalesce(ThisItem.FinalCost, 0) > 0)
@@ -1320,7 +1320,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: |-
                     =With(
@@ -1383,7 +1383,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: ="Notes (" & If(IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), 0, CountRows(Filter(Split(ThisItem.StaffNotes, " | "), !IsBlank(Trim(Value))))) & ")"
                   Width: =97
@@ -1397,7 +1397,7 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   Height: =20
-                  OnSelect: =Select(Parent)
+                  OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: |-
                     ="💻 " & ThisItem.SlicedOnComputer.Value
