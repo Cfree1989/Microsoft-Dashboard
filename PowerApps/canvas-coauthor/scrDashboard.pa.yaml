@@ -1542,7 +1542,6 @@ Screens:
               ClearCollect(colAllBuildPlates, BuildPlates);
               ClearCollect(colAllPayments, Payments);
               ClearCollect(colAllRequestComments, RequestComments);
-              
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
             PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -2201,7 +2200,6 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Format: =TextFormat.Text
                   Height: =36
                   HintText: =If(varSelectedItem.Method.Value = "Resin", "Enter mL", "Enter grams")
                   HoverBorderColor: =varInputBorderColor
@@ -4539,6 +4537,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -4591,12 +4590,12 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =29
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: ="Performing Action As"
                   Width: =300
                   X: =recPaymentModal.X + 20
-                  Y: =145
+                  Y: =149
             - ddPaymentStaff:
                 Control: Classic/ComboBox
                 Properties:
@@ -4632,8 +4631,8 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =29
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: ="Payment Type"
                   Width: =180
                   X: =445
@@ -4646,7 +4645,6 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Format: =TextFormat.Number
                   Height: =36
                   HintText: |-
                     =Switch(
@@ -4689,8 +4687,8 @@ Screens:
                     )
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =33
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: |-
                     =If(
                         varSelectedItem.Method.Value = "Resin",
@@ -4710,7 +4708,7 @@ Screens:
                     )
                   Width: =261
                   X: =recPaymentModal.X + 20
-                  Y: =291
+                  Y: =299
             - txtPaymentWeight:
                 Control: Classic/TextInput
                 Properties:
@@ -4724,6 +4722,7 @@ Screens:
                   HintText: ="Weight in grams"
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
+                  OnChange: =Reset(txtPaymentAmount)
                   RadiusBottomLeft: =varInputBorderRadius
                   RadiusBottomRight: =varInputBorderRadius
                   RadiusTopLeft: =varInputBorderRadius
@@ -4738,10 +4737,10 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =25
-                  Size: =14
-                  Text: ="Final Cost"
-                  X: =403
+                  Height: =20
+                  Size: =12
+                  Text: ="Calculated Total"
+                  X: =511
                   Y: =299
             - lblPaymentCostValue:
                 Control: Label
@@ -4751,7 +4750,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Height: =42
-                  Size: =20
+                  Size: =12
                   Text: |-
                     =If(
                         IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
@@ -4773,9 +4772,9 @@ Screens:
                         ),
                         "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
                     )
-                  Width: =292
-                  X: =397
-                  Y: =322
+                  Width: =156
+                  X: =505
+                  Y: =318
             - lblPaymentDateLabel:
                 Control: Label
                 Properties:
@@ -4783,8 +4782,8 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =29
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: ="Payment Date"
                   Width: =200
                   X: =445
@@ -4814,6 +4813,8 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =32
                   HoverColor: =varColorText
+                  OnCheck: =Reset(txtPaymentAmount)
+                  OnUncheck: =Reset(txtPaymentAmount)
                   Text: ="Student provided material (70% off)"
                   Width: =510
                   X: =153
@@ -4850,8 +4851,8 @@ Screens:
                   Color: =varColorText
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =29
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: |-
                     =Switch(
                         ddPaymentType.Selected.Value,
@@ -4862,19 +4863,19 @@ Screens:
                     )
                   Width: =300
                   X: =recPaymentModal.X + 20
-                  Y: =220
+                  Y: =224
             - lblPaymentNotesLabel:
                 Control: Label
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =33
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: =If(varSelectedItem.Status.Value = "Printing", "Partial Payment Notes", "Payment Notes")
                   Width: =339
                   X: =recPaymentModal.X + 20
-                  Y: =551
+                  Y: =559
             - txtPaymentNotes:
                 Control: Classic/TextInput
                 Properties:
@@ -4947,6 +4948,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -4990,6 +4992,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -5027,6 +5030,8 @@ Screens:
                         (ddPaymentType.Selected.Value <> "Code" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
                         !IsNumeric(txtPaymentWeight.Text) ||
                         Value(txtPaymentWeight.Text) <= 0 ||
+                        !IsNumeric(txtPaymentAmount.Text) ||
+                        Value(txtPaymentAmount.Text) <= 0 ||
                         (
                             !chkPayerSameAsStudent.Value &&
                             (
@@ -5100,7 +5105,7 @@ Screens:
                         )
                     );
 
-                    // Calculate cost locally for audit message
+                    // Calculate reference cost locally and use the editable amount as the charge saved by the flow.
                     Set(varBaseCost,
                         Max(
                             varMinimumCost,
@@ -5108,7 +5113,9 @@ Screens:
                             If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
                         )
                     );
-                    Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+                    Set(varCalculatedCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+                    Set(varFinalCost, Value(txtPaymentAmount.Text));
+                    Set(varEffectivePaymentRate, varFinalCost / Value(txtPaymentWeight.Text));
 
                     // Call Flow H to handle all writes server-side
                     Set(
@@ -5116,10 +5123,10 @@ Screens:
                         'Flow-(H)-Payment-SaveSingle'.Run(
                             varSelectedItem.ID,
                             Value(txtPaymentWeight.Text),
-                            varFilamentRate,
-                            varResinGramRate,
-                            varMinimumCost,
-                            varOwnMaterialDiscount,
+                            varEffectivePaymentRate,
+                            varEffectivePaymentRate,
+                            0,
+                            1,
                             If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
                             ddPaymentType.Selected.Value,
                             If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
@@ -5169,6 +5176,7 @@ Screens:
                                             If(wResultStatus = "Paid & Picked Up", "Status Change", "Partial Payment"),
                                             If(wResultStatus = "Paid & Picked Up", "Status", "Payment"),
                                             "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                                            If(Abs(varFinalCost - varCalculatedCost) > 0.01, " (Calculated " & Text(varCalculatedCost, "[$-en-US]$#,##0.00") & ")", "") &
                                             If(
                                                 !IsBlank(varPickedPlateIDsText),
                                                 " (Plate IDs " & varPickedPlateIDsText & " | Display " & varPickedPlatesText & ")",
@@ -5191,6 +5199,7 @@ Screens:
                         Set(varSelectedItem, Blank());
                         Reset(txtPaymentTransaction);
                         Reset(txtPaymentWeight);
+                        Reset(txtPaymentAmount);
                         Reset(dpPaymentDate);
                         Reset(txtPaymentNotes);
                         Reset(ddPaymentStaff);
@@ -5255,12 +5264,12 @@ Screens:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =30
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: ="Payer Name"
                   Width: =200
                   X: =153
-                  Y: =469
+                  Y: =477
             - lblPaymentHistoryHeader:
                 Control: Label
                 Properties:
@@ -5280,11 +5289,12 @@ Screens:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Size: =14
+                  Height: =20
+                  Size: =12
                   Text: ="Payer Tiger Card"
                   Width: =180
                   X: =425
-                  Y: =463
+                  Y: =477
             - txtPayerTigerCard:
                 Control: Classic/TextInput
                 Properties:
@@ -5299,7 +5309,7 @@ Screens:
                   HoverBorderColor: =RGBA(0, 18, 107, 1)
                   HoverFill: =RGBA(186, 202, 226, 1)
                   Width: =180
-                  X: =425
+                  X: =423
                   Y: =503
             - txtPayerName:
                 Control: Classic/TextInput
@@ -5546,6 +5556,59 @@ Screens:
                   Width: =460
                   X: =recPaymentModal.X + 590
                   Y: =galPlatesPickup.Y + galPlatesPickup.Height + 4
+            - lblPaymentAmountLabel:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =20
+                  Size: =12
+                  Text: ="Charged Amount"
+                  X: =329
+                  Y: =297
+            - txtPaymentAmount:
+                Control: Classic/TextInput
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Default: |-
+                    =If(
+                        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
+                        With(
+                            {
+                                baseCost: Max(
+                                    varMinimumCost,
+                                    Value(txtPaymentWeight.Text) * If(
+                                        varSelectedItem.Method.Value = "Resin",
+                                        varResinGramRate,
+                                        varFilamentRate
+                                    )
+                                )
+                            },
+                            Text(
+                                If(chkOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+                                "[$-en-US]#,##0.00"
+                            )
+                        ),
+                        Text(varMinimumCost, "[$-en-US]#,##0.00")
+                    )
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Format: =TextFormat.Number
+                  Height: =36
+                  HintText: ="Amount charged"
+                  HoverBorderColor: =varInputBorderColor
+                  HoverFill: =varInputHoverFill
+                  RadiusBottomLeft: =varInputBorderRadius
+                  RadiusBottomRight: =varInputBorderRadius
+                  RadiusTopLeft: =varInputBorderRadius
+                  RadiusTopRight: =varInputBorderRadius
+                  Size: =varInputFontSize
+                  Width: =150
+                  X: =329
+                  Y: =324
       - conBuildPlatesModal:
           Control: GroupContainer
           Variant: ManualLayout
@@ -5888,52 +5951,7 @@ Screens:
                         HoverBorderColor: =varColorDanger
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =RGBA(220, 50, 50, 0.15)
-                        OnSelect: |-
-                          =If(
-                              Coalesce(varSelectedItem.BuildPlateLabelsLocked, false) && !StartsWith(ThisItem.ResolvedPlateLabel, "Reprint"),
-                              Notify("Original locked plates cannot be deleted. Add a reprint instead.", NotificationType.Warning),
-                              With(
-                                  {
-                                      wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
-                                  },
-                                  Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
-                                  Patch(
-                                      PrintRequests,
-                                      wFreshRequest,
-                                      {
-                                          StaffNotes: Concatenate(
-                                              If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                                              "BUILD PLATE: [Summary] Removed " & ThisItem.ResolvedPlateLabel &
-                                              " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                                          )
-                                      }
-                                  )
-                              );
-                              ClearCollect(colBuildPlates,
-                                  Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-                              );
-                              ClearCollect(colBuildPlatesIndexed,
-                                  AddColumns(
-                                      colBuildPlates As plate,
-                                      PlateNum,
-                                      CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                      ResolvedPlateLabel,
-                                      With(
-                                          {
-                                              wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                                              wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                                          },
-                                          If(
-                                              !IsBlank(wStoredLabel),
-                                              wStoredLabel,
-                                              Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
-                                          )
-                                      )
-                                  )
-                              );
-                              ClearCollect(colAllBuildPlates, BuildPlates);
-                              
-                          )
+                        OnSelect: "=If(\n    Coalesce(varSelectedItem.BuildPlateLabelsLocked, false) && !StartsWith(ThisItem.ResolvedPlateLabel, \"Reprint\"),\n    Notify(\"Original locked plates cannot be deleted. Add a reprint instead.\", NotificationType.Warning),\n    With(\n        {\n            wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)\n        },\n        Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));\n        Patch(\n            PrintRequests,\n            wFreshRequest,\n            {\n                StaffNotes: Concatenate(\n                    If(IsBlank(wFreshRequest.StaffNotes), \"\", wFreshRequest.StaffNotes & \" | \"),\n                    \"BUILD PLATE: [Summary] Removed \" & ThisItem.ResolvedPlateLabel &\n                    \" [Changes] [Reason] [Context] [Comment] - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            }\n        )\n    );\n    ClearCollect(colBuildPlates,\n        Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n    );\n    ClearCollect(colBuildPlatesIndexed,\n        AddColumns(\n            colBuildPlates As plate,\n            PlateNum,\n            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n            ResolvedPlateLabel,\n            With(\n                {\n                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n                },\n                If(\n                    !IsBlank(wStoredLabel),\n                    wStoredLabel,\n                    Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n                )\n            )\n        )\n    );\n    ClearCollect(colAllBuildPlates, BuildPlates);\n    \n)"
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =Self.Color
@@ -6192,7 +6210,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
+                  Size: =12
                   Text: ="Performing Action As"
                   Width: =200
                   X: =recBatchPaymentModal.X + 20
@@ -6204,7 +6222,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
+                  Size: =12
                   Text: ="Payment Type"
                   Width: =120
                   X: =403
@@ -6252,7 +6270,7 @@ Screens:
                   PaddingLeft: =0
                   PaddingRight: =0
                   PaddingTop: =
-                  Size: =10
+                  Size: =12
                   Text: |-
                     =Switch(
                         ddBatchPaymentType.Selected.Value,
@@ -6320,7 +6338,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
+                  Size: =12
                   Text: |-
                     =If(
                         CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0,
@@ -6354,6 +6372,7 @@ Screens:
                   Height: =36
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
+                  OnChange: =Reset(txtBatchAmount)
                   RadiusBottomLeft: =varInputBorderRadius
                   RadiusBottomRight: =varInputBorderRadius
                   RadiusTopLeft: =varInputBorderRadius
@@ -6362,6 +6381,77 @@ Screens:
                   Width: =150
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 270
+            - lblBatchAmountLabel:
+                Control: Label
+                Properties:
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =20
+                  Size: =12
+                  Text: ="Charged Amount"
+                  Width: =165
+                  X: =recBatchPaymentModal.X + 190
+                  Y: =recBatchPaymentModal.Y + 245
+            - txtBatchAmount:
+                Control: Classic/TextInput
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Default: |-
+                    =With(
+                        {
+                            totalEstWeight: Sum(colBatchItems, EstimatedWeight),
+                            itemCount: CountRows(colBatchItems),
+                            enteredWeight: Value(txtBatchWeight.Text)
+                        },
+                        Text(
+                            Sum(
+                                ForAll(
+                                    colBatchItems As batchItem,
+                                    With(
+                                        {
+                                            allocatedWeight: If(
+                                                totalEstWeight > 0,
+                                                Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
+                                                Round(enteredWeight / itemCount, 2)
+                                            )
+                                        },
+                                        With(
+                                            {
+                                                baseCost: Max(
+                                                    If(
+                                                        batchItem.Method.Value = "Resin",
+                                                        allocatedWeight * varResinGramRate,
+                                                        allocatedWeight * varFilamentRate
+                                                    ),
+                                                    varMinimumCost
+                                                )
+                                            },
+                                            If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
+                                        )
+                                    )
+                                ),
+                                Value
+                            ),
+                            "[$-en-US]#,##0.00"
+                        )
+                    )
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Format: =TextFormat.Number
+                  Height: =36
+                  HintText: ="Amount charged"
+                  HoverBorderColor: =varInputBorderColor
+                  HoverFill: =varInputHoverFill
+                  RadiusBottomLeft: =varInputBorderRadius
+                  RadiusBottomRight: =varInputBorderRadius
+                  RadiusTopLeft: =varInputBorderRadius
+                  RadiusTopRight: =varInputBorderRadius
+                  Size: =varInputFontSize
+                  Width: =130
+                  X: =recBatchPaymentModal.X + 190
+                  Y: =recBatchPaymentModal.Y + 270
             - lblBatchCostLabel:
                 Control: Label
                 Properties:
@@ -6369,10 +6459,10 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
-                  Text: ="Total"
-                  Width: =100
-                  X: =597
+                  Size: =12
+                  Text: ="Calculated Total"
+                  Width: =140
+                  X: =recBatchPaymentModal.X + 360
                   Y: =recBatchPaymentModal.Y + 245
             - lblBatchCostValue:
                 Control: Label
@@ -6421,7 +6511,7 @@ Screens:
                             "[$-en-US]$#,##0.00"
                         )
                     )
-                  X: =597
+                  X: =recBatchPaymentModal.X + 360
                   Y: =recBatchPaymentModal.Y + 270
             - chkBatchOwnMaterial:
                 Control: Classic/CheckBox
@@ -6430,14 +6520,16 @@ Screens:
                   CheckboxBorderColor: =varInputBorderColor
                   CheckmarkFill: =RGBA(0, 0, 0, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   Height: =36
                   HoverColor: =varColorText
+                  OnCheck: =Reset(txtBatchAmount)
+                  OnUncheck: =Reset(txtBatchAmount)
                   Size: =11
                   Text: ="Student provided material (70% off)"
-                  Width: =220
-                  X: =recBatchPaymentModal.X + 360
-                  Y: =recBatchPaymentModal.Y + 270
+                  Width: =350
+                  X: =recBatchPaymentModal.X + 20
+                  Y: =recBatchPaymentModal.Y + 330
             - lblBatchItemsHeader:
                 Control: Label
                 Properties:
@@ -6448,7 +6540,7 @@ Screens:
                   Text: ="Items"
                   Width: =560
                   X: =recBatchPaymentModal.X + 20
-                  Y: =recBatchPaymentModal.Y + 320
+                  Y: =recBatchPaymentModal.Y + 385
             - galBatchItems:
                 Control: Gallery
                 Variant: BrowseLayout_Vertical_OneTextVariant_ver5.0
@@ -6461,7 +6553,7 @@ Screens:
                   TemplateSize: =35
                   Width: =560
                   X: =recBatchPaymentModal.X + 20
-                  Y: =recBatchPaymentModal.Y + 345
+                  Y: =recBatchPaymentModal.Y + 410
                 Children:
                   - lblBatchItemRow:
                       Control: Label
@@ -6533,6 +6625,7 @@ Screens:
                     Reset(txtBatchPayerName);
                     Reset(dpBatchPaymentDate);
                     Reset(txtBatchWeight);
+                    Reset(txtBatchAmount);
                     Reset(ddBatchStaff);
                     Reset(chkBatchOwnMaterial);
                     Reset(ddBatchPaymentType)
@@ -6565,6 +6658,9 @@ Screens:
                         !IsBlank(txtBatchWeight.Text) && 
                         IsNumeric(txtBatchWeight.Text) && 
                         Value(txtBatchWeight.Text) > 0 &&
+                        !IsBlank(txtBatchAmount.Text) &&
+                        IsNumeric(txtBatchAmount.Text) &&
+                        Value(txtBatchAmount.Text) > 0 &&
                         CountRows(colBatchItems) > 0,
                         DisplayMode.Edit,
                         DisplayMode.Disabled
@@ -6583,14 +6679,16 @@ Screens:
 
                     // Call Flow I to handle the entire batch save server-side
                     Set(varBatchProcessedCount, CountRows(colBatchItems));
+                    Set(varBatchFinalCost, Value(txtBatchAmount.Text));
+                    Set(varBatchEffectivePaymentRate, varBatchFinalCost / Value(txtBatchWeight.Text));
                     Set(
                         varFlowResult,
                         'Flow-(I)-Payment-SaveBatch'.Run(
                             Value(txtBatchWeight.Text),
-                            varFilamentRate,
-                            varResinGramRate,
-                            varMinimumCost,
-                            varOwnMaterialDiscount,
+                            varBatchEffectivePaymentRate,
+                            varBatchEffectivePaymentRate,
+                            0,
+                            1,
                             Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
                             Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
                             If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
@@ -6649,6 +6747,7 @@ Screens:
                         Reset(txtBatchPayerName);
                         Reset(dpBatchPaymentDate);
                         Reset(txtBatchWeight);
+                        Reset(txtBatchAmount);
                         Reset(ddBatchStaff);
                         Reset(chkBatchOwnMaterial);
                         Reset(ddBatchPaymentType);
@@ -6730,6 +6829,7 @@ Screens:
                     Reset(txtBatchPayerName);
                     Reset(dpBatchPaymentDate);
                     Reset(txtBatchWeight);
+                    Reset(txtBatchAmount);
                     Reset(ddBatchStaff);
                     Reset(chkBatchOwnMaterial);
                     Reset(ddBatchPaymentType)
@@ -6757,9 +6857,9 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
+                  Size: =12
                   Text: ="Payer Name"
-                  Width: =93
+                  Width: =210
                   X: =673
                   Y: =109
             - txtBatchPayerName:
@@ -6789,7 +6889,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
-                  Size: =10
+                  Size: =12
                   Text: ="Payment Date"
                   Width: =140
                   X: =743

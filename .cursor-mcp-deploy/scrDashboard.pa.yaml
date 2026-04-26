@@ -4595,7 +4595,7 @@ Screens:
                   Text: ="Performing Action As"
                   Width: =300
                   X: =recPaymentModal.X + 20
-                  Y: =145
+                  Y: =149
             - ddPaymentStaff:
                 Control: Classic/ComboBox
                 Properties:
@@ -4708,7 +4708,7 @@ Screens:
                     )
                   Width: =261
                   X: =recPaymentModal.X + 20
-                  Y: =291
+                  Y: =299
             - txtPaymentWeight:
                 Control: Classic/TextInput
                 Properties:
@@ -4739,8 +4739,8 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
-                  Text: ="Total"
-                  X: =403
+                  Text: ="Calculated Total"
+                  X: =511
                   Y: =299
             - lblPaymentCostValue:
                 Control: Label
@@ -4750,7 +4750,7 @@ Screens:
                   Font: =varAppFont
                   FontWeight: =FontWeight.Bold
                   Height: =42
-                  Size: =20
+                  Size: =12
                   Text: |-
                     =If(
                         IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
@@ -4772,9 +4772,9 @@ Screens:
                         ),
                         "$" & Text(varMinimumCost, "[$-en-US]#,##0.00") & " (minimum)"
                     )
-                  Width: =292
-                  X: =397
-                  Y: =322
+                  Width: =156
+                  X: =505
+                  Y: =318
             - lblPaymentDateLabel:
                 Control: Label
                 Properties:
@@ -4863,7 +4863,7 @@ Screens:
                     )
                   Width: =300
                   X: =recPaymentModal.X + 20
-                  Y: =220
+                  Y: =224
             - lblPaymentNotesLabel:
                 Control: Label
                 Properties:
@@ -4875,7 +4875,7 @@ Screens:
                   Text: =If(varSelectedItem.Status.Value = "Printing", "Partial Payment Notes", "Payment Notes")
                   Width: =339
                   X: =recPaymentModal.X + 20
-                  Y: =551
+                  Y: =559
             - txtPaymentNotes:
                 Control: Classic/TextInput
                 Properties:
@@ -5269,7 +5269,7 @@ Screens:
                   Text: ="Payer Name"
                   Width: =200
                   X: =153
-                  Y: =469
+                  Y: =477
             - lblPaymentHistoryHeader:
                 Control: Label
                 Properties:
@@ -5294,7 +5294,7 @@ Screens:
                   Text: ="Payer Tiger Card"
                   Width: =180
                   X: =425
-                  Y: =463
+                  Y: =477
             - txtPayerTigerCard:
                 Control: Classic/TextInput
                 Properties:
@@ -5309,7 +5309,7 @@ Screens:
                   HoverBorderColor: =RGBA(0, 18, 107, 1)
                   HoverFill: =RGBA(186, 202, 226, 1)
                   Width: =180
-                  X: =425
+                  X: =423
                   Y: =503
             - txtPayerName:
                 Control: Classic/TextInput
@@ -5565,9 +5565,9 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
-                  Text: ="Amount"
-                  X: =190
-                  Y: =299
+                  Text: ="Charged Amount"
+                  X: =329
+                  Y: =297
             - txtPaymentAmount:
                 Control: Classic/TextInput
                 Properties:
@@ -5607,8 +5607,8 @@ Screens:
                   RadiusTopRight: =varInputBorderRadius
                   Size: =varInputFontSize
                   Width: =150
-                  X: =190
-                  Y: =322
+                  X: =329
+                  Y: =324
       - conBuildPlatesModal:
           Control: GroupContainer
           Variant: ManualLayout
@@ -6389,8 +6389,8 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
-                  Text: ="Amount"
-                  Width: =130
+                  Text: ="Charged Amount"
+                  Width: =165
                   X: =recBatchPaymentModal.X + 190
                   Y: =recBatchPaymentModal.Y + 245
             - txtBatchAmount:
@@ -6460,8 +6460,8 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
-                  Text: ="Total"
-                  Width: =100
+                  Text: ="Calculated Total"
+                  Width: =140
                   X: =recBatchPaymentModal.X + 360
                   Y: =recBatchPaymentModal.Y + 245
             - lblBatchCostValue:
@@ -6859,7 +6859,7 @@ Screens:
                   Height: =20
                   Size: =12
                   Text: ="Payer Name"
-                  Width: =93
+                  Width: =210
                   X: =673
                   Y: =109
             - txtBatchPayerName:
