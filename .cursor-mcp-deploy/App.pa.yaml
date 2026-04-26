@@ -110,6 +110,8 @@ App:
       Set(varPickedPlateIDsList, "");
       Set(varBaseCost, 0);
       Set(varFinalCost, 0);
+      Set(varPayModalDate, Today());
+      Set(varBatchPayModalDate, Today());
 
       // Currently selected item for modals (typed to PrintRequests schema)
       Set(varSelectedItem, Blank());

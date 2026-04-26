@@ -1088,8 +1088,8 @@ Screens:
                             )
                         )
                     );
-                    ClearCollect(colPickedUpPlates, Blank());
                     Clear(colPickedUpPlates);
+                    Set(varPayModalDate, Today());
                     Set(varShowPaymentModal, ThisItem.ID)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -2948,6 +2948,7 @@ Screens:
                             "Cannot open batch payment: selection mixes Filament and Resin. Remove items until only one print method remains.",
                             NotificationType.Warning
                         ),
+                        Set(varBatchPayModalDate, Today());
                         Set(varShowBatchPaymentModal, 1)
                     )
                   PressedBorderColor: =Self.Fill
@@ -4793,6 +4794,7 @@ Screens:
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
+                  DefaultDate: =varPayModalDate
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =Font.'Open Sans'
                   Height: =36
@@ -5025,6 +5027,7 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: |-
                     =If(
+                        IsBlank(dpPaymentDate.SelectedDate) ||
                         IsBlank(ddPaymentStaff.Selected) ||
                         IsBlank(ddPaymentType.Selected.Value) ||
                         (ddPaymentType.Selected.Value <> "Code" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
@@ -5143,11 +5146,11 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
+                    // Success: compare only as text/number-like strings to avoid bool vs text comparison warnings; Text() maps actual booleans to "true"/"false".
                     If(
                         Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
+                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
+                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "1"
                         ),
 
                         // === SUCCESS PATH ===
@@ -5516,7 +5519,7 @@ Screens:
                               !(ThisItem.ID in colPickedUpPlates.ID),
                               Collect(colPickedUpPlates, ThisItem)
                           )
-                        OnSelect: =Select(Parent)
+                        OnSelect: =Blank()
                         OnUncheck: =Remove(colPickedUpPlates, ThisItem)
                         Text: =""
                         Width: =30
@@ -6701,11 +6704,11 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
+                    // Success: same as single payment — avoid mixing boolean and string comparisons; see btnPaymentConfirm.
                     If(
                         Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
+                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
+                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "1"
                         ),
 
                         // === SUCCESS PATH ===
@@ -6899,6 +6902,7 @@ Screens:
                 Properties:
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
+                  DefaultDate: =varBatchPayModalDate
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =Font.'Open Sans'
                   Height: =36
