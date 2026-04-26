@@ -4337,6 +4337,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -4522,12 +4523,66 @@ Screens:
                   HintText: ="Weight in grams"
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
+                  OnChange: =Reset(txtPaymentAmount)
                   RadiusBottomLeft: =varInputBorderRadius
                   RadiusBottomRight: =varInputBorderRadius
                   RadiusTopLeft: =varInputBorderRadius
                   RadiusTopRight: =varInputBorderRadius
                   Width: =150
                   X: =recPaymentModal.X + 20
+                  Y: =recPaymentModal.Y + 280
+            - lblPaymentAmountLabel:
+                Control: Label@2.5.1
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =25
+                  Size: =14
+                  Text: ="Amount Charged"
+                  Width: =150
+                  X: =205
+                  Y: =299
+            - txtPaymentAmount:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Default: |-
+                    =If(
+                        IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
+                        With(
+                            {
+                                baseCost: Max(
+                                    varMinimumCost,
+                                    Value(txtPaymentWeight.Text) * If(
+                                        varSelectedItem.Method.Value = "Resin",
+                                        varResinGramRate,
+                                        varFilamentRate
+                                    )
+                                )
+                            },
+                            Text(
+                                If(chkOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+                                "[$-en-US]#,##0.00"
+                            )
+                        ),
+                        Text(varMinimumCost, "[$-en-US]#,##0.00")
+                    )
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Format: =TextFormat.Number
+                  Height: =36
+                  HintText: ="Amount charged"
+                  HoverBorderColor: =varInputBorderColor
+                  HoverFill: =varInputHoverFill
+                  RadiusBottomLeft: =varInputBorderRadius
+                  RadiusBottomRight: =varInputBorderRadius
+                  RadiusTopLeft: =varInputBorderRadius
+                  RadiusTopRight: =varInputBorderRadius
+                  Width: =150
+                  X: =205
                   Y: =recPaymentModal.Y + 280
             - lblPaymentCostLabel:
                 Control: Label@2.5.1
@@ -4538,7 +4593,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =25
                   Size: =14
-                  Text: ="Final Cost"
+                  Text: ="Calculated Price"
                   X: =403
                   Y: =299
             - lblPaymentCostValue:
@@ -4612,6 +4667,8 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =32
                   HoverColor: =varColorText
+                  OnCheck: =Reset(txtPaymentAmount)
+                  OnUncheck: =Reset(txtPaymentAmount)
                   Text: ="Student provided own material (70% discount)"
                   Width: =510
                   X: =153
@@ -4745,6 +4802,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -4788,6 +4846,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtPaymentTransaction);
                     Reset(txtPaymentWeight);
+                    Reset(txtPaymentAmount);
                     Reset(dpPaymentDate);
                     Reset(txtPaymentNotes);
                     Reset(ddPaymentStaff);
@@ -4825,6 +4884,8 @@ Screens:
                         (ddPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
                         !IsNumeric(txtPaymentWeight.Text) ||
                         Value(txtPaymentWeight.Text) <= 0 ||
+                        !IsNumeric(txtPaymentAmount.Text) ||
+                        Value(txtPaymentAmount.Text) <= 0 ||
                         (
                             !chkPayerSameAsStudent.Value &&
                             (
@@ -4898,7 +4959,7 @@ Screens:
                         )
                     );
 
-                    // Calculate cost locally for audit message
+                    // Calculate reference cost locally and use the editable amount as the charge saved by the flow.
                     Set(varBaseCost,
                         Max(
                             varMinimumCost,
@@ -4906,7 +4967,9 @@ Screens:
                             If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
                         )
                     );
-                    Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+                    Set(varCalculatedCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+                    Set(varFinalCost, Value(txtPaymentAmount.Text));
+                    Set(varEffectivePaymentRate, varFinalCost / Value(txtPaymentWeight.Text));
 
                     // Call Flow H to handle all writes server-side
                     Set(
@@ -4914,10 +4977,10 @@ Screens:
                         'Flow-(H)-Payment-SaveSingle'.Run(
                             varSelectedItem.ID,
                             Value(txtPaymentWeight.Text),
-                            varFilamentRate,
-                            varResinGramRate,
-                            varMinimumCost,
-                            varOwnMaterialDiscount,
+                            varEffectivePaymentRate,
+                            varEffectivePaymentRate,
+                            0,
+                            1,
                             If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
                             ddPaymentType.Selected.Value,
                             If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
@@ -4934,12 +4997,9 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
+                    // Success output is treated as text so flow serialization casing does not matter.
                     If(
-                        Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                        ),
+                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
                         // === SUCCESS PATH ===
                         Concurrent(
@@ -4979,6 +5039,7 @@ Screens:
                                             If(wResultStatus = "Paid & Picked Up", "Status Change", "Partial Payment"),
                                             If(wResultStatus = "Paid & Picked Up", "Status", "Payment"),
                                             "Payment: " & Text(varFinalCost, "[$-en-US]$#,##0.00") &
+                                            If(Abs(varFinalCost - varCalculatedCost) > 0.01, " (Calculated " & Text(varCalculatedCost, "[$-en-US]$#,##0.00") & ")", "") &
                                             If(
                                                 !IsBlank(varPickedPlateIDsText),
                                                 " (Plate IDs " & varPickedPlateIDsText & " | Display " & varPickedPlatesText & ")",
@@ -5001,6 +5062,7 @@ Screens:
                         Set(varSelectedItem, Blank());
                         Reset(txtPaymentTransaction);
                         Reset(txtPaymentWeight);
+                        Reset(txtPaymentAmount);
                         Reset(dpPaymentDate);
                         Reset(txtPaymentNotes);
                         Reset(ddPaymentStaff);
@@ -6199,6 +6261,7 @@ Screens:
                   Height: =36
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
+                  OnChange: =Reset(txtBatchAmount)
                   RadiusBottomLeft: =varInputBorderRadius
                   RadiusBottomRight: =varInputBorderRadius
                   RadiusTopLeft: =varInputBorderRadius
@@ -6206,6 +6269,77 @@ Screens:
                   Size: =varInputFontSize
                   Width: =150
                   X: =recBatchPaymentModal.X + 20
+                  Y: =recBatchPaymentModal.Y + 270
+            - lblBatchAmountLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =20
+                  Size: =10
+                  Text: ="Amount Charged:"
+                  Width: =130
+                  X: =recBatchPaymentModal.X + 190
+                  Y: =recBatchPaymentModal.Y + 245
+            - txtBatchAmount:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Default: |-
+                    =With(
+                        {
+                            totalEstWeight: Sum(colBatchItems, EstimatedWeight),
+                            itemCount: CountRows(colBatchItems),
+                            enteredWeight: Value(txtBatchWeight.Text)
+                        },
+                        Text(
+                            Sum(
+                                ForAll(
+                                    colBatchItems As batchItem,
+                                    With(
+                                        {
+                                            allocatedWeight: If(
+                                                totalEstWeight > 0,
+                                                Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
+                                                Round(enteredWeight / itemCount, 2)
+                                            )
+                                        },
+                                        With(
+                                            {
+                                                baseCost: Max(
+                                                    If(
+                                                        batchItem.Method.Value = "Resin",
+                                                        allocatedWeight * varResinGramRate,
+                                                        allocatedWeight * varFilamentRate
+                                                    ),
+                                                    varMinimumCost
+                                                )
+                                            },
+                                            If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
+                                        )
+                                    )
+                                ),
+                                Value
+                            ),
+                            "[$-en-US]#,##0.00"
+                        )
+                    )
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Format: =TextFormat.Number
+                  Height: =36
+                  HintText: ="Amount charged"
+                  HoverBorderColor: =varInputBorderColor
+                  HoverFill: =varInputHoverFill
+                  RadiusBottomLeft: =varInputBorderRadius
+                  RadiusBottomRight: =varInputBorderRadius
+                  RadiusTopLeft: =varInputBorderRadius
+                  RadiusTopRight: =varInputBorderRadius
+                  Size: =varInputFontSize
+                  Width: =130
+                  X: =recBatchPaymentModal.X + 190
                   Y: =recBatchPaymentModal.Y + 270
             - lblBatchCostLabel:
                 Control: Label@2.5.1
@@ -6215,7 +6349,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =10
-                  Text: ="Total Cost:"
+                  Text: ="Calculated Total:"
                   Width: =100
                   X: =597
                   Y: =recBatchPaymentModal.Y + 245
@@ -6278,6 +6412,8 @@ Screens:
                   Font: =Font.'Open Sans'
                   Height: =36
                   HoverColor: =varColorText
+                  OnCheck: =Reset(txtBatchAmount)
+                  OnUncheck: =Reset(txtBatchAmount)
                   Size: =11
                   Text: ="Student provides own material (70% discount)"
                   Width: =220
@@ -6378,6 +6514,7 @@ Screens:
                     Reset(txtBatchPayerName);
                     Reset(dpBatchPaymentDate);
                     Reset(txtBatchWeight);
+                    Reset(txtBatchAmount);
                     Reset(ddBatchStaff);
                     Reset(chkBatchOwnMaterial);
                     Reset(ddBatchPaymentType)
@@ -6409,6 +6546,9 @@ Screens:
                         !IsBlank(txtBatchWeight.Text) && 
                         IsNumeric(txtBatchWeight.Text) && 
                         Value(txtBatchWeight.Text) > 0 &&
+                        !IsBlank(txtBatchAmount.Text) &&
+                        IsNumeric(txtBatchAmount.Text) &&
+                        Value(txtBatchAmount.Text) > 0 &&
                         CountRows(colBatchItems) > 0,
                         DisplayMode.Edit,
                         DisplayMode.Disabled
@@ -6427,14 +6567,16 @@ Screens:
 
                     // Call Flow I to handle the entire batch save server-side
                     Set(varBatchProcessedCount, CountRows(colBatchItems));
+                    Set(varBatchFinalCost, Value(txtBatchAmount.Text));
+                    Set(varBatchEffectivePaymentRate, varBatchFinalCost / Value(txtBatchWeight.Text));
                     Set(
                         varFlowResult,
                         'Flow-(I)-Payment-SaveBatch'.Run(
                             Value(txtBatchWeight.Text),
-                            varFilamentRate,
-                            varResinGramRate,
-                            varMinimumCost,
-                            varOwnMaterialDiscount,
+                            varBatchEffectivePaymentRate,
+                            varBatchEffectivePaymentRate,
+                            0,
+                            1,
                             Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
                             Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
                             If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
@@ -6447,12 +6589,9 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
+                    // Success output is treated as text so flow serialization casing does not matter.
                     If(
-                        Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                        ),
+                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
                         // === SUCCESS PATH ===
                         Concurrent(
@@ -6506,6 +6645,7 @@ Screens:
                         Reset(txtBatchPayerName);
                         Reset(dpBatchPaymentDate);
                         Reset(txtBatchWeight);
+                        Reset(txtBatchAmount);
                         Reset(ddBatchStaff);
                         Reset(chkBatchOwnMaterial);
                         Reset(ddBatchPaymentType);
@@ -6533,7 +6673,7 @@ Screens:
                   Text: ="Record Batch Payment"
                   Width: =130
                   X: =recBatchPaymentModal.X + 450
-                  Y: =690
+                  Y: =recBatchPaymentModal.Y + recBatchPaymentModal.Height - Self.Height - 20
             - ddBatchStaff:
                 Control: Classic/ComboBox@2.4.0
                 Properties:
@@ -6587,6 +6727,7 @@ Screens:
                     Reset(txtBatchPayerName);
                     Reset(dpBatchPaymentDate);
                     Reset(txtBatchWeight);
+                    Reset(txtBatchAmount);
                     Reset(ddBatchStaff);
                     Reset(chkBatchOwnMaterial);
                     Reset(ddBatchPaymentType)
