@@ -41,9 +41,9 @@ A multi-model council review of the Staff Dashboard Canvas App. Each model conne
 
 | File | Description |
 |------|-------------|
-| `PowerApps/canvas-sync/App.pa.yaml` | App-level OnStart, variables, connections |
-| `PowerApps/canvas-sync/scrDashboard.pa.yaml` | Main screen — all galleries, modals, buttons, timer |
-| `PowerApps/canvas-sync/scrSchedule.pa.yaml` | Schedule screen |
+| `PowerApps/canvas-coauthor/App.pa.yaml` | App-level OnStart, variables, connections |
+| `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` | Main screen — all galleries, modals, buttons, timer |
+| `PowerApps/canvas-coauthor/scrSchedule.pa.yaml` | Schedule screen |
 
 ---
 
@@ -307,9 +307,9 @@ These are documented problems already tracked in the spec — models should look
 REVIEW TASK: Staff Dashboard Canvas App (Power Apps) — Bug Hunt and Improvement Audit
 
 Connect to the server and read these source files:
-  - PowerApps/canvas-sync/App.pa.yaml
-  - PowerApps/canvas-sync/scrDashboard.pa.yaml
-  - PowerApps/canvas-sync/scrSchedule.pa.yaml
+  - PowerApps/canvas-coauthor/App.pa.yaml
+  - PowerApps/canvas-coauthor/scrDashboard.pa.yaml
+  - PowerApps/canvas-coauthor/scrSchedule.pa.yaml
 
 WHAT THIS APP DOES:
 Staff at a 3D printing fabrication lab use this Canvas App (tablet layout) to manage student
@@ -524,7 +524,7 @@ IMPORTANT: Do not change any files. Do not write a consensus summary.
 
 ### Composer 2
 
-**Summary:** Reviewed `PowerApps/canvas-sync/App.pa.yaml`, `scrDashboard.pa.yaml`, and `scrSchedule.pa.yaml` against this spec. Several documented issues are still present; the synced YAML does **not** contain a duplicate `// === SCHEDULE SCREEN STATE ===` block (only one block at `App.OnStart` lines 51–59). A few new risks surfaced around schedule save error handling, shift validation, and data freshness for `RequestComments`.
+**Summary:** Reviewed `PowerApps/canvas-coauthor/App.pa.yaml`, `scrDashboard.pa.yaml`, and `scrSchedule.pa.yaml` against this spec. Several documented issues are still present; the synced YAML does **not** contain a duplicate `// === SCHEDULE SCREEN STATE ===` block (only one block at `App.OnStart` lines 51–59). A few new risks surfaced around schedule save error handling, shift validation, and data freshness for `RequestComments`.
 
 ---
 
@@ -678,7 +678,7 @@ High-confidence findings from one or two models with clear impact.
 
 ~~`conExportModal` is declared after `conLoadingOverlay` in `scrDashboard.pa.yaml`. The export modal renders on top of the loading spinner, making the loading overlay invisible to the user while "Download Report" is in progress. Fix: move `conLoadingOverlay` to be declared after `conExportModal` so it gets the higher z-order.~~
 
-*(Raised by Claude Opus 4.6 only. ~~✅ Verified~~ **Fixed Apr 22, 2026** — `conExportModal` is now declared before `conLoadingOverlay` in both `canvas-coauthor` and `canvas-sync`, so the loading overlay holds the higher z-order during export. **Pushed to live coauthoring session via `compile_canvas` + verification `sync_canvas`.** Compiler verified: warnings only, no blocking errors.)*
+*(Raised by Claude Opus 4.6 only. ~~✅ Verified~~ **Fixed Apr 22, 2026** — `conExportModal` is now declared before `conLoadingOverlay` in `canvas-coauthor` (live coauthor YAML), so the loading overlay holds the higher z-order during export. **Pushed to live coauthoring session via `compile_canvas` + verification `sync_canvas`.** Compiler verified: warnings only, no blocking errors.)*
 
 ---
 

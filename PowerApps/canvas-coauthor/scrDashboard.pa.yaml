@@ -2201,7 +2201,7 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Format: =TextFormat.Number
+                  Format: =TextFormat.Text
                   Height: =36
                   HintText: =If(varSelectedItem.Method.Value = "Resin", "Enter mL", "Enter grams")
                   HoverBorderColor: =varInputBorderColor
@@ -4651,9 +4651,9 @@ Screens:
                   HintText: |-
                     =Switch(
                         ddPaymentType.Selected.Value,
-                        "TigerCASH", "TigerCASH receipt number",
-                        "Check", "Check number",
-                        "Grant/Program Code", "Leave blank if code is unknown",
+                        "TigerCASH", "",
+                        "Check", "",
+                        "Code", "Optional code",
                         "Receipt or reference number"
                     )
                   HoverBorderColor: =varInputBorderColor
@@ -4814,7 +4814,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =32
                   HoverColor: =varColorText
-                  Text: ="Student provided own material (70% discount)"
+                  Text: ="Student provided material (70% off)"
                   Width: =510
                   X: =153
                   Y: =417
@@ -4834,7 +4834,7 @@ Screens:
                   Font: =varAppFont
                   Height: =36
                   HoverFill: =varDropdownHoverFill
-                  Items: =["TigerCASH", "Check", "Grant/Program Code"]
+                  Items: =["TigerCASH", "Check", "Code"]
                   Items.Value: =Value
                   PressedColor: =varDropdownPressedColor
                   PressedFill: =varDropdownPressedFill
@@ -4848,16 +4848,16 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =29
                   Size: =14
                   Text: |-
                     =Switch(
                         ddPaymentType.Selected.Value,
-                        "TigerCASH", "Transaction #",
-                        "Check", "Check #",
-                        "Grant/Program Code", "Grant/Program Code",
+                        "TigerCASH", "Transaction Number",
+                        "Check", "Check Number",
+                        "Code", "Code",
                         "Transaction #"
                     )
                   Width: =300
@@ -5024,7 +5024,7 @@ Screens:
                     =If(
                         IsBlank(ddPaymentStaff.Selected) ||
                         IsBlank(ddPaymentType.Selected.Value) ||
-                        (ddPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
+                        (ddPaymentType.Selected.Value <> "Code" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
                         !IsNumeric(txtPaymentWeight.Text) ||
                         Value(txtPaymentWeight.Text) <= 0 ||
                         (
@@ -6165,7 +6165,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =35
                   Size: =20
-                  Text: ="Final Batch Pickup - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
+                  Text: ="Batch Pickup - " & CountRows(colBatchItems) & " Item" & If(CountRows(colBatchItems) <> 1, "s", "")
                   Width: =560
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 20
@@ -6230,7 +6230,7 @@ Screens:
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varDropdownHoverFill
                   IsSearchable: =false
-                  Items: =["TigerCASH", "Check", "Grant/Program Code"]
+                  Items: =["TigerCASH", "Check", "Code"]
                   PressedColor: =varDropdownPressedColor
                   PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]
@@ -6256,9 +6256,9 @@ Screens:
                   Text: |-
                     =Switch(
                         ddBatchPaymentType.Selected.Value,
-                        "TigerCASH", "Transaction #",
-                        "Check", "Check #",
-                        "Grant/Program Code", "Grant/Program Code",
+                        "TigerCASH", "Transaction Number",
+                        "Check", "Check Number",
+                        "Code", "Code",
                         "Transaction #"
                     )
                   Width: =175
@@ -6279,9 +6279,9 @@ Screens:
                   HintText: |-
                     =Switch(
                         ddBatchPaymentType.Selected.Value,
-                        "TigerCASH", "TigerCASH receipt number",
-                        "Check", "Check number",
-                        "Grant/Program Code", "Leave blank if code is pending",
+                        "TigerCASH", "",
+                        "Check", "",
+                        "Code", "Optional code",
                         "Receipt or reference number"
                     )
                   HoverBorderColor: =varInputBorderColor
@@ -6370,7 +6370,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =10
-                  Text: ="Total Cost:"
+                  Text: ="Total"
                   Width: =100
                   X: =597
                   Y: =recBatchPaymentModal.Y + 245
@@ -6434,7 +6434,7 @@ Screens:
                   Height: =36
                   HoverColor: =varColorText
                   Size: =11
-                  Text: ="Student provides own material (70% discount)"
+                  Text: ="Student provided material (70% off)"
                   Width: =220
                   X: =recBatchPaymentModal.X + 360
                   Y: =recBatchPaymentModal.Y + 270
@@ -6445,7 +6445,7 @@ Screens:
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =12
-                  Text: ="Selected Items:"
+                  Text: ="Items"
                   Width: =560
                   X: =recBatchPaymentModal.X + 20
                   Y: =recBatchPaymentModal.Y + 320
@@ -6559,7 +6559,7 @@ Screens:
                     =If(
                         !IsBlank(ddBatchStaff.Selected) && 
                         !IsBlank(ddBatchPaymentType.Selected.Value) &&
-                        !(ddBatchPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtBatchTransaction.Text))) &&
+                        (ddBatchPaymentType.Selected.Value = "Code" || !IsBlank(Trim(txtBatchTransaction.Text))) &&
                         !IsBlank(Trim(txtBatchPayerName.Text)) &&
                         !IsBlank(dpBatchPaymentDate.SelectedDate) &&
                         !IsBlank(txtBatchWeight.Text) && 
@@ -6673,7 +6673,7 @@ Screens:
                   RadiusTopLeft: =varBtnBorderRadius
                   RadiusTopRight: =varBtnBorderRadius
                   Size: =9
-                  Text: ="Record Batch Payment"
+                  Text: ="Record Batch"
                   Width: =130
                   X: =recBatchPaymentModal.X + 450
                   Y: =690
@@ -6754,7 +6754,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =10
@@ -6765,12 +6765,19 @@ Screens:
             - txtBatchPayerName:
                 Control: Classic/TextInput
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
                   Default: =""
-                  Font: =Font.'Open Sans'
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
                   Height: =36
-                  HoverBorderColor: =RGBA(0, 18, 107, 1)
-                  HoverFill: =RGBA(186, 202, 226, 1)
+                  HoverBorderColor: =varInputBorderColor
+                  HoverFill: =varInputHoverFill
+                  RadiusBottomLeft: =varInputBorderRadius
+                  RadiusBottomRight: =varInputBorderRadius
+                  RadiusTopLeft: =varInputBorderRadius
+                  RadiusTopRight: =varInputBorderRadius
+                  Size: =varInputFontSize
                   Width: =270
                   X: =673
                   Y: =134
@@ -6779,7 +6786,7 @@ Screens:
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Color: =varColorText
-                  Font: =Font.'Open Sans'
+                  Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
                   Height: =20
                   Size: =10
@@ -6790,10 +6797,12 @@ Screens:
             - dpBatchPaymentDate:
                 Control: Classic/DatePicker
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =Font.'Open Sans'
                   Height: =36
-                  IconBackground: =RGBA(56, 96, 178, 1)
+                  IconBackground: =varChevronBackground
                   IconFill: =RGBA(255, 255, 255, 1)
                   Width: =140
                   X: =743

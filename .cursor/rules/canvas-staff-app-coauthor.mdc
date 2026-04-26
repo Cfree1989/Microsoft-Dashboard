@@ -1,0 +1,32 @@
+---
+description: Staff Dashboard Canvas — MCP coauthor files, sync/compile, never empty YAML
+globs: PowerApps/canvas-coauthor/**
+alwaysApply: false
+---
+
+# Staff Dashboard Canvas (Print Lab) — coauthoring
+
+**Full details:** [PowerApps/CANVAS-COAUTHOR-WORKFLOW.md](PowerApps/CANVAS-COAUTHOR-WORKFLOW.md) (and [README.md](README.md) at repo root).
+
+## Files to use
+
+- **Git canonical YAML:** `PowerApps/canvas-coauthor/App.pa.yaml`, `scrDashboard.pa.yaml`, `scrSchedule.pa.yaml` — keep these in sync with the live app after a successful push.
+- **MCP push target:** edit **`.cursor-mcp-deploy/`** (same three filenames) for `sync_canvas` / `compile_canvas` round-trips. Do not `compile_canvas` from empty or partial YAML.
+
+## Required loop (every change that must hit the live app)
+
+1. **`sync_canvas`** → target directory (e.g. `.cursor-mcp-deploy`) to pull the **current** coauthor session.
+2. **Edit** the complete `.pa.yaml` set in that directory (never a stale or half-export).
+3. **`compile_canvas`** on that directory; fix blocking issues before calling it done.
+4. **`sync_canvas`** again, then **update** `PowerApps/canvas-coauthor/*` to match, **commit** when the repo should record live state.
+
+## Do not
+
+- Push from an **empty** `scrDashboard.pa.yaml` (or missing screens) — can corrupt the live coauthor session.
+- Maintain parallel ad-hoc “sync” trees; one deploy dir + one canonical `canvas-coauthor` path.
+
+**Student Portal** is a **different** app — not these files. See the workflow doc.
+
+---
+
+When **`.cursor-mcp-deploy`** is used but not under this glob, apply the same rules to those three `.pa.yaml` files.
