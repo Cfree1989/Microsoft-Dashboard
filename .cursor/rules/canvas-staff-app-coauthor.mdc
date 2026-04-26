@@ -1,7 +1,6 @@
 ---
-description: Staff Dashboard Canvas — MCP coauthor files, sync/compile, never empty YAML
-globs: PowerApps/canvas-coauthor/**
-alwaysApply: false
+description: 
+alwaysApply: true
 ---
 
 # Staff Dashboard Canvas (Print Lab) — coauthoring
