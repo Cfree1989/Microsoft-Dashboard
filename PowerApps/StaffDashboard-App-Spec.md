@@ -4376,15 +4376,21 @@ If(
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Approving request...");
 
-// Calculate cost
-Set(varCalculatedCost, 
-    Max(
-        varMinimumCost,
-        Value(txtEstimatedWeight.Text) * If(
-            varSelectedItem.Method.Value = "Resin",
-            varResinRate,
-            varFilamentRate
-        )
+// Calculate cost (base then own-material discount; must match lblApprovalCostValue)
+Set(
+    varCalculatedCost,
+    With(
+        {
+            wBase: Max(
+                varMinimumCost,
+                Value(txtEstimatedWeight.Text) * If(
+                    varSelectedItem.Method.Value = "Resin",
+                    varResinRate,
+                    varFilamentRate
+                )
+            )
+        },
+        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)
     )
 );
 
@@ -11434,7 +11440,7 @@ If(
                             rawName: If(
                                 !isManualNote && byPos > 0 && colonPos > byPos + 4,
                                 Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
-                                If(colonPos > 1, Trim(Left(text, colonPos - 1)), "")
+                                ""
                             ),
                             details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
                         },
@@ -11463,8 +11469,11 @@ If(
                                         mainText: Trim(First(Filter(Table({t: Trim(First(Split(Last(Split(details, "[Summary]")).Value, "[Changes]")).Value)}, {t: Trim(First(Split(Last(Split(details, "[Changes]")).Value, "[Reason]")).Value)}), !IsBlank(t))).t)
                                     },
                                     action & " - " & datetime & Char(10) &
-                                    shortName &
-                                    If(!IsBlank(mainText), " - " & mainText, "") &
+                                    If(
+                                        !IsBlank(shortName),
+                                        shortName & If(!IsBlank(mainText), " - " & mainText, ""),
+                                        If(!IsBlank(mainText), mainText, "")
+                                    ) &
                                     If(
                                         action = "NOTE" && !IsBlank(commentText) && IsBlank(mainText),
                                         " - " & """" & commentText & """",
@@ -11488,24 +11497,46 @@ If(
                                         legacyCommentText: If(Find(" - ", details) > 0, Mid(details, Find(" - ", details) + 3, Max(0, Len(details) - Find(" - ", details) - 2)), "")
                                     },
                                     action & " - " & datetime & Char(10) &
-                                    shortName &
+                                    If(!IsBlank(shortName), shortName, "") &
                                     If(
                                         Len(details) > 0,
                                         If(
-                                            action = "NOTE",
-                                            " - " & """" & details & """",
+                                            !IsBlank(shortName),
                                             If(
-                                                action = "UPDATED",
-                                                " - " & details,
+                                                action = "NOTE",
+                                                " - " & """" & details & """",
                                                 If(
-                                                    action = "REVERTED",
-                                                    " - " & legacyMainText &
-                                                    If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", ""),
+                                                    action = "UPDATED",
+                                                    " - " & details,
                                                     If(
-                                                        action in ["APPROVED", "PAID", "PAID (BATCH)", "STATUS", "BUILD PLATE"],
-                                                        " - " & details,
+                                                        action = "REVERTED",
                                                         " - " & legacyMainText &
-                                                        If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", "")
+                                                        If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", ""),
+                                                        If(
+                                                            action in ["APPROVED", "PAID", "PAID (BATCH)", "STATUS", "BUILD PLATE"],
+                                                            " - " & details,
+                                                            " - " & legacyMainText &
+                                                            If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", "")
+                                                        )
+                                                    )
+                                                )
+                                            ),
+                                            If(
+                                                action = "NOTE",
+                                                """" & details & """",
+                                                If(
+                                                    action = "UPDATED",
+                                                    details,
+                                                    If(
+                                                        action = "REVERTED",
+                                                        legacyMainText &
+                                                        If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", ""),
+                                                        If(
+                                                            action in ["APPROVED", "PAID", "PAID (BATCH)", "STATUS", "BUILD PLATE"],
+                                                            details,
+                                                            legacyMainText &
+                                                            If(!IsBlank(legacyCommentText), Char(10) & """" & legacyCommentText & """", "")
+                                                        )
                                                     )
                                                 )
                                             )
@@ -15906,6 +15937,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, plate pickup checkbox uses `Select(Parent)` for row taps, Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
 | **2026-04-27: Job card Notes count / alert** | **`lblNotesHeader`** and **`btnViewNotes`** (red fill) now key off **manual** staff notes only: segments of `StaffNotes` after splitting on `" | "` that **`StartsWith(Trim(Value), "[NOTE] ")`**. Activity lines (approvals, build plates, payments, etc.) still render in the Notes modal but no longer drive the card number or red styling. Legacy manual lines without the `[NOTE] ` prefix are not counted (prefer migrating or re-saving via Add Note if needed). |
 | **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. Uses `colAllBuildPlates` + `LookUp(BuildPlates, ID=…)` for the gate and fresh row (avoids `CountRows(Filter(BuildPlates,…))` delegation on **Start Print**). |
+| **2026-04-27: Notes modal (`txtStaffNotesContent`)** | Tokenized segments without ` by Name` before `:` (e.g. **`STATUS:`**, **`BUILD PLATE:`**) no longer treat the action label as **`rawName`**; v2 **`[Summary]`** blocks render **line 2 = summary only** when there is no staff actor, matching **`PowerApps/Notes-Format-Options.md`** (no redundant `STATUS - …` prefix, no fake **`BUILD P.`** line). Legacy (non-v2) rendering uses the same **no fake name** rule when **`shortName`** is blank. |
+| **2026-04-27: Approval own material vs `EstimatedCost`** | **`btnApprovalConfirm`** sets **`varCalculatedCost`** to **`wBase * varOwnMaterialDiscount`** when **`chkApprovalOwnMaterial`** is checked (same math as **`lblApprovalCostValue`**). **`Patch`** writes that value to **`EstimatedCost`** and the **`APPROVED`** **`StaffNotes`** dollar amount; **`StudentOwnMaterial`** unchanged. Historical list rows approved before this fix are not backfilled. |
 
 # Next Steps
 
