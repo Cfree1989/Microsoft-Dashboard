@@ -1998,12 +1998,12 @@ If(
 | Y | `73` |
 | Width | `75` |
 | Height | `25` |
-| Fill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 46, 46, 1), Color.White)` |
-| Color | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 255, 255, 1), varColorPrimary)` |
-| HoverFill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(220, 40, 40, 1), varColorPrimary)` |
+| Fill | `If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(255, 46, 46, 1), Color.White)` |
+| Color | `If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(255, 255, 255, 1), varColorPrimary)` |
+| HoverFill | `If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(220, 40, 40, 1), varColorPrimary)` |
 | HoverColor | `Color.White` |
-| PressedFill | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
-| BorderColor | `If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(184, 0, 0, 1), varColorPrimary)` |
+| PressedFill | `If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))` |
+| BorderColor | `If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(184, 0, 0, 1), varColorPrimary)` |
 | BorderThickness | `2` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -13038,7 +13038,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 | Property | Value |
 |----------|-------|
-| Text | `"Notes (" & If(IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), 0, CountRows(Filter(Split(ThisItem.StaffNotes, " | "), !IsBlank(Trim(Value))))) & ")"` |
+| Text | `"Notes (" & CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) & ")"` |
 | X | `lblMessagesHeader.X + lblMessagesHeader.Width + 20` |
 | Y | `lblMessagesHeader.Y` |
 | Width | `200` |
@@ -13049,7 +13049,7 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Color | `varColorText` |
 | Visible | `true` |
 
-> 💡 **Note:** This counts all stored staff-note timeline entries, not just manual `[NOTE]` entries. The card now highlights and counts whenever `StaffNotes` has any non-blank content, including audit-style entries such as approvals, rejections, detail changes, payments, and build-plate events.
+> 💡 **Note:** The **Notes (n)** label and **Notes** button red state count only manual staff notes: pipe-delimited segments of `StaffNotes` that start with `[NOTE] ` (same prefix the Add Note flow appends). Approvals, build-plate lines, payments, and other activity still appear inside the Notes modal under **Staff Notes & Activity**, but they no longer inflate the card count or turn the button red.
 
 #### View Messages Button (btnViewMessages)
 
@@ -13117,7 +13117,7 @@ Set(varSelectedItem, ThisItem)
 
 With these controls, each job card shows:
 - **Messages (X)** header with total message count
-- **Notes (X)** header with total internal timeline entry count
+- **Notes (X)** header with count of manual `[NOTE] ` entries in `StaffNotes` (activity-only jobs show **Notes (0)** with a neutral Notes button; full history remains in the modal)
 - **View Messages** button to open the full conversation modal
 - **Red unread badge** with count of unread student replies
 
@@ -15853,6 +15853,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **DisplayFields for staff** | Live `colStaff` includes `StaffID`, `AidType`, and `SchedSortOrder` (see variable table). ComboBox `DisplayFields` may use `["MemberName"]` or include email — match your live control. |
 | **galStatusTabs** | Step 5 was updated: live **`FocusedBorderThickness`** is `0`. |
 | **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, plate pickup checkbox uses `Select(Parent)` for row taps, Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
+| **2026-04-27: Job card Notes count / alert** | **`lblNotesHeader`** and **`btnViewNotes`** (red fill) now key off **manual** staff notes only: segments of `StaffNotes` after splitting on `" | "` that **`StartsWith(Trim(Value), "[NOTE] ")`**. Activity lines (approvals, build plates, payments, etc.) still render in the Notes modal but no longer drive the card number or red styling. Legacy manual lines without the `[NOTE] ` prefix are not counted (prefer migrating or re-saving via Add Note if needed). |
 
 # Next Steps
 

@@ -538,23 +538,23 @@ Screens:
             - btnViewNotes:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(184, 0, 0, 1), varColorPrimary)
+                  BorderColor: =If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(184, 0, 0, 1), varColorPrimary)
                   BorderThickness: =varInputBorderThickness
-                  Color: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 255, 255, 1), varColorPrimary)
+                  Color: =If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(255, 255, 255, 1), varColorPrimary)
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  Fill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(255, 46, 46, 1), Color.White)
+                  Fill: =If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(255, 46, 46, 1), Color.White)
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(220, 40, 40, 1), varColorPrimary)
+                  HoverFill: =If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(220, 40, 40, 1), varColorPrimary)
                   OnSelect: |-
                     =Set(varShowNotesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: =If(!IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
+                  PressedFill: =If(CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1389,7 +1389,7 @@ Screens:
                   Height: =20
                   OnSelect: =Select(recCardBackground)
                   Size: =8
-                  Text: ="Notes (" & If(IsBlank(Trim(Coalesce(ThisItem.StaffNotes, ""))), 0, CountRows(Filter(Split(ThisItem.StaffNotes, " | "), !IsBlank(Trim(Value))))) & ")"
+                  Text: ="Notes (" & CountRows(Filter(Split(Trim(Coalesce(ThisItem.StaffNotes, "")), " | "), StartsWith(Trim(Value), "[NOTE] "))) & ")"
                   Width: =97
                   X: =117
                   Y: =330
