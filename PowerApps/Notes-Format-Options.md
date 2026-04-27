@@ -12,6 +12,8 @@ The goal is a compact timeline that answers four questions fast:
 
 ## **Scope**
 
+**Staff Dashboard job cards:** The live **Power Apps** formulas for **Notes (n)**, **Messages (n)**, and red/alert styling are maintained in [StaffDashboard-App-Spec.md](StaffDashboard-App-Spec.md) (and coauthor **YAML**). This file defines **storage** and **modal** presentation; the **Dashboard Card Behavior** subsection below calls out the card rules explicitly.
+
 Included in the Notes modal:
 
 - Manual staff notes
@@ -300,11 +302,12 @@ Only include extra detail if the note becomes ambiguous without it.
 
 ## Dashboard Card Behavior
 
-The job card now treats any non-blank `StaffNotes` content as "notes exist" for summary/highlight purposes.
+**Staff Dashboard (live app, StaffDashboard-App-Spec + coauthor YAML):** The job card **only** uses **manual** staff notes for the **Notes (n)** count and the **red** `Notes` button / header styling. Treat pipe-delimited segments of `StaffNotes` where **`Trim(Value)`** **`StartsWith("[NOTE] ")`** after splitting on `" | "`.
 
-- The `Notes` button turns red when `StaffNotes` has any content.
-- The `Notes (n)` header counts all stored timeline entries separated by `" | "`, not just manual `[NOTE]` entries.
-- `[NOTE]` is still preserved for manual-note storage and rendering, but it is no longer the thing that powers the card count/highlight by itself.
+- The **`Notes` button** fill/border and **`lblNotesHeader` “Notes (n)”` text** `n` = **only** those `[NOTE] ` entries.
+- Approvals, build-plate lines, payments, batch lines, and other `StaffNotes` **activity** still show inside the **Notes** modal, but they **do not** inflate the card number or the red state.
+
+(If you are documenting **another** app or an older build, do not assume this card rule — confirm the formulas on **`btnViewNotes`**, **`lblNotesHeader`**, and the Messages controls separately.)
 
 ## **Modal Layout Implications**
 

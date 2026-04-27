@@ -1009,6 +1009,7 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         recStudentNoteModal
         recStudentNoteOverlay
     ▼ conBatchPaymentModal            ← Step 12E (Batch Payment Modal Container)
+        btnBatchPaymentClose
         btnBatchPaymentConfirm
         btnBatchPaymentCancel
         galBatchItems
@@ -1016,12 +1017,18 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         chkBatchOwnMaterial
         lblBatchCostValue
         lblBatchCostLabel
+        txtBatchAmount
+        lblBatchAmountLabel
         txtBatchWeight
         lblBatchWeightLabel
         txtBatchTransaction
         lblBatchTransLabel
         ddBatchPaymentType
         lblBatchPaymentTypeLabel
+        dpBatchPaymentDate
+        lblBatchPaymentDateLabel
+        txtBatchPayerName
+        lblBatchPayerNameLabel
         ddBatchStaff
         lblBatchStaffLabel
         lblBatchSummary
@@ -8712,7 +8719,7 @@ Set(varLoadingMessage, "")
 
 - Only requests currently in `Completed` status may enter batch mode.
 - **Single print method per batch.** Selections **must not mix** `Filament` and `Resin`. The gallery blocks adding a second method; **Process Batch Payment** and **`Flow-(I)-Payment-SaveBatch`** also reject mixed batches. Staff process mixed-method pickups as **separate** checkouts (or use single-item payment). This keeps **EstimatedWeight** sums and proportional allocation meaningful (filament in **g**, resin estimates often in **mL**—never added together).
-- Staff enter **one combined pickup total** in **Combined weight**; `Flow-(I)-Payment-SaveBatch` and `lblBatchCostValue` allocate it **proportionally** by each row's `EstimatedWeight` and apply **`varFilamentRate`** or **`varResinGramRate`** according to the **shared** method for that batch.
+- Staff enter **one combined pickup total** in **Combined weight**, then confirm or edit the **Charged Amount** in **`txtBatchAmount`**. The live app sets **`varBatchFinalCost`** from **`Value(txtBatchAmount.Text)`** before calling **`Flow-(I)-Payment-SaveBatch`**. The **Calculated Total** readout (**`lblBatchCostValue`**) is the proportional **preview** from the same math as the **`Default`** on **`txtBatchAmount`**, with **`txtBatchAmount.OnChange`/`Reset`** on weight and own-material to avoid stale overrides.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
@@ -8724,30 +8731,27 @@ Set(varLoadingMessage, "")
 ```
 scrDashboard
 └── conBatchPaymentModal          ← CONTAINER (set Visible here only!)
-    ├── btnBatchPaymentConfirm    ← Record Batch Payment button
-    ├── btnBatchPaymentCancel     ← Cancel button
-    ├── galBatchItems             ← Gallery showing selected items
-    ├── lblBatchItemsHeader       ← "Selected Items:"
-    ├── chkBatchOwnMaterial       ← Own material checkbox (applies to all)
-    ├── lblBatchCostValue         ← Auto-calculated combined cost
-    ├── lblBatchCostLabel         ← "Total Cost:"
-    ├── dpBatchPaymentDate        ← Shared payment date picker
-    ├── lblBatchPaymentDateLabel  ← "Payment Date"
-    ├── txtBatchPayerName         ← Shared payer name input
-    ├── lblBatchPayerNameLabel    ← "Payer Name"
-    ├── txtBatchWeight            ← Combined pickup weight input
-    ├── lblBatchWeightLabel       ← "Combined weight" (same unit family as estimates: g for filament, g weighed at pickup for resin batches)
-    ├── txtBatchTransaction       ← Transaction number input
-    ├── lblBatchTransLabel        ← "Transaction Number"
-    ├── ddBatchPaymentType        ← Payment type dropdown
-    ├── lblBatchPaymentTypeLabel  ← "Payment Type"
-    ├── ddBatchStaff              ← Staff dropdown
-    ├── lblBatchStaffLabel        ← "Performing Action As"
-    ├── lblBatchSummary           ← Summary showing count and estimated total
-    ├── lblBatchTitle             ← "Batch Payment - X Items"
-    ├── recBatchPaymentModal      ← White modal box
-    └── recBatchPaymentOverlay    ← Dark semi-transparent background
+    ├── recBatchPaymentOverlay
+    ├── recBatchPaymentModal
+    ├── lblBatchTitle
+    ├── btnBatchPaymentClose
+    ├── lblBatchSummary
+    ├── lblBatchStaffLabel / ddBatchStaff
+    ├── lblBatchPaymentTypeLabel / ddBatchPaymentType
+    ├── lblBatchTransLabel / txtBatchTransaction
+    ├── lblBatchPaymentDateLabel / dpBatchPaymentDate
+    ├── lblBatchPayerNameLabel / txtBatchPayerName
+    ├── lblBatchWeightLabel / txtBatchWeight          ← left column; `txtBatchWeight.OnChange` = Reset(txtBatchAmount)
+    ├── lblBatchAmountLabel / txtBatchAmount         ← “Charged Amount” — `Value(txtBatchAmount.Text)` is what **`btnBatchPaymentConfirm`** stores in **`varBatchFinalCost`** for **Flow I**
+    ├── lblBatchCostLabel / lblBatchCostValue        ← “Calculated Total” preview (X ≈ +360); same proportional math; optional cross-check to typed amount
+    ├── chkBatchOwnMaterial                           ← `OnCheck` / `OnUncheck` = Reset(txtBatchAmount)
+    ├── lblBatchItemsHeader
+    ├── galBatchItems
+    ├── btnBatchPaymentCancel
+    └── btnBatchPaymentConfirm
 ```
+
+> 💡 **YAML vs. build order:** Studio’s tree may list children in insert order. Layout positions follow **`PowerApps/canvas-coauthor/scrDashboard.pa.yaml`**. Confirm **`txtBatchAmount`** (required for confirm **`DisplayMode`**) and **Reset(`txtBatchAmount`)** on **Close** / **Cancel** / **success** match the live app.
 
 ---
 
@@ -8873,6 +8877,7 @@ Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
+Reset(txtBatchAmount);
 Reset(ddBatchStaff);
 Reset(chkBatchOwnMaterial);
 Reset(ddBatchPaymentType)
@@ -9236,20 +9241,56 @@ Text(Sum(colBatchItems, EstimatedWeight))
 
 > 💡 **Pre-filled:** Weight is pre-filled with the sum of estimated weights from all selected items. Staff can adjust based on actual measured weight.
 
+57. Set **`OnChange`:**
+
+```powerfx
+Reset(txtBatchAmount)
+```
+
+---
+
+### Charged Amount (lblBatchAmountLabel + txtBatchAmount)
+
+> 💡 **Live app:** These sit **between** combined weight and the **Calculated Total** readout. **`btnBatchPaymentConfirm`** requires a positive numeric **Charged Amount**; **`varBatchFinalCost`** is **`Value(txtBatchAmount.Text)`**.
+
+57A. **Label** — add a **Text label** named `lblBatchAmountLabel`:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Charged Amount"` |
+| X | `recBatchPaymentModal.X + 190` |
+| Y | `recBatchPaymentModal.Y + 245` |
+| Width | `165` |
+| Height | `20` |
+| FontWeight | `FontWeight.Semibold` |
+
+57B. **Input** — add a **Classic Text input** named `txtBatchAmount`:
+
+| Property | Value |
+|----------|-------|
+| X | `recBatchPaymentModal.X + 190` |
+| Y | `recBatchPaymentModal.Y + 270` |
+| Width | `130` |
+| Height | `36` |
+| Format | `TextFormat.Number` |
+| HintText | `"Amount charged"` |
+
+57C. Set **`Default:`** to the same proportional **Sum** of per-item base costs as **`lblBatchCostValue.Text`** (see the block in **`scrDashboard.pa.yaml`** for **`txtBatchAmount.Default`**) so staff get a good starting value; they can override the dollar amount to match the terminal.
+
 ---
 
 ### Cost Label (lblBatchCostLabel)
 
-57. Click **+ Insert** → **Text label**.
-58. **Rename it:** `lblBatchCostLabel`
-59. Set properties:
+58. Click **+ Insert** → **Text label**.
+59. **Rename it:** `lblBatchCostLabel`
+60. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Total Cost:"` |
-| X | `recBatchPaymentModal.X + 190` |
+| Text | `"Calculated Total"` |
+| X | `recBatchPaymentModal.X + 360` |
 | Y | `recBatchPaymentModal.Y + 245` |
-| Width | `100` |
+| Width | `140` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
 
@@ -9257,22 +9298,22 @@ Text(Sum(colBatchItems, EstimatedWeight))
 
 ### Cost Value (lblBatchCostValue)
 
-60. Click **+ Insert** → **Text label**.
-61. **Rename it:** `lblBatchCostValue`
-62. Set properties:
+61. Click **+ Insert** → **Text label**.
+62. **Rename it:** `lblBatchCostValue`
+63. Set properties:
 
 | Property | Value |
 |----------|-------|
-| X | `recBatchPaymentModal.X + 190` |
+| X | `recBatchPaymentModal.X + 360` |
 | Y | `recBatchPaymentModal.Y + 270` |
 | Width | `150` |
 | Height | `36` |
 | Size | `16` |
 | FontWeight | `FontWeight.Semibold` |
-| Color | `varColorSuccess` |
+| Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-63. Set **Text:**
+64. Set **Text:**
 
 ```powerfx
 With(
@@ -9321,32 +9362,34 @@ With(
 
 ### Own Material Checkbox (chkBatchOwnMaterial)
 
-64. Click **+ Insert** → **Checkbox**.
-65. **Rename it:** `chkBatchOwnMaterial`
-66. Set properties:
+65. Click **+ Insert** → **Checkbox**.
+66. **Rename it:** `chkBatchOwnMaterial`
+67. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Student provides own material (70% discount)"` |
-| X | `recBatchPaymentModal.X + 360` |
-| Y | `recBatchPaymentModal.Y + 270` |
-| Width | `220` |
+| Text | `"Student provided material (70% off)"` |
+| X | `recBatchPaymentModal.X + 20` |
+| Y | `recBatchPaymentModal.Y + 330` |
+| Width | `350` |
 | Height | `36` |
 | Size | `11` |
+
+68. Set **`OnCheck`:** `=Reset(txtBatchAmount)` and **`OnUncheck`:** `=Reset(txtBatchAmount)` (matches live: recalc **`Default`** on the charged-amount field after discount toggles).
 
 ---
 
 ### Items Header (lblBatchItemsHeader)
 
-67. Click **+ Insert** → **Text label**.
-68. **Rename it:** `lblBatchItemsHeader`
-69. Set properties:
+69. Click **+ Insert** → **Text label**.
+70. **Rename it:** `lblBatchItemsHeader`
+71. Set properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Selected Items:"` |
+| Text | `"Items"` |
 | X | `recBatchPaymentModal.X + 20` |
-| Y | `recBatchPaymentModal.Y + 320` |
+| Y | `recBatchPaymentModal.Y + 385` |
 | Width | `560` |
 | Height | `20` |
 | FontWeight | `FontWeight.Semibold` |
@@ -9356,21 +9399,21 @@ With(
 
 ### Items Gallery (galBatchItems)
 
-70. Click **+ Insert** → **Blank vertical gallery**.
-71. **Rename it:** `galBatchItems`
-72. Set properties:
+72. Click **+ Insert** → **Blank vertical gallery**.
+73. **Rename it:** `galBatchItems`
+74. Set properties:
 
 | Property | Value |
 |----------|-------|
 | Items | `colBatchItems` |
 | X | `recBatchPaymentModal.X + 20` |
-| Y | `recBatchPaymentModal.Y + 345` |
+| Y | `recBatchPaymentModal.Y + 410` |
 | Width | `560` |
 | Height | `230` |
 | TemplateSize | `35` |
 | TemplatePadding | `2` |
 
-61. Inside `galBatchItems`, add a **Text label** named `lblBatchItemRow`:
+75. Inside `galBatchItems`, add a **Text label** named `lblBatchItemRow`:
 
 | Property | Value |
 |----------|-------|
@@ -9382,7 +9425,7 @@ With(
 | Color | `varColorText` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
-62. Set **Text** for `lblBatchItemRow`:
+76. Set **Text** for `lblBatchItemRow`:
 
 ```powerfx
 With(
@@ -9397,7 +9440,7 @@ With(
 
 > 💡 **Plate count display:** Each batch row now shows how many completed plates will be picked up, reinforcing the final-pickup semantics.
 
-63. Inside `galBatchItems`, add a **Button** named `btnRemoveFromBatch`:
+77. Inside `galBatchItems`, add a **Button** named `btnRemoveFromBatch`:
 
 > ⚠️ **Use Classic Button:** Insert → Input → **Button** (NOT Modern Button). Classic buttons use `Fill`/`Color` properties. Do NOT set an `Appearance` property - that's Modern-only syntax.
 
@@ -9420,7 +9463,7 @@ With(
 | Size | `10` |
 | Font | `varAppFont` |
 
-64. Set **OnSelect** for `btnRemoveFromBatch`:
+78. Set **OnSelect** for `btnRemoveFromBatch`:
 
 ```powerfx
 Remove(colBatchItems, ThisItem);
@@ -9474,6 +9517,7 @@ Reset(txtBatchTransaction);
 Reset(txtBatchPayerName);
 Reset(dpBatchPaymentDate);
 Reset(txtBatchWeight);
+Reset(txtBatchAmount);
 Reset(ddBatchStaff);
 Reset(chkBatchOwnMaterial);
 Reset(ddBatchPaymentType)
@@ -9511,21 +9555,24 @@ Reset(ddBatchPaymentType)
 
 ```powerfx
 If(
-    !IsBlank(ddBatchStaff.Selected) && 
+    !IsBlank(ddBatchStaff.Selected) &&
     !IsBlank(ddBatchPaymentType.Selected.Value) &&
-    !(ddBatchPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtBatchTransaction.Text))) &&
+    (ddBatchPaymentType.Selected.Value = "Code" || !IsBlank(Trim(txtBatchTransaction.Text))) &&
     !IsBlank(Trim(txtBatchPayerName.Text)) &&
     !IsBlank(dpBatchPaymentDate.SelectedDate) &&
-    !IsBlank(txtBatchWeight.Text) && 
-    IsNumeric(txtBatchWeight.Text) && 
+    !IsBlank(txtBatchWeight.Text) &&
+    IsNumeric(txtBatchWeight.Text) &&
     Value(txtBatchWeight.Text) > 0 &&
+    !IsBlank(txtBatchAmount.Text) &&
+    IsNumeric(txtBatchAmount.Text) &&
+    Value(txtBatchAmount.Text) > 0 &&
     CountRows(colBatchItems) > 0,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> Transaction number is required for `TigerCASH` but optional for `Check` and `Grant/Program Code`. A blank `txtBatchTransaction` should be treated as valid for non-TigerCASH batch payments so staff can save pending grant/program-code pickups.
+> **Transaction / approval ID:** The live `ddBatchPaymentType` set uses **`"Code"`** (grant/program) where a blank transaction is allowed; other types require a non-blank `txtBatchTransaction` **unless** your data-source labels differ — copy **`DisplayMode` from** **`scrDashboard.pa.yaml`**.
 
 73. Set **OnSelect:**
 
@@ -9536,14 +9583,16 @@ Set(varLoadingMessage, "Processing batch payment...");
 
 // Call Flow I to handle the entire batch save server-side
 Set(varBatchProcessedCount, CountRows(colBatchItems));
+Set(varBatchFinalCost, Value(txtBatchAmount.Text));
+Set(varBatchEffectivePaymentRate, varBatchFinalCost / Value(txtBatchWeight.Text));
 Set(
     varFlowResult,
     'Flow-(I)-Payment-SaveBatch'.Run(
         Value(txtBatchWeight.Text),
-        varFilamentRate,
-        varResinGramRate,
-        varMinimumCost,
-        varOwnMaterialDiscount,
+        varBatchEffectivePaymentRate,
+        varBatchEffectivePaymentRate,
+        0,
+        1,
         Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
         Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
         If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
@@ -9604,6 +9653,7 @@ If(
     Reset(txtBatchPayerName);
     Reset(dpBatchPaymentDate);
     Reset(txtBatchWeight);
+    Reset(txtBatchAmount);
     Reset(ddBatchStaff);
     Reset(chkBatchOwnMaterial);
     Reset(ddBatchPaymentType);
@@ -15513,6 +15563,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `ddBatchStaff` | Classic/ComboBox |
 | `dpBatchPaymentDate` | Classic/DatePicker |
 | `galBatchItems` | Gallery |
+| `lblBatchAmountLabel` | Label |
 | `lblBatchCostLabel` | Label |
 | `lblBatchCostValue` | Label |
 | `lblBatchItemsHeader` | Label |
@@ -15526,6 +15577,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `lblBatchWeightLabel` | Label |
 | `recBatchPaymentModal` | Rectangle |
 | `recBatchPaymentOverlay` | Rectangle |
+| `txtBatchAmount` | Classic/TextInput |
 | `txtBatchPayerName` | Classic/TextInput |
 | `txtBatchTransaction` | Classic/TextInput |
 | `txtBatchWeight` | Classic/TextInput |
@@ -15944,6 +15996,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Notes modal (`txtStaffNotesContent`)** | Tokenized segments without ` by Name` before `:` (e.g. **`STATUS:`**, **`BUILD PLATE:`**) no longer treat the action label as **`rawName`**; v2 **`[Summary]`** blocks render **line 2 = summary only** when there is no staff actor, matching **`PowerApps/Notes-Format-Options.md`** (no redundant `STATUS - …` prefix, no fake **`BUILD P.`** line). Legacy (non-v2) rendering uses the same **no fake name** rule when **`shortName`** is blank. |
 | **2026-04-27: Approval own material vs `EstimatedCost`** | **`btnApprovalConfirm`** sets **`varCalculatedCost`** to **`wBase * varOwnMaterialDiscount`** when **`chkApprovalOwnMaterial`** is checked (same math as **`lblApprovalCostValue`**). **`Patch`** writes that value to **`EstimatedCost`** and the **`APPROVED`** **`StaffNotes`** dollar amount; **`StudentOwnMaterial`** unchanged. Historical list rows approved before this fix are not backfilled. |
 | **2026-04-27: Details save — skip empty `UPDATED` in Notes** | **`btnDetailsConfirm`**: when **`varChangeDesc`** is blank (e.g. only **Student own material** / implied **`EstimatedCost`** change), **`StaffNotes`** is left unchanged (no `UPDATED by …` append). SharePoint fields, **`LastAction`**, and **`Flow-(C)-Action-LogAction`** are unchanged. |
+| **2026-04-27: `conBatchPaymentModal` inventory** | Live coauthor added **`lblBatchAmountLabel`** + **`txtBatchAmount`** (custom batch charged amount, tied to own-material / payment-type changes). Added to the Live coauthor control inventory. |
+| **2026-04-27: Step 12E + `Notes-Format-Options` sync** | **Step 12E** now documents the **Charged Amount** row, **Calculated Total** at **`X + 360`**, list/header **`Y`**, own-material **Reset** hooks, and **`btnBatchPaymentConfirm`** / cancel / success **`DisplayMode`·`OnSelect`** ( **`varBatchFinalCost`**, **`varBatchEffectivePaymentRate`**, **`Flow-(I)`**·**`.Run`** signature) matching **`scrDashboard.pa.yaml`**. **`PowerApps/Notes-Format-Options.md`** “Dashboard Card Behavior” updated: Notes count / red state = **`[NOTE] `** segments only (same as the job-card formulas in this spec), not all **`StaffNotes`** segments. |
 
 # Next Steps
 
