@@ -1,0 +1,26 @@
+---
+description: After changing Power Apps canvas implementation, update the matching Staff Dashboard, Schedule, or Student Portal spec markdown.
+alwaysApply: true
+---
+
+# Power Apps — keep specs in sync with code
+
+Whenever you change **implementation** of a canvas app tracked in this repo, update the **authoritative spec Markdown** in the same change set (same PR or back-to-back commits), not only YAML or Studio exports.
+
+## Which file to edit
+
+| Area changed | Spec to update |
+|--------------|----------------|
+| Staff Dashboard: `PowerApps/canvas-coauthor/` (`App.pa.yaml`, `scrDashboard.pa.yaml`, shared app chrome, dashboard-only screens), or `.cursor-mcp-deploy/` for the same Staff app | [PowerApps/StaffDashboard-App-Spec.md](PowerApps/StaffDashboard-App-Spec.md) |
+| Schedule screen: `scrSchedule.pa.yaml`, schedule-only controls, formulas, or `App.OnStart` / dashboard pieces that exist **only** for schedule | [PowerApps/StaffDashboard-Schedule-Screen.md](PowerApps/StaffDashboard-Schedule-Screen.md); if the change also affects the main dashboard or global app behavior, update **both** Schedule doc and [PowerApps/StaffDashboard-App-Spec.md](PowerApps/StaffDashboard-App-Spec.md) |
+| Student Portal: `PowerApps/source/StudentPortal/` (any `.pa.yaml` or related source under that tree) | [PowerApps/StudentPortal-App-Spec.md](PowerApps/StudentPortal-App-Spec.md) |
+
+If unsure, prefer **both** Staff specs when a change touches `scrSchedule` **and** shared app chrome or `scrDashboard`.
+
+## What “written out” means
+
+- **Behavioral or formula changes:** Update the relevant **step sections**, **copy-paste snippets**, and any **notes** so someone could rebuild from the doc alone.
+- **Control / property inventory drift:** Refresh **Live coauthor control inventory** and **Audit findings** (or equivalent headings) when controls are added, renamed, or removed.
+- **Tiny fixes:** At minimum, a dated bullet under the closest **audit** or **inventory** subsection describing what changed and why.
+
+Do **not** treat YAML or coauthor files as the only handoff: the three specs above are the long-lived documentation surface for these apps.
