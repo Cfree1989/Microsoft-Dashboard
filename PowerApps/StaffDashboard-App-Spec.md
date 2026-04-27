@@ -2949,7 +2949,7 @@ Clear(colPickedUpPlates);
 Set(varShowPaymentModal, ThisItem.ID)
 ```
 
-> 💡 **Note:** This opens the Payment Modal (built in Step 12C) and pre-loads both `Payments` history and the build-plate pickup checklist for the selected request. When opened from "Printing" status, it records a partial payment while the rest continues printing. When opened from "Completed" status, staff can record either a final pickup or another partial pickup.
+> 💡 **Note:** This opens the Payment Modal (built in Step 12C) and pre-loads both `Payments` history and the build-plate pickup checklist for the selected request. The `ClearCollect(colPickedUpPlates, Blank()); Clear(colPickedUpPlates);` pattern normalizes the collection schema so `ThisItem.ID in colPickedUpPlates.ID` is safe when the checkbox list renders, even after prior modal sessions. When opened from "Printing" status, it records a partial payment while the rest continues printing. When opened from "Completed" status, staff can record either a final pickup or another partial pickup.
 
 ### Edit Details Button (btnEditDetails)
 
@@ -6385,6 +6385,8 @@ scrDashboard
     ├── lblPayerNameLabel
     ├── chkPayerSameAsStudent
     ├── chkOwnMaterial
+    ├── txtPaymentAmount
+    ├── lblPaymentAmountLabel
     ├── lblPaymentCostValue
     ├── lblPaymentCostLabel
     ├── txtPaymentWeight
@@ -6522,6 +6524,7 @@ Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
+Reset(txtPaymentAmount);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
@@ -6799,6 +6802,8 @@ Switch(
 | IconBackground | `varChevronBackground` |
 | IconFill | `RGBA(255, 255, 255, 1)` |
 
+> 💡 **Date defaulting:** The live app does **not** use a separate `varPayModalDate`/`DefaultDate` pattern. Staff simply pick a date, and the flow receives it as **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** from `btnPaymentConfirm` / Flow H.
+
 ---
 
 ### Weight Label (lblPaymentWeightLabel)
@@ -6952,6 +6957,73 @@ If(
 > 💰 **Pricing:** Uses the same centralized pricing variables from `App.OnStart`.
 
 ---
+
+### Charged Amount Label (lblPaymentAmountLabel)
+
+When staff needs to record an amount that differs from the calculated total (rounding, grant coverage, etc.), the live app includes a separate **charged amount** input. The confirm button validates against this value.
+
+1. Click **+ Insert** → **Text label**.
+2. **Rename it:** `lblPaymentAmountLabel`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Charged Amount"` |
+| X | `329` |
+| Y | `297` |
+| Height | `20` |
+| Size | `12` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+
+---
+
+### Charged Amount Input (txtPaymentAmount)
+
+1. Click **+ Insert** → **Input** → **Text input** (**Classic**).
+2. **Rename it:** `txtPaymentAmount`
+3. Set properties:
+
+| Property | Value |
+|----------|-------|
+| X | `329` |
+| Y | `324` |
+| Width | `150` |
+| Height | `36` |
+| Format | `TextFormat.Number` |
+| HintText | `"Amount charged"` |
+| Font | `varAppFont` |
+| Size | `varInputFontSize` |
+| BorderColor | `varInputBorderColor` |
+| BorderThickness | `varInputBorderThickness` |
+| FocusedBorderThickness | `varFocusedBorderThickness` |
+
+Set **Default**:
+
+```powerfx
+If(
+    IsNumeric(txtPaymentWeight.Text) && Value(txtPaymentWeight.Text) > 0,
+    With(
+        {
+            baseCost: Max(
+                varMinimumCost,
+                Value(txtPaymentWeight.Text) * If(
+                    varSelectedItem.Method.Value = "Resin",
+                    varResinGramRate,
+                    varFilamentRate
+                )
+            )
+        },
+        Text(
+            If(chkOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost),
+            "[$-en-US]#,##0.00"
+        )
+    ),
+    Text(varMinimumCost, "[$-en-US]#,##0.00")
+)
+```
+
+> 💡 This defaults to the calculated amount but still allows staff to enter the **actual charged** total saved by Flow H.
 
 ### Own Material Checkbox (chkOwnMaterial)
 
@@ -7398,6 +7470,7 @@ With(
 | Width | `20` |
 | Height | `28` |
 | Default | `ThisItem.ID in colPickedUpPlates.ID` |
+| OnSelect | `Select(Parent)` |
 
 114. Set `chkPlate.OnCheck`:
 
@@ -7540,6 +7613,7 @@ Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
+Reset(txtPaymentAmount);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
@@ -7594,6 +7668,7 @@ Set(varShowPaymentModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtPaymentTransaction);
 Reset(txtPaymentWeight);
+Reset(txtPaymentAmount);
 Reset(dpPaymentDate);
 Reset(txtPaymentNotes);
 Reset(ddPaymentStaff);
@@ -7642,9 +7717,11 @@ Clear(colPayments)
 If(
     IsBlank(ddPaymentStaff.Selected) ||
     IsBlank(ddPaymentType.Selected.Value) ||
-    (ddPaymentType.Selected.Value = "TigerCASH" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
+    (ddPaymentType.Selected.Value <> "Code" && IsBlank(Trim(txtPaymentTransaction.Text))) ||
     !IsNumeric(txtPaymentWeight.Text) ||
     Value(txtPaymentWeight.Text) <= 0 ||
+    !IsNumeric(txtPaymentAmount.Text) ||
+    Value(txtPaymentAmount.Text) <= 0 ||
     (
         !chkPayerSameAsStudent.Value &&
         (
@@ -7719,7 +7796,7 @@ Set(
     )
 );
 
-// Calculate cost locally for audit message
+// Calculate reference cost locally and use the editable amount as the charge saved by the flow.
 Set(varBaseCost,
     Max(
         varMinimumCost,
@@ -7727,7 +7804,9 @@ Set(varBaseCost,
         If(varSelectedItem.Method.Value = "Resin", varResinGramRate, varFilamentRate)
     )
 );
-Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+Set(varCalculatedCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost));
+Set(varFinalCost, Value(txtPaymentAmount.Text));
+Set(varEffectivePaymentRate, varFinalCost / Value(txtPaymentWeight.Text));
 
 // Call Flow H to handle all writes server-side
 Set(
@@ -7735,10 +7814,10 @@ Set(
     'Flow-(H)-Payment-SaveSingle'.Run(
         varSelectedItem.ID,
         Value(txtPaymentWeight.Text),
-        varFilamentRate,
-        varResinGramRate,
-        varMinimumCost,
-        varOwnMaterialDiscount,
+        varEffectivePaymentRate,
+        varEffectivePaymentRate,
+        0,
+        1,
         If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
         ddPaymentType.Selected.Value,
         If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
@@ -7811,6 +7890,7 @@ If(
     Set(varSelectedItem, Blank());
     Reset(txtPaymentTransaction);
     Reset(txtPaymentWeight);
+    Reset(txtPaymentAmount);
     Reset(dpPaymentDate);
     Reset(txtPaymentNotes);
     Reset(ddPaymentStaff);
@@ -7849,7 +7929,7 @@ Set(varLoadingMessage, "")
 | **Flow name errors** | Flow title in Power Automate does not match the formula | In **Data** → flow must appear as **`Flow-(H)-Payment-SaveSingle`** and **`Flow-(I)-Payment-SaveBatch`**, or change the quoted name in every `'...'.Run(` to match **exactly** (including spelling and hyphens). |
 | **`TriggerInputSchemaMismatch`** / *String `M/D/YYYY` does not validate against format `date`* | The flow trigger still has **PaymentDate** as type **Date** while Power Apps sends a **locale** date string, or the app still passes **`SelectedDate`** instead of an ISO string | Align with **`Flow-(H)-Payment-SaveSingle.md`** / **`Flow-(I)-Payment-SaveBatch.md`**: trigger **PaymentDate** = **Text**; app passes **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** (single) or **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`** (batch). **Both H and I:** inline **`parseDateTime`** where SharePoint needs a datetime (**no payment-date Compose**). Remove and re-add the flow under **Data** after changing the trigger. |
 | **`parseDateTime`… `'2026-MM-02'` was not valid** / **`InvalidTemplate`** on **Create Consolidated Payment** (batch) | **`Text`** used **`"yyyy-MM-dd"`**; **`MM`** is **not** the month in Power Fx and is written literally | Use **`"yyyy-mm-dd"`** (lowercase **`mm`**) so the trigger receives a numeric month (e.g. **`2026-04-02`**). See **Power Fx date format** note above. |
-| **Red error banner but text says “Batch payment saved.” / success wording** | **`Respond to a Power App`** returns **`Success`** as **`string(bool)`**, which is often **`"True"`** (capital **T**). **`varFlowResult.success = "true"`** is **false**, so the app takes the **failure** branch and calls **`Notify(..., NotificationType.Error)`** with the success **message** | Use the **`Or(varFlowResult.success = true, Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true")`** pattern in **`btnPaymentConfirm`** / **`btnBatchPaymentConfirm`** (this spec), **or** set the flow output to **`toLower(string(variables('varSuccess')))`** so the string is always lowercase. |
+| **Red error banner but text says “Batch payment saved.” / success wording** | **`Respond to a Power App`** may return `Success` as a **boolean** `true` or as a **string** like `"True"` / `"true"` depending on connector serialization. A strict string check like `varFlowResult.success = "true"` fails and routes to the failure `Notify(...)` even though the flow succeeded. | Use the **`Or(varFlowResult.success = true, Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true")`** pattern in **`btnPaymentConfirm`** / **`btnBatchPaymentConfirm`** (this spec), **or** set the flow output to **`toLower(string(variables('varSuccess')))`** so the string is always lowercase. |
 
 **Correct split (this spec):** Single checkout → **`btnPaymentConfirm`** calls **`'Flow-(H)-Payment-SaveSingle'.Run(...)`** using **`varSelectedItem`** and the payment modal fields. Batch checkout → **`btnBatchPaymentConfirm`** calls **`'Flow-(I)-Payment-SaveBatch'.Run(...)`** using **`colBatchItems`**. Do not route both through one button unless every `If` branch passes valid types into `Filter` / `.Run`.
 
@@ -8979,13 +9059,14 @@ Switch(
 | Y | `recBatchPaymentModal.Y + 185` |
 | Width | `130` |
 | Height | `36` |
-| DefaultDate | `Today()` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | IconBackground | `varChevronBackground` |
 | IconFill | `RGBA(255, 255, 255, 1)` |
+
+> 💡 **Date defaulting:** The live app does **not** set `DefaultDate` here; the picker remains a normal staff-selected date, passed into Flow I as **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`**.
 
 > ⚠️ **Build-order reminder:** Create `txtBatchPayerName` and `dpBatchPaymentDate` in the app before pasting any updated batch close/cancel/confirm formulas. Those formulas reference these controls directly.
 
@@ -9908,17 +9989,17 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 |----------|-------|
 | Control | Dropdown |
 | Name | `drpPlateMachine` |
-| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 (")), true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
+| Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
 | Value | `"DisplayValue"` |
 | Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
-| X | `116` |
+| X | `53` |
 | Y | `8` |
-| Width | `160` |
+| Width | `167` |
 | Height | `36` |
 | Size | `10` |
 | Font | `varAppFont` |
 | BorderColor | `If(Self.DisplayMode = DisplayMode.Edit, varInputBorderColor, Color.Transparent)` |
-| ChevronBackground | `If(Self.DisplayMode = DisplayMode.Edit, varColorPrimary, Color.Transparent)` |
+| ChevronBackground | `If(Self.DisplayMode = DisplayMode.Edit, varChevronBackground, Color.Transparent)` |
 | DisplayMode | `If(varIsLoading, DisplayMode.Disabled, If(ThisItem.Status.Value in ["Queued", "Printing"], DisplayMode.Edit, DisplayMode.Disabled))` |
 
 **OnChange:**
@@ -10020,7 +10101,7 @@ Set(varLoadingMessage, "")
 | Control | Text label |
 | Name | `lblPlateStatus` |
 | Text | `ThisItem.Status.Value` |
-| X | `280` |
+| X | `246` |
 | Y | `10` |
 | Width | `84` |
 | Height | `32` |
@@ -10031,6 +10112,7 @@ Set(varLoadingMessage, "")
 | VerticalAlign | `VerticalAlign.Middle` |
 | Fill | `Switch(ThisItem.Status.Value, "Queued", RGBA(230, 230, 230, 1), "Printing", RGBA(255, 243, 205, 1), "Completed", RGBA(200, 230, 201, 1), "Picked Up", RGBA(187, 222, 251, 1), RGBA(230, 230, 230, 1))` |
 | Color | `Switch(ThisItem.Status.Value, "Queued", RGBA(80, 80, 80, 1), "Printing", RGBA(130, 80, 0, 1), "Completed", RGBA(27, 94, 32, 1), "Picked Up", RGBA(13, 71, 161, 1), RGBA(80, 80, 80, 1))` |
+| OnSelect | `Select(Parent)` |
 
 ---
 
@@ -10040,12 +10122,12 @@ Set(varLoadingMessage, "")
 |----------|-------|
 | Control | Button |
 | Name | `btnMarkPrinting` |
-| Text | `"▶ Printing"` |
-| X | `372` |
+| Text | `"Mark Printing"` |
+| X | `356` |
 | Y | `10` |
-| Width | `90` |
+| Width | `113` |
 | Height | `32` |
-| Fill | `varColorWarning` |
+| Fill | `varColorPrimary` |
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorPrimary, -15%)` |
 | PressedFill | `ColorFade(varColorPrimary, -25%)` |
@@ -10055,7 +10137,7 @@ Set(varLoadingMessage, "")
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `9` |
+| Size | `10` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `ThisItem.Status.Value = "Queued" && varSelectedItem.Status.Value = "Printing"` |
@@ -10157,22 +10239,22 @@ Same properties as `btnMarkPrinting` with:
 |----------|-------|
 | Control | Button |
 | Name | `btnMarkDone` |
-| Text | `"✓ Done"` |
-| X | `372` |
+| Text | `"Mark Done"` |
+| X | `367` |
 | Y | `10` |
 | Width | `90` |
 | Height | `32` |
-| Fill | `varColorSuccess` |
+| Fill | `varColorPrimary` |
 | Color | `Color.White` |
-| HoverFill | `varColorSuccessHover` |
-| PressedFill | `ColorFade(varColorSuccess, -25%)` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
 | BorderColor | `Color.Transparent` |
 | BorderThickness | `0` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
 | RadiusBottomRight | `varBtnBorderRadius` |
-| Size | `9` |
+| Size | `10` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | **Visible** | `ThisItem.Status.Value = "Printing"` |
@@ -12482,7 +12564,7 @@ If(
 )
 ```
 
-> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight and transaction number for all selected items. The **`Distinct`** guard enforces **one `Method.Value` per batch** (defense in depth if data ever drifts).
+> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight, transaction info, and payment date for all selected items. The live app simply toggles `varShowBatchPaymentModal` and does **not** pre-seed a separate “batch modal date” variable; date is read from `dpBatchPaymentDate.SelectedDate` when saving. The **`Distinct`** guard enforces **one `Method.Value` per batch** (defense in depth if data ever drifts).
 
 ---
 
@@ -15489,6 +15571,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `lblPaidSoFar` | Label |
 | `lblPayerNameLabel` | Label |
 | `lblPayerTigerCardLabel` | Label |
+| `lblPaymentAmountLabel` | Label |
 | `lblPaymentCostLabel` | Label |
 | `lblPaymentCostValue` | Label |
 | `lblPaymentDateLabel` | Label |
@@ -15510,6 +15593,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `txtPayerName` | Classic/TextInput |
 | `txtPayerTigerCard` | Classic/TextInput |
 | `txtPaymentNotes` | Classic/TextInput |
+| `txtPaymentAmount` | Classic/TextInput |
 | `txtPaymentTransaction` | Classic/TextInput |
 | `txtPaymentWeight` | Classic/TextInput |
 
@@ -15744,6 +15828,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **Approval modal tree** | **`lblWeightValidation`** is not present in the live app; sliced-on computer, own material, and build-plates shortcuts are. |
 | **DisplayFields for staff** | Live `colStaff` includes `StaffID`, `AidType`, and `SchedSortOrder` (see variable table). ComboBox `DisplayFields` may use `["MemberName"]` or include email — match your live control. |
 | **galStatusTabs** | Step 5 was updated: live **`FocusedBorderThickness`** is `0`. |
+| **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, plate pickup checkbox uses `Select(Parent)` for row taps, Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
 
 # Next Steps
 
