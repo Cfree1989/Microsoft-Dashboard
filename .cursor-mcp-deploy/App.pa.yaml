@@ -67,6 +67,10 @@ App:
       Set(varShowRevertModal, 0);
       Set(varShowBatchPaymentModal, 0);
       Set(varShowBuildPlatesModal, 0);
+      // Build Plates modal: defer StaffNotes for high-volume actions; flush on modal close
+      Set(varPendingBuildPlateAddCount, 0);
+      Set(varPendingBuildPlateMarkPrintingCount, 0);
+      Set(varPendingBuildPlateMarkDoneCount, 0);
       Set(varShowExportModal, 0);
 
       // === SCHEDULE SCREEN STATE ===

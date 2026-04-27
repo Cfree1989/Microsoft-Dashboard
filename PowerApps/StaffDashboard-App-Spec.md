@@ -780,6 +780,9 @@ Set(varLoadingMessage, "")
 | `colRevertedPlates` | Snapshot of `BuildPlates` rows targeted by the revert cascade (used to drive the `ForAll` patch) | Table |
 | `varShowBatchPaymentModal` | Controls batch payment modal visibility (0=hidden) | Number |
 | `varShowBuildPlatesModal` | ID of item for build plates modal (0=hidden) | Number |
+| `varPendingBuildPlateAddCount` | Plates added in the current Build Plates session before `StaffNotes` flush on ✕/Done | Number |
+| `varPendingBuildPlateMarkPrintingCount` | Queued→Printing marks deferred until modal ✕/Done (batched `StaffNotes`) | Number |
+| `varPendingBuildPlateMarkDoneCount` | Printing→Completed marks deferred until modal ✕/Done (batched `StaffNotes`) | Number |
 | `varShowExportModal` | Controls export modal visibility (`0` = hidden, `1` = visible) | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
@@ -2149,6 +2152,10 @@ ClearCollect(colBuildPlatesIndexed,
 ClearCollect(colPrintersUsed,
     Distinct(Filter(BuildPlates, RequestID = ThisItem.ID), Machine.Value)
 );
+// Fresh modal session: reset deferred StaffNotes counters (flush happens on ✕ / Done)
+Set(varPendingBuildPlateAddCount, 0);
+Set(varPendingBuildPlateMarkPrintingCount, 0);
+Set(varPendingBuildPlateMarkDoneCount, 0);
 Set(varShowBuildPlatesModal, ThisItem.ID)
 ```
 
@@ -4181,6 +4188,9 @@ If(
 ```powerfx
 // Open Build Plates modal (varSelectedItem already set from Approve button click)
 Set(varBuildPlatesOpenedFromApproval, true);
+Set(varPendingBuildPlateAddCount, 0);
+Set(varPendingBuildPlateMarkPrintingCount, 0);
+Set(varPendingBuildPlateMarkDoneCount, 0);
 Set(varShowBuildPlatesModal, varSelectedItem.ID);
 // Load existing plates (if any)
 ClearCollect(colBuildPlates,
@@ -9848,7 +9858,66 @@ scrDashboard
 
 **Replace the existing `OnSelect` formula with:**
 
+> **Batched `StaffNotes`:** While the modal is open, `+ Add Plate`, `Mark Printing`, and `Mark Done` **do not** append `PrintRequests.StaffNotes` per click. They increment `varPendingBuildPlateAddCount`, `varPendingBuildPlateMarkPrintingCount`, and `varPendingBuildPlateMarkDoneCount`. On **✕** or **Done**, if any counter is greater than zero, the app **once** patches `StaffNotes` with up to three compact `BUILD PLATE: [Summary] …` lines (add batch, printing batch, completed batch), then resets the counters, closes the modal, and clears collections. **Machine dropdown** changes still log immediately (unchanged). **Remove plate** still logs immediately.
+
 ```powerfx
+If(
+    !IsBlank(varSelectedItem) && (varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0 || varPendingBuildPlateMarkDoneCount > 0),
+    With(
+        {
+            wReqId: varSelectedItem.ID,
+            wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+            wTS: Text(Now(), "m/d h:mmam/pm"),
+            wMachList: Concat(
+                Distinct(
+                    AddColumns(
+                        Filter(BuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"),
+                        "MachTrim",
+                        Trim(If(Find("(", Machine.Value) > 0, Left(Machine.Value, Find("(", Machine.Value) - 2), Machine.Value))
+                    ),
+                    MachTrim
+                ),
+                MachTrim,
+                ", "
+            )
+        },
+        With(
+            {
+                wAddLine: If(
+                    varPendingBuildPlateAddCount > 0,
+                    "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                    Blank()
+                ),
+                wPrintLine: If(
+                    varPendingBuildPlateMarkPrintingCount > 0,
+                    "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkPrintingCount) & " plate(s) queued -> printing" & If(!IsBlank(wMachList), " on " & wMachList, "") & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                    Blank()
+                ),
+                wDoneLine: If(
+                    varPendingBuildPlateMarkDoneCount > 0,
+                    "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkDoneCount) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
+                    Blank()
+                ),
+                wSuffix: Concatenate(
+                    If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
+                    If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
+                    If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
+                )
+            },
+            IfError(
+                Patch(
+                    PrintRequests,
+                    LookUp(PrintRequests, ID = wReqId),
+                    { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
+                ),
+                Notify("Could not save build plate activity to notes.", NotificationType.Warning)
+            )
+        )
+    )
+);
+Set(varPendingBuildPlateAddCount, 0);
+Set(varPendingBuildPlateMarkPrintingCount, 0);
+Set(varPendingBuildPlateMarkDoneCount, 0);
 Set(varShowBuildPlatesModal, 0);
 If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
 ClearCollect(colBuildPlates, Blank());
@@ -10176,21 +10245,10 @@ With(
         )
     );
     
-    // Only update request if plate update succeeded
+    // Only update request if plate update succeeded (StaffNotes deferred until modal ✕ / Done)
     If(
         !IsBlank(varPlatePatchSuccess),
-        Patch(
-            PrintRequests,
-            wFreshRequest,
-            {
-                StaffNotes: Concatenate(
-                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE: [Summary] " & ThisItem.ResolvedPlateLabel & " queued -> printing on " &
-                    Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &
-                    " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                )
-            }
-        );
+        Set(varPendingBuildPlateMarkPrintingCount, varPendingBuildPlateMarkPrintingCount + 1);
         Notify("Plate marked as printing", NotificationType.Success, 2000),
         // Error notification
         Notify("Failed to update plate status. Please try again.", NotificationType.Error, 3000)
@@ -10327,17 +10385,8 @@ With(
                 )
             )
         );
-        // Update request notes
-        Patch(
-            PrintRequests,
-            wFreshRequest,
-            {
-                StaffNotes: Concatenate(
-                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE: [Summary] " & ThisItem.ResolvedPlateLabel & " printing -> completed [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                )
-            }
-        );
+        // Defer StaffNotes until Build Plates modal closes (batched with other plate actions)
+        Set(varPendingBuildPlateMarkDoneCount, varPendingBuildPlateMarkDoneCount + 1);
         Notify("Plate marked as completed", NotificationType.Success, 2000),
         // Error notification
         Notify("Failed to update plate status. Please try again.", NotificationType.Error, 3000)
@@ -10377,7 +10426,7 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 
 > 💡 **Label lock trigger:** The first time any plate is marked `Completed`, freeze the current visible labels onto all existing plates, set `PrintRequests.BuildPlateLabelsLocked` to `true`, and store the frozen denominator in `PrintRequests.BuildPlateOriginalTotal`. Do not clear those values later if the request is reverted.
 >
-> **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` may append a `StaffNotes` entry, but it must not change label-lock state or parent request status.
+> **Important:** Only `btnMarkDone` should apply the label-lock logic. `btnMarkPrinting` increments `varPendingBuildPlateMarkPrintingCount` (batched `StaffNotes` on modal close) and must not change label-lock state or parent request status.
 >
 > 🔒 **Concurrency Protection & Field Preservation:**
 > - Both status buttons now use `IfError()` to catch patch conflicts when clicking too quickly
@@ -10600,27 +10649,10 @@ Set(
     )
 );
 
-// Patch 2: Append StaffNotes on the parent request (only if Patch 1 succeeded)
+// Defer StaffNotes for add-plate: one batched line when the Build Plates modal closes (✕ or Done)
 If(
     varAddPlateSuccess,
-    Set(
-        varAddPlateSuccess,
-        IfError(
-            Patch(
-                PrintRequests,
-                LookUp(PrintRequests, ID = varSelectedItem.ID),
-                {
-                    StaffNotes: Concatenate(
-                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                        "BUILD PLATE: [Summary] Added " & varNewDisplayLabel & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                    )
-                }
-            );
-            true,
-            Notify("Plate added but could not log note.", NotificationType.Warning, 3000);
-            true
-        )
-    )
+    Set(varPendingBuildPlateAddCount, varPendingBuildPlateAddCount + 1)
 );
 
 // Refresh collections and notify on success
@@ -10681,17 +10713,9 @@ Set(varLoadingMessage, "")
 
 **Replace the existing `OnSelect` formula with:**
 
-```powerfx
-Set(varShowBuildPlatesModal, 0);
-If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
-ClearCollect(colBuildPlates, Blank());
-Clear(colBuildPlates);
-ClearCollect(colBuildPlatesIndexed, Blank());
-Clear(colBuildPlatesIndexed);
-Set(varBuildPlatesOpenedFromApproval, false)
-```
+`btnBuildPlatesDone` uses the **same** `OnSelect` formula as **`btnBuildPlatesClose`** in `scrDashboard.pa.yaml`: batched `StaffNotes` flush (when any `varPendingBuildPlate*Count` is greater than zero), reset all three pending counters, `Set(varShowBuildPlatesModal, 0)`, conditional `Set(varSelectedItem, Blank())`, then clear `colBuildPlates` / `colBuildPlatesIndexed` and `Set(varBuildPlatesOpenedFromApproval, false)`.
 
-> 💡 **Same as Close button:** Both buttons close the modal and clean up collections.
+> 💡 **Same as Close button:** Flush runs **before** clearing `varSelectedItem` so the `Patch` target is still valid.
 
 ---
 
@@ -10718,6 +10742,7 @@ Before moving on, verify:
 - [ ] Removing a plate deletes the BuildPlates record only when that row is eligible for deletion
 - [ ] Progress label updates when plate statuses change
 - [ ] Close and Done buttons both reset collections and close modal
+- [ ] After adding or marking plates in one session, `StaffNotes` receives **at most one line per action type** on modal close (add batch, queued→printing batch, printing→completed batch), not one line per click
 
 ---
 

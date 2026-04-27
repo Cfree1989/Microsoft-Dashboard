@@ -514,6 +514,10 @@ Screens:
                     ClearCollect(colPrintersUsed,
                         Distinct(Filter(BuildPlates, RequestID = ThisItem.ID), Machine.Value)
                     );
+                    // Reset deferred StaffNotes counters for this modal session
+                    Set(varPendingBuildPlateAddCount, 0);
+                    Set(varPendingBuildPlateMarkPrintingCount, 0);
+                    Set(varPendingBuildPlateMarkDoneCount, 0);
                     Set(varShowBuildPlatesModal, ThisItem.ID)
                   PaddingBottom: =0
                   PaddingLeft: =0
@@ -2474,6 +2478,9 @@ Screens:
                   OnSelect: |-
                     =// Open Build Plates modal (varSelectedItem already set from Approve button click)
                     Set(varBuildPlatesOpenedFromApproval, true);
+                    Set(varPendingBuildPlateAddCount, 0);
+                    Set(varPendingBuildPlateMarkPrintingCount, 0);
+                    Set(varPendingBuildPlateMarkDoneCount, 0);
                     Set(varShowBuildPlatesModal, varSelectedItem.ID);
                     // Load existing plates (if any)
                     ClearCollect(colBuildPlates,
@@ -5659,7 +5666,71 @@ Screens:
                   HoverBorderColor: =Color.Transparent
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =varColorDangerHover
-                  OnSelect: "=Set(varShowBuildPlatesModal, 0);\nIf(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));\nClearCollect(colBuildPlates, Blank());\nClear(colBuildPlates);\nClearCollect(colBuildPlatesIndexed, Blank());\nClear(colBuildPlatesIndexed);\nSet(varBuildPlatesOpenedFromApproval, false)    "
+                  OnSelect: |-
+                    =If(
+                        !IsBlank(varSelectedItem) && (varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0 || varPendingBuildPlateMarkDoneCount > 0),
+                        With(
+                            {
+                                wReqId: varSelectedItem.ID,
+                                wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+                                wTS: Text(Now(), "m/d h:mmam/pm"),
+                                wMachList: Concat(
+                                    Distinct(
+                                        AddColumns(
+                                            Filter(BuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"),
+                                            "MachTrim",
+                                            Trim(If(Find("(", Machine.Value) > 0, Left(Machine.Value, Find("(", Machine.Value) - 2), Machine.Value))
+                                        ),
+                                        MachTrim
+                                    ),
+                                    MachTrim,
+                                    ", "
+                                )
+                            },
+                            With(
+                                {
+                                    wAddLine: If(
+                                        varPendingBuildPlateAddCount > 0,
+                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wPrintLine: If(
+                                        varPendingBuildPlateMarkPrintingCount > 0,
+                                        "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkPrintingCount) & " plate(s) queued -> printing" & If(!IsBlank(wMachList), " on " & wMachList, "") & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wDoneLine: If(
+                                        varPendingBuildPlateMarkDoneCount > 0,
+                                        "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkDoneCount) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wSuffix: Concatenate(
+                                        If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
+                                        If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
+                                        If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
+                                    )
+                                },
+                                IfError(
+                                    Patch(
+                                        PrintRequests,
+                                        LookUp(PrintRequests, ID = wReqId),
+                                        { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
+                                    ),
+                                    Notify("Could not save build plate activity to notes.", NotificationType.Warning)
+                                )
+                            )
+                        )
+                    );
+                    Set(varPendingBuildPlateAddCount, 0);
+                    Set(varPendingBuildPlateMarkPrintingCount, 0);
+                    Set(varPendingBuildPlateMarkDoneCount, 0);
+                    Set(varShowBuildPlatesModal, 0);
+                    If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
+                    ClearCollect(colBuildPlates, Blank());
+                    Clear(colBuildPlates);
+                    ClearCollect(colBuildPlatesIndexed, Blank());
+                    Clear(colBuildPlatesIndexed);
+                    Set(varBuildPlatesOpenedFromApproval, false)
                   PaddingBottom: =0
                   PaddingLeft: =0
                   PaddingRight: =0
@@ -5894,7 +5965,7 @@ Screens:
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =ColorFade(varColorPrimary, -15%)
-                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Updating plate status...\");\n\nWith(\n    {\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Printing\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only update request if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        Patch(\n            PrintRequests,\n            wFreshRequest,\n            {\n                StaffNotes: Concatenate(\n                    If(IsBlank(wFreshRequest.StaffNotes), \"\", wFreshRequest.StaffNotes & \" | \"),\n                    \"BUILD PLATE: [Summary] \" & ThisItem.ResolvedPlateLabel & \" queued -> printing on \" &\n                    Trim(If(Find(\"(\", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find(\"(\", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value)) &\n                    \" [Changes] [Reason] [Context] [Comment] - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            }\n        );\n        Notify(\"Plate marked as printing\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")\n;\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
+                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Updating plate status...\");\n\nWith(\n    {\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Printing\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only update request if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        Set(varPendingBuildPlateMarkPrintingCount, varPendingBuildPlateMarkPrintingCount + 1);\n        Notify(\"Plate marked as printing\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")\n;\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -5923,7 +5994,7 @@ Screens:
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =ColorFade(varColorPrimary, -15%)
-                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Marking plate as completed...\");\n\nWith(\n    {\n        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Completed\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only continue if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        // Lock labels if this is the first completed plate\n        If(\n            wShouldLockLabels,\n            ForAll(\n                AddColumns(\n                    colBuildPlates As plate,\n                    FrozenLabel,\n                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & \"/\" & Text(CountRows(colBuildPlates))\n                ) As plateToLock,\n                Patch(\n                    BuildPlates,\n                    LookUp(BuildPlates, ID = plateToLock.ID),\n                    { \n                        DisplayLabel: plateToLock.FrozenLabel,\n                        // Preserve ReqKey in label-locking updates\n                        ReqKey: plateToLock.ReqKey\n                    }\n                )\n            );\n            Set(\n                varSelectedItem,\n                Patch(\n                    PrintRequests,\n                    wFreshRequest,\n                    {\n                        BuildPlateLabelsLocked: true,\n                        BuildPlateOriginalTotal: CountRows(colBuildPlates)\n                    }\n                )\n            )\n        );\n        // Update request notes\n        Patch(\n            PrintRequests,\n            wFreshRequest,\n            {\n                StaffNotes: Concatenate(\n                    If(IsBlank(wFreshRequest.StaffNotes), \"\", wFreshRequest.StaffNotes & \" | \"),\n                    \"BUILD PLATE: [Summary] \" & ThisItem.ResolvedPlateLabel & \" printing -> completed [Changes] [Reason] [Context] [Comment] - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            }\n        );\n        Notify(\"Plate marked as completed\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\");\n\n// Refresh collection\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
+                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Marking plate as completed...\");\n\nWith(\n    {\n        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Completed\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only continue if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        // Lock labels if this is the first completed plate\n        If(\n            wShouldLockLabels,\n            ForAll(\n                AddColumns(\n                    colBuildPlates As plate,\n                    FrozenLabel,\n                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & \"/\" & Text(CountRows(colBuildPlates))\n                ) As plateToLock,\n                Patch(\n                    BuildPlates,\n                    LookUp(BuildPlates, ID = plateToLock.ID),\n                    { \n                        DisplayLabel: plateToLock.FrozenLabel,\n                        // Preserve ReqKey in label-locking updates\n                        ReqKey: plateToLock.ReqKey\n                    }\n                )\n            );\n            Set(\n                varSelectedItem,\n                Patch(\n                    PrintRequests,\n                    wFreshRequest,\n                    {\n                        BuildPlateLabelsLocked: true,\n                        BuildPlateOriginalTotal: CountRows(colBuildPlates)\n                    }\n                )\n            )\n        );\n        // Defer StaffNotes: batched when Build Plates modal closes\n        Set(varPendingBuildPlateMarkDoneCount, varPendingBuildPlateMarkDoneCount + 1);\n        Notify(\"Plate marked as completed\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\");\n\n// Refresh collection\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -6053,27 +6124,10 @@ Screens:
                         )
                     );
 
-                    // Patch 2: Append StaffNotes on the parent request (only if Patch 1 succeeded)
+                    // Defer StaffNotes for add-plate: one batched line when the Build Plates modal closes
                     If(
                         varAddPlateSuccess,
-                        Set(
-                            varAddPlateSuccess,
-                            IfError(
-                                Patch(
-                                    PrintRequests,
-                                    LookUp(PrintRequests, ID = varSelectedItem.ID),
-                                    {
-                                        StaffNotes: Concatenate(
-                                            If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                                            "BUILD PLATE: [Summary] Added " & varNewDisplayLabel & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                                        )
-                                    }
-                                );
-                                true,
-                                Notify("Plate added but could not log note.", NotificationType.Warning, 3000);
-                                true
-                            )
-                        )
+                        Set(varPendingBuildPlateAddCount, varPendingBuildPlateAddCount + 1)
                     );
 
                     // Refresh collections and notify on success
@@ -6128,7 +6182,64 @@ Screens:
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =varColorPrimaryHover
                   OnSelect: |-
-                    =Set(varShowBuildPlatesModal, 0);
+                    =If(
+                        !IsBlank(varSelectedItem) && (varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0 || varPendingBuildPlateMarkDoneCount > 0),
+                        With(
+                            {
+                                wReqId: varSelectedItem.ID,
+                                wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+                                wTS: Text(Now(), "m/d h:mmam/pm"),
+                                wMachList: Concat(
+                                    Distinct(
+                                        AddColumns(
+                                            Filter(BuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"),
+                                            "MachTrim",
+                                            Trim(If(Find("(", Machine.Value) > 0, Left(Machine.Value, Find("(", Machine.Value) - 2), Machine.Value))
+                                        ),
+                                        MachTrim
+                                    ),
+                                    MachTrim,
+                                    ", "
+                                )
+                            },
+                            With(
+                                {
+                                    wAddLine: If(
+                                        varPendingBuildPlateAddCount > 0,
+                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wPrintLine: If(
+                                        varPendingBuildPlateMarkPrintingCount > 0,
+                                        "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkPrintingCount) & " plate(s) queued -> printing" & If(!IsBlank(wMachList), " on " & wMachList, "") & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wDoneLine: If(
+                                        varPendingBuildPlateMarkDoneCount > 0,
+                                        "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkDoneCount) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        Blank()
+                                    ),
+                                    wSuffix: Concatenate(
+                                        If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
+                                        If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
+                                        If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
+                                    )
+                                },
+                                IfError(
+                                    Patch(
+                                        PrintRequests,
+                                        LookUp(PrintRequests, ID = wReqId),
+                                        { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
+                                    ),
+                                    Notify("Could not save build plate activity to notes.", NotificationType.Warning)
+                                )
+                            )
+                        )
+                    );
+                    Set(varPendingBuildPlateAddCount, 0);
+                    Set(varPendingBuildPlateMarkPrintingCount, 0);
+                    Set(varPendingBuildPlateMarkDoneCount, 0);
+                    Set(varShowBuildPlatesModal, 0);
                     If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
                     ClearCollect(colBuildPlates, Blank());
                     Clear(colBuildPlates);

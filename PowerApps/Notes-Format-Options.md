@@ -243,11 +243,20 @@ Use the request's allocated portion of the shared payment here, not the full bat
 
 Build plate add/remove/machine/status changes from the Build Plates UI are **app-triggered** (no staff dropdown). Display without a name line:
 
+**Volume / batching (Staff Dashboard):** While the Build Plates modal is open, **add plate**, **mark printing**, and **mark done** increment in-memory counters only. When staff closes the modal (**Done** or **✕**), the app appends **up to three** `BUILD PLATE: [Summary] … [Changes] …` segments in one `Patch` (add batch, printing batch, completed batch), each using the same v2 bracket layout as before. **Per-plate machine changes** and **remove plate** still log **immediately** (unchanged).
+
 **Added plate**
 
 ```text
 BUILD PLATE - 3/26 9:40am
 Added 4/4 on Prusa MK4S
+```
+
+**Batched adds (after modal close)** — one stored line for several `+ Add Plate` clicks in the same session:
+
+```text
+BUILD PLATE - 4/27 10:15am
+Added 3 plate(s); total now 4
 ```
 
 **Other examples** (same pattern: header, then summary only):
@@ -260,6 +269,13 @@ BUILD PLATE - 3/31 8:48am
 ```text
 BUILD PLATE - 3/31 9:22am
 1/2 queued -> printing on Prusa MK4S
+```
+
+**Batched queued → printing** (one line for N marks before close):
+
+```text
+BUILD PLATE - 4/27 8:19pm
+4 plate(s) queued -> printing on Prusa MK4S
 ```
 
 ## **What Should Not Appear**
