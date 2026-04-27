@@ -6322,11 +6322,15 @@ Patch(
             Picture: ""
         },
         LastActionAt: Now(),
-        StaffNotes: Concatenate(
-            If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-            "UPDATED by " & 
-            With({n: ddDetailsStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-            ": [Summary] " & varChangeDesc & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+        StaffNotes: If(
+            IsBlank(varChangeDesc),
+            LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+            Concatenate(
+                If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                "UPDATED by " &
+                With({n: ddDetailsStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": [Summary] " & varChangeDesc & " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+            )
         )
     }
 );
@@ -15939,6 +15943,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. Uses `colAllBuildPlates` + `LookUp(BuildPlates, ID=…)` for the gate and fresh row (avoids `CountRows(Filter(BuildPlates,…))` delegation on **Start Print**). |
 | **2026-04-27: Notes modal (`txtStaffNotesContent`)** | Tokenized segments without ` by Name` before `:` (e.g. **`STATUS:`**, **`BUILD PLATE:`**) no longer treat the action label as **`rawName`**; v2 **`[Summary]`** blocks render **line 2 = summary only** when there is no staff actor, matching **`PowerApps/Notes-Format-Options.md`** (no redundant `STATUS - …` prefix, no fake **`BUILD P.`** line). Legacy (non-v2) rendering uses the same **no fake name** rule when **`shortName`** is blank. |
 | **2026-04-27: Approval own material vs `EstimatedCost`** | **`btnApprovalConfirm`** sets **`varCalculatedCost`** to **`wBase * varOwnMaterialDiscount`** when **`chkApprovalOwnMaterial`** is checked (same math as **`lblApprovalCostValue`**). **`Patch`** writes that value to **`EstimatedCost`** and the **`APPROVED`** **`StaffNotes`** dollar amount; **`StudentOwnMaterial`** unchanged. Historical list rows approved before this fix are not backfilled. |
+| **2026-04-27: Details save — skip empty `UPDATED` in Notes** | **`btnDetailsConfirm`**: when **`varChangeDesc`** is blank (e.g. only **Student own material** / implied **`EstimatedCost`** change), **`StaffNotes`** is left unchanged (no `UPDATED by …` append). SharePoint fields, **`LastAction`**, and **`Flow-(C)-Action-LogAction`** are unchanged. |
 
 # Next Steps
 
