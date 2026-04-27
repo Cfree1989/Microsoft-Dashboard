@@ -884,11 +884,15 @@ Screens:
                     Set(varStartPrintAutoPlate, false);
 
                     // If exactly one Queued build plate, move it to Printing first (must succeed before job advances)
+                    // Use colAllBuildPlates (in-memory) for counts/sort to avoid SharePoint delegation warnings; LookUp fresh row for Patch
                     If(
-                        CountRows(Filter(BuildPlates, RequestID = varCurrentItem.ID)) = 1,
+                        CountRows(Filter(colAllBuildPlates, RequestID = varCurrentItem.ID)) = 1,
                         With(
                             {
-                                wPlate: First(Sort(Filter(BuildPlates, RequestID = varCurrentItem.ID), ID, SortOrder.Ascending))
+                                wPlate: LookUp(
+                                    BuildPlates,
+                                    ID = First(Sort(Filter(colAllBuildPlates, RequestID = varCurrentItem.ID), ID, SortOrder.Ascending)).ID
+                                )
                             },
                             If(
                                 wPlate.Status.Value = "Queued",

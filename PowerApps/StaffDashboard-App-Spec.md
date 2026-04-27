@@ -2685,11 +2685,15 @@ Set(varStartPrintProceed, true);
 Set(varStartPrintAutoPlate, false);
 
 // If exactly one Queued build plate, move it to Printing first (must succeed before job advances)
+// Use colAllBuildPlates (in-memory) for counts/sort to avoid SharePoint delegation warnings; LookUp fresh row for Patch
 If(
-    CountRows(Filter(BuildPlates, RequestID = varCurrentItem.ID)) = 1,
+    CountRows(Filter(colAllBuildPlates, RequestID = varCurrentItem.ID)) = 1,
     With(
         {
-            wPlate: First(Sort(Filter(BuildPlates, RequestID = varCurrentItem.ID), ID, SortOrder.Ascending))
+            wPlate: LookUp(
+                BuildPlates,
+                ID = First(Sort(Filter(colAllBuildPlates, RequestID = varCurrentItem.ID), ID, SortOrder.Ascending)).ID
+            )
         },
         If(
             wPlate.Status.Value = "Queued",
@@ -2761,7 +2765,7 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> **Single build plate:** When the request has exactly one `BuildPlates` row and its status is `Queued`, **Start Print** patches that plate to `Printing` (same preserved fields as **Mark Printing** in the Build Plates modal) **before** patching the job. If that plate patch fails, the job is not advanced and Flow C is not run. Jobs with zero or multiple plates behave as before. `varPendingBuildPlateMarkPrintingCount` is not incremented here (that counter is for modal **Done** StaffNotes merge only).
+> **Single build plate:** When `colAllBuildPlates` shows exactly one row for the request and that plate is `Queued`, **Start Print** `LookUp`s the live `BuildPlates` row by ID, patches it to `Printing` (same preserved fields as **Mark Printing** in the Build Plates modal) **before** patching the job. If that plate patch fails, the job is not advanced and Flow C is not run. Jobs with zero or multiple plates behave as before. `varPendingBuildPlateMarkPrintingCount` is not incremented here (that counter is for modal **Done** StaffNotes merge only).
 
 > 💡 **Flow C Parameters:** Pass 5 parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The flow auto-populates ClientApp ("Power Apps") and Notes.
 
@@ -15901,7 +15905,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **galStatusTabs** | Step 5 was updated: live **`FocusedBorderThickness`** is `0`. |
 | **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, plate pickup checkbox uses `Select(Parent)` for row taps, Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
 | **2026-04-27: Job card Notes count / alert** | **`lblNotesHeader`** and **`btnViewNotes`** (red fill) now key off **manual** staff notes only: segments of `StaffNotes` after splitting on `" | "` that **`StartsWith(Trim(Value), "[NOTE] ")`**. Activity lines (approvals, build plates, payments, etc.) still render in the Notes modal but no longer drive the card number or red styling. Legacy manual lines without the `[NOTE] ` prefix are not counted (prefer migrating or re-saving via Add Note if needed). |
-| **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. |
+| **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. Uses `colAllBuildPlates` + `LookUp(BuildPlates, ID=…)` for the gate and fresh row (avoids `CountRows(Filter(BuildPlates,…))` delegation on **Start Print**). |
 
 # Next Steps
 
