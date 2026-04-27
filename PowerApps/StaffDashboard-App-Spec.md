@@ -9869,15 +9869,8 @@ If(
             wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
             wTS: Text(Now(), "m/d h:mmam/pm"),
             wMachList: Concat(
-                Distinct(
-                    AddColumns(
-                        Filter(BuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"),
-                        "MachTrim",
-                        Trim(If(Find("(", Machine.Value) > 0, Left(Machine.Value, Find("(", Machine.Value) - 2), Machine.Value))
-                    ),
-                    MachTrim
-                ),
-                MachTrim,
+                Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID && Status.Value = "Printing"), Machine.Value),
+                Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)),
                 ", "
             )
         },
@@ -9897,20 +9890,26 @@ If(
                     varPendingBuildPlateMarkDoneCount > 0,
                     "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkDoneCount) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
                     Blank()
-                ),
-                wSuffix: Concatenate(
-                    If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
-                    If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
-                    If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
                 )
             },
-            IfError(
-                Patch(
-                    PrintRequests,
-                    LookUp(PrintRequests, ID = wReqId),
-                    { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
-                ),
-                Notify("Could not save build plate activity to notes.", NotificationType.Warning)
+            With(
+                {
+                    wSuffix: Concatenate(
+                        If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
+                        If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
+                        If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
+                    )
+                },
+                IfError(
+                    Patch(
+                        PrintRequests,
+                        LookUp(PrintRequests, ID = wReqId),
+                        { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
+                    );
+                    true,
+                    Notify("Could not save build plate activity to notes.", NotificationType.Warning);
+                    false
+                )
             )
         )
     )
