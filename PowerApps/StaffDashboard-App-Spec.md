@@ -11528,14 +11528,28 @@ If(
                         colonPos: Find(":", text)
                     },
                     With(
+                    { noteColonPos: Find(":", beforeDatetime) },
+                    With(
                         {
                             action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), If(colonPos > 0, Upper(Left(text, colonPos - 1)), "NOTE"))),
                             rawName: If(
-                                !isManualNote && byPos > 0 && colonPos > byPos + 4,
-                                Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
-                                ""
+                                isManualNote && noteColonPos > 0,
+                                Trim(Left(beforeDatetime, noteColonPos - 1)),
+                                If(
+                                    !isManualNote && byPos > 0 && colonPos > byPos + 4,
+                                    Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
+                                    ""
+                                )
                             ),
-                            details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                            details: If(
+                                isManualNote,
+                                If(
+                                    noteColonPos > 0,
+                                    Trim(Mid(beforeDatetime, noteColonPos + 2, Max(0, Len(beforeDatetime) - noteColonPos - 1))),
+                                    Trim(beforeDatetime)
+                                ),
+                                If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                            )
                         },
                         With(
                             {
@@ -11640,6 +11654,7 @@ If(
                                 )
                             )
                         )
+                    )
                     )
                 )
             )
@@ -16033,6 +16048,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Job card Notes count / alert** | **`lblNotesHeader`** and **`btnViewNotes`** (red fill) now key off **manual** staff notes only: segments of `StaffNotes` after splitting on `" | "` that **`StartsWith(Trim(Value), "[NOTE] ")`**. Activity lines (approvals, build plates, payments, etc.) still render in the Notes modal but no longer drive the card number or red styling. Legacy manual lines without the `[NOTE] ` prefix are not counted (prefer migrating or re-saving via Add Note if needed). |
 | **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. Uses `colAllBuildPlates` + `LookUp(BuildPlates, ID=…)` for the gate and fresh row (avoids `CountRows(Filter(BuildPlates,…))` delegation on **Start Print**). |
 | **2026-04-27: Notes modal (`txtStaffNotesContent`)** | Tokenized segments without ` by Name` before `:` (e.g. **`STATUS:`**, **`BUILD PLATE:`**) no longer treat the action label as **`rawName`**; v2 **`[Summary]`** blocks render **line 2 = summary only** when there is no staff actor, matching **`PowerApps/Notes-Format-Options.md`** (no redundant `STATUS - …` prefix, no fake **`BUILD P.`** line). Legacy (non-v2) rendering uses the same **no fake name** rule when **`shortName`** is blank. |
+| **2026-04-28: Notes modal — manual `[NOTE]` author** | Manual notes are stored as **`[NOTE] ShortName: text - date`** (Add Note), not `NOTE by Name:`. The display parser now sets **`rawName`** from the text before the first colon in **`beforeDatetime`** (`noteColonPos`), so line 2 renders **`ShortName - "…"`** per **`PowerApps/Notes-Format-Options.md`**. Segments with no `:` before the date (legacy) still show the full pre-date text as the quoted body with no name line. |
 | **2026-04-27: Approval own material vs `EstimatedCost`** | **`btnApprovalConfirm`** sets **`varCalculatedCost`** to **`wBase * varOwnMaterialDiscount`** when **`chkApprovalOwnMaterial`** is checked (same math as **`lblApprovalCostValue`**). **`Patch`** writes that value to **`EstimatedCost`** and the **`APPROVED`** **`StaffNotes`** dollar amount; **`StudentOwnMaterial`** unchanged. Historical list rows approved before this fix are not backfilled. |
 | **2026-04-27: Details save — skip empty `UPDATED` in Notes** | **`btnDetailsConfirm`**: when **`varChangeDesc`** is blank (e.g. only **Student own material** / implied **`EstimatedCost`** change), **`StaffNotes`** is left unchanged (no `UPDATED by …` append). SharePoint fields, **`LastAction`**, and **`Flow-(C)-Action-LogAction`** are unchanged. |
 | **2026-04-27: `conBatchPaymentModal` inventory** | Live coauthor added **`lblBatchAmountLabel`** + **`txtBatchAmount`** (custom batch charged amount, tied to own-material / payment-type changes). Added to the Live coauthor control inventory. |

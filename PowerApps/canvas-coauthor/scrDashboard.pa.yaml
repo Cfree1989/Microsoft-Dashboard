@@ -7281,7 +7281,7 @@ Screens:
                                         text: If(StartsWith(entry.Value, "[NOTE] "), Mid(entry.Value, 8, Len(entry.Value) - 7), entry.Value),
                                         isManualNote: StartsWith(entry.Value, "[NOTE] ")
                                     },
-                                    With(
+                                        With(
                                         {
                                             datetime: Last(Split(text, " - ")).Value,
                                             beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(Split(text, " - ")).Value) - 3)),
@@ -7289,14 +7289,28 @@ Screens:
                                             colonPos: Find(":", text)
                                         },
                                         With(
+                                        { noteColonPos: Find(":", beforeDatetime) },
+                                        With(
                                             {
                                                 action: If(isManualNote, "NOTE", If(byPos > 0 && byPos < colonPos, Upper(Left(text, byPos - 1)), If(colonPos > 0, Upper(Left(text, colonPos - 1)), "NOTE"))),
                                                 rawName: If(
-                                                    !isManualNote && byPos > 0 && colonPos > byPos + 4,
-                                                    Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
-                                                    ""
+                                                    isManualNote && noteColonPos > 0,
+                                                    Trim(Left(beforeDatetime, noteColonPos - 1)),
+                                                    If(
+                                                        !isManualNote && byPos > 0 && colonPos > byPos + 4,
+                                                        Trim(Mid(text, byPos + 4, Max(0, colonPos - byPos - 4))),
+                                                        ""
+                                                    )
                                                 ),
-                                                details: If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                                                details: If(
+                                                    isManualNote,
+                                                    If(
+                                                        noteColonPos > 0,
+                                                        Trim(Mid(beforeDatetime, noteColonPos + 2, Max(0, Len(beforeDatetime) - noteColonPos - 1))),
+                                                        Trim(beforeDatetime)
+                                                    ),
+                                                    If(colonPos > 0 && Len(beforeDatetime) > colonPos + 1, Trim(Mid(beforeDatetime, colonPos + 2, Max(0, Len(beforeDatetime) - colonPos - 1))), "")
+                                                )
                                             },
                                             With(
                                                 {
@@ -7401,6 +7415,7 @@ Screens:
                                                     )
                                                 )
                                             )
+                                        )
                                         )
                                     )
                                 )
