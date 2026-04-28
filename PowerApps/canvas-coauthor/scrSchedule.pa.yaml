@@ -552,7 +552,7 @@ Screens:
                             With(
                                 {
                                     dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
-                                    dayBg:    Switch(dn.Value, "Monday", "#c1b3a3", "Tuesday", "#ece2d6", "Wednesday", "#c1b3a3", "Thursday", "#ece2d6", "Friday", "#c1b3a3", "#d7ccc8")
+                                    dayBg: Switch(dn.Value, "Monday", "#c1b3a3", "Tuesday", "#ece2d6", "Wednesday", "#c1b3a3", "Thursday", "#ece2d6", "Friday", "#c1b3a3", "#d7ccc8")
                                 },
                                 With(
                                     {nc: CountRows(dayStaff)},
@@ -597,35 +597,35 @@ Screens:
                                 With(
                                     {lab: Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1)},
                                     "<tr style='height:" & Text(H) & "px;'>" &
-                                "<td style='" & brd & "background:#fdf6f0;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;font-size:11px;vertical-align:middle;border-right:2px solid #d7ccc8;box-sizing:border-box;'>" & lab & "</td>" &
-                                Concat(
-                                    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
-                                    With(
-                                        {
-                                            dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
-                                            dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"),
-                                            si: slot.Idx
-                                        },
-                                        If(
-                                            CountRows(dayStaff) = 0,
+                                    "<td style='" & brd & "background:#fdf6f0;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;font-size:11px;vertical-align:middle;border-right:2px solid #d7ccc8;box-sizing:border-box;'>" & lab & "</td>" &
+                                    Concat(
+                                        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
+                                        With(
+                                            {
+                                                dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
+                                                dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"),
+                                                si: slot.Idx
+                                            },
                                             If(
-                                                slot.Idx = minSlotIdx,
-                                                "<td rowspan='" & Text(slotCount) & "' style='border:1px solid #bdbdbd;border-top:1px solid #d7ccc8;background:" & dayCellBg & ";text-align:center;color:#999;vertical-align:middle;padding:12px;font-size:11px;'>No shifts</td>",
-                                                ""
-                                            ),
-                                            Concat(
-                                                dayStaff As s,
-                                                With(
-                                                    {
-                                                        cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
-                                                        on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
-                                                    },
-                                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
+                                                CountRows(dayStaff) = 0,
+                                                If(
+                                                    slot.Idx = minSlotIdx,
+                                                    "<td rowspan='" & Text(slotCount) & "' style='border:1px solid #bdbdbd;border-top:1px solid #d7ccc8;background:" & dayCellBg & ";text-align:center;color:#999;vertical-align:middle;padding:12px;font-size:11px;'>No shifts</td>",
+                                                    ""
+                                                ),
+                                                Concat(
+                                                    dayStaff As s,
+                                                    With(
+                                                        {
+                                                            cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
+                                                            on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
+                                                        },
+                                                        "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
+                                                    )
                                                 )
                                             )
                                         )
-                                    )
-                                ) &
+                                    ) &
                                     "<td style='" & brd & "background:#fdf6f0;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;font-size:11px;vertical-align:middle;border-left:2px solid #d7ccc8;box-sizing:border-box;'>" & lab & "</td>" &
                                     "</tr>"
                                 )
