@@ -208,9 +208,9 @@ App:
       // === PRICING CONFIGURATION ===
       // Centralized pricing rates - change here to update all cost calculations
       Set(varFilamentRate, 0.10);    // $ per gram for filament printing
-      Set(varResinRate, 0.30);       // $ per mL for resin printing  
-      Set(varResinDensity, 1.11);    // g per mL for Formlabs Black/Gray/White/Clear V4.1 resin
-      Set(varResinGramRate, Round(varResinRate / varResinDensity, 4)); // $ per gram for resin pickup billing
+      Set(varResinDensity, 1.11);    // g per mL for Formlabs Black/Gray/White/Clear V4.1 resin (slicer mL → mass)
+      Set(varResinGramRate, 0.30);   // $ per gram for resin (pickup scale + estimates via mL×density)
+      Set(varResinRate, varResinDensity * varResinGramRate); // $ per slicer mL so (mL × this) = grams × varResinGramRate
       Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
       // === STYLING / THEMING ===

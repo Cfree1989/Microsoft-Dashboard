@@ -140,9 +140,9 @@ Most modals use an integer pattern (`0` = hidden, any record ID = visible). The 
 | Variable | Value | Purpose |
 |----------|-------|---------|
 | `varFilamentRate` | `0.10` | Cost per gram (filament) |
-| `varResinRate` | `0.30` | Cost per mL (resin) |
-| `varResinDensity` | `1.11` | Density for weight-to-mL conversion |
-| `varResinGramRate` | Derived | Actual per-gram resin rate |
+| `varResinDensity` | `1.11` | g/mL (slicer mL → mass) |
+| `varResinGramRate` | `0.30` | Cost per gram (resin)—pickup and billing basis |
+| `varResinRate` | Derived (`density × gram rate`) | Multiplier on slicer mL in estimate formulas |
 | `varMinimumCost` | `3.00` | Floor price |
 | `varOwnMaterialDiscount` | `0.30` | Fraction discount if student provides material |
 

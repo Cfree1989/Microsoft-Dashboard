@@ -816,7 +816,7 @@ The Fabrication Lab uses a weight-based pricing model to recover material costs 
 | Material | Rate | Typical Small Print | Typical Large Print |
 |----------|------|---------------------|---------------------|
 | Filament (PLA/PETG/ABS) | $0.10/g | 50g -> $5.00 | 200g -> $20.00 |
-| Resin (Standard) | $0.30/mL | 50mL -> $15.00 | 200mL -> $60.00 |
+| Resin (Standard) | **$0.30/g** (slicer mL × 1.11 g/mL → mass) | 50 mL → ~55.5 g → **~$16.65** | 200 mL → ~222 g → **~$66.60** |
 
 #### Minimum Charge
 
@@ -834,6 +834,7 @@ Covers:
 ```
 EstimatedCost = Max($3.00, EstimatedWeight × Material_Rate)
 ```
+(Resin: `Material_Rate` on stored slicer mL is `varResinRate` = density × **$0.30/g**, so this equals `Max($3, mL × 1.11 × $0.30)`.)
 
 **For Final Payment (at Pickup):**
 ```
@@ -843,7 +844,7 @@ FinalCost = Max($3.00, FinalWeight × Payment_Rate)
 **Where:**
 - **EstimatedWeight:** Predicted material usage from slicer software (grams for filament, mL for resin)
 - **FinalWeight:** Actual weighed pickup amount in grams for both methods
-- **Payment_Rate:** $0.10/g (Filament) or about $0.2703/g for resin pickup billing, derived from $0.30/mL at 1.11 g/mL
+- **Payment_Rate:** $0.10/g (Filament) or **$0.30/g** (Resin)—pickup and estimates both use mass in grams; resin **estimates** start from slicer **mL** multiplied by density **1.11 g/mL** before applying the gram rate
 - **$3.00:** Minimum charge applied if calculated cost is lower
 
 #### Calculation Examples
@@ -861,16 +862,16 @@ FinalCost = Max($3.00, FinalWeight × Payment_Rate)
 - **Final Cost: $7.50**
 
 **Example 3: Small Resin Miniature**
-- Volume: 20 mL
+- Volume: 20 mL (slicer) → implied mass ~22.2 g (× 1.11 g/mL)
 - Method: Resin
-- Calculated: 20mL × $0.30/mL = $6.00
-- **Final Cost: $6.00**
+- Calculated: ~22.2 g × $0.30/g ≈ **$6.66**
+- **Final Cost: ~$6.66** (or actual scale weight × $0.30/g at pickup, `Max` with $3.00 minimum)
 
 **Example 4: Large Resin Model**
-- Volume: 100 mL
+- Volume: 100 mL (slicer) → implied mass ~111 g
 - Method: Resin
-- Calculated: 100mL × $0.30/mL = $30.00
-- **Final Cost: $30.00**
+- Calculated: ~111 g × $0.30/g ≈ **$33.30**
+- **Final Cost: ~$33.30** (same minimum rule applies)
 
 #### Estimation Process
 

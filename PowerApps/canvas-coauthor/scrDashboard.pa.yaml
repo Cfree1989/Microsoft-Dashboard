@@ -6563,40 +6563,20 @@ Screens:
                   Default: |-
                     =With(
                         {
-                            totalEstWeight: Sum(colBatchItems, EstimatedWeight),
-                            itemCount: CountRows(colBatchItems),
-                            enteredWeight: Value(txtBatchWeight.Text)
+                            enteredWeight: Value(txtBatchWeight.Text),
+                            batchAllResin: CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0
                         },
-                        Text(
-                            Sum(
-                                ForAll(
-                                    colBatchItems As batchItem,
-                                    With(
-                                        {
-                                            allocatedWeight: If(
-                                                totalEstWeight > 0,
-                                                Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
-                                                Round(enteredWeight / itemCount, 2)
-                                            )
-                                        },
-                                        With(
-                                            {
-                                                baseCost: Max(
-                                                    If(
-                                                        batchItem.Method.Value = "Resin",
-                                                        allocatedWeight * varResinGramRate,
-                                                        allocatedWeight * varFilamentRate
-                                                    ),
-                                                    varMinimumCost
-                                                )
-                                            },
-                                            If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
-                                        )
-                                    )
-                                ),
-                                Value
-                            ),
-                            "[$-en-US]#,##0.00"
+                        With(
+                            {
+                                batchBase: Max(
+                                    varMinimumCost,
+                                    enteredWeight * If(batchAllResin, varResinGramRate, varFilamentRate)
+                                )
+                            },
+                            Text(
+                                If(chkBatchOwnMaterial.Value, batchBase * varOwnMaterialDiscount, batchBase),
+                                "[$-en-US]#,##0.00"
+                            )
                         )
                     )
                   FocusedBorderThickness: =varFocusedBorderThickness
@@ -6637,40 +6617,20 @@ Screens:
                   Text: |-
                     =With(
                         {
-                            totalEstWeight: Sum(colBatchItems, EstimatedWeight),
-                            itemCount: CountRows(colBatchItems),
-                            enteredWeight: Value(txtBatchWeight.Text)
+                            enteredWeight: Value(txtBatchWeight.Text),
+                            batchAllResin: CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0
                         },
-                        Text(
-                            Sum(
-                                ForAll(
-                                    colBatchItems As batchItem,
-                                    With(
-                                        {
-                                            allocatedWeight: If(
-                                                totalEstWeight > 0,
-                                                Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
-                                                Round(enteredWeight / itemCount, 2)
-                                            )
-                                        },
-                                        With(
-                                            {
-                                                baseCost: Max(
-                                                    If(
-                                                        batchItem.Method.Value = "Resin",
-                                                        allocatedWeight * varResinGramRate,
-                                                        allocatedWeight * varFilamentRate
-                                                    ),
-                                                    varMinimumCost
-                                                )
-                                            },
-                                            If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
-                                        )
-                                    )
-                                ),
-                                Value
-                            ),
-                            "[$-en-US]$#,##0.00"
+                        With(
+                            {
+                                batchBase: Max(
+                                    varMinimumCost,
+                                    enteredWeight * If(batchAllResin, varResinGramRate, varFilamentRate)
+                                )
+                            },
+                            Text(
+                                If(chkBatchOwnMaterial.Value, batchBase * varOwnMaterialDiscount, batchBase),
+                                "[$-en-US]$#,##0.00"
+                            )
                         )
                     )
                   X: =recBatchPaymentModal.X + 360

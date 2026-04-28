@@ -416,8 +416,8 @@ Reviewed the full `Dashboard Yaml` formula implementations for `btnPaymentConfir
 #### 2. HIGH: Batch Payment Always Uses Filament Rate, Ignoring Resin (confirms prior reviewers)
 
 - **Area:** `btnBatchPaymentConfirm.OnSelect` — `varBatchFinalCost` calculation
-- **Risk:** Formula: `Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost)`. Always uses `varFilamentRate` ($0.10/g), never checks `Method.Value` or uses `varResinRate` ($0.30/g). Resin prints are undercharged by ~67%.
-- **Evidence:** Single payment correctly uses `If(varSelectedItem.Method.Value = "Resin", varResinRate, varFilamentRate)` (Dashboard Yaml ~line 4607). Batch has no equivalent.
+- **Risk:** Formula: `Max(Value(txtBatchWeight.Text) * varFilamentRate, varMinimumCost)`. Always uses `varFilamentRate` ($0.10/g), never checks `Method.Value` or uses `varResinGramRate` ($0.30/g resin). Resin batch checkouts can be undercharged vs single-item payment.
+- **Evidence:** Single payment correctly uses `If(Method = "Resin", varResinGramRate, varFilamentRate)` on pickup weight (grams). Batch path historically omitted the resin branch. Batch has no equivalent.
 - **Classification:** Hard data integrity defect (financial).
 - **Recommendation:** Compute per-item costs inside the ForAll using each item's `Method.Value` to select rate, then sum. Or block resin from batch until per-item pricing is implemented.
 

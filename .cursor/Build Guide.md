@@ -205,7 +205,7 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 | AssignedTo | Person | Optional manual assignment |
 | EstimatedTime | Number | Staff estimation (print time in hours) |
 | EstimatedWeight | Number | Staff estimation (grams for filament, mL for resin) |
-| EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/gram, Resin: $0.30/mL, $3.00 minimum) |
+| EstimatedCost | Currency | Auto-calculated cost (Filament: $0.10/g; Resin: **$0.30/g** on mass from slicer mL × density 1.11 g/mL; $3.00 minimum) |
 | StaffNotes | Multiple lines of text | Staff-only |
 | LastAction | Choice | Created; Updated; Status Change; File Added; Comment Added; Assigned; Email Sent; Rejected; Canceled by Student; System; Approved; Printing; Completed; Picked Up; Student Confirmed |
 | LastActionBy | Person | Who did it |
@@ -216,11 +216,11 @@ Use the table below. For each row: **Add column** → pick **Type** → set the 
 
 > **💰 Pricing Structure for EstimatedCost Calculation:**
 > - **Filament prints:** $0.10 per gram
-> - **Resin prints:** $0.30 per mL  
+> - **Resin prints:** **$0.30 per gram** of printed resin. Staff still enters **slicer volume in mL**; the app multiplies by density (1.11 g/mL) and the gram rate so estimates align with pickup.
 > - **Minimum charge:** $3.00 per print (applied automatically)
-> - **Formula:** `Cost = Max($3.00, MaterialUsage × Method Rate)`
+> - **Formula:** `Cost = Max($3.00, MaterialUsage × Method Rate)` (resin approval uses `mL × (density × $/g)` via `varResinRate` in the Staff app)
 > - **EstimatedTime:** Optional for operational tracking (not used in pricing)
-> - **Pickup billing note:** Resin estimates are created in `mL`, but final pickup can still be entered in grams and converted in-app using the lab's resin density rule
+> - **Pickup billing note:** Resin pickup is weighed in **grams** and charged at the same **$0.30/g** (`varResinGramRate` in the Staff app).
 
 #### 2b. Create helpful **Views**
 Create two modern views to simplify day‑to‑day use. These are lenses on the same data; permissions still control which rows users can see.

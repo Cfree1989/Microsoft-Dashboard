@@ -301,9 +301,11 @@ Set(varHasInvalidFile, false);
 Set(varIsLoading, false);
 
 // === PRICING CONFIGURATION ===
-// For display purposes (estimates shown to students)
+// Matches Staff Dashboard (SharePoint stores estimates; vars kept for parity / future UI)
 Set(varFilamentRate, 0.10);
-Set(varResinRate, 0.30);
+Set(varResinDensity, 1.11);
+Set(varResinGramRate, 0.30);
+Set(varResinRate, varResinDensity * varResinGramRate);
 Set(varMinimumCost, 3.00);
 
 // ============================================
@@ -4484,7 +4486,9 @@ Set(varIsLoading, false);
 
 // === PRICING ===
 Set(varFilamentRate, 0.10);
-Set(varResinRate, 0.30);
+Set(varResinDensity, 1.11);
+Set(varResinGramRate, 0.30);
+Set(varResinRate, varResinDensity * varResinGramRate);
 Set(varMinimumCost, 3.00);
 
 // === STYLING ===

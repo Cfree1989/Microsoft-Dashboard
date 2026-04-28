@@ -607,9 +607,9 @@ ClearCollect(colPayments, FirstN(colAllPayments, 0));
 // === PRICING CONFIGURATION ===
 // Centralized pricing rates - change here to update all cost calculations
 Set(varFilamentRate, 0.10);    // $ per gram for filament printing
-Set(varResinRate, 0.30);       // $ per mL for resin printing  
-Set(varResinDensity, 1.11);    // g per mL for Formlabs Black/Gray/White/Clear V4.1 resin
-Set(varResinGramRate, Round(varResinRate / varResinDensity, 4)); // $ per gram for resin pickup billing
+Set(varResinDensity, 1.11);    // g per mL for Formlabs Black/Gray/White/Clear V4.1 resin (slicer mL → mass)
+Set(varResinGramRate, 0.30);   // $ per gram for resin (pickup scale + estimates via mL×density)
+Set(varResinRate, varResinDensity * varResinGramRate); // $ per slicer mL so (mL × this) = grams × varResinGramRate
 Set(varMinimumCost, 3.00);     // Minimum charge for any print job
 
 // === STYLING / THEMING ===
@@ -793,7 +793,7 @@ Set(varLoadingMessage, "")
 | `varBatchItemCount` | Number of items in batch (calculation temp) | Number |
 | `varBatchLastItemID` | ID of the last batch item (receives rounding remainder) | Number |
 | `varBatchLastItemWeight` | Weight for last batch item after remainder adjustment | Number |
-| `varBatchFinalCost` | Sum of the per-item charges for the current batch run | Number |
+| `varBatchFinalCost` | Confirmed **Charged Amount** for the batch: set from **`Value(txtBatchAmount.Text)`** on **`btnBatchPaymentConfirm`** before **Flow I** (not an app-side sum of per-row minimums) | Number |
 | `varBatchProcessedCount` | Count of items processed (for notification) | Number |
 | `varBatchRecordedAt` | Shared timestamp used for all rows created by one batch checkout | DateTime |
 | `varSelectedItem` | Item currently selected for modal | PrintRequests Record |
@@ -821,9 +821,9 @@ Set(varLoadingMessage, "")
 | `varFinalCost` | Payment modal: final cost after discount | Number |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
 | `varFilamentRate` | Cost per gram for filament printing | Number |
-| `varResinRate` | Cost per mL for resin printing | Number |
-| `varResinDensity` | Resin density in g/mL for pickup conversion | Number |
-| `varResinGramRate` | Cost per gram for resin pickup billing | Number |
+| `varResinDensity` | Resin density in g/mL (slicer mL → estimated grams) | Number |
+| `varResinGramRate` | Cost per gram for resin ($0.30); used at pickup and as the billing basis for estimates | Number |
+| `varResinRate` | `varResinDensity * varResinGramRate` (~$0.333/mL)—multiplier on **slicer mL** so `mL × varResinRate` equals `mL × density × $/g` | Number |
 | `varMinimumCost` | Minimum charge for any print job | Number |
 | `varAppFont` | Global font for consistent styling | Font |
 | `varColorPrimary` | Blue - primary actions | Color |
@@ -4105,7 +4105,7 @@ If(
 )
 ```
 
-> 💰 **Pricing:** Uses `varFilamentRate` ($/g), `varResinRate` ($/mL), and `varMinimumCost` from App.OnStart
+> 💰 **Pricing:** Uses `varFilamentRate` ($/g), `varResinGramRate` ($/g resin), derived `varResinRate` on slicer mL, and `varMinimumCost` from App.OnStart
 
 ---
 
@@ -6413,7 +6413,7 @@ Set(varLoadingMessage, "")
 
 > 💡 **Immediate refresh:** After a Details save, the app refreshes `PrintRequests`, `BuildPlates`, `Payments`, and `RequestComments`, then reloads `colAllBuildPlates`, `colAllPayments`, and `colAllRequestComments` so the card no longer waits for the Build Plates modal path to show updated data.
 
-> 💡 **Cost recalculation:** When material usage or method changes, cost is automatically recalculated using: `Max(varMinimumCost, usage × rate)` where rate is `varFilamentRate` for Filament ($/g) and `varResinRate` for Resin ($/mL).
+> 💡 **Cost recalculation:** When material usage or method changes, cost is automatically recalculated using: `Max(varMinimumCost, usage × rate)` where rate is `varFilamentRate` for Filament ($/g) and, for Resin, `varResinRate` on **slicer mL** (equal to `mL × varResinDensity × varResinGramRate` because `varResinRate = varResinDensity * varResinGramRate`).
 
 > 💡 **Transaction number editing:** The transaction number field only appears for items that have already been paid (have a TransactionNumber value). This allows staff to correct typos without undoing the entire payment.
 
@@ -8709,7 +8709,7 @@ Set(varLoadingMessage, "")
 >
 > ⚠️ **Consistency note:** Batch must follow the same source-of-truth pattern as Step 12C: validate and close each selected request, then write one consolidated `Payments` row for the real-world checkout. The per-request allocation details belong in the saved batch fields and request rollups, not in duplicate ledger rows.
 >
-> ⚠️ **Pricing note:** Batch weight is allocated **proportionally** across the selected requests. **Filament and Resin are not batched together** (see **Batch Eligibility Rules**), so every row shares one `Method.Value` and comparable **EstimatedWeight** units—no mixing mL and grams in the same checkout.
+> ⚠️ **Pricing note:** For **ledger and request rollups**, combined pickup weight is still allocated **proportionally** across the selected requests (same pattern **Flow I** uses with **`varBatchEffectivePaymentRate`**). For **staff-facing price preview** (**`lblBatchCostValue`** / **`txtBatchAmount.Default`**), **`varMinimumCost`** applies **once per batch transaction** to the **entire combined entered weight** (`Max(varMinimumCost, enteredWeight × rate)` for the batch’s single `Method.Value`), then the own-material discount—**not** once per selected request (which would stack minimums). **Filament and Resin are not batched together** (see **Batch Eligibility Rules**), so every row shares one `Method.Value` and comparable **EstimatedWeight** units—no mixing mL and grams in the same checkout. If **Flow I** ever re-applies a per-row minimum server-side, change the flow so allocation is **only proportional dollars** from the single charged total; the in-app preview assumes that model.
 >
 > ⚠️ **Stable identity rule:** Any request with build plates should still persist `PlateKey` values to `Payments.PlateIDsPickedUp` and audit text, but that snapshot is operational context only. If plates are later re-sliced or replaced, the `Payments` row remains the canonical history.
 
@@ -8719,7 +8719,7 @@ Set(varLoadingMessage, "")
 
 - Only requests currently in `Completed` status may enter batch mode.
 - **Single print method per batch.** Selections **must not mix** `Filament` and `Resin`. The gallery blocks adding a second method; **Process Batch Payment** and **`Flow-(I)-Payment-SaveBatch`** also reject mixed batches. Staff process mixed-method pickups as **separate** checkouts (or use single-item payment). This keeps **EstimatedWeight** sums and proportional allocation meaningful (filament in **g**, resin estimates often in **mL**—never added together).
-- Staff enter **one combined pickup total** in **Combined weight**, then confirm or edit the **Charged Amount** in **`txtBatchAmount`**. The live app sets **`varBatchFinalCost`** from **`Value(txtBatchAmount.Text)`** before calling **`Flow-(I)-Payment-SaveBatch`**. The **Calculated Total** readout (**`lblBatchCostValue`**) is the proportional **preview** from the same math as the **`Default`** on **`txtBatchAmount`**, with **`txtBatchAmount.OnChange`/`Reset`** on weight and own-material to avoid stale overrides.
+- Staff enter **one combined pickup total** in **Combined weight**, then confirm or edit the **Charged Amount** in **`txtBatchAmount`**. The live app sets **`varBatchFinalCost`** from **`Value(txtBatchAmount.Text)`** before calling **`Flow-(I)-Payment-SaveBatch`**. The **Calculated Total** readout (**`lblBatchCostValue`**) is the **batch-level** preview (**one minimum** on combined weight, then own-material discount); **`txtBatchAmount.Default`** uses the **same** expression (formatted as a number for the input). **`txtBatchAmount.OnChange`/`Reset`** on weight and own-material avoid stale overrides.
 - If a selected request has build plates, batch processing must re-check that there are no `Queued` or `Printing` plates before confirming payment.
 - If a selected request has build plates, batch processing must verify that at least one remaining plate is eligible for pickup (`Status = "Completed"`). Requests whose plates are already fully `Picked Up` must be removed from the batch with a blocking message.
 - Batch pickup always means "pick up all remaining eligible completed plates for this request now." There is no per-plate checkbox UI inside the batch modal.
@@ -8743,7 +8743,7 @@ scrDashboard
     ├── lblBatchPayerNameLabel / txtBatchPayerName
     ├── lblBatchWeightLabel / txtBatchWeight          ← left column; `txtBatchWeight.OnChange` = Reset(txtBatchAmount)
     ├── lblBatchAmountLabel / txtBatchAmount         ← “Charged Amount” — `Value(txtBatchAmount.Text)` is what **`btnBatchPaymentConfirm`** stores in **`varBatchFinalCost`** for **Flow I**
-    ├── lblBatchCostLabel / lblBatchCostValue        ← “Calculated Total” preview (X ≈ +360); same proportional math; optional cross-check to typed amount
+    ├── lblBatchCostLabel / lblBatchCostValue        ← “Calculated Total” preview (X ≈ +360); batch-level min + rate math (matches **`txtBatchAmount.Default`**); optional cross-check to typed amount
     ├── chkBatchOwnMaterial                           ← `OnCheck` / `OnUncheck` = Reset(txtBatchAmount)
     ├── lblBatchItemsHeader
     ├── galBatchItems
@@ -9275,7 +9275,30 @@ Reset(txtBatchAmount)
 | Format | `TextFormat.Number` |
 | HintText | `"Amount charged"` |
 
-57C. Set **`Default:`** to the same proportional **Sum** of per-item base costs as **`lblBatchCostValue.Text`** (see the block in **`scrDashboard.pa.yaml`** for **`txtBatchAmount.Default`**) so staff get a good starting value; they can override the dollar amount to match the terminal.
+57C. Set **`Default:`** to the **same batch-level expression** as **`lblBatchCostValue.Text`**, wrapped in `Text(..., "[$-en-US]#,##0.00")` (number input format without a literal `$` in the pattern) so staff get a good starting value; they can override the dollar amount to match the terminal:
+
+```powerfx
+With(
+    {
+        enteredWeight: Value(txtBatchWeight.Text),
+        batchAllResin: CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0
+    },
+    With(
+        {
+            batchBase: Max(
+                varMinimumCost,
+                enteredWeight * If(batchAllResin, varResinGramRate, varFilamentRate)
+            )
+        },
+        Text(
+            If(chkBatchOwnMaterial.Value, batchBase * varOwnMaterialDiscount, batchBase),
+            "[$-en-US]#,##0.00"
+        )
+    )
+)
+```
+
+> ⚠️ **Power Fx scope:** A record literal in `With({ ... })` cannot reference **sibling** fields (`batchBase` must not sit beside `enteredWeight` in the **same** `{ }`). Nest a second `With` for `batchBase` as above, or Studio reports **`enteredWeight` isn't recognized** / **`If` has some invalid arguments**.
 
 ---
 
@@ -9318,45 +9341,25 @@ Reset(txtBatchAmount)
 ```powerfx
 With(
     {
-        totalEstWeight: Sum(colBatchItems, EstimatedWeight),
-        itemCount: CountRows(colBatchItems),
-        enteredWeight: Value(txtBatchWeight.Text)
+        enteredWeight: Value(txtBatchWeight.Text),
+        batchAllResin: CountIf(colBatchItems, Method.Value = "Resin") = CountRows(colBatchItems) && CountRows(colBatchItems) > 0
     },
-    Text(
-        Sum(
-            ForAll(
-                colBatchItems As batchItem,
-                With(
-                    {
-                        allocatedWeight: If(
-                            totalEstWeight > 0,
-                            Round((batchItem.EstimatedWeight / totalEstWeight) * enteredWeight, 2),
-                            Round(enteredWeight / itemCount, 2)
-                        )
-                    },
-                    With(
-                        {
-                            baseCost: Max(
-                                If(
-                                    batchItem.Method.Value = "Resin",
-                                    allocatedWeight * varResinGramRate,
-                                    allocatedWeight * varFilamentRate
-                                ),
-                                varMinimumCost
-                            )
-                        },
-                        If(chkBatchOwnMaterial.Value, baseCost * varOwnMaterialDiscount, baseCost)
-                    )
-                )
-            ),
-            Value
-        ),
-        "[$-en-US]$#,##0.00"
+    With(
+        {
+            batchBase: Max(
+                varMinimumCost,
+                enteredWeight * If(batchAllResin, varResinGramRate, varFilamentRate)
+            )
+        },
+        Text(
+            If(chkBatchOwnMaterial.Value, batchBase * varOwnMaterialDiscount, batchBase),
+            "[$-en-US]$#,##0.00"
+        )
     )
 )
 ```
 
-> 💡 **Auto-calculated:** Cost updates in real-time from the entered combined weight, then prices each request with its own method-specific rate before summing the per-item charges.
+> 💡 **Auto-calculated:** Updates from **combined** entered weight. **`varMinimumCost`** applies **once** to the batch (`Max` with weight × **`varFilamentRate`** or **`varResinGramRate`** when the batch is all resin—same detection as **`lblBatchWeightLabel.Color`**), then the own-material discount—so multiple minimum-priced jobs in one checkout do **not** each add a separate floor. **`lblBatchSummary`** “Estimated Total” still uses **`Sum(colBatchItems, EstimatedCost)`** from SharePoint and may disagree when several rows each stored a per-request minimum; for checkout, trust **Combined weight** + **Calculated Total** / **Charged Amount**.
 
 ---
 
@@ -9750,11 +9753,9 @@ Then re-paste these formulas:
 
 #### Error: "Name isn't valid. 'allocatedWeight' isn't recognized." / "Name isn't valid. 'wAllocatedWeight' isn't recognized."
 
-**Cause:** Power Fx can reject sibling local-variable references inside the same record literal of a `With(...)`.
+**Cause:** Older Step 12E drafts used a `ForAll` per-item allocation formula where Power Fx could reject sibling local-variable references inside the same record literal of a `With(...)`.
 
-**Fix:** Use the nested `With(...)` version shown in this guide for both:
-- `lblBatchCostValue.Text`
-- the `Set(varBatchFinalCost, ...)` block inside `btnBatchPaymentConfirm.OnSelect`
+**Fix:** Use the **nested `With`** batch formulas in this guide for **`lblBatchCostValue.Text`** and **`txtBatchAmount.Default`** (outer `With` = `enteredWeight` + `batchAllResin`, inner `With` = `batchBase` so `batchBase` is not a sibling of `enteredWeight` in one record literal). The **`Set(varBatchFinalCost, Value(txtBatchAmount.Text))`** block in **`btnBatchPaymentConfirm.OnSelect`** does not use `allocatedWeight`.
 
 #### Error: "The function 'Patch' has some invalid arguments." / "Invalid argument type (Table). Expecting a Record value instead."
 
@@ -15149,9 +15150,9 @@ Use this checklist to verify all features work correctly:
 | `varIsStaff` | App.OnStart | Staff member check |
 | `colStaff` | App.OnStart | Active staff collection |
 | `varFilamentRate` | App.OnStart | Filament price per gram ($0.10) |
-| `varResinRate` | App.OnStart | Resin price per mL ($0.30) |
 | `varResinDensity` | App.OnStart | Resin density in g/mL (1.11) |
-| `varResinGramRate` | App.OnStart | Resin pickup price per gram (~$0.2703) |
+| `varResinGramRate` | App.OnStart | Resin price per gram ($0.30)—pickup and billing basis |
+| `varResinRate` | App.OnStart | Derived: `varResinDensity * varResinGramRate` (~$0.333/mL on slicer volume) |
 | `varMinimumCost` | App.OnStart | Minimum charge ($3.00) |
 | `varSelectedStatus` | Status tab click | Current filter |
 | `varSelectedItem` | Button click | Item for modal |
@@ -15198,14 +15199,14 @@ LastActionBy: {
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `varFilamentRate` | `0.10` | $ per gram for filament |
-| `varResinRate` | `0.30` | $ per mL for resin |
 | `varResinDensity` | `1.11` | g per mL for supported resin colors (Black/Gray/White/Clear V4.1) |
-| `varResinGramRate` | `Round(varResinRate / varResinDensity, 4)` | $ per gram for resin pickup billing |
+| `varResinGramRate` | `0.30` | $ per gram for resin (pickup and equivalent estimate cost) |
+| `varResinRate` | `varResinDensity * varResinGramRate` | $ per slicer mL so approval/details `mL × varResinRate` matches `grams × varResinGramRate` |
 | `varMinimumCost` | `3.00` | Minimum charge |
 
 **For Estimates (Approval Modal):**
 ```powerfx
-// EstimatedCost from EstimatedWeight
+// EstimatedCost from EstimatedWeight (filament: g; resin: slicer mL × varResinRate = mL × density × varResinGramRate)
 Max(varMinimumCost, EstimatedWeight * If(Method = "Resin", varResinRate, varFilamentRate))
 ```
 
@@ -15217,7 +15218,7 @@ Set(varBaseCost, Max(varMinimumCost, FinalWeight * If(Method = "Resin", varResin
 Set(varFinalCost, If(chkOwnMaterial.Value, varBaseCost * varOwnMaterialDiscount, varBaseCost))
 ```
 
-> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (grams for filament, slicer mL for resin). FinalWeight/FinalCost are recorded at payment pickup in grams for both methods; resin pickup charges convert those grams through `varResinGramRate`.
+> 💡 **Estimate vs Actual:** EstimatedWeight/EstimatedCost are set at approval (grams for filament, **slicer mL** for resin). Resin **policy** is **$0.30/g**; the app stores slicer mL and multiplies by `varResinRate` (= `varResinDensity * varResinGramRate`) so the dollar amount matches `mL × density × $0.30`. FinalWeight/FinalCost at pickup use **grams × `varResinGramRate`** ($0.30/g) for resin.
 >
 > 💡 **Own Material Discount:** When student provides their own filament/resin, check `chkOwnMaterial` for a 70% discount (student pays 30% of normal cost). This is saved to the `StudentOwnMaterial` field.
 
@@ -15998,6 +15999,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Details save — skip empty `UPDATED` in Notes** | **`btnDetailsConfirm`**: when **`varChangeDesc`** is blank (e.g. only **Student own material** / implied **`EstimatedCost`** change), **`StaffNotes`** is left unchanged (no `UPDATED by …` append). SharePoint fields, **`LastAction`**, and **`Flow-(C)-Action-LogAction`** are unchanged. |
 | **2026-04-27: `conBatchPaymentModal` inventory** | Live coauthor added **`lblBatchAmountLabel`** + **`txtBatchAmount`** (custom batch charged amount, tied to own-material / payment-type changes). Added to the Live coauthor control inventory. |
 | **2026-04-27: Step 12E + `Notes-Format-Options` sync** | **Step 12E** now documents the **Charged Amount** row, **Calculated Total** at **`X + 360`**, list/header **`Y`**, own-material **Reset** hooks, and **`btnBatchPaymentConfirm`** / cancel / success **`DisplayMode`·`OnSelect`** ( **`varBatchFinalCost`**, **`varBatchEffectivePaymentRate`**, **`Flow-(I)`**·**`.Run`** signature) matching **`scrDashboard.pa.yaml`**. **`PowerApps/Notes-Format-Options.md`** “Dashboard Card Behavior” updated: Notes count / red state = **`[NOTE] `** segments only (same as the job-card formulas in this spec), not all **`StaffNotes`** segments. |
+| **2026-04-28: Step 12E batch minimum (one per transaction)** | **`lblBatchCostValue`** and **`txtBatchAmount.Default`** now document **batch-level** pricing: **`Max(varMinimumCost, combinedWeight × rate)`** once per checkout (then own-material discount), not a sum of per-row **`Max(..., varMinimumCost)`** (which stacked minimums). **`lblBatchSummary`** “Estimated Total” may still differ from **`Sum(EstimatedCost)`** on cards; variable table **`varBatchFinalCost`** clarified as the typed charged amount. Troubleshooting updated for obsolete **`allocatedWeight`** errors and for **nested `With`** (Power Fx cannot reference sibling names inside one `{ }` record literal—`batchBase` must be in an inner `With` or Studio shows **`enteredWeight` isn't recognized**). Live **`scrDashboard.pa.yaml`** (and **`.cursor-mcp-deploy`** when used) aligned to the same formulas. |
 
 # Next Steps
 

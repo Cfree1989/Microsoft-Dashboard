@@ -1519,7 +1519,7 @@ The entire application stack is operationally deployed using Docker and Docker C
 
 ### 5.5 Cost Matrix & Calculation (Operational)
 - Filament Print Cost: $0.10 per gram (enforced in catalog configuration).
-- Resin Print Cost: $0.20 per gram (enforced in catalog configuration).
+- Resin Print Cost: $0.30 per gram (Staff Dashboard: `varResinGramRate`; catalog copy should match).
 - $3.00 minimum charge for all print jobs (system-enforced).
 - Operational cost calculation based on dynamic catalog material pricing and job weight.
 

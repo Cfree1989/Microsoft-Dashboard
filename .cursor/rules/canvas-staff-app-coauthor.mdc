@@ -5,8 +5,6 @@ alwaysApply: true
 
 # Staff Dashboard Canvas (Print Lab) — coauthoring
 
-**Full details:** [PowerApps/CANVAS-COAUTHOR-WORKFLOW.md](PowerApps/CANVAS-COAUTHOR-WORKFLOW.md) (and [README.md](README.md) at repo root).
-
 ## Files to use
 
 - **Git canonical YAML:** `PowerApps/canvas-coauthor/App.pa.yaml`, `scrDashboard.pa.yaml`, `scrSchedule.pa.yaml` — keep these in sync with the live app after a successful push.
@@ -26,7 +24,7 @@ alwaysApply: true
 - Push from an **empty** `scrDashboard.pa.yaml` (or missing screens) — can corrupt the live coauthor session.
 - Maintain parallel ad-hoc “sync” trees; one deploy dir + one canonical `canvas-coauthor` path.
 
-**Student Portal** is a **different** app — not these files. See the workflow doc.
+**Student Portal** is a **different** app — source under `PowerApps/source/StudentPortal/` (not these three Staff `.pa.yaml` files).
 
 ---
 
