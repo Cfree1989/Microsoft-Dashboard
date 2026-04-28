@@ -603,13 +603,14 @@ Screens:
                                     With(
                                         {
                                             dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
+                                            dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"),
                                             si: slot.Idx
                                         },
                                         If(
                                             CountRows(dayStaff) = 0,
                                             If(
                                                 slot.Idx = minSlotIdx,
-                                                "<td rowspan='" & Text(slotCount) & "' style='border:1px solid #bdbdbd;border-top:1px solid #d7ccc8;background:#fdfaf6;text-align:center;color:#999;vertical-align:middle;padding:12px;font-size:11px;'>No shifts</td>",
+                                                "<td rowspan='" & Text(slotCount) & "' style='border:1px solid #bdbdbd;border-top:1px solid #d7ccc8;background:" & dayCellBg & ";text-align:center;color:#999;vertical-align:middle;padding:12px;font-size:11px;'>No shifts</td>",
                                                 ""
                                             ),
                                             Concat(
@@ -619,7 +620,7 @@ Screens:
                                                         cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
                                                         on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
                                                     },
-                                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:#fdfaf6;") & "'></td>"
+                                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
                                                 )
                                             )
                                         )

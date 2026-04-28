@@ -707,14 +707,113 @@ Use **`HtmlViewer`** (`htmlSchedGrid`). Do **not** follow older guides that used
 
 ### Authoritative `HtmlText` formula
 
-The live formula is **large** and must stay under Power Fx string limits. **Source of truth:** `PowerApps/canvas-coauthor/scrSchedule.pa.yaml` → control **`htmlSchedGrid`** → property **`HtmlText`**. Copy from there when updating Studio by hand.
+Paste this into **`htmlSchedGrid.HtmlText`** in Studio. It uses inline table styles only, carries the alternating day color down into blank grid cells, and keeps scheduled shift blocks in each staff member's saturated `Hex` color.
+
+```powerfx
+With(
+    {
+        st: Sort(colSchedStaff, SchedSortOrder, SortOrder.Ascending),
+        H: 28,
+        slotCount: CountRows(Filter(colTimeSlots, Idx < 16)),
+        minSlotIdx: Min(Filter(colTimeSlots, Idx < 16), Idx)
+    },
+    "<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;box-sizing:border-box;background:#f5f1eb;padding:8px;font-family:Segoe UI,Arial,sans-serif;font-size:11px;'>" &
+    "<table cellpadding='0' style='width:100%;border-collapse:collapse;table-layout:fixed;background:#e8e0d8;border:2px solid #d7ccc8;border-radius:10px;overflow:hidden;'>" &
+    "<tr><td rowspan='2' style='width:80px;min-width:80px;background:#fdf6f0;border-right:2px solid #d7ccc8;box-sizing:border-box;'></td>" &
+    Concat(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
+        With(
+            {
+                dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
+                dayBg: Switch(dn.Value, "Monday", "#c1b3a3", "Tuesday", "#ece2d6", "Wednesday", "#c1b3a3", "Thursday", "#ece2d6", "Friday", "#c1b3a3", "#d7ccc8")
+            },
+            With(
+                {nc: CountRows(dayStaff)},
+                If(
+                    nc = 0,
+                    "<th style='height:" & Text(H) & "px;background:" & dayBg & ";text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;border:1px solid #bdbdbd;color:#3e2723;padding:2px;'>" & Upper(dn.Value) & "</th>",
+                    "<th colspan='" & Text(nc) & "' style='height:" & Text(H) & "px;background:" & dayBg & ";text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;border:1px solid #bdbdbd;color:#3e2723;padding:2px;'>" & Upper(dn.Value) & "</th>"
+                )
+            )
+        )
+    ) &
+    "<td rowspan='2' style='width:80px;min-width:80px;background:#fdf6f0;border-left:2px solid #d7ccc8;box-sizing:border-box;'></td></tr>" &
+    "<tr>" &
+    Concat(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
+        With(
+            {dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)},
+            If(
+                CountRows(dayStaff) = 0,
+                "<td style='height:" & Text(H) & "px;background:#e8e0d8;border:1px solid #bdbdbd;'></td>",
+                Concat(
+                    dayStaff As s,
+                    With(
+                        {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
+                        "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;border:1px solid #bdbdbd;overflow:hidden;white-space:nowrap;'>" &
+                        Left(First(Split(Trim(s.MemberName), " ")).Value, 1) &
+                        Left(Last(Split(Trim(s.MemberName), " ")).Value, 1) &
+                        "</td>"
+                    )
+                )
+            )
+        )
+    ) &
+    "</tr>" &
+    Concat(
+        Filter(colTimeSlots, Idx < 16) As slot,
+        With(
+            {
+                nxt: Coalesce(LookUp(colTimeSlots, Idx = slot.Idx + 1).Label, "4:30 PM"),
+                brd: "border-top:1px solid #d7ccc8;"
+            },
+            With(
+                {lab: Left(slot.Label, Find(" ", slot.Label) - 1) & "-" & Left(nxt, Find(" ", nxt) - 1)},
+                "<tr style='height:" & Text(H) & "px;'>" &
+                "<td style='" & brd & "background:#fdf6f0;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;font-size:11px;vertical-align:middle;border-right:2px solid #d7ccc8;box-sizing:border-box;'>" & lab & "</td>" &
+                Concat(
+                    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] As dn,
+                    With(
+                        {
+                            dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0),
+                            dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"),
+                            si: slot.Idx
+                        },
+                        If(
+                            CountRows(dayStaff) = 0,
+                            If(
+                                slot.Idx = minSlotIdx,
+                                "<td rowspan='" & Text(slotCount) & "' style='border:1px solid #bdbdbd;border-top:1px solid #d7ccc8;background:" & dayCellBg & ";text-align:center;color:#999;vertical-align:middle;padding:12px;font-size:11px;'>No shifts</td>",
+                                ""
+                            ),
+                            Concat(
+                                dayStaff As s,
+                                With(
+                                    {
+                                        cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
+                                        on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
+                                    },
+                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
+                                )
+                            )
+                        )
+                    )
+                ) &
+                "<td style='" & brd & "background:#fdf6f0;text-align:center;color:#5d4037;white-space:nowrap;padding:0 4px;font-size:11px;vertical-align:middle;border-left:2px solid #d7ccc8;box-sizing:border-box;'>" & lab & "</td>" &
+                "</tr>"
+            )
+        )
+    ) &
+    "</table></div>"
+)
+```
 
 **Structure summary (as implemented):**
 
 - Outer `<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;…'>` so horizontal overflow can still fit if needed without the grid taking over vertical scrolling.
 - **Single master `<table>`** with `border-collapse:collapse`, `table-layout:fixed`, `width:100%`, and **per-cell** `border:1px solid #bdbdbd` (plus `border-top:1px solid #d7ccc8` on every slot row, including the first, so the grid line under the legend is visible). One outer rounded border wraps the whole table (`border:2px solid #d7ccc8;border-radius:10px`).
 - **Header rows:** Row 1 — left/right **corner** cells (`rowspan=2`, 80px) bracket Mon–Fri **`<th>`** cells (dynamic `colspan` from `CountRows(dayStaff)`). Row 2 — staff **initials** `<td>`s (one per staff column); empty placeholder `<td>` for a day with no staff.
-- **Slot rows:** one **`<tr style='height:{H}px'>`** per **`Filter(colTimeSlots, Idx < 16)`**. Cell order: **left time label** | Mon columns… | Tue… | … | **right time label** (same text as left). **`With({ si: slot.Idx }, …)`** when testing `colSchedLookup` so the slot index is in scope for each staff cell.
+- **Slot rows:** one **`<tr style='height:{H}px'>`** per **`Filter(colTimeSlots, Idx < 16)`**. Cell order: **left time label** | Mon columns… | Tue… | … | **right time label** (same text as left). **`With({ dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"), si: slot.Idx }, …)`** keeps the Mon/Wed/Fri vs Tue/Thu day banding visible down the grid while staff shift blocks still use each person's saturated `Hex` color.
 - **Per day filtering (reduces visual clutter):** For each day, `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, …)` so only staff with shifts on that day get columns. **`H = 28`** for header, legend, and slot row heights (same pitch everywhere).
 - **No shifts:** for a day with `CountRows(dayStaff)=0`, emit **one** `<td rowspan='{slotCount}' …>No shifts</td>` on the **first** slot row (`slot.Idx = Min(…)` / `minSlotIdx` in the YAML); emit `""` for that day on later slot rows so column counts stay valid.
 - **Gallery `TemplateSize`:** the scroll template’s grid segment uses the same **28px** slot pitch as the HtmlViewer (`80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28` in the formula’s grid part) so the body height matches the rendered grid.
