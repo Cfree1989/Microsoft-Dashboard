@@ -3963,7 +3963,7 @@ Screens:
                   HoverFill: =varDropdownHoverFill
                   IsSearchable: =false
                   Items: =Choices([@PrintRequests].Method)
-                  OnChange: =Reset(ddDetailsPrinter)
+                  OnChange: =Reset(ddDetailsPrinter); Reset(ddDetailsColor)
                   PressedColor: =varDropdownPressedColor
                   PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]
@@ -4055,14 +4055,42 @@ Screens:
                   ChevronFill: =varChevronFill
                   ChevronHoverBackground: =varChevronHoverBackground
                   ChevronHoverFill: =varChevronHoverFill
-                  DefaultSelectedItems: =If(IsBlank(varSelectedItem.Color), Blank(), [varSelectedItem.Color])
+                  DefaultSelectedItems: |-
+                    =With(
+                        {
+                            m: Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value),
+                            c: varSelectedItem.Color
+                        },
+                        If(
+                            IsBlank(c),
+                            Blank(),
+                            If(
+                                m = "Resin",
+                                If(Or(c.Value = "Black", c.Value = "White", c.Value = "Gray", c.Value = "Clear"), [c], Blank()),
+                                [c]
+                            )
+                        )
+                    )
                   DisplayFields: =["Value"]
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
                   Height: =36
                   HoverFill: =varDropdownHoverFill
                   IsSearchable: =false
-                  Items: =Choices([@PrintRequests].Color)
+                  Items: |-
+                    =With(
+                        {selectedMethod: Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
+                        Filter(
+                            Choices([@PrintRequests].Color),
+                            Or(
+                                selectedMethod <> "Resin",
+                                Value = "Black",
+                                Value = "White",
+                                Value = "Gray",
+                                Value = "Clear"
+                            )
+                        )
+                    )
                   PressedColor: =varDropdownPressedColor
                   PressedFill: =varDropdownPressedFill
                   SearchFields: =["Value"]

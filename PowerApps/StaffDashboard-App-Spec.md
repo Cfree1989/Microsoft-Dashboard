@@ -5692,7 +5692,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 | DisplayFields | `["Value"]` |
 | SearchFields | `["Value"]` |
 | DefaultSelectedItems | `If(IsBlank(varSelectedItem.Method), Blank(), [varSelectedItem.Method])` |
-| OnChange | `Reset(ddDetailsPrinter)` |
+| OnChange | `Reset(ddDetailsPrinter); Reset(ddDetailsColor)` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5712,7 +5712,7 @@ If(IsBlank(varSelectedItem.EstimatedCost), "No cost", "$" & Text(varSelectedItem
 
 > 💡 **Preloaded current value:** Preloading the current Method makes the modal easier to understand and keeps the combo box aligned with the record that is being edited.
 
-> ⚠️ **Important:** Changing Method resets the Printer dropdown to show only compatible printers.
+> ⚠️ **Important:** Changing Method resets the **Printer** dropdown to show only compatible printers and **resets `ddDetailsColor`** so the color combo reapplies **`DefaultSelectedItems`** against the filtered **Items** list (avoids a filament-only color staying selected when Method is switched to **Resin**).
 
 ---
 
@@ -5819,13 +5819,11 @@ With(
 
 | Property | Value |
 |----------|-------|
-| Items | `Choices([@PrintRequests].Color)` |
 | X | `recDetailsModal.X + 20` |
 | Y | `recDetailsModal.Y + 278` |
 | Width | `200` |
 | Height | `36` |
 | DisplayFields | `["Value"]` |
-| DefaultSelectedItems | `If(IsBlank(varSelectedItem.Color), Blank(), [varSelectedItem.Color])` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
 | BorderThickness | `varInputBorderThickness` |
@@ -5842,6 +5840,46 @@ With(
 | PressedColor | `varDropdownPressedColor` |
 | SelectionFill | `varDropdownSelectionFill` |
 | SelectionColor | `varDropdownSelectionColor` |
+
+42b. Set **DefaultSelectedItems** (effective Method via `Coalesce`; when **Resin**, only preselect if the saved color is **Black**, **White**, **Gray**, or **Clear** — otherwise **Blank** until staff pick a valid resin color):
+
+```powerfx
+With(
+    {
+        m: Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value),
+        c: varSelectedItem.Color
+    },
+    If(
+        IsBlank(c),
+        Blank(),
+        If(
+            m = "Resin",
+            If(Or(c.Value = "Black", c.Value = "White", c.Value = "Gray", c.Value = "Clear"), [c], Blank()),
+            [c]
+        )
+    )
+)
+```
+
+42c. Set **Items** (same resin allowlist as Student submit: when effective Method is **Resin**, only **Black / White / Gray / Clear**; otherwise all SharePoint color choices):
+
+```powerfx
+With(
+    {selectedMethod: Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)},
+    Filter(
+        Choices([@PrintRequests].Color),
+        Or(
+            selectedMethod <> "Resin",
+            Value = "Black",
+            Value = "White",
+            Value = "Gray",
+            Value = "Clear"
+        )
+    )
+)
+```
+
+> **Parity:** Matches **`PowerApps/source/StudentPortal/Other/Src/scrSubmit.pa.yaml`** **`DataCardValue9`** **`Items`** filter for **Resin**.
 
 ---
 
@@ -16000,6 +16038,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: `conBatchPaymentModal` inventory** | Live coauthor added **`lblBatchAmountLabel`** + **`txtBatchAmount`** (custom batch charged amount, tied to own-material / payment-type changes). Added to the Live coauthor control inventory. |
 | **2026-04-27: Step 12E + `Notes-Format-Options` sync** | **Step 12E** now documents the **Charged Amount** row, **Calculated Total** at **`X + 360`**, list/header **`Y`**, own-material **Reset** hooks, and **`btnBatchPaymentConfirm`** / cancel / success **`DisplayMode`·`OnSelect`** ( **`varBatchFinalCost`**, **`varBatchEffectivePaymentRate`**, **`Flow-(I)`**·**`.Run`** signature) matching **`scrDashboard.pa.yaml`**. **`PowerApps/Notes-Format-Options.md`** “Dashboard Card Behavior” updated: Notes count / red state = **`[NOTE] `** segments only (same as the job-card formulas in this spec), not all **`StaffNotes`** segments. |
 | **2026-04-28: Step 12E batch minimum (one per transaction)** | **`lblBatchCostValue`** and **`txtBatchAmount.Default`** now document **batch-level** pricing: **`Max(varMinimumCost, combinedWeight × rate)`** once per checkout (then own-material discount), not a sum of per-row **`Max(..., varMinimumCost)`** (which stacked minimums). **`lblBatchSummary`** “Estimated Total” may still differ from **`Sum(EstimatedCost)`** on cards; variable table **`varBatchFinalCost`** clarified as the typed charged amount. Troubleshooting updated for obsolete **`allocatedWeight`** errors and for **nested `With`** (Power Fx cannot reference sibling names inside one `{ }` record literal—`batchBase` must be in an inner `With` or Studio shows **`enteredWeight` isn't recognized**). Live **`scrDashboard.pa.yaml`** (and **`.cursor-mcp-deploy`** when used) aligned to the same formulas. |
+| **2026-04-28: Details modal — Color vs Method (Resin)** | **`ddDetailsColor`**: **`Items`** filters **`Choices([@PrintRequests].Color)`** when effective Method is **Resin** to **Black / White / Gray / Clear** (Student Portal parity). **`DefaultSelectedItems`** uses **`Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)`** so filament-only saved colors do not preselect under Resin. **`ddDetailsMethod.OnChange`**: **`Reset(ddDetailsPrinter); Reset(ddDetailsColor)`**. |
 
 # Next Steps
 
