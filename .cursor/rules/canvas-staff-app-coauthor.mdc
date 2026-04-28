@@ -14,10 +14,12 @@ alwaysApply: true
 
 ## Required loop (every change that must hit the live app)
 
-1. **`sync_canvas`** → target directory (e.g. `.cursor-mcp-deploy`) to pull the **current** coauthor session.
-2. **Edit** the complete `.pa.yaml` set in that directory (never a stale or half-export).
-3. **`compile_canvas`** on that directory; fix blocking issues before calling it done.
-4. **`sync_canvas`** again, then **update** `PowerApps/canvas-coauthor/*` to match, **commit** when the repo should record live state.
+1. **`sync_canvas`** → target directory (e.g. `.cursor-mcp-deploy`) to pull the **current** coauthor session. Treat this as a read/check step, not proof that live is correct.
+2. **Before editing, compiling, copying, or updating specs**, diff the synced `.cursor-mcp-deploy/*.pa.yaml` files against `PowerApps/canvas-coauthor/*.pa.yaml` and summarize the behavioral/formula differences to the user in plain language.
+3. If live and repo differ, **stop and ask which side should win**. Do not assume live should overwrite repo. If the repo contains intentional fixes that are missing from live, restore/seed `.cursor-mcp-deploy` from the repo before pushing those fixes back to the app.
+4. **Edit** the complete `.pa.yaml` set in the chosen source of truth directory (never a stale or half-export).
+5. **`compile_canvas`** on that directory; fix blocking issues before calling it done.
+6. **`sync_canvas`** again, then diff live vs repo again. Only update `PowerApps/canvas-coauthor/*` and specs when the user has confirmed the post-sync live state is the state the repo should record.
 
 ## Do not
 
