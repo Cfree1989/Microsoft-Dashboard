@@ -7281,7 +7281,7 @@ Screens:
                                         text: If(StartsWith(entry.Value, "[NOTE] "), Mid(entry.Value, 8, Len(entry.Value) - 7), entry.Value),
                                         isManualNote: StartsWith(entry.Value, "[NOTE] ")
                                     },
-                                        With(
+                                    With(
                                         {
                                             datetime: Last(Split(text, " - ")).Value,
                                             beforeDatetime: Left(text, Max(0, Len(text) - Len(Last(Split(text, " - ")).Value) - 3)),

@@ -14588,6 +14588,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 4. **Normalize schedule emails at every join point.** Store `colSchedStaff.MemberEmail`, `colShifts.Email`, and `varSchedSelectedEmail` as `Lower(Trim(...))`, and compare/de-duplicate `StaffShifts.StaffEmail` with the same normalization. Without that, case or stray whitespace differences can hide saved shifts on load or leave orphaned rows behind on save.
 5. **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 6. **Reorder panel sizes to content, not to screen.** Don't revert `Height` to `Parent.Height - Self.Y`; use `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` so the background hugs the last row instead of stretching to the bottom.
+7. **AidType weekly hour caps are fixed in canvas formulas (not SharePoint).** **Apr 30, 2026:** `lblSchedAidInfo` and the sortable totals (`MaxH`) use `Switch(AidType, …)` — **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week. SharePoint only stores `AidType`; changing caps requires editing those formulas in `scrSchedule` (see [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md)).
 
 ### Authoring workflow (canvas-authoring MCP)
 

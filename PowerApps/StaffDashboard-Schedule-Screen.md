@@ -539,9 +539,9 @@ If(
         aidType: drpSchedName.Selected.AidType,
         maxHrs: Switch(
             drpSchedName.Selected.AidType,
-            "Work Study",         12,
+            "Work Study",         13,
             "Graduate Assistant", 20,
-            6
+            7
         ),
         mins: Sum(
             AddColumns(
@@ -567,9 +567,9 @@ If(
 ```
 =With(
     {maxHrs: Switch(drpSchedName.Selected.AidType,
-                 "Work Study",         12,
+                 "Work Study",         13,
                  "Graduate Assistant", 20,
-                 6)},
+                 7)},
     If(
         Value(Mid(lblSchedAidInfo.Text, Find("·", lblSchedAidInfo.Text) + 2, 4)) > maxHrs,
         varColorDanger,
@@ -1076,7 +1076,7 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 - Select your name from the ComboBox (`Select Your Name` placeholder when empty)
 - In the gallery, set Day **Monday**, Start **9:00 AM**, End **1:00 PM**
 - Click **+ Add shift** and add **Wednesday** 10:00 AM – 2:00 PM
-- Hour counter should show "8 / 12 hrs" (or "8 / 6 hrs" for President's Aid), etc.
+- Hour counter should show "8 / 13 hrs" (or "8 / 7 hrs" for President's Aid), etc.
 - Click **Save Schedule**
 - Grid should update with your colored blocks
 
@@ -1331,5 +1331,6 @@ To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in
 | **conSchedScrollBody.Items** | Docs previously showed `=[1]`; live app uses **`=[varSchedScrollVersion]`** as the gallery refresh key. |
 | **TemplateSize** | Live formula uses **`(80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28) + Max(CountRows(colSchedStaff), 1) * 28 + 124`**, not `* 30` for slot rows. Updated in this guide. |
 | **Root controls** | Live screen has `recSchedHeader`, `btnSchedBack`, `lblSchedTitle`, **`conSchedScrollBody`** (vertical gallery wrapping the whole scroll body). |
+| **Weekly hour caps (AidType)** | **Apr 30, 2026:** Canvas formulas enforce **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week (`lblSchedAidInfo` + totals `MaxH`). SharePoint stores only `AidType`; numeric caps are fixed in `scrSchedule` YAML. |
 
 

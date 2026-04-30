@@ -211,7 +211,7 @@ Screens:
                   Color: |-
                     =With(
                         {
-                            maxHrs: Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                            maxHrs: Switch(drpSchedName.Selected.AidType, "Work Study", 13, "Graduate Assistant", 20, 7),
                             hrs:    Sum(
                                 Filter(
                                     colEditShifts,
@@ -231,7 +231,7 @@ Screens:
                     =With(
                         {
                             aidType: drpSchedName.Selected.AidType,
-                            maxHrs:  Switch(drpSchedName.Selected.AidType, "Work Study", 12, "Graduate Assistant", 20, 6),
+                            maxHrs:  Switch(drpSchedName.Selected.AidType, "Work Study", 13, "Graduate Assistant", 20, 7),
                             hrs:     Sum(
                                 Filter(
                                     colEditShifts,
@@ -864,7 +864,7 @@ Screens:
                                         wH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Wednesday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
                                         thH:  Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Thursday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
                                         fH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Friday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
-                                        maxH: Switch(p.AidType, "Work Study", 12, "Graduate Assistant", 20, 6)
+                                        maxH: Switch(p.AidType, "Work Study", 13, "Graduate Assistant", 20, 7)
                                     },
                                     {
                                         StaffID:   p.StaffID,

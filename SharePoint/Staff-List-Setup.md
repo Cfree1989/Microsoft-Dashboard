@@ -79,11 +79,11 @@ The app uses `AidType` to enforce weekly hour limits:
 
 | Aid Type | Abbrev | Max Hours/Week | Fund (Annual) |
 |----------|--------|----------------|---------------|
-| President's Aid | PA | 6 hrs | $1,550 |
-| Work Study | WS | 12 hrs | $3,000 |
+| President's Aid | PA | 7 hrs | $1,550 |
+| Work Study | WS | 13 hrs | $3,000 |
 | Graduate Assistant | GA | 20 hrs | — |
 
-> **How WS/PA limits are calculated:** Annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr = max weekly hours. The app enforces this automatically.
+> **How WS/PA limits relate to funding:** A rough planning formula is annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr. **Apr 30, 2026:** The Staff Dashboard Schedule screen enforces **fixed** weekly caps in Power Fx (**PA 7**, **WS 13**, **GA 20**). Changing caps requires updating those formulas (see [`PowerApps/StaffDashboard-Schedule-Screen.md`](../PowerApps/StaffDashboard-Schedule-Screen.md)), not this list alone.
 
 ### Column 5: SchedSortOrder (Number)
 
@@ -135,8 +135,8 @@ Controls the left-to-right column order in the schedule grid. The app's reorder 
 
 1. Click **Edit in grid view** in the toolbar
 2. For each active staff member, click their `AidType` cell and select:
-   - **President's Aid (PA)** — ~6 hrs/week cap
-   - **Work Study (WS)** — ~12 hrs/week cap
+   - **President's Aid (PA)** — ~7 hrs/week cap (enforced in app)
+   - **Work Study (WS)** — ~13 hrs/week cap (enforced in app)
    - **Graduate Assistant (GA)** — ~20 hrs/week cap
    - Leave blank if not on a financial aid program
 3. Click **Exit grid view** when done
