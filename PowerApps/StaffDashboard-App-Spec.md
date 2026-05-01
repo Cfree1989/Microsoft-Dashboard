@@ -7651,6 +7651,8 @@ Trim(
 | Color | `varColorTextMuted` |
 | Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
 
+> 💡 **Final vs partial checkout:** For a job already **Completed**, Flow H only promotes the request to **Paid & Picked Up** when every plate that still shows as **Completed** at checkout is included in this pickup (or the batch flow marks all eligible plates). If staff record payment while only some plates are checked and **Partial Pickup** is off, Flow H leaves the job **Completed**—which matches the failure mode where multi-plate jobs stayed completed after a one-plate pickup. **`btnPaymentConfirm.DisplayMode`** (Confirm Payment Button, below) enforces “all completed plates checked unless Partial Pickup.”
+
 ---
 
 ### Partial Pickup Checkbox (chkPartialPickup)
@@ -7674,7 +7676,7 @@ Trim(
 | HoverColor | `RGBA(0, 18, 107, 1)` |
 | Visible | `varSelectedItem.Status.Value = "Completed"` |
 
-> ⚠️ **Behavior:** If the modal is opened from `Printing`, the payment is automatically partial and this checkbox stays hidden.
+> ⚠️ **Behavior:** If the modal is opened from **Printing**, the payment is automatically partial and this checkbox stays hidden—staff may pick up fees for a subset of completed plates without checking **Partial Pickup** (see **`btnPaymentConfirm.DisplayMode`** guard).
 
 ---
 
@@ -7847,14 +7849,22 @@ If(
     ) ||
     (
         CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0 &&
-        CountRows(colPickedUpPlates) = 0
+        (
+            CountRows(colPickedUpPlates) = 0 ||
+            (
+                !Or(chkPartialPickup.Value, varSelectedItem.Status.Value = "Printing") &&
+                CountRows(colPickedUpPlates) < CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed"))
+            )
+        )
     ),
     DisplayMode.Disabled,
     DisplayMode.Edit
 )
 ```
 
-> 💡 Button is enabled only when staff is selected, transaction info is valid, payer info is complete, and at least one completed plate is checked when the plate pickup list is shown. Transaction number is required for TigerCASH payments but optional for Check and Grant/Program Code payments, since grant codes are not always available at the time of payment.
+> 💡 **Plate pickup gate:** When the gallery lists one or more **Completed** plates, **Record Payment** stays disabled until staff either checks **every** completed plate (normal final checkout from **Completed**), or checks **Partial Pickup** and then may select a subset (student returns later). **Printing** jobs use the same gallery for partial payment; `chkPartialPickup` is hidden there, so **`Or(chkPartialPickup.Value, varSelectedItem.Status.Value = "Printing")`** allows selecting fewer than all completed plates without blocking the button.
+>
+> 💡 Otherwise: staff is selected, transaction info is valid, payer info is complete. Transaction number is required for TigerCASH payments but optional for Check and Grant/Program Code payments, since grant codes are not always available at the time of payment.
 >
 > 💡 **Grant/Program Code payments:** Treat a blank `TransactionNumber` as "code pending", not as a validation failure.
 
@@ -16056,6 +16066,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Step 12E + `Notes-Format-Options` sync** | **Step 12E** now documents the **Charged Amount** row, **Calculated Total** at **`X + 360`**, list/header **`Y`**, own-material **Reset** hooks, and **`btnBatchPaymentConfirm`** / cancel / success **`DisplayMode`·`OnSelect`** ( **`varBatchFinalCost`**, **`varBatchEffectivePaymentRate`**, **`Flow-(I)`**·**`.Run`** signature) matching **`scrDashboard.pa.yaml`**. **`PowerApps/Notes-Format-Options.md`** “Dashboard Card Behavior” updated: Notes count / red state = **`[NOTE] `** segments only (same as the job-card formulas in this spec), not all **`StaffNotes`** segments. |
 | **2026-04-28: Step 12E batch minimum (one per transaction)** | **`lblBatchCostValue`** and **`txtBatchAmount.Default`** now document **batch-level** pricing: **`Max(varMinimumCost, combinedWeight × rate)`** once per checkout (then own-material discount), not a sum of per-row **`Max(..., varMinimumCost)`** (which stacked minimums). **`lblBatchSummary`** “Estimated Total” may still differ from **`Sum(EstimatedCost)`** on cards; variable table **`varBatchFinalCost`** clarified as the typed charged amount. Troubleshooting updated for obsolete **`allocatedWeight`** errors and for **nested `With`** (Power Fx cannot reference sibling names inside one `{ }` record literal—`batchBase` must be in an inner `With` or Studio shows **`enteredWeight` isn't recognized**). Live **`scrDashboard.pa.yaml`** (and **`.cursor-mcp-deploy`** when used) aligned to the same formulas. |
 | **2026-04-28: Details modal — Color vs Method (Resin)** | **`ddDetailsColor`**: **`Items`** filters **`Choices([@PrintRequests].Color)`** when effective Method is **Resin** to **Black / White / Gray / Clear** (Student Portal parity). **`DefaultSelectedItems`** uses **`Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)`** so filament-only saved colors do not preselect under Resin. **`ddDetailsMethod.OnChange`**: **`Reset(ddDetailsPrinter); Reset(ddDetailsColor)`**. |
+| **2026-05-01: Payment modal — final pickup plate gate** | **`btnPaymentConfirm.DisplayMode`** now documents requiring **all** completed plates to be checked for **Completed** jobs unless **`chkPartialPickup`** is checked; **`Printing`** remains exempt via **`Or(..., varSelectedItem.Status.Value = "Printing")`** so partial payment from printing still works. Prevents accidental one-plate checkout on multi-plate jobs (job stayed **Completed** per Flow H **ResultStatus**). Apply this formula in Studio on **`scrDashboard`**. YAML in-repo left unchanged when updating from spec only. |
 
 # Next Steps
 
