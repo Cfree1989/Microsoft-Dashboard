@@ -1295,31 +1295,56 @@ concat(first(split(triggerBody()['text_6'], ' ')), ' ', substring(last(split(tri
 
 **Where to add this:** Below `StaffShortName`, still inside the `Write All Records` scope.
 
-1. Click **+ Add an action** below `StaffShortName`
-2. Search for and select **Create item** (SharePoint)
-3. Rename to: `Create Consolidated Payment`
-4. Fill in:
+Before adding the action, confirm the SharePoint **`Payments`** list already has these long-text columns configured:
+
+- **`PlateIDsPickedUp`** = **Multiple lines of text**
+- **`PlatesPickedUp`** = **Multiple lines of text**
+- **`BatchAllocationSummary`** = **Multiple lines of text**
+
+> **Why this matters:** Batch rows combine plate IDs and labels from multiple requests. Those values often exceed 255 characters, so the SharePoint **Create item** card must be created after the list exposes these fields as long text.
+
+1. Click **+ Add an action** below `StaffShortName`.
+2. Search for **Create item**.
+3. Choose **SharePoint** → **Create item**.
+4. Rename the action exactly: `Create Consolidated Payment`.
+
+> **Important:** Keep this action name exact. **Action 2c** uses `body('Create_Consolidated_Payment')?['ID']`, and Power Automate creates that internal name from the action title.
+
+5. Fill in the SharePoint target:
    - **Site Address:** type directly: `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List Name:** type directly: `Payments`
-   - **Amount:** click the **Expression** tab and paste: `variables('varTotalCost')`
-   - **PaymentDate:** click the **Expression** tab and paste: `parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')`
-   - **RecordedAt:** click the **Expression** tab and paste: `utcNow()`
-   - **Weight:** click the **Expression** tab and paste: `triggerBody()['number']`
-   - **RequestID:** (leave blank — batch rows do not use RequestID)
-   - **TransactionNumber:** click the **Expression** tab and paste: `if(empty(trim(coalesce(triggerBody()['text_2'], ''))), null, trim(triggerBody()['text_2']))`
-   - **PayerName:** click the **Expression** tab and paste: `triggerBody()['text_4']`
-   - **PaymentType Value:** click the **Expression** tab and paste: `triggerBody()['text_3']`
-   - **PayerTigerCard:** (leave blank — batch flow has no TigerCard input)
-   - **PlatesPickedUp:** click the field, then select from **Dynamic content**: the variable `varPlateLabelsText`
-   - **PlateIDsPickedUp:** click the field, then select from **Dynamic content**: the variable `varPlateKeysText`
-   - **RecordedBy Claims:** click the **Expression** tab and paste: `concat('i:0#.f|membership|', triggerBody()['text_5'])`
-   - **StudentOwnMaterial:** click the **Expression** tab and paste: `triggerBody()['boolean']`
-   - **BatchReqKeys:** click the **Expression** tab and paste: `triggerBody()['text_1']`
-   - **BatchRequestIDs:** click the **Expression** tab and paste: `replace(triggerBody()['text'], ' ', '')` — this stores IDs without spaces (`164,165` instead of `164, 165`); the app's Split formula handles both formats
-   - **BatchAllocationSummary:** click the field, then select from **Dynamic content**: the output of `BatchAllocationSummary`
-   - **ReqKey:** (leave blank)
 
-5. **Configure retry policy.**
+6. Map every field below:
+
+| Field | How to set |
+|-------|------------|
+| **Amount** | Expression: `variables('varTotalCost')` |
+| **PaymentDate** | Expression: `parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')` |
+| **RecordedAt** | Expression: `utcNow()` |
+| **Weight** | Expression: `triggerBody()['number']` |
+| **RequestID** | Leave blank — batch rows do not use `RequestID` |
+| **TransactionNumber** | Expression: `if(empty(trim(coalesce(triggerBody()['text_2'], ''))), null, trim(triggerBody()['text_2']))` |
+| **PayerName** | Expression: `triggerBody()['text_4']` |
+| **PaymentType Value** | Expression: `triggerBody()['text_3']` |
+| **PayerTigerCard** | Leave blank — batch flow has no TigerCard input |
+| **PlatesPickedUp** | Dynamic content: variable **`varPlateLabelsText`** |
+| **PlateIDsPickedUp** | Dynamic content: variable **`varPlateKeysText`** |
+| **RecordedBy Claims** | Expression: `concat('i:0#.f|membership|', triggerBody()['text_5'])` |
+| **StudentOwnMaterial** | Expression: `triggerBody()['boolean']` |
+| **BatchReqKeys** | Expression: `triggerBody()['text_1']` |
+| **BatchRequestIDs** | Expression: `replace(triggerBody()['text'], ' ', '')` — stores IDs without spaces (`164,165` instead of `164, 165`); the app's Split formula handles both formats |
+| **BatchAllocationSummary** | Dynamic content: output of **`BatchAllocationSummary`** |
+| **ReqKey** | Leave blank |
+
+7. Open the action's **Settings**.
+8. Set **Retry policy** to:
+   - **Type:** `Exponential`
+   - **Count:** `2`
+   - **Interval:** `PT10S`
+   - **Minimum interval:** `PT5S`
+   - **Maximum interval:** `PT30S`
+
+> **Build check:** If **`PlateIDsPickedUp`** or **`PlatesPickedUp`** shows as limited to 255 characters during testing, the SharePoint list field type was not available to this card when the action was created. Confirm the list setup above, then create this action again from these first-time build directions.
 
 ---
 
@@ -1653,6 +1678,52 @@ If any of those cards are missing their value mappings, the flow can appear to "
 1. Select a batch where at least one request still has a plate in `Queued` or `Printing`
 2. Confirm the flow returns `Success = "false"` with the ineligible-plates message
 3. Confirm no `Payments` row was created and no plates/requests were changed
+
+---
+
+## Troubleshooting
+
+### `Create Consolidated Payment` — `PlateIDsPickedUp` (or `PlatesPickedUp`) exceeds maximum length **255**
+
+**Symptoms**
+
+- Failure on **`Create Consolidated Payment`** (`OpenApiConnection` / `PostItem`).
+- Message says **`item/PlateIDsPickedUp`** (or **`item/PlatesPickedUp`**) must be a string with **maximum length 255**, but the run supplies a longer value (common on multi-request batches because **Action 9** concatenates plate snapshots across the whole checkout).
+
+**What the flow is doing (by design)**
+
+- **Plate keys:** **Actions 9g–9h** append to **`varPlateKeysText`** segments like `REQ-00734: BP-734-A1, BP-734-A2 …` joined with ` | ` across requests (**`PlateKeysAppend`** / **Append Plate Keys**).
+- **Plate labels:** **Actions 9e–9f** do the same for **`varPlateLabelsText`** (**`PlateLabelsAppend`** / **Append Plate Labels**).
+- **Create item:** **Action 2b** maps those variables into **`Payments.PlateIDsPickedUp`** and **`Payments.PlatesPickedUp`**.
+
+Batch checkouts routinely produce **well over 255 characters**. The SharePoint **`Payments`** list must allow long text — see **`SharePoint/Payments-List-Setup.md`** (`PlateIDsPickedUp` and, for aggregated label snapshots, **`PlatesPickedUp`**).
+
+**What to check when the flow still reports 255**
+
+The **SharePoint Online** connector validates the fields on the **Create item** card before the request reaches SharePoint. If this card was created while the list still exposed a field as **Single line of text**, it can still reject long batch values with the old 255-character rule.
+
+1. In **SharePoint**, confirm column types: **`PlateIDsPickedUp`** and **`PlatesPickedUp`** = **Multiple lines of text**.
+2. Confirm **`BatchAllocationSummary`** is also **Multiple lines of text**.
+3. Confirm **Action 2b** was built after those column types were correct, using the first-time build directions above.
+4. If the 255 error persists: reconnect or **Fix connection** on the SharePoint connection the flow uses, then **save** and run **Test** again.
+5. Compare to the **Power Apps** call only after a single Power Automate test run succeeds.
+
+### Power Apps shows **502 / BadGateway / NoResponse** on `Flow-(I)-Payment-SaveBatch`
+
+**Symptoms**
+
+- Pink banner when **`btnBatchPaymentConfirm`** runs; HTTP **502**, inner **`NoResponse`**.
+
+**Typical meanings**
+
+- The **instant flow response** never reached Power Apps within the connector timeout — often because the flow run **timed out**, **stopped without running `Return Result`**, or was still **busy on SharePoint** (especially with slow retries or stuck actions).
+
+**What to verify**
+
+1. Open the matching run in Power Automate and see whether it **failed**, **succeeded**, or **still running**.
+2. If it **succeeded after** Power Apps timed out: do **not** blindly retry until you verify whether a **`Payments`** row was created and requests/plates updated (risk of duplicate ledger rows or mismatched UI state).
+3. Confirm **`Return Result`** is **outside** all conditions/scopes per **Step 7**, and write-failure handlers are configured **run after** the **`Write All Records`** scope on **failure**/**timeout** — see **`Handle Write Failure`** actions below **Scope: Write All Records**.
+4. Keep SharePoint retries aligned with **`Retry policy`** in this doc (short intervals so runs stay inside Power Apps sync limits).
 
 ---
 
