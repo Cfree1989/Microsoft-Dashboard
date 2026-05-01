@@ -7587,7 +7587,7 @@ With(
 | Width | `30` |
 | Height | `28` |
 | Default | `ThisItem.ID in colPickedUpPlates.ID` |
-| OnSelect | `Select(Parent)` |
+| OnSelect | `Blank()` — do **not** use `Select(Parent)` on **`chkPlate`**; this gallery template triggers an App checker **Select(container)** warning. Check / uncheck logic stays on **OnCheck** / **OnUncheck**. |
 
 114. Set `chkPlate.OnCheck`:
 
@@ -7617,6 +7617,7 @@ Remove(colPickedUpPlates, ThisItem)
 | AutoHeight | `true` |
 | Font | `varAppFont` |
 | Size | `10` |
+| OnSelect | `Select(chkPlate)` — tapping the plate label forwards to the row’s checkbox (same template scope; avoids `Select(Parent)` on the label). |
 
 117. Set `lblPlateName.Text`:
 
@@ -7644,7 +7645,7 @@ Vertical galleries use a **fixed `TemplateSize` per row**. **`AutoHeight`** on `
 | **Scrollbar only when needed** | Live: **`ShowScrollbar`** = `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46 > 220`. Use the same **`rowStridePx`** and **`capPx`** as in **`Height`**. |
 | **Label uses full row width** | Prefer **`Width = Parent.TemplateWidth - Self.X - 8`** on **`lblPlateName`** instead of a fixed pixel width so checkbox column + label track gallery width changes. |
 
-**Avoid:** Mixing **`AutoHeight`** with a tiny **`TemplateSize`** (text looks fine in Studio but clips at runtime). **Prefer** raising **`TemplateSize`** first, then adjust **`Height`** × **`rowStridePx`**.
+**Avoid:** Mixing **`AutoHeight`** with a tiny **`TemplateSize`** (text looks fine in Studio but clips at runtime). **Prefer** raising **`TemplateSize`** first, then adjust **`Height`** × **`rowStridePx`**. On **`chkPlate`** / **`lblPlateName`**, do **not** use **`Select(Parent)`** — use **`Blank()`** on the checkbox **`OnSelect`** and **`Select(chkPlate)`** on the label so Studio’s container/`Select` checker stays clean.
 
 ---
 
@@ -16071,7 +16072,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **Approval modal tree** | **`lblWeightValidation`** is not present in the live app; sliced-on computer, own material, and build-plates shortcuts are. |
 | **DisplayFields for staff** | Live `colStaff` includes `StaffID`, `AidType`, and `SchedSortOrder` (see variable table). ComboBox `DisplayFields` may use `["MemberName"]` or include email — match your live control. |
 | **galStatusTabs** | Step 5 was updated: live **`FocusedBorderThickness`** is `0`. |
-| **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, plate pickup checkbox uses `Select(Parent)` for row taps, Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
+| **2026-04-27: Build Plates + Payments docs sync** | Synced Step 12F (Build Plates) row spacing to live coauthor YAML (`drpPlateMachine` X/Width + resin Items filter, `lblPlateStatus` X + row tap), and synced Step 12C/12E payment docs to the live modal behavior: no `DefaultDate` pre-seeding for `dpPaymentDate` / `dpBatchPaymentDate`, **`galPlatesPickup`**: **`chkPlate.OnSelect`** = **`Blank()`** (not **`Select(Parent)`** — App checker); **`lblPlateName.OnSelect`** = **`Select(chkPlate)`** for row taps; Flow H/I success checks treat `success` as boolean-or-string, and Step 12C now includes `txtPaymentAmount` (charged amount) with confirm validation + Flow H arguments matching production. |
 | **2026-04-27: Job card Notes count / alert** | **`lblNotesHeader`** and **`btnViewNotes`** (red fill) now key off **manual** staff notes only: segments of `StaffNotes` after splitting on `" | "` that **`StartsWith(Trim(Value), "[NOTE] ")`**. Activity lines (approvals, build plates, payments, etc.) still render in the Notes modal but no longer drive the card number or red styling. Legacy manual lines without the `[NOTE] ` prefix are not counted (prefer migrating or re-saving via Add Note if needed). |
 | **2026-04-27: Start Print + single Queued plate** | **`btnStartPrint`**: if the job has exactly one `BuildPlates` row and it is `Queued`, the app patches that plate to `Printing` (same field preservation as **Mark Printing**) before patching `PrintRequests` to `Printing`; plate patch failure skips job patch and Flow C. Success toast includes “Plate moved to Printing” when the auto plate patch ran. Revert modal and `varPendingBuildPlateMarkPrintingCount` unchanged. Uses `colAllBuildPlates` + `LookUp(BuildPlates, ID=…)` for the gate and fresh row (avoids `CountRows(Filter(BuildPlates,…))` delegation on **Start Print**). |
 | **2026-04-27: Notes modal (`txtStaffNotesContent`)** | Tokenized segments without ` by Name` before `:` (e.g. **`STATUS:`**, **`BUILD PLATE:`**) no longer treat the action label as **`rawName`**; v2 **`[Summary]`** blocks render **line 2 = summary only** when there is no staff actor, matching **`PowerApps/Notes-Format-Options.md`** (no redundant `STATUS - …` prefix, no fake **`BUILD P.`** line). Legacy (non-v2) rendering uses the same **no fake name** rule when **`shortName`** is blank. |

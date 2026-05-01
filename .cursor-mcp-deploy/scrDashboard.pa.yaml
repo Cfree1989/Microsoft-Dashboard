@@ -5611,7 +5611,7 @@ Screens:
                               !(ThisItem.ID in colPickedUpPlates.ID),
                               Collect(colPickedUpPlates, ThisItem)
                           )
-                        OnSelect: =Select(Parent)
+                        OnSelect: =Blank()
                         OnUncheck: =Remove(colPickedUpPlates, ThisItem)
                         Text: =""
                         Width: =30
@@ -5624,7 +5624,7 @@ Screens:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Font: =varAppFont
                         Height: =22
-                        OnSelect: =Select(Parent)
+                        OnSelect: =Select(chkPlate)
                         Text: |-
                           =ThisItem.ResolvedPlateLabel &
                           " · " &
