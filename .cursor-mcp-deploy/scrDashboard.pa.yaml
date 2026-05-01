@@ -5129,7 +5129,13 @@ Screens:
                         ) ||
                         (
                             CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0 &&
-                            CountRows(colPickedUpPlates) = 0
+                            (
+                                CountRows(colPickedUpPlates) = 0 ||
+                                (
+                                    !Or(chkPartialPickup.Value, varSelectedItem.Status.Value = "Printing") &&
+                                    CountRows(colPickedUpPlates) < CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed"))
+                                )
+                            )
                         ),
                         DisplayMode.Disabled,
                         DisplayMode.Edit
@@ -5579,10 +5585,11 @@ Screens:
                 Variant: BrowseLayout_Vertical_TwoTextOneImageVariant_ver5.0
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =Min(170, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)
+                  Height: =Min(220, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46)
                   Items: =Filter(colBuildPlatesIndexed, Status.Value = "Completed")
+                  ShowScrollbar: =CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46 > 220
                   TemplatePadding: =2
-                  TemplateSize: =34
+                  TemplateSize: =44
                   Visible: =CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0
                   Width: =460
                   X: =recPaymentModal.X + 590
@@ -5613,6 +5620,7 @@ Screens:
                   - lblPlateName:
                       Control: Label
                       Properties:
+                        AutoHeight: =true
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Font: =varAppFont
                         Height: =22
@@ -5627,9 +5635,9 @@ Screens:
                                   ThisItem.Machine.Value
                               )
                           )
-                        Width: =272
+                        Width: =Parent.TemplateWidth - Self.X - 8
                         X: =34
-                        Y: =5
+                        Y: =2
             - lblPlatesHint:
                 Control: Label
                 Properties:

@@ -7569,10 +7569,11 @@ With(
 | X | `recPaymentModal.X + 590` |
 | Y | `lblPlatesPickupHeader.Y + lblPlatesPickupHeader.Height + 4` |
 | Width | `460` |
-| Height | `Min(170, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 36)` |
-| TemplateSize | `34` |
+| Height | `Min(220, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46)` — ties gallery height to plate count with **`capPx = 220`** and **`rowStridePx = 46`** (matches live **`scrDashboard`**); see **Dynamic layout** for tuning |
+| TemplateSize | `44` (taller rows so **`AutoHeight`** labels wrap without clipping; pair with **`rowStridePx`** below) |
 | TemplatePadding | `2` |
 | Fill | `RGBA(248, 249, 250, 1)` |
+| ShowScrollbar | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46 > 220` — scrollbar when natural height would exceed the cap |
 | Visible | `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) > 0` |
 
 112. Inside the template, add a checkbox named `chkPlate` and a label named `lblPlateName`.
@@ -7583,7 +7584,7 @@ With(
 |----------|-------|
 | X | `4` |
 | Y | `2` |
-| Width | `20` |
+| Width | `30` |
 | Height | `28` |
 | Default | `ThisItem.ID in colPickedUpPlates.ID` |
 | OnSelect | `Select(Parent)` |
@@ -7609,10 +7610,11 @@ Remove(colPickedUpPlates, ThisItem)
 
 | Property | Value |
 |----------|-------|
-| X | `30` |
-| Y | `6` |
-| Width | `410` |
-| Height | `22` |
+| X | `34` |
+| Y | `2` |
+| Width | `Parent.TemplateWidth - Self.X - 8` (fills the row; stays correct if gallery width changes) |
+| Height | `22` (acts as minimum when **AutoHeight** is on) |
+| AutoHeight | `true` |
 | Font | `varAppFont` |
 | Size | `10` |
 
@@ -7629,6 +7631,20 @@ Trim(
     )
 )
 ```
+
+#### Dynamic layout for `galPlatesPickup` (make the list grow and scroll cleanly)
+
+Vertical galleries use a **fixed `TemplateSize` per row**. **`AutoHeight`** on `lblPlateName` only grows the label inside that row — if wrapped text is taller than **`TemplateSize`**, the row **clips**. Tune these together instead of stacking one-off tweaks:
+
+| Goal | What to set |
+|------|-------------|
+| **Gallery grows with plate count** | Keep **`Height`** tied to row count and a **max cap**. Live **`scrDashboard`** uses **`capPx = 220`**, **`TemplateSize = 44`**, **`TemplatePadding = 2`**, **`rowStridePx = 46`**: `Min(220, CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46)`. |
+| **Raise the cap** | Adjust **`capPx`** only if **`recPaymentModal`** / surrounding controls leave room; reposition dependent controls (`lblPlatesHint`, **`chkPartialPickup`**, **`btnPaymentConfirm`**) if the modal feels cramped. |
+| **Wrapped plate lines** | **`TemplateSize = 44`** with **`rowStridePx = 46`** in **`Height`** (live); raise **`TemplateSize`** further (and **`rowStridePx`**) only if long plate lines still clip. |
+| **Scrollbar only when needed** | Live: **`ShowScrollbar`** = `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46 > 220`. Use the same **`rowStridePx`** and **`capPx`** as in **`Height`**. |
+| **Label uses full row width** | Prefer **`Width = Parent.TemplateWidth - Self.X - 8`** on **`lblPlateName`** instead of a fixed pixel width so checkbox column + label track gallery width changes. |
+
+**Avoid:** Mixing **`AutoHeight`** with a tiny **`TemplateSize`** (text looks fine in Studio but clips at runtime). **Prefer** raising **`TemplateSize`** first, then adjust **`Height`** × **`rowStridePx`**.
 
 ---
 
@@ -16066,7 +16082,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-27: Step 12E + `Notes-Format-Options` sync** | **Step 12E** now documents the **Charged Amount** row, **Calculated Total** at **`X + 360`**, list/header **`Y`**, own-material **Reset** hooks, and **`btnBatchPaymentConfirm`** / cancel / success **`DisplayMode`·`OnSelect`** ( **`varBatchFinalCost`**, **`varBatchEffectivePaymentRate`**, **`Flow-(I)`**·**`.Run`** signature) matching **`scrDashboard.pa.yaml`**. **`PowerApps/Notes-Format-Options.md`** “Dashboard Card Behavior” updated: Notes count / red state = **`[NOTE] `** segments only (same as the job-card formulas in this spec), not all **`StaffNotes`** segments. |
 | **2026-04-28: Step 12E batch minimum (one per transaction)** | **`lblBatchCostValue`** and **`txtBatchAmount.Default`** now document **batch-level** pricing: **`Max(varMinimumCost, combinedWeight × rate)`** once per checkout (then own-material discount), not a sum of per-row **`Max(..., varMinimumCost)`** (which stacked minimums). **`lblBatchSummary`** “Estimated Total” may still differ from **`Sum(EstimatedCost)`** on cards; variable table **`varBatchFinalCost`** clarified as the typed charged amount. Troubleshooting updated for obsolete **`allocatedWeight`** errors and for **nested `With`** (Power Fx cannot reference sibling names inside one `{ }` record literal—`batchBase` must be in an inner `With` or Studio shows **`enteredWeight` isn't recognized**). Live **`scrDashboard.pa.yaml`** (and **`.cursor-mcp-deploy`** when used) aligned to the same formulas. |
 | **2026-04-28: Details modal — Color vs Method (Resin)** | **`ddDetailsColor`**: **`Items`** filters **`Choices([@PrintRequests].Color)`** when effective Method is **Resin** to **Black / White / Gray / Clear** (Student Portal parity). **`DefaultSelectedItems`** uses **`Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)`** so filament-only saved colors do not preselect under Resin. **`ddDetailsMethod.OnChange`**: **`Reset(ddDetailsPrinter); Reset(ddDetailsColor)`**. |
-| **2026-05-01: Payment modal — final pickup plate gate** | **`btnPaymentConfirm.DisplayMode`** now documents requiring **all** completed plates to be checked for **Completed** jobs unless **`chkPartialPickup`** is checked; **`Printing`** remains exempt via **`Or(..., varSelectedItem.Status.Value = "Printing")`** so partial payment from printing still works. Prevents accidental one-plate checkout on multi-plate jobs (job stayed **Completed** per Flow H **ResultStatus**). Apply this formula in Studio on **`scrDashboard`**. YAML in-repo left unchanged when updating from spec only. |
+| **2026-05-01: Payment modal — final pickup plate gate** | Live coauthor is now the source for **`scrDashboard`** and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` is aligned to it. **`btnPaymentConfirm.DisplayMode`** requires **all** completed plates to be checked for **Completed** jobs unless **`chkPartialPickup`** is checked; **`Printing`** remains exempt via **`Or(..., varSelectedItem.Status.Value = "Printing")`**. **`galPlatesPickup`** live: **`TemplateSize = 44`**, **`Height = Min(220, CountRows × 46)`**, **`ShowScrollbar`** when content exceeds the cap, **`lblPlateName.AutoHeight`** + **`Width = Parent.TemplateWidth - Self.X - 8`**. **Step 12C** documents the same **dynamic layout** rules. |
 
 # Next Steps
 
