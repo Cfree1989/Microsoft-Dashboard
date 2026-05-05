@@ -7587,7 +7587,7 @@ With(
 | Width | `30` |
 | Height | `28` |
 | Default | `ThisItem.ID in colPickedUpPlates.ID` |
-| OnSelect | `Blank()` — do **not** use `Select(Parent)` on **`chkPlate`**; this gallery template triggers an App checker **Select(container)** warning. Check / uncheck logic stays on **OnCheck** / **OnUncheck**. |
+| OnSelect | `Select(Parent)` — live coauthor uses row selection here; check / uncheck logic stays on **OnCheck** / **OnUncheck**. |
 
 114. Set `chkPlate.OnCheck`:
 
@@ -7617,7 +7617,7 @@ Remove(colPickedUpPlates, ThisItem)
 | AutoHeight | `true` |
 | Font | `varAppFont` |
 | Size | `10` |
-| OnSelect | `Select(chkPlate)` — tapping the plate label forwards to the row’s checkbox (same template scope; avoids `Select(Parent)` on the label). |
+| OnSelect | `Select(Parent)` — tapping the plate label uses the same row-selection behavior as the checkbox. |
 
 117. Set `lblPlateName.Text`:
 
@@ -7645,7 +7645,7 @@ Vertical galleries use a **fixed `TemplateSize` per row**. **`AutoHeight`** on `
 | **Scrollbar only when needed** | Live: **`ShowScrollbar`** = `CountRows(Filter(colBuildPlatesIndexed, Status.Value = "Completed")) * 46 > 220`. Use the same **`rowStridePx`** and **`capPx`** as in **`Height`**. |
 | **Label uses full row width** | Prefer **`Width = Parent.TemplateWidth - Self.X - 8`** on **`lblPlateName`** instead of a fixed pixel width so checkbox column + label track gallery width changes. |
 
-**Avoid:** Mixing **`AutoHeight`** with a tiny **`TemplateSize`** (text looks fine in Studio but clips at runtime). **Prefer** raising **`TemplateSize`** first, then adjust **`Height`** × **`rowStridePx`**. On **`chkPlate`** / **`lblPlateName`**, do **not** use **`Select(Parent)`** — use **`Blank()`** on the checkbox **`OnSelect`** and **`Select(chkPlate)`** on the label so Studio’s container/`Select` checker stays clean.
+**Avoid:** Mixing **`AutoHeight`** with a tiny **`TemplateSize`** (text looks fine in Studio but clips at runtime). **Prefer** raising **`TemplateSize`** first, then adjust **`Height`** × **`rowStridePx`**. Live coauthor currently uses **`Select(Parent)`** on **`chkPlate.OnSelect`** and **`lblPlateName.OnSelect`** so taps share the same row-selection path.
 
 ---
 
@@ -10214,14 +10214,16 @@ Set(varBuildPlatesOpenedFromApproval, false)
 | Control | Text label |
 | Name | `lblPlateLabel` |
 | Text | `ThisItem.ResolvedPlateLabel` |
-| X | `8` |
-| Y | `0` |
-| Width | `104` |
-| Height | `Parent.TemplateHeight` |
+| X | `5` |
+| Y | `12` |
+| Width | `80` |
+| Height | `22` |
 | Size | `11` |
 | FontWeight | `FontWeight.Semibold` |
 | Font | `varAppFont` |
 | Color | `varColorText` |
+| Align | `Align.Center` |
+| AutoHeight | `true` |
 | VerticalAlign | `VerticalAlign.Middle` |
 
 ---
@@ -10237,7 +10239,7 @@ Editable for Queued/Printing plates. Locked (disabled) for Completed/Picked Up t
 | Items | `AddColumns(Filter(Choices([@BuildPlates].Machine), If(varSelectedItem.Method.Value = "Filament", StartsWith(Value, "Prusa MK4S") Or StartsWith(Value, "Prusa XL") Or StartsWith(Value, "Raise"), varSelectedItem.Method.Value = "Resin", Value = "Form 3+ (5.7×5.7×7.3in)", true)), DisplayValue, Trim(If(Find("(", Value) > 0, Left(Value, Find("(", Value) - 2), Value)))` |
 | Value | `"DisplayValue"` |
 | Default | `Trim(If(Find("(", ThisItem.Machine.Value) > 0, Left(ThisItem.Machine.Value, Find("(", ThisItem.Machine.Value) - 2), ThisItem.Machine.Value))` |
-| X | `53` |
+| X | `88` |
 | Y | `8` |
 | Width | `167` |
 | Height | `36` |
@@ -10346,7 +10348,7 @@ Set(varLoadingMessage, "")
 | Control | Text label |
 | Name | `lblPlateStatus` |
 | Text | `ThisItem.Status.Value` |
-| X | `246` |
+| X | `272` |
 | Y | `10` |
 | Width | `84` |
 | Height | `32` |
@@ -10368,7 +10370,7 @@ Set(varLoadingMessage, "")
 | Control | Button |
 | Name | `btnMarkPrinting` |
 | Text | `"Mark Printing"` |
-| X | `356` |
+| X | `373` |
 | Y | `10` |
 | Width | `113` |
 | Height | `32` |
@@ -10474,7 +10476,7 @@ Same properties as `btnMarkPrinting` with:
 | Control | Button |
 | Name | `btnMarkDone` |
 | Text | `"Mark Done"` |
-| X | `367` |
+| X | `373` |
 | Y | `10` |
 | Width | `90` |
 | Height | `32` |
@@ -16084,6 +16086,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-28: Step 12E batch minimum (one per transaction)** | **`lblBatchCostValue`** and **`txtBatchAmount.Default`** now document **batch-level** pricing: **`Max(varMinimumCost, combinedWeight × rate)`** once per checkout (then own-material discount), not a sum of per-row **`Max(..., varMinimumCost)`** (which stacked minimums). **`lblBatchSummary`** “Estimated Total” may still differ from **`Sum(EstimatedCost)`** on cards; variable table **`varBatchFinalCost`** clarified as the typed charged amount. Troubleshooting updated for obsolete **`allocatedWeight`** errors and for **nested `With`** (Power Fx cannot reference sibling names inside one `{ }` record literal—`batchBase` must be in an inner `With` or Studio shows **`enteredWeight` isn't recognized**). Live **`scrDashboard.pa.yaml`** (and **`.cursor-mcp-deploy`** when used) aligned to the same formulas. |
 | **2026-04-28: Details modal — Color vs Method (Resin)** | **`ddDetailsColor`**: **`Items`** filters **`Choices([@PrintRequests].Color)`** when effective Method is **Resin** to **Black / White / Gray / Clear** (Student Portal parity). **`DefaultSelectedItems`** uses **`Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)`** so filament-only saved colors do not preselect under Resin. **`ddDetailsMethod.OnChange`**: **`Reset(ddDetailsPrinter); Reset(ddDetailsColor)`**. |
 | **2026-05-01: Payment modal — final pickup plate gate** | Live coauthor is now the source for **`scrDashboard`** and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` is aligned to it. **`btnPaymentConfirm.DisplayMode`** requires **all** completed plates to be checked for **Completed** jobs unless **`chkPartialPickup`** is checked; **`Printing`** remains exempt via **`Or(..., varSelectedItem.Status.Value = "Printing")`**. **`galPlatesPickup`** live: **`TemplateSize = 44`**, **`Height = Min(220, CountRows × 46)`**, **`ShowScrollbar`** when content exceeds the cap, **`lblPlateName.AutoHeight`** + **`Width = Parent.TemplateWidth - Self.X - 8`**. **Step 12C** documents the same **dynamic layout** rules. |
+| **2026-05-05: Live YAML mirror** | Pulled the working live app through coauthor MCP and mirrored it into `PowerApps/canvas-coauthor`. Live only differed in **`scrDashboard`**: **`galPlatesPickup`** row taps use **`Select(Parent)`** on **`chkPlate`** and **`lblPlateName`**; **`galBuildPlates`** row layout uses centered/auto-height **`lblPlateLabel`** at **`X=5`**, machine/status/buttons shifted right; **`txtBatchTransaction`** no longer sets centered alignment; **`btnBatchPaymentConfirm.Size`** uses **`varBtnFontSize`**; and the payment-type dropdown at **`X=743`** is **`Width=172`**. |
 
 # Next Steps
 

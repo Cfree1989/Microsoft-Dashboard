@@ -5611,7 +5611,7 @@ Screens:
                               !(ThisItem.ID in colPickedUpPlates.ID),
                               Collect(colPickedUpPlates, ThisItem)
                           )
-                        OnSelect: =Blank()
+                        OnSelect: =Select(Parent)
                         OnUncheck: =Remove(colPickedUpPlates, ThisItem)
                         Text: =""
                         Width: =30
@@ -5624,7 +5624,7 @@ Screens:
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Font: =varAppFont
                         Height: =22
-                        OnSelect: =Select(chkPlate)
+                        OnSelect: =Select(Parent)
                         Text: |-
                           =ThisItem.ResolvedPlateLabel &
                           " · " &
@@ -5907,6 +5907,8 @@ Screens:
                   - lblPlateLabel:
                       Control: Label
                       Properties:
+                        Align: =Align.Center
+                        AutoHeight: =true
                         BorderColor: =RGBA(0, 18, 107, 1)
                         Color: =varColorText
                         Font: =varAppFont
@@ -5916,7 +5918,8 @@ Screens:
                         Size: =11
                         Text: =ThisItem.ResolvedPlateLabel
                         Width: =80
-                        X: =8
+                        X: =5
+                        Y: =12
                   - drpPlateMachine:
                       Control: Classic/DropDown
                       Properties:
@@ -6021,7 +6024,7 @@ Screens:
                         SelectionFill: =varDropdownSelectionFill
                         Size: =10
                         Width: =167
-                        X: =53
+                        X: =88
                         Y: =8
                   - lblPlateStatus:
                       Control: Label
@@ -6036,7 +6039,7 @@ Screens:
                         Size: =9
                         Text: =ThisItem.Status.Value
                         Width: =84
-                        X: =246
+                        X: =272
                         Y: =10
                   - btnMarkPrinting:
                       Control: Classic/Button
@@ -6065,7 +6068,7 @@ Screens:
                         Text: ="Mark Printing"
                         Visible: =ThisItem.Status.Value = "Queued" && varSelectedItem.Status.Value = "Printing"
                         Width: =113
-                        X: =356
+                        X: =373
                         Y: =10
                   - btnMarkDone:
                       Control: Classic/Button
@@ -6094,7 +6097,7 @@ Screens:
                         Text: ="Mark Done"
                         Visible: =ThisItem.Status.Value = "Printing"
                         Width: =90
-                        X: =367
+                        X: =373
                         Y: =10
                   - btnRemovePlate:
                       Control: Classic/Button
@@ -6483,7 +6486,6 @@ Screens:
             - txtBatchTransaction:
                 Control: Classic/TextInput
                 Properties:
-                  Align: =Align.Center
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
                   Default: =""
@@ -6929,7 +6931,7 @@ Screens:
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
                   RadiusTopRight: =varBtnBorderRadius
-                  Size: =9
+                  Size: =varBtnFontSize
                   Text: ="Record Batch"
                   Width: =130
                   X: =recBatchPaymentModal.X + 450
@@ -7062,7 +7064,7 @@ Screens:
                   Height: =36
                   IconBackground: =varChevronBackground
                   IconFill: =RGBA(255, 255, 255, 1)
-                  Width: =140
+                  Width: =172
                   X: =743
                   Y: =209
       - conStudentNoteModal:
