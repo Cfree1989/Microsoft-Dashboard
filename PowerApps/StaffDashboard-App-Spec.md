@@ -8101,7 +8101,7 @@ Set(varLoadingMessage, "")
 | Printing | Ready to Print | Printer jam, wrong filament, need to reassign |
 | Completed | Printing | Print has defect, needs reprint |
 | Completed | Ready to Print | Complete redo needed |
-| Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate `TransactionNumber` rejected the sibling job). |
+| Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate **TigerCASH** receipt in `TransactionNumber` rejected the sibling job — **Check** / **Code** references are not uniqueness-gated in Flow H / Flow I). |
 
 > ⚠️ **Paid & Picked Up revert is a recovery path, not a payment undo.** Reverting the request status **does not** delete any `Payments` row — those ledger entries remain the record of money actually collected at the POS. Staff use this revert to redo work on a completed request and then re-run checkout (single or batch) on the cleaned-up request. See **Plate cascade on Paid & Picked Up → Completed** and **Payment-field cascade on Paid & Picked Up → Completed** below for what the revert does touch.
 
@@ -8758,7 +8758,7 @@ Set(varLoadingMessage, "")
 > 🧹 **Cleanup guidance — orphaned or refunded Payment row.** The request row is cleaned automatically on revert, but `Payments` rows are not. You only need to delete a `Payments` row manually in two situations:
 >
 > 1. **TigerCASH refund issued.** If the student was refunded through TigerCASH, the monthly export (`Flow-(G)-Export-MonthlyTransactions`) will still include the charge. Screenshot the row for audit, then delete it in SharePoint before month-end so the export reconciles with the TigerCASH report.
-> 2. **Duplicate-transaction retry.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job, hit a duplicate `TransactionNumber` error on the sibling, and reverted the first job to rerun as a batch, the original `Payments` row blocks re-use of that transaction number. Delete it in SharePoint (after screenshotting for audit), then re-run the batch with the real combined weight/amount and the original `TransactionNumber` so the monthly export lands in the right period.
+> 2. **Duplicate TigerCASH receipt retry.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job as **TigerCASH**, hit a duplicate **receipt** error on the sibling (Flow H / Flow I only enforce uniqueness when `PaymentType` is **TigerCASH**), and reverted the first job to rerun as a batch, the original `Payments` row blocks re-use of that **same TigerCASH receipt string**. Delete it in SharePoint (after screenshotting for audit), then re-run the batch with the real combined weight/amount and the original receipt in `TransactionNumber` so the monthly export lands in the right period. **Check** and **Code** (`Grant/Program Code`) values may repeat across rows; you should not need this cleanup for those payment types.
 >
 > In all other cases (student is re-paying without a refund, redo-the-print scenario, partial-payment flow, etc.), leave the `Payments` rows alone — the cleared request fields are enough, and the ledger entries are finance's source of truth.
 

@@ -24,12 +24,12 @@ This document asks: **Are those flows the best design?**
 
 The two proposed Power Automate flows:
 
-- **Flow H (`Flow-(H)-Payment-SaveSingle`)** — handles the entire single-payment save server-side. Validates inputs, checks for duplicate transactions, writes the canonical payment record, updates plate statuses, and patches the parent request.
+- **Flow H (`Flow-(H)-Payment-SaveSingle`)** — handles the entire single-payment save server-side. Validates inputs, checks for duplicate **TigerCASH** receipt numbers (when `PaymentType` is **TigerCASH**), writes the canonical payment record, updates plate statuses, and patches the parent request.
 - **Flow I (`Flow-(I)-Payment-SaveBatch`)** — handles all-or-nothing batch payment saves server-side. Validates every selected request, calculates proportional weight/cost allocations, writes one consolidated payment record first, then updates all plate statuses and parent requests.
 
 Both flows follow the same general pattern:
 1. Initialize variables for result tracking
-2. Validate inputs (TigerCard detection, duplicate transaction check)
+2. Validate inputs (TigerCard detection, duplicate **TigerCASH** receipt check when applicable)
 3. Load and validate SharePoint data
 4. Calculate values (costs, allocations, statuses)
 5. Write all records inside a Scope (payment first, then plates, then parent request)
@@ -330,14 +330,14 @@ The current two-flow architecture with variable-gated control flow is the right 
 
 ### Stability Concerns
 
-- **2-minute PowerApp timeout:** Both flows make multiple sequential SharePoint API calls with exponential retry policies (up to 4 retries, up to 1 hour max interval). A single throttled SharePoint call could retry for minutes, easily exceeding the 2-minute synchronous timeout from Power Apps. If Power Apps times out, the user sees an error, but the flow continues running in the background. Staff may retry, creating a duplicate payment. **Mitigation:** The duplicate transaction number check in Step 2 catches exact-match retries. But if staff changes the transaction number on retry (thinking the first attempt failed), a duplicate payment is created with no guard. Consider adding a shorter retry policy (e.g., 2 retries, 30s max) to stay within the timeout window, or document the timeout behavior for staff.
+- **2-minute PowerApp timeout:** Both flows make multiple sequential SharePoint API calls with exponential retry policies (up to 4 retries, up to 1 hour max interval). A single throttled SharePoint call could retry for minutes, easily exceeding the 2-minute synchronous timeout from Power Apps. If Power Apps times out, the user sees an error, but the flow continues running in the background. Staff may retry, creating a duplicate payment. **Mitigation:** For **TigerCASH**, the Step 2 duplicate **receipt** check catches exact-match retries (same `TransactionNumber` string). **Check** / **Code** checkouts do not use that duplicate gate. If staff changes the receipt number on retry (thinking the first attempt failed), a duplicate TigerCASH payment can still be created with no guard. Consider adding a shorter retry policy (e.g., 2 retries, 30s max) to stay within the timeout window, or document the timeout behavior for staff.
 - **Scope failure granularity:** The Scope's run-after handler distinguishes "payment record created but later step failed" from "payment record itself failed" using `varPaymentID > 0`. This is correct. However, if the `Set varPaymentID` action itself fails (between Create item and the plate updates), `varPaymentID` stays at 0, and the error message says "nothing was written" — which is wrong, because the payment record exists. This is an extremely unlikely edge case (Set variable would only fail if the flow engine itself is broken), but worth noting.
 - **Batch Flow I: no validation that the plate update in Step 6 echoes required fields.** See Finding #7 above. If the Update item action only sets Status and Id, it could blank `RequestID`, `PlateKey`, and `Machine` on every plate.
 
 ### Performance Concerns
 
-- **Flow H API call count:** 1 (duplicate check) + 1 (get request) + 1 (get plates) + 1 (create payment) + 2×P (get + update per plate) + 1 (update request) = **5 + 2P** calls, where P is the number of plates being picked up. For 3 plates: 11 calls. Well within the 600/min limit.
-- **Flow I API call count:** 1 (duplicate check) + 1 (get batch requests) + 1 (get all batch plates) + 1 (create consolidated payment) + P (update per plate across all requests) + R (update per request) = **4 + P + R** calls (plus R filter-array operations in memory). For 3 requests with 2 plates each: 4 + 6 + 3 = 13 calls. For 10 requests with 3 plates each: 4 + 30 + 10 = 44 calls. Comfortable. For 20 requests with 5 plates each: 4 + 100 + 20 = 124 calls. Still within limits but getting meaningful. The exponential retry policy could multiply these counts under throttling.
+- **Flow H API call count:** 0–1 (TigerCASH-only duplicate receipt check) + 1 (get request) + 1 (get plates) + 1 (create payment) + 2×P (get + update per plate) + 1 (update request) = **5 + 2P** or **4 + 2P** calls, where P is the number of plates being picked up. For 3 plates: 11 calls (or 10 when the duplicate step is skipped). Well within the 600/min limit.
+- **Flow I API call count:** 0–1 (TigerCASH-only duplicate receipt check) + 1 (get batch requests) + 1 (get all batch plates) + 1 (create consolidated payment) + P (update per plate across all requests) + R (update per request) = **3 + P + R** to **4 + P + R** calls (plus R filter-array operations in memory). For 3 requests with 2 plates each: 4 + 6 + 3 = 13 calls (or 12 when duplicate step is skipped). For 10 requests with 3 plates each: 4 + 30 + 10 = 44 calls. Comfortable. For 20 requests with 5 plates each: 4 + 100 + 20 = 124 calls. Still within limits but getting meaningful. The exponential retry policy could multiply these counts under throttling.
 - **No concurrent plate updates:** Both flows update plates sequentially by default. Enabling concurrency (degree 5–10) on the plate update loops would improve wall-clock time for larger batches without hitting throttling for typical plate counts.
 
 ### Open Questions
@@ -400,7 +400,7 @@ The second improvement is replacing the `xpath(xml(json(concat(...)))))` hack in
 
 No fundamental alternative architecture is needed. The current structure — variable gates, single write Scope, run-after error handlers, always-runs Respond action — is the correct PA pattern for a flow that must always return a typed response to Power Apps. The improvements below are refinements to the existing architecture, not replacements.
 
-**One structural note worth raising for future consideration:** if validation logic (TigerCard check + duplicate transaction check) continues to be duplicated across Flow H and Flow I verbatim, extracting it into a shared child flow becomes worth revisiting. As the batch flow count grows (if a third payment variant is ever added), this duplication will compound. For two flows, keeping them self-contained is still the right call.
+**One structural note worth raising for future consideration:** if validation logic (TigerCard check + duplicate **TigerCASH** receipt check) continues to be duplicated across Flow H and Flow I verbatim, extracting it into a shared child flow becomes worth revisiting. As the batch flow count grows (if a third payment variant is ever added), this duplication will compound. For two flows, keeping them self-contained is still the right call.
 
 ---
 
@@ -583,10 +583,10 @@ This would reduce the total action count from ~85 actions across two flows to ap
    - Simpler alternative: Build JSON object directly in batch request body using expressions
    - Impact: Reduces action count by ~8-10 actions
 
-5. **Duplicate Transaction Check**
-   - Current approach: Separate Get items query with complex filter expression
+5. **Duplicate TigerCASH receipt check**
+   - Current approach: **Get items** on **`Payments`** with **`TransactionNumber` + `PaymentType eq 'TigerCASH'`**, only when the trigger’s **`PaymentType`** is **TigerCASH** (see `Flow-(H)-Payment-SaveSingle.md` / `Flow-(I)-Payment-SaveBatch.md` Step 2).
    - Simpler alternative: Let SharePoint enforce uniqueness constraints or check within batch
-   - Impact: Could eliminate 3-4 actions depending on constraint approach
+   - Impact: Could eliminate 3-4 actions depending on constraint approach (but you would still need TigerCASH-specific rules; **Check** / **Code** references intentionally do not require uniqueness).
 
 ### Flow I (Batch Payment) Findings
 

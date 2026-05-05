@@ -40,7 +40,7 @@ Add inputs in the exact order listed below.
 | 6 | BatchItemIDs | Text | `triggerBody()['text']` | Comma-separated `PrintRequests.ID` values (e.g., `164, 165`) |
 | 7 | BatchItemReqKeys | Text | `triggerBody()['text_1']` | Comma-separated `ReqKey` values (e.g., `REQ-00164, REQ-00165`) |
 | 8 | TransactionNumber | Text | `triggerBody()['text_2']` | Receipt / check number / grant code |
-| 9 | PaymentType | Text | `triggerBody()['text_3']` | `TigerCASH`, `Check`, or `Grant/Program Code` |
+| 9 | PaymentType | Text | `triggerBody()['text_3']` | From Power Apps: `TigerCASH`, `Check`, or `Code` (grant / program — may map to **Grant/Program Code** on the list). Uniqueness of `TransactionNumber` is enforced only when this value is **`TigerCASH`**. |
 | 10 | PayerName | Text | `triggerBody()['text_4']` | Name of the person who paid |
 | 11 | StaffEmail | Text | `triggerBody()['text_5']` | Email of the staff member processing the payment |
 | 12 | StaffName | Text | `triggerBody()['text_6']` | Full name of the staff member |
@@ -89,7 +89,7 @@ Flow
 │
 ├── Step 2: Validate Transaction Number
 │   ├── Is TigerCard Number? (Condition)
-│   └── Gate → Check Uniqueness (same pattern as Flow H)
+│   └── Gate → Check TigerCASH Uniqueness (same pattern as Flow H: only when PaymentType = TigerCASH)
 │
 ├── Step 3: Load and Validate Batch Requests
 │   └── Gate → Get Items: Get Batch Requests
@@ -318,7 +318,7 @@ Add these actions immediately below the trigger. For each one:
 
 ## Step 2: Validate Transaction Number
 
-**What this does:** Catches two common input problems before any batch data is loaded: a TigerCard number entered as a transaction number, and a transaction number that has already been used.
+**What this does:** Catches two common input problems before any batch data is loaded: a TigerCard number entered as a transaction number, and (for **TigerCASH** only) a **receipt** value that already exists on another `Payments` row. **Check** and **Code** reference strings are allowed to repeat.
 
 #### Action 1: Is TigerCard Number
 
@@ -355,25 +355,30 @@ and(equals(triggerBody()['text_3'], 'TigerCASH'), equals(length(trim(coalesce(tr
 
 Leave the **False** branch of `Is TigerCard Number` empty.
 
-#### Action 4: Gate: Check Uniqueness
+#### Action 4: Gate: Check TigerCASH Uniqueness
 
 **Where to add this:** Below `Is TigerCard Number`, after both branches rejoin. This is back at the top level of the flow.
 
 14. Below `Is TigerCard Number`, after both branches rejoin, add a **Condition**
-15. Rename it to: `Gate: Check Uniqueness`
+15. Rename it to: `Gate: Check TigerCASH Uniqueness`
 16. Set the condition exactly like this:
-    - Left side: click the field, switch to the **Expression** tab, paste `variables('varSuccess')`
+    - Left side: click the field, switch to the **Expression** tab, paste:
+
+```
+and(equals(variables('varSuccess'), true), equals(triggerBody()['text_3'], 'TigerCASH'))
+```
+
     - **Operator:** `is equal to`
     - Right side: switch to the **Expression** tab, paste `true`
 17. Delete any extra blank condition row. The gate should have exactly **one** row.
 
-> **Critical build check:** Do not type plain `varSuccess` into the left box. In code view, this gate must compare `@variables('varSuccess')` to the boolean `true`. If the code shows `"varSuccess"` instead, the condition will always evaluate to false and all later work will be skipped.
+> **Critical build check:** The left side must be **`and(equals(variables('varSuccess'), true), equals(triggerBody()['text_3'], 'TigerCASH'))`** compared to boolean **`true`**. If you only compare `varSuccess` here, **Check** and **Code** batch checkouts will still run the duplicate lookup.
 
 #### Action 5: Has Transaction Number
 
-**Where to add this:** Inside the **True** branch of `Gate: Check Uniqueness`.
+**Where to add this:** Inside the **True** branch of `Gate: Check TigerCASH Uniqueness`.
 
-18. Inside the **True** branch of `Gate: Check Uniqueness`, add a **Condition**
+18. Inside the **True** branch of `Gate: Check TigerCASH Uniqueness`, add a **Condition**
 19. Rename it to: `Has Transaction Number`
 20. Click the left side of the condition, switch to the **Expression** tab, and paste:
 
@@ -396,10 +401,13 @@ length(trim(coalesce(triggerBody()['text_2'], '')))
     - **Filter Query:** click the **Expression** tab and paste:
 
 ```
-concat('TransactionNumber eq ''', trim(triggerBody()['text_2']), '''')
+concat('TransactionNumber eq ''', trim(triggerBody()['text_2']), ''' and PaymentType eq ''TigerCASH''')
 ```
 
+    - **Note:** Include **`and PaymentType eq 'TigerCASH'`** (same as **Flow H**) so only prior **TigerCASH** rows participate in receipt de-duplication.
+
     - **Top Count:** type directly: `1`
+
 26. **Configure retry policy** on this action.
 
 #### Action 7: Is Duplicate Transaction
@@ -436,12 +444,14 @@ length(body('Check_Existing_Transaction')?['value'])
 39. **Value:** click the **Expression** tab and paste:
 
 ```
-concat('Transaction number ''', trim(triggerBody()['text_2']), ''' already exists. Use a unique number.')
+concat('TigerCASH receipt ''', trim(triggerBody()['text_2']), ''' already exists. Enter a unique POS receipt number.')
 ```
 
 Leave the **False** branch of `Is Duplicate Transaction` empty.
 Leave the **False** branch of `Has Transaction Number` empty. Blank transaction numbers are allowed.
-Leave the **False** branch of `Gate: Check Uniqueness` empty.
+Leave the **False** branch of `Gate: Check TigerCASH Uniqueness` empty.
+
+> **Important:** The SharePoint duplicate lookup runs **only when `PaymentType` is TigerCASH`** (see **Action 4**). **Check** and **Code** batch checkouts skip it entirely.
 
 ---
 
@@ -451,9 +461,9 @@ Leave the **False** branch of `Gate: Check Uniqueness` empty.
 
 #### Action 1: Gate Before Request Load
 
-**Where to add this:** Below `Gate: Check Uniqueness`, after all branches rejoin, back at the top level of the flow.
+**Where to add this:** Below `Gate: Check TigerCASH Uniqueness`, after all branches rejoin, back at the top level of the flow.
 
-1. Click **+ Add an action** below `Gate: Check Uniqueness`
+1. Click **+ Add an action** below `Gate: Check TigerCASH Uniqueness`
 2. Search for and select **Condition**
 3. Rename to: `Gate: Load Batch Requests`
 4. Set the condition exactly like this:
@@ -1613,7 +1623,7 @@ After wiring the flow, inspect these cards once in the designer or code view bef
 2. `Mark Write Success` includes **Value** = `Batch payment saved.`
 3. `Handle Write Failure - Success` includes **Value** = `false`
 4. `Handle Write Failure - Message` includes the full failure expression
-5. Every `Gate: ...` condition uses left-side expression `variables('varSuccess')`, right-side expression `true`, and has no extra blank row
+5. Every `Gate: ...` condition uses left-side expression `variables('varSuccess')` compared to boolean `true`, **except** `Gate: Check TigerCASH Uniqueness`, which must use **`and(equals(variables('varSuccess'), true), equals(triggerBody()['text_3'], 'TigerCASH'))`** on the left. No gate should have an extra blank condition row.
 6. `Update Batch Request` includes the full field mapping, not just `Id`
 7. `Return Result` is outside all conditions and returns all three outputs
 8. All accumulator actions (`Add Est Weight`, `Accumulate Alloc Weights`, `Accumulate Total Cost`, `Add Last Cost`) use **Increment variable**, not Set variable — Set variable with a self-referencing `add()` expression will fail to save
@@ -1641,11 +1651,18 @@ If any of those cards are missing their value mappings, the flow can appear to "
 2. Confirm the flow returns `Success = "false"` with the status error
 3. Confirm no `Payments` row was created and no plates/requests were changed
 
-### Test 3: Duplicate Transaction Number
+### Test 3: Duplicate TigerCASH receipt
 
-1. Use a transaction number that already exists in `Payments`
-2. Confirm the flow returns `Success = "false"` with the duplicate-transaction message
-3. Confirm no `Payments` row was created and nothing else was written
+1. Set **`PaymentType`** to **`TigerCASH`**.
+2. Use a **`TransactionNumber`** that already exists in `Payments` from another TigerCASH row.
+3. Confirm the flow returns `Success = "false"` with the duplicate **TigerCASH receipt** message.
+4. Confirm no `Payments` row was created and nothing else was written.
+
+### Test 3b: Reused reference for Check or Code batch (should succeed)
+
+1. Set **`PaymentType`** to **`Check`** or **`Code`**.
+2. Use the same **`TransactionNumber`** as an existing `Payments` row.
+3. Confirm the flow **does not** fail the duplicate step — with valid batch data it returns `Success = "true"` and writes the consolidated row.
 
 ### Test 4: Single-Item Batch
 

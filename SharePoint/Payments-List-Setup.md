@@ -100,6 +100,8 @@ The Payments list stores transaction ledger records for print jobs. Unlike the s
 > 💡 **Batch note:** If one checkout covers multiple requests, create one consolidated `Payments` row for the full checkout total and reuse that one `TransactionNumber` on the single ledger row.
 >
 > ⚠️ **Do not use a TigerCard number as the transaction number.** The TigerCard belongs in `PayerTigerCard`; `TransactionNumber` should hold the TigerCASH receipt / approval / reference number.
+>
+> 💡 **Uniqueness:** SharePoint does **not** enforce a unique constraint on this column. **`Flow-(H)-Payment-SaveSingle`** and **`Flow-(I)-Payment-SaveBatch`** treat duplicate **`TransactionNumber`** values as an error **only for `PaymentType = TigerCASH`** (POS receipt de-duplication). **Check** numbers and **grant/program** (`Code`) references may repeat across rows.
 
 ### Column 7: Weight (Number)
 

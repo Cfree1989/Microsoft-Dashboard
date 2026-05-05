@@ -228,11 +228,11 @@ Reviewed the current `PowerApps/StaffDashboard-App-Spec.md` and related SharePoi
    - **Classification:** Real defect / hard data integrity risk.
    - **Recommendation:** Treat ledger creation as the gating step, not the cleanup step. Either orchestrate the entire batch server-side, or stage the checkout first and only close requests after the consolidated `Payments` row saves successfully.
 
-3. **High - Partial batch retry path is internally contradictory**
-   - **Area:** `btnBatchPaymentConfirm.OnSelect` uniqueness check plus partial-failure cleanup
-   - **Risk:** The UX says failed items can be reviewed and retried, but once the succeeded subset writes the consolidated payment row, the same `TransactionNumber` already exists. Retrying with the original checkout number is blocked; retrying with a new number splits one real-world checkout across multiple ledger rows.
-   - **Evidence:** Step 1 blocks `TransactionNumber` reuse against all `Payments` rows. Step 6 keeps failed items in `colBatchItems` and tells staff to review and retry.
-   - **Classification:** Recovery gap / operational fragility.
+3. **High - Partial batch retry path is internally contradictory** *(TigerCASH only for duplicate blocking — May 2026)*  
+   - **Area:** `btnBatchPaymentConfirm.OnSelect` partial-failure cleanup; Flow I Step 2 duplicate receipt logic
+   - **Risk:** The UX says failed items can be reviewed and retried, but once the succeeded subset writes the consolidated payment row, a **TigerCASH** retry with the **same POS receipt** can still hit the duplicate-receipt guard (same `TransactionNumber` on another **TigerCASH** row). Retrying with a **new** receipt string splits one real-world checkout across multiple ledger rows. **Check** / **Code** batches do not use that duplicate step, so the same reference text can be reused across retries.
+   - **Evidence:** Partial-success batch handling plus finance expectation of one receipt per charge.
+   - **Classification:** Recovery gap / operational fragility for **TigerCASH**; less acute for non-TigerCASH payment types.
    - **Recommendation:** Decide explicitly between:
      - true all-or-nothing batches, or
      - a resumable batch model that can append failed items into the same checkout record.
@@ -367,11 +367,11 @@ Reviewed the full `StaffDashboard-App-Spec.md` (15,071 lines), `Payments-List-Se
    - **Classification:** Policy gap / documented-vs-implemented mismatch.
    - **Recommendation:** Either enforce the rule (block adding a different-method item to `colBatchItems` at selection time, or reject mixed batches in the confirm validation) or remove the documented restriction and make mixed-method batches an explicitly supported workflow.
 
-10. **Medium - Transaction number uniqueness check is global but not scoped to payment type or date**
-    - **Area:** `btnPaymentConfirm.OnSelect` line 7320: `CountRows(Filter(colAllPayments, TransactionNumber = Trim(txtPaymentTransaction.Text))) > 0`; `btnBatchPaymentConfirm.OnSelect` line 9129: same pattern
-    - **Risk:** The uniqueness check filters all `Payments` rows by `TransactionNumber` regardless of `PaymentType`. A TigerCASH receipt number could collide with a Check number or a Grant/Program Code that happens to share the same string. More importantly, `colAllPayments` is populated at the start of the save path via `ClearCollect(colAllPayments, Payments)` — but the `Payments` list may contain more than 2,000 rows over time. Power Apps non-delegable `Filter` against a collection has a row limit (default 500 or 2,000 depending on settings). If `colAllPayments` is truncated, the uniqueness check can miss older duplicates entirely.
-    - **Classification:** Data integrity risk (duplicate detection gap) for mature deployments.
-    - **Recommendation:** Scope the uniqueness check to the same `PaymentType` at minimum. For the delegation concern, either (a) move the uniqueness check to a Power Automate flow with a delegable SharePoint query, or (b) increase the non-delegable row limit and monitor `Payments` list growth.
+10. **Medium - Transaction number uniqueness check is global but not scoped to payment type or date** *(superseded for live flows — May 2026)*  
+    - **Area (historical):** Early canvas save paths used `CountRows(Filter(colAllPayments, TransactionNumber = ...))` without scoping by `PaymentType`.
+    - **Current build docs:** `Flow-(H)-Payment-SaveSingle` and `Flow-(I)-Payment-SaveBatch` Step 2 run **`Get items`** on **`Payments`** only when the trigger’s **`PaymentType`** is **`TigerCASH`**. The filter is **`TransactionNumber eq '<value>' and PaymentType eq 'TigerCASH'`**, so **Check** and **Grant/Program Code** rows (and the Staff app’s **`Code`** input) never participate in receipt de-duplication and may repeat the same reference text freely.
+    - **Residual risk:** Operational mistakes on TigerCASH (wrong receipt, retry with a different string) are unchanged; finance still relies on staff discipline for POS accuracy.
+    - **Classification:** Historical data-integrity note; policy updated in flow build specs.
 
 11. **Medium - `PayerTigerCard` is not populated for batch payments**
     - **Area:** `btnBatchPaymentConfirm.OnSelect`, Step 4 consolidated `Payments` row at lines 9376-9412
@@ -415,7 +415,7 @@ Reviewed the full `StaffDashboard-App-Spec.md` (15,071 lines), `Payments-List-Se
 ### Safe / Sound Areas
 
 - **Pre-save revalidation in both flows** — Both `btnPaymentConfirm` and `btnBatchPaymentConfirm` call `Refresh` on all three data sources and re-check status eligibility before proceeding. This is a meaningful defense against the most obvious stale-state race conditions (e.g., another staff member already processed the request).
-- **Transaction number uniqueness check** — Both save paths block duplicate transaction numbers before creating a `Payments` row. The check is imperfect for large lists (finding #10) but is a solid safeguard for typical usage volumes.
+- **TigerCASH receipt duplicate check (server-side)** — Flow H and Flow I run a delegable **`Payments`** lookup for duplicate **`TransactionNumber`** only when **`PaymentType`** is **TigerCASH**, blocking accidental double-posting of the same POS receipt. **Check** and **Code** (grant/program) reference strings may repeat. The check is imperfect for extremely large lists only in the sense that any SharePoint query must stay within service limits; see historical finding #10 for the old app-side `colAllPayments` pattern.
 - **Consolidated batch architecture** — Writing one `Payments` row per real-world checkout is architecturally correct and aligns with finance/export needs. The GPT-5.4 review's endorsement of this direction is well-founded.
 - **`IfError` wrapping on the single payment `Patch`** — The critical `Patch(Payments, Defaults(Payments), ...)` call is wrapped in `IfError(..., false)` with an early exit if it fails. This prevents the worst-case scenario of proceeding with plate and parent updates when the ledger row doesn't exist.
 - **Batch partial-failure tracking** — The `colBatchSucceededItems` / `colBatchFailedItems` / `colBatchSucceededDetails` pattern provides per-item error granularity, which is materially better than an all-or-nothing approach that might lose all progress on a single item failure.
@@ -652,7 +652,7 @@ These do not block the top fixes but should be addressed in parallel or during i
 - **Consolidated batch architecture** — One `Payments` row per real-world checkout is the correct ledger model and aligns with finance/export needs.
 - **`IfError` wrapping on the primary `Payments` insert** — Both single and batch paths protect the critical ledger write with error detection and early exit.
 - **Pre-save revalidation** — Both paths refresh data sources and re-check status eligibility before proceeding, defending against the most obvious stale-state races.
-- **Transaction number uniqueness check** — Both paths block duplicate transaction numbers before creating a `Payments` row (with the caveat about non-delegable row limits for mature deployments).
+- **TigerCASH receipt duplicate check (server-side)** — Flow H and Flow I block duplicate **`TransactionNumber`** values only for **TigerCASH** before creating a `Payments` row. **Check** / **Code** are not uniqueness-gated. Caveat: historical reviews discussed non-delegable app-side `Filter` limits; the live design uses Power Automate + SharePoint **Get items** for TigerCASH only.
 - **Per-item revalidation inside batch `ForAll`** — Refresh + `LookUp` per item reduces stale-card races compared with a single upfront snapshot.
 - **`PlateKey` as stable identity** — `Text(GUID())` for `PlateKey` persisted to `PlateIDsPickedUp` gives a durable audit trail that survives relabeling and reprints.
 - **Export treats `Payments` as canonical** — The TigerCASH export flow reads from `Payments` directly and does not reconstruct transactions from rollup fields.
