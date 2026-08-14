@@ -45,7 +45,8 @@ App:
           varShowRevertModal > 0 ||
           varShowBatchPaymentModal > 0 ||
           varShowBuildPlatesModal > 0 ||
-          varShowExportModal > 0
+          varShowExportModal > 0;
+      StaffCacheSince = DateAdd(Today(), -365, TimeUnit.Days)
     OnStart: |-
       =// === USER IDENTIFICATION ===
       // Cache user info for performance
@@ -60,11 +61,7 @@ App:
       // All possible statuses in the system
       Set(varStatuses, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled", "Archived"]);
 
-      // Statuses shown in the main queue (active work)
-      Set(varQuickQueue, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed"]);
-
       // === UI STATE VARIABLES ===
-      // Currently selected status tab
       Set(varSelectedStatus, "Uploaded");
 
       // Current page/view
@@ -74,7 +71,6 @@ App:
       Set(varSearchText, "");
       Set(varSortOrder, "Queue Order");
       Set(varNeedsAttention, false);
-      Set(varExpandAll, false);
 
       // === MODAL CONTROLS ===
       // These control which modal is visible (0 = hidden, ID = visible for that item)
@@ -114,10 +110,6 @@ App:
       Set(varBatchSelectMode, false);
       ClearCollect(colBatchItems, Blank());
       Clear(colBatchItems);
-      ClearCollect(colBatchSucceededItems, Blank());
-      Clear(colBatchSucceededItems);
-      ClearCollect(colBatchFailedItems, Blank());
-      Clear(colBatchFailedItems);
 
       // Batch calculation variables (used during batch payment processing)
       Set(varBatchTotalEstWeight, 0);
@@ -171,9 +163,9 @@ App:
               )
           ),
           ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
-          ClearCollect(colAllBuildPlates, BuildPlates),
-          ClearCollect(colAllPayments, Payments),
-          ClearCollect(colAllRequestComments, RequestComments)
+          ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince)),
+          ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince)),
+          ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince))
       );
 
       // === SCHEDULE: TIME SLOTS ===
@@ -213,9 +205,6 @@ App:
           {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
           {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
       );
-
-      // Check if current user is a staff member (uses colStaff loaded above)
-      Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
 
       // Seed both attention counters before the timer starts so the first comparison is typed and stable
       Set(varCurrentAttentionCount, CountRows(colNeedsAttention));

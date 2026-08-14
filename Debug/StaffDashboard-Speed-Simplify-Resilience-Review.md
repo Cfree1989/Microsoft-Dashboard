@@ -73,6 +73,8 @@ Power Apps will only copy a limited number of rows (often 500, sometimes 2,000).
 
 **What we would do later:** Only photocopy plates/messages for jobs still in the active queue. When someone opens an old Paid or Archived job, fetch that job’s extras on demand.
 
+**Status (14 August 2026):** Live app photocopies plates, payments, and messages from the last **365 days** (`StaffCacheSince`), not the entire lists. Opening **Messages** also loads that job’s thread from SharePoint. **Report** preview asks SharePoint for the selected month (download is still Flow G). Very old Archived cards may show empty plate/message counts until you open the popup.
+
 ### 1.2 Summaries are built the slow way
 
 **In plain English:** To show “2/3 plates done” and “Messages (4)” on each card, the app builds two cheat sheets at startup.
@@ -92,6 +94,8 @@ Then each visible card looks up the cheat sheet. The Messages **button** looks i
 Examples: a “is this person staff?” flag that is never checked (and would not help anyway — the signed-in email is always the owner), an “expand all cards” switch from when cards could collapse, and leftover boxes from when batch payment used to save one job at a time on the tablet (batch payment is now one Flow).
 
 They do not break the lab. They make the startup recipe longer.
+
+**Fixed 14 August 2026:** Removed unused `varQuickQueue`, `varExpandAll`, `varIsStaff`, `colBatchSucceededItems`, and `colBatchFailedItems` from startup.
 
 ### 1.4 Opening the app is the only real lock
 
@@ -232,6 +236,11 @@ What is missing: the card does **not** stop you from adding a job that still has
 Gaps:
 
 - You can confirm a rejection with **no checkbox and no comment**. Easy to send a blank “your print was rejected” email.
+
+**Fixed 14 August 2026:** Confirm is disabled until staff pick **Performing Action As** and either check a reason or type a comment.
+
+Remaining:
+
 - Adding a new canned reason today means changing the app, because the seven checkboxes are typed into the screen. They could be driven by the SharePoint list of reasons instead.
 - When it writes the internal activity log, it looks up the same job twice. Harmless, just extra work. Same habit appears on Approve, Archive, Complete, and Revert.
 
@@ -470,10 +479,10 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 3. ~~Pause the 30-second refresh while a popup is open or a save is running. Make Refresh match the timer.~~ **Done 14 August 2026** (live app).  
 4. ~~Add the safety net (`IfError` + loading) on the saves in the table above.~~ **Done 14 August 2026** (live app).  
 5. ~~Build plate/message cheat sheets in one pass; look up messages once per card.~~ **Done 14 August 2026** (live app).  
-6. Stop photocopying *all* payments/messages/plates for all of history.  
-7. Reject: require at least one reason or a comment.  
+6. ~~Stop photocopying *all* payments/messages/plates for all of history.~~ **Done 14 August 2026** (live app): last **365 days** by `Created`, Report month query, Messages load that job on open.  
+7. ~~Reject: require at least one reason or a comment.~~ **Done 14 August 2026** (live app).  
 8. Batch: do not let staff add a job the payment helper will refuse.  
-9. Delete leftover startup switches that nothing uses.  
+9. ~~Delete leftover startup switches that nothing uses.~~ **Done 14 August 2026** (live app).  
 10. Schedule: reuse the staff list already in memory; load shifts the simple way. Do not default the name dropdown to the signed-in account.  
 11. Later: stop using StaffNotes as an event log; consider shorter cards.
 

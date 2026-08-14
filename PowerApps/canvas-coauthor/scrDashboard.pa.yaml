@@ -41,9 +41,9 @@ Screens:
                   );
 
                   // Reload local collections used by job-card summaries
-                  ClearCollect(colAllBuildPlates, BuildPlates);
-                  ClearCollect(colAllPayments, Payments);
-                  ClearCollect(colAllRequestComments, RequestComments);
+                  ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+                  ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+                  ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
                   // Reload NeedsAttention items into local collection (avoids delegation)
                   ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 
@@ -1290,7 +1290,9 @@ Screens:
                   HoverFill: =If(Self.Fill = Color.White, varColorPrimary, RGBA(220, 40, 40, 1))
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
-                    Set(varSelectedItem, ThisItem)
+                    Set(varSelectedItem, ThisItem);
+                    RemoveIf(colAllRequestComments, RequestID = ThisItem.ID);
+                    Collect(colAllRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =If(Self.Fill = Color.White, ColorFade(varColorPrimary, -15%), RGBA(200, 35, 35, 1))
@@ -1628,9 +1630,9 @@ Screens:
                   Refresh(Payments),
                   Refresh(RequestComments)
               );
-              ClearCollect(colAllBuildPlates, BuildPlates);
-              ClearCollect(colAllPayments, Payments);
-              ClearCollect(colAllRequestComments, RequestComments);
+              ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+              ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+              ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
               ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
               Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
               If(
@@ -2043,7 +2045,22 @@ Screens:
                   BorderColor: =ColorFade(Self.Fill, -15%)
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                  DisplayMode: =If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
+                  DisplayMode: |-
+                    =If(
+                        IsBlank(ddRejectStaff.Selected) ||
+                        (
+                            !chkTooSmall.Value &&
+                            !chkGeometry.Value &&
+                            !chkNotSolid.Value &&
+                            !chkScale.Value &&
+                            !chkMessy.Value &&
+                            !chkOverhangs.Value &&
+                            !chkNotJoined.Value &&
+                            IsBlank(Trim(txtRejectComments.Text))
+                        ),
+                        DisplayMode.Disabled,
+                        DisplayMode.Edit
+                    )
                   Fill: =varColorDanger
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -2515,7 +2532,7 @@ Screens:
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =ColorFade(varColorSuccess, -15%)
-                  OnSelect: "=// === SHOW LOADING ===\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Approving request...\");\n\n// Calculate cost (base then own-material discount; must match lblApprovalCostValue)\nSet(\n    varCalculatedCost,\n    With(\n        {\n            wBase: Max(\n                varMinimumCost,\n                Value(txtEstimatedWeight.Text) * If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    varResinRate,\n                    varFilamentRate\n                )\n            )\n        },\n        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)\n    )\n);\n\n// Update SharePoint item with error handling\n// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names\n// Using LookUp to get fresh record avoids concurrency conflicts\nSet(\n    varApprovalSaved,\n    IfError(\n        With(\n            {\n                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))\n            },\n            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {\n                Status: LookUp(Choices(PrintRequests.Status), Value = \"Pending\"),\n                NeedsAttention: false,\n                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = \"Status Change\"),\n                LastActionBy: {\n                    Claims: \"i:0#.f|membership|\" & ddApprovalStaff.Selected.MemberEmail,\n                    Discipline: \"\",\n                    DisplayName: ddApprovalStaff.Selected.MemberName,\n                    Email: ddApprovalStaff.Selected.MemberEmail,\n                    JobTitle: \"\",\n                    Picture: \"\"\n                },\n                LastActionAt: Now(),\n                EstimatedWeight: Value(txtEstimatedWeight.Text),\n                EstimatedTime: Value(txtEstimatedTime.Text),\n                EstimatedCost: varCalculatedCost,\n                StudentOwnMaterial: chkApprovalOwnMaterial.Value,\n                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},\n                ApprovalComment: txtApprovalComments.Text,\n                StaffNotes: Concatenate(\n                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), \"\", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & \" | \"),\n                    \"APPROVED by \" &\n                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(\" \", n) - 1) & \" \" & Left(Last(Split(n, \" \")).Value, 1) & \".\") &\n                    \": [Summary] \" & txtEstimatedWeight.Text &\n                    If(varSelectedItem.Method.Value = \"Resin\", \"mL\", \"g\") &\n                    \", $\" & Text(varCalculatedCost, \"[$-en-US]#,##0.00\") &\n                    \" [Changes] [Reason] [Context] \" &\n                    \" [Comment] \" &\n                    Trim(\n                        Substitute(\n                            Substitute(\n                                Substitute(\n                                    Substitute(\n                                        Substitute(\n                                            Substitute(\n                                                Substitute(txtApprovalComments.Text, \" | \", \"; \"),\n                                                \" ~~ \",\n                                                \"; \"\n                                            ),\n                                            \"[Summary]\",\n                                            \"(Summary)\"\n                                        ),\n                                        \"[Changes]\",\n                                        \"(Changes)\"\n                                    ),\n                                    \"[Reason]\",\n                                    \"(Reason)\"\n                                ),\n                                \"[Context]\",\n                                \"(Context)\"\n                            ),\n                            \"[Comment]\",\n                            \"(Comment)\"\n                        )\n                    ) &\n                    \" - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            })\n        );\n        true,\n        Set(varIsLoading, false);\n        Notify(\"Failed to save approval. Please try again.\", NotificationType.Error);\n        false\n    )\n);\n\nIf(\n    varApprovalSaved,\n    IfError(\n        'Flow-(C)-Action-LogAction'.Run(\n            Text(varSelectedItem.ID),              // RequestID\n            \"Approved\",                            // Action\n            \"Status\",                              // FieldName\n            \"Pending\",                             // NewValue\n            ddApprovalStaff.Selected.MemberEmail   // ActorEmail\n        ),\n        Notify(\"Approved, but could not log to audit.\", NotificationType.Warning)\n    );\n    Notify(\"Approved! Student will receive estimate email.\", NotificationType.Success);\n    \n    // === CREATE DEFAULT BUILD PLATE ===\n    // If staff didn't configure plates via \"Add Plates/Printers\" button, auto-create one\n    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,\n        IfError(\n            Patch(BuildPlates, Defaults(BuildPlates), {\n                RequestID: varSelectedItem.ID,\n                ReqKey: varSelectedItem.ReqKey,\n                PlateKey: Text(GUID()),\n                Machine: If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    Coalesce(\n                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),\n                        LookUp(\n                            Choices([@BuildPlates].Machine),\n                            Or(StartsWith(Value, \"Form 3+\"), StartsWith(Value, \"Form 3 (\"))\n                        )\n                    ),\n                    varSelectedItem.Printer\n                ),\n                Status: {Value: \"Queued\"},\n                DisplayLabel: Blank()\n            });\n            true,\n            Notify(\"Request approved, but the default plate could not be created. Add a plate from Build Plates.\", NotificationType.Warning);\n            false\n        )\n    );\n    // Refresh plate collections for job cards\n    ClearCollect(colAllBuildPlates, BuildPlates);\n    \n    // Close modal and reset\n    Set(varShowApprovalModal, 0);\n    Set(varSelectedItem, Blank());\n    Reset(txtEstimatedWeight);\n    Reset(txtEstimatedTime);\n    Reset(txtApprovalComments);\n    Reset(ddApprovalStaff);\n    Reset(ddSlicedOnComputer);\n    Reset(chkApprovalOwnMaterial)\n);\n\n// === HIDE LOADING ===\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")"
+                  OnSelect: "=// === SHOW LOADING ===\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Approving request...\");\n\n// Calculate cost (base then own-material discount; must match lblApprovalCostValue)\nSet(\n    varCalculatedCost,\n    With(\n        {\n            wBase: Max(\n                varMinimumCost,\n                Value(txtEstimatedWeight.Text) * If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    varResinRate,\n                    varFilamentRate\n                )\n            )\n        },\n        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)\n    )\n);\n\n// Update SharePoint item with error handling\n// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names\n// Using LookUp to get fresh record avoids concurrency conflicts\nSet(\n    varApprovalSaved,\n    IfError(\n        With(\n            {\n                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))\n            },\n            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {\n                Status: LookUp(Choices(PrintRequests.Status), Value = \"Pending\"),\n                NeedsAttention: false,\n                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = \"Status Change\"),\n                LastActionBy: {\n                    Claims: \"i:0#.f|membership|\" & ddApprovalStaff.Selected.MemberEmail,\n                    Discipline: \"\",\n                    DisplayName: ddApprovalStaff.Selected.MemberName,\n                    Email: ddApprovalStaff.Selected.MemberEmail,\n                    JobTitle: \"\",\n                    Picture: \"\"\n                },\n                LastActionAt: Now(),\n                EstimatedWeight: Value(txtEstimatedWeight.Text),\n                EstimatedTime: Value(txtEstimatedTime.Text),\n                EstimatedCost: varCalculatedCost,\n                StudentOwnMaterial: chkApprovalOwnMaterial.Value,\n                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},\n                ApprovalComment: txtApprovalComments.Text,\n                StaffNotes: Concatenate(\n                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), \"\", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & \" | \"),\n                    \"APPROVED by \" &\n                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(\" \", n) - 1) & \" \" & Left(Last(Split(n, \" \")).Value, 1) & \".\") &\n                    \": [Summary] \" & txtEstimatedWeight.Text &\n                    If(varSelectedItem.Method.Value = \"Resin\", \"mL\", \"g\") &\n                    \", $\" & Text(varCalculatedCost, \"[$-en-US]#,##0.00\") &\n                    \" [Changes] [Reason] [Context] \" &\n                    \" [Comment] \" &\n                    Trim(\n                        Substitute(\n                            Substitute(\n                                Substitute(\n                                    Substitute(\n                                        Substitute(\n                                            Substitute(\n                                                Substitute(txtApprovalComments.Text, \" | \", \"; \"),\n                                                \" ~~ \",\n                                                \"; \"\n                                            ),\n                                            \"[Summary]\",\n                                            \"(Summary)\"\n                                        ),\n                                        \"[Changes]\",\n                                        \"(Changes)\"\n                                    ),\n                                    \"[Reason]\",\n                                    \"(Reason)\"\n                                ),\n                                \"[Context]\",\n                                \"(Context)\"\n                            ),\n                            \"[Comment]\",\n                            \"(Comment)\"\n                        )\n                    ) &\n                    \" - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            })\n        );\n        true,\n        Set(varIsLoading, false);\n        Notify(\"Failed to save approval. Please try again.\", NotificationType.Error);\n        false\n    )\n);\n\nIf(\n    varApprovalSaved,\n    IfError(\n        'Flow-(C)-Action-LogAction'.Run(\n            Text(varSelectedItem.ID),              // RequestID\n            \"Approved\",                            // Action\n            \"Status\",                              // FieldName\n            \"Pending\",                             // NewValue\n            ddApprovalStaff.Selected.MemberEmail   // ActorEmail\n        ),\n        Notify(\"Approved, but could not log to audit.\", NotificationType.Warning)\n    );\n    Notify(\"Approved! Student will receive estimate email.\", NotificationType.Success);\n    \n    // === CREATE DEFAULT BUILD PLATE ===\n    // If staff didn't configure plates via \"Add Plates/Printers\" button, auto-create one\n    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,\n        IfError(\n            Patch(BuildPlates, Defaults(BuildPlates), {\n                RequestID: varSelectedItem.ID,\n                ReqKey: varSelectedItem.ReqKey,\n                PlateKey: Text(GUID()),\n                Machine: If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    Coalesce(\n                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),\n                        LookUp(\n                            Choices([@BuildPlates].Machine),\n                            Or(StartsWith(Value, \"Form 3+\"), StartsWith(Value, \"Form 3 (\"))\n                        )\n                    ),\n                    varSelectedItem.Printer\n                ),\n                Status: {Value: \"Queued\"},\n                DisplayLabel: Blank()\n            });\n            true,\n            Notify(\"Request approved, but the default plate could not be created. Add a plate from Build Plates.\", NotificationType.Warning);\n            false\n        )\n    );\n    // Refresh plate collections for job cards\n    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));\n    \n    // Close modal and reset\n    Set(varShowApprovalModal, 0);\n    Set(varSelectedItem, Blank());\n    Reset(txtEstimatedWeight);\n    Reset(txtEstimatedTime);\n    Reset(txtApprovalComments);\n    Reset(ddApprovalStaff);\n    Reset(ddSlicedOnComputer);\n    Reset(chkApprovalOwnMaterial)\n);\n\n// === HIDE LOADING ===\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")"
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorSuccess, -25%)
@@ -3761,7 +3778,7 @@ Screens:
                                     )
                                 )
                             );
-                            ClearCollect(colAllBuildPlates, BuildPlates)
+                            ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))
                         );
 
                         // Clear the stale payment fields on the request row when reverting
@@ -4515,9 +4532,9 @@ Screens:
                         Refresh(Payments),
                         Refresh(RequestComments)
                     );
-                    ClearCollect(colAllBuildPlates, BuildPlates);
-                    ClearCollect(colAllPayments, Payments);
-                    ClearCollect(colAllRequestComments, RequestComments);
+                    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+                    ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+                    ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
 
                     // Log to audit via Flow C
                     IfError(
@@ -5337,8 +5354,8 @@ Screens:
                             Refresh(BuildPlates),
                             Refresh(Payments)
                         );
-                        ClearCollect(colAllBuildPlates, BuildPlates);
-                        ClearCollect(colAllPayments, Payments);
+                        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+                        ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
                         Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
                         With(
@@ -6098,7 +6115,7 @@ Screens:
                                       )
                                   )
                               );
-                              ClearCollect(colAllBuildPlates, BuildPlates);
+                              ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
                               ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
                               Notify("Machine updated", NotificationType.Success, 2000)
                           );
@@ -6143,7 +6160,7 @@ Screens:
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =ColorFade(varColorPrimary, -15%)
-                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Updating plate status...\");\n\nWith(\n    {\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Printing\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only update request if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        Set(varPendingBuildPlateMarkPrintingCount, varPendingBuildPlateMarkPrintingCount + 1);\n        Notify(\"Plate marked as printing\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")\n;\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
+                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Updating plate status...\");\n\nWith(\n    {\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Printing\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only update request if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        Set(varPendingBuildPlateMarkPrintingCount, varPendingBuildPlateMarkPrintingCount + 1);\n        Notify(\"Plate marked as printing\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")\n;\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))"
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -6172,7 +6189,7 @@ Screens:
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =ColorFade(varColorPrimary, -15%)
-                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Marking plate as completed...\");\n\nWith(\n    {\n        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Completed\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only continue if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        // Lock labels if this is the first completed plate\n        If(\n            wShouldLockLabels,\n            ForAll(\n                AddColumns(\n                    colBuildPlates As plate,\n                    FrozenLabel,\n                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & \"/\" & Text(CountRows(colBuildPlates))\n                ) As plateToLock,\n                Patch(\n                    BuildPlates,\n                    LookUp(BuildPlates, ID = plateToLock.ID),\n                    { \n                        DisplayLabel: plateToLock.FrozenLabel,\n                        // Preserve ReqKey in label-locking updates\n                        ReqKey: plateToLock.ReqKey\n                    }\n                )\n            );\n            Set(\n                varSelectedItem,\n                Patch(\n                    PrintRequests,\n                    wFreshRequest,\n                    {\n                        BuildPlateLabelsLocked: true,\n                        BuildPlateOriginalTotal: CountRows(colBuildPlates)\n                    }\n                )\n            )\n        );\n        // Defer StaffNotes: batched when Build Plates modal closes\n        Set(varPendingBuildPlateMarkDoneCount, varPendingBuildPlateMarkDoneCount + 1);\n        Notify(\"Plate marked as completed\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\");\n\n// Refresh collection\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, BuildPlates)"
+                        OnSelect: "=// Show loading overlay to prevent double-clicks\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Marking plate as completed...\");\n\nWith(\n    {\n        wShouldLockLabels: !Coalesce(varSelectedItem.BuildPlateLabelsLocked, false),\n        wFreshPlate: LookUp(BuildPlates, ID = ThisItem.ID),\n        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)\n    },\n    // Update BuildPlate with explicit field preservation\n    Set(\n        varPlatePatchSuccess,\n        IfError(\n            Patch(BuildPlates,\n                wFreshPlate,\n                { \n                    Status: { Value: \"Completed\" },\n                    // Explicitly preserve required fields to prevent clearing\n                    RequestID: wFreshPlate.RequestID,\n                    ReqKey: wFreshPlate.ReqKey,\n                    PlateKey: wFreshPlate.PlateKey,\n                    Machine: wFreshPlate.Machine,\n                    Title: wFreshPlate.Title\n                }\n            ),\n            Blank()\n        )\n    );\n    \n    // Only continue if plate update succeeded\n    If(\n        !IsBlank(varPlatePatchSuccess),\n        // Lock labels if this is the first completed plate\n        If(\n            wShouldLockLabels,\n            ForAll(\n                AddColumns(\n                    colBuildPlates As plate,\n                    FrozenLabel,\n                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & \"/\" & Text(CountRows(colBuildPlates))\n                ) As plateToLock,\n                Patch(\n                    BuildPlates,\n                    LookUp(BuildPlates, ID = plateToLock.ID),\n                    { \n                        DisplayLabel: plateToLock.FrozenLabel,\n                        // Preserve ReqKey in label-locking updates\n                        ReqKey: plateToLock.ReqKey\n                    }\n                )\n            );\n            Set(\n                varSelectedItem,\n                Patch(\n                    PrintRequests,\n                    wFreshRequest,\n                    {\n                        BuildPlateLabelsLocked: true,\n                        BuildPlateOriginalTotal: CountRows(colBuildPlates)\n                    }\n                )\n            )\n        );\n        // Defer StaffNotes: batched when Build Plates modal closes\n        Set(varPendingBuildPlateMarkDoneCount, varPendingBuildPlateMarkDoneCount + 1);\n        Notify(\"Plate marked as completed\", NotificationType.Success, 2000),\n        // Error notification\n        Notify(\"Failed to update plate status. Please try again.\", NotificationType.Error, 3000)\n    )\n);\n\n// Hide loading overlay\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\");\n\n// Refresh collection\nClearCollect(colBuildPlates,\n    Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)\n);\nClearCollect(colBuildPlatesIndexed,\n    AddColumns(\n        colBuildPlates As plate,\n        PlateNum,\n        CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n        ResolvedPlateLabel,\n        With(\n            {\n                wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),\n                wStoredLabel: Trim(Coalesce(plate.DisplayLabel, \"\"))\n            },\n            If(\n                !IsBlank(wStoredLabel),\n                wStoredLabel,\n                Text(wDynamicNum) & \"/\" & Text(CountRows(colBuildPlates))\n            )\n        )\n    )\n);\nClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))"
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -6254,7 +6271,7 @@ Screens:
                                           )
                                       )
                                   );
-                                  ClearCollect(colAllBuildPlates, BuildPlates)
+                                  ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))
                               )
                           )
                         PressedBorderColor: =Self.Fill
@@ -6384,7 +6401,7 @@ Screens:
                                 )
                             )
                         );
-                        ClearCollect(colAllBuildPlates, BuildPlates);
+                        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
                         Notify("Plate added", NotificationType.Success, 2000)
                     );
 
@@ -7021,8 +7038,8 @@ Screens:
                             Refresh(BuildPlates),
                             Refresh(Payments)
                         );
-                        ClearCollect(colAllBuildPlates, BuildPlates);
-                        ClearCollect(colAllPayments, Payments);
+                        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+                        ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
                         ForAll(
                             colBatchItems As BatchItem,
                             IfError(
@@ -8359,7 +8376,7 @@ Screens:
                         ReadByStaff = false,
                         { ReadByStaff: true }
                     );
-                    ClearCollect(colAllRequestComments, RequestComments);
+                    ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
 
                     // Clear the NeedsAttention flag on the request
                     Set(
@@ -8491,7 +8508,7 @@ Screens:
 
                     If(
                         varMessageSaved,
-                        ClearCollect(colAllRequestComments, RequestComments);
+                        ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
                         IfError(
                             Patch(
                                 PrintRequests,
@@ -8706,15 +8723,22 @@ Screens:
                   Text: |
                     =With(
                         {
-                            filtered: Filter(
-                                colAllPayments,
-                                PaymentType.Value = "TigerCASH" &&
-                                Month(PaymentDate) = ddExportMonth.Selected.Value &&
-                                Year(PaymentDate) = ddExportYear.Selected.Value
-                            )
+                            wStart: Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1)
                         },
-                        CountRows(filtered) & " transactions  ·  " &
-                        Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
+                        With(
+                            {
+                                filtered: Filter(
+                                    Filter(
+                                        Payments,
+                                        PaymentDate >= wStart,
+                                        PaymentDate < DateAdd(wStart, 1, TimeUnit.Months)
+                                    ),
+                                    PaymentType.Value = "TigerCASH"
+                                )
+                            },
+                            CountRows(filtered) & " transactions  ·  " &
+                            Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
+                        )
                     )
                   Width: =460
                   X: =recExportBox.X + 20
@@ -8730,10 +8754,12 @@ Screens:
                     =If(
                         CountRows(
                             Filter(
-                                colAllPayments,
-                                PaymentType.Value = "TigerCASH" &&
-                                Month(PaymentDate) = ddExportMonth.Selected.Value &&
-                                Year(PaymentDate) = ddExportYear.Selected.Value
+                                Filter(
+                                    Payments,
+                                    PaymentDate >= Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1),
+                                    PaymentDate < DateAdd(Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1), 1, TimeUnit.Months)
+                                ),
+                                PaymentType.Value = "TigerCASH"
                             )
                         ) > 0,
                         DisplayMode.Edit,

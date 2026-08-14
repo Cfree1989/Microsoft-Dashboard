@@ -398,7 +398,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 > **Canonical `App.OnStart`:** Paste the block below into **App.OnStart** in Studio. It intentionally includes **one** `// === SCHEDULE SCREEN STATE ===` block (after modal flags, before batch payment) with typed `colEditShifts` seed times. If your coauthor YAML still has a **second** duplicate schedule block after `varRefreshInterval`, **delete that duplicate** so the app matches this doc — the duplicate reset `colEditShifts` with empty strings and could cause type drift on schedule dropdowns.
 >
-> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, and `StaffModalOpen` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those three named formulas out of the block below into **Formulas**. Plate and message cheat sheets use **`GroupBy` + `AddColumns` + `DropColumns`** (one pass per list), not `ForAll(Distinct(...), Filter(whole list))`.
+> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, `StaffModalOpen`, and `StaffCacheSince` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those named formulas out of the block below into **Formulas**. Plate and message cheat sheets use **`GroupBy` + `AddColumns` + `DropColumns`** (one pass per list). **`StaffCacheSince`** is today minus 365 days; startup/timer photocopies of plates, payments, and messages use `Created >= StaffCacheSince`.
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
@@ -418,11 +418,7 @@ ClearCollect(colSlicingComputers, ForAll(Choices(PrintRequests.SlicedOnComputer)
 // All possible statuses in the system
 Set(varStatuses, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled", "Archived"]);
 
-// Statuses shown in the main queue (active work)
-Set(varQuickQueue, ["Uploaded", "Pending", "Ready to Print", "Printing", "Completed"]);
-
 // === UI STATE VARIABLES ===
-// Currently selected status tab
 Set(varSelectedStatus, "Uploaded");
 
 // Current page/view
@@ -432,7 +428,6 @@ Set(varCurrentPage, "Dashboard");
 Set(varSearchText, "");
 Set(varSortOrder, "Queue Order");
 Set(varNeedsAttention, false);
-Set(varExpandAll, false);
 
 // === MODAL CONTROLS ===
 // These control which modal is visible (0 = hidden, ID or 1 = visible).
@@ -470,10 +465,6 @@ Clear(colEditShifts);
 Set(varBatchSelectMode, false);
 ClearCollect(colBatchItems, Blank());
 Clear(colBatchItems);
-ClearCollect(colBatchSucceededItems, Blank());
-Clear(colBatchSucceededItems);
-ClearCollect(colBatchFailedItems, Blank());
-Clear(colBatchFailedItems);
 
 // Batch calculation variables (used during batch payment processing)
 Set(varBatchTotalEstWeight, 0);
@@ -527,9 +518,9 @@ Concurrent(
         )
     ),
     ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true)),
-    ClearCollect(colAllBuildPlates, BuildPlates),
-    ClearCollect(colAllPayments, Payments),
-    ClearCollect(colAllRequestComments, RequestComments)
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince)),
+    ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince)),
+    ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince))
 );
 
 // === SCHEDULE: TIME SLOTS ===
@@ -618,9 +609,7 @@ StaffModalOpen =
     varShowBatchPaymentModal > 0 ||
     varShowBuildPlatesModal > 0 ||
     varShowExportModal > 0;
-
-// Check if current user is a staff member (uses colStaff loaded above)
-Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
+StaffCacheSince = DateAdd(Today(), -365, TimeUnit.Days);
 
 // Seed both attention counters before the timer starts so the first comparison is typed and stable
 Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
@@ -774,16 +763,13 @@ Set(varLoadingMessage, "")
 | `varMeEmail` | Current user's email (lowercase) | Text |
 | `varMeName` | Current user's display name | Text |
 | `colStaff` | Active staff from SharePoint `Staff` (`Active = true`), flattened: `StaffID`, `MemberName`, `MemberEmail`, `Role`, `Active`, `AidType`, `SchedSortOrder` | Table |
-| `varIsStaff` | Is current user a staff member? | Boolean |
 | `varStatuses` | All status options | Table |
-| `varQuickQueue` | Active queue statuses | Table |
 | `varSelectedStatus` | Currently selected status tab | Text |
 | `varCurrentPage` | Legacy navigation flag (live header uses `Navigate` / modals instead of multi-page chrome) | Text |
 | `colSlicingComputers` | `{Name}` table from `Choices(PrintRequests.SlicedOnComputer)` for slicer dropdowns | Table |
 | `varSearchText` | Current search filter | Text |
 | `varSortOrder` | Current dashboard sort mode | Text |
 | `varNeedsAttention` | Filter for attention items only | Boolean |
-| `varExpandAll` | Reserved (expand/collapse removed; cards always expanded) | Boolean |
 | `varSchedSelectedEmail` | Schedule screen: staff member email selected for editing | Text |
 | `varSchedEditSaving` | Schedule screen: true while save is in progress | Boolean |
 | `varSchedConfirmSave` | Schedule screen: true after first save click, while waiting for the destructive replace confirmation click | Boolean |
@@ -817,8 +803,6 @@ Set(varLoadingMessage, "")
 | `varShowExportModal` | Controls export modal visibility (`0` = hidden, `1` = visible). **`conExportModal.Visible`** must be **`varShowExportModal > 0`** (not `<> 0`) so the modal stays hidden while this variable is still blank during app startup. | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
-| `colBatchSucceededItems` | Batch items saved successfully in the current run | Table |
-| `colBatchFailedItems` | Batch items that failed validation or patching in the current run | Table |
 | `varBatchTotalEstWeight` | Sum of estimated weights for batch items (calculation temp) | Number |
 | `varBatchCombinedWeight` | Combined final weight entered for batch (calculation temp) | Number |
 | `varBatchItemCount` | Number of items in batch (calculation temp) | Number |
@@ -834,10 +818,11 @@ Set(varLoadingMessage, "")
 | `colNeedsAttention` | Local collection of NeedsAttention items (avoids delegation) | Table |
 | `varCurrentAttentionCount` | Current count of NeedsAttention items on the latest timer/on-start refresh | Number |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
-| `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
+| `colAllBuildPlates` | BuildPlates created in the last 365 days (`Created >= StaffCacheSince`) | Table |
+| `StaffCacheSince` | Named formula: `DateAdd(Today(), -365, TimeUnit.Days)` | Date |
 | `BuildPlateSummary` | Named formula: one-pass `GroupBy` of `colAllBuildPlates` by `RequestID`. Columns: `TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`, `TotalAll`, `IncompleteCount` | Table |
-| `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
-| `colAllRequestComments` | All `RequestComments` rows cached locally for dashboard badges and the message thread gallery | Table |
+| `colAllPayments` | Payments created in the last 365 days (`Created >= StaffCacheSince`). Report preview queries **Payments** for the selected month. | Table |
+| `colAllRequestComments` | RequestComments created in the last 365 days. Opening Messages also loads that job’s thread from SharePoint. | Table |
 | `RequestCommentSummary` | Named formula: one-pass `GroupBy` of `colAllRequestComments` by `RequestID` (`TotalCount`, `UnreadInboundCount`) | Table |
 | `StaffModalOpen` | Named formula: true when any dashboard popup is open (`varShow*Modal > 0`). Used to pause `tmrAutoRefresh`. Batch-select mode is not a popup and does not pause the timer. | Boolean |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
@@ -3644,7 +3629,29 @@ Reset(chkNotJoined)
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
-| DisplayMode | `If(IsBlank(ddRejectStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)` |
+| DisplayMode | Disabled unless staff is selected **and** at least one reason checkbox is on **or** the comment box has text |
+
+45b. Set **DisplayMode:**
+
+```powerfx
+If(
+    IsBlank(ddRejectStaff.Selected) ||
+    (
+        !chkTooSmall.Value &&
+        !chkGeometry.Value &&
+        !chkNotSolid.Value &&
+        !chkScale.Value &&
+        !chkMessy.Value &&
+        !chkOverhangs.Value &&
+        !chkNotJoined.Value &&
+        IsBlank(Trim(txtRejectComments.Text))
+    ),
+    DisplayMode.Disabled,
+    DisplayMode.Edit
+)
+```
+
+> Staff cannot confirm a blank rejection. Pick at least one canned reason or type a comment (and pick Performing Action As).
 
 46. Set **OnSelect:**
 
@@ -4634,7 +4641,7 @@ If(
         )
     );
     // Refresh plate collections for job cards
-    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
     // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     
     // Close modal and reset
@@ -6532,9 +6539,9 @@ Concurrent(
     Refresh(Payments),
     Refresh(RequestComments)
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colAllPayments, Payments);
-ClearCollect(colAllRequestComments, RequestComments);
+ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
 
 // Log to audit via Flow C
 IfError(
@@ -8116,9 +8123,9 @@ If(
         Refresh(BuildPlates),
         Refresh(Payments)
     );
-    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
     // BuildPlateSummary recalculates automatically from colAllBuildPlates.
-    ClearCollect(colAllPayments, Payments);
+    ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
     Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
 
     With(
@@ -8783,7 +8790,7 @@ If(
                 )
             )
         );
-        ClearCollect(colAllBuildPlates, BuildPlates)
+        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))
     );
 
     // Clear the stale payment fields on the request row when reverting
@@ -9816,9 +9823,9 @@ If(
         Refresh(BuildPlates),
         Refresh(Payments)
     );
-    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
     // BuildPlateSummary recalculates automatically from colAllBuildPlates.
-    ClearCollect(colAllPayments, Payments);
+    ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
 
     ForAll(
         colBatchItems As BatchItem,
@@ -10453,7 +10460,7 @@ If(
             )
         )
     );
-    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
     // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     ClearCollect(colPrintersUsed, Distinct(colBuildPlates, Machine.Value));
     Notify("Machine updated", NotificationType.Success, 2000)
@@ -10589,7 +10596,7 @@ ClearCollect(colBuildPlatesIndexed,
         )
     )
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
 // BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
@@ -10728,7 +10735,7 @@ ClearCollect(colBuildPlatesIndexed,
         )
     )
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
+ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
 // BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
@@ -10826,7 +10833,7 @@ If(
                 )
             )
         );
-        ClearCollect(colAllBuildPlates, BuildPlates)
+        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))
     )
 )
 ```
@@ -10994,7 +11001,7 @@ If(
             )
         )
     );
-    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
     // BuildPlateSummary recalculates automatically from colAllBuildPlates.
     Notify("Plate added", NotificationType.Success, 2000)
 );
@@ -11344,19 +11351,26 @@ LookUp(Self.Items, Value = Month(Today()))
 ```powerfx
 With(
     {
-        filtered: Filter(
-            colAllPayments,
-            PaymentType.Value = "TigerCASH" &&
-            Month(PaymentDate) = ddExportMonth.Selected.Value &&
-            Year(PaymentDate) = ddExportYear.Selected.Value
-        )
+        wStart: Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1)
     },
-    CountRows(filtered) & " transactions  ·  " &
-    Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
+    With(
+        {
+            filtered: Filter(
+                Filter(
+                    Payments,
+                    PaymentDate >= wStart,
+                    PaymentDate < DateAdd(wStart, 1, TimeUnit.Months)
+                ),
+                PaymentType.Value = "TigerCASH"
+            )
+        },
+        CountRows(filtered) & " transactions  ·  " &
+        Text(Sum(filtered, Amount), "[$-en-US]$#,##0.00") & " total"
+    )
 )
 ```
 
-> This queries the local `colAllPayments` collection (pre-loaded at startup) for preview purposes only. The actual export uses Power Automate with server-side filtering — no delegation limits. Only TigerCASH payments are included; Check and Grant/Program Code payments are excluded.
+> Preview asks SharePoint for that month’s payment dates, then keeps TigerCASH in memory. Download still uses **Flow G** (no row cap). Do not preview from `colAllPayments` (that cache is only the last 365 days of `Created`).
 
 ---
 
@@ -11393,10 +11407,12 @@ With(
 If(
     CountRows(
         Filter(
-            colAllPayments,
-            PaymentType.Value = "TigerCASH" &&
-            Month(PaymentDate) = ddExportMonth.Selected.Value &&
-            Year(PaymentDate) = ddExportYear.Selected.Value
+            Filter(
+                Payments,
+                PaymentDate >= Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1),
+                PaymentDate < DateAdd(Date(ddExportYear.Selected.Value, ddExportMonth.Selected.Value, 1), 1, TimeUnit.Months)
+            ),
+            PaymentType.Value = "TigerCASH"
         )
     ) > 0,
     DisplayMode.Edit,
@@ -12576,9 +12592,9 @@ Concurrent(
     Refresh(Payments),
     Refresh(RequestComments)
 );
-ClearCollect(colAllBuildPlates, BuildPlates);
-ClearCollect(colAllPayments, Payments);
-ClearCollect(colAllRequestComments, RequestComments);
+ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
 ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
 If(
@@ -13438,7 +13454,9 @@ Go back inside `galJobCards` gallery template to add the messages display.
 
 ```powerfx
 Set(varShowViewMessagesModal, ThisItem.ID);
-Set(varSelectedItem, ThisItem)
+Set(varSelectedItem, ThisItem);
+RemoveIf(colAllRequestComments, RequestID = ThisItem.ID);
+Collect(colAllRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
 ```
 
 > **Note:** This button opens the View Messages Modal (Step 17D). **Fill** looks up the message cheat sheet once. **Color / HoverFill / PressedFill / BorderColor** reuse **`Self.Fill = Color.White`** so they do not look up again.
@@ -14144,7 +14162,7 @@ Set(
 
 If(
     varMessageSaved,
-    ClearCollect(colAllRequestComments, RequestComments);
+    ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
     IfError(
         Patch(
             PrintRequests,
@@ -14225,7 +14243,7 @@ UpdateIf(
     ReadByStaff = false,
     { ReadByStaff: true }
 );
-ClearCollect(colAllRequestComments, RequestComments);
+ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
 
 // Clear the NeedsAttention flag on the request
 Set(
@@ -14555,9 +14573,9 @@ If(
     );
 
     // Reload local collections used by job-card summaries
-    ClearCollect(colAllBuildPlates, BuildPlates);
-    ClearCollect(colAllPayments, Payments);
-    ClearCollect(colAllRequestComments, RequestComments);
+    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+    ClearCollect(colAllPayments, Filter(Payments, Created >= StaffCacheSince));
+    ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
     // BuildPlateSummary / RequestCommentSummary recalculate from these collections.
 
     // Reload NeedsAttention items into local collection (avoids delegation)
@@ -16299,6 +16317,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: IfError on remaining saves** | **Start Print** job Patch + Flow C, **Approve** default plate, **Add Note** (loading + disable while saving), **Send Message**, **Files** form **OnFailure**, **Remove plate**, and **Payment / Batch** `Flow.Run` (timeout → “did not respond”). Success toasts only after the write works. `IfError(Patch(...), Notify(...))` is invalid — use `IfError(Patch(...); true, Notify(...); false)`. |
 | **2026-08-14: Plate/message cheat sheets one pass** | **`BuildPlateSummary`** / **`RequestCommentSummary`** are **`GroupBy` → `AddColumns` → `DropColumns`**. Cards still `LookUp` those tables. **Messages** button colors reuse **`Self.Fill`**. Unread badge **Visible** is **`Value(Self.Text) > 0`**. **Print Complete** uses **`TotalAll`** / **`IncompleteCount`**. Do not wrap **`galJobCards.Items`** in **`AddColumns`** (breaks idle-search delegation). |
 | **2026-08-14: Quiet real App Checker noise** | Approve plate label uses **`BuildPlateSummary`**. Approve confirm + Build Plates Close/Done count from **`colAllBuildPlates`**, not live **`BuildPlates`**. Payment/batch success is **`Text(success)` = `"true"`** only (boolean `true` still matches). Remaining ~30 warnings are Job Search / Schedule `in`/`Lower` — expected. |
+| **2026-08-14: Cache window + reject gate + dead startup** | Photocopies of plates/payments/messages use **`Created >= StaffCacheSince`** (365 days). Report preview filters **Payments** by month dates. Messages open loads that job’s thread from SharePoint. **Reject** needs a reason checkbox or a comment. Removed unused **`varQuickQueue`**, **`varExpandAll`**, **`varIsStaff`**, **`colBatchSucceededItems`**, **`colBatchFailedItems`**. |
 
 # Next Steps
 
