@@ -570,6 +570,7 @@ Screens:
                         Set(varIsLoading, false);
                         Set(varShowConfirmModal, 0);
                         Set(varSelectedItem, Blank());
+                        Set(varNeedsConfirmCount, Max(0, Coalesce(varNeedsConfirmCount, 0) - 1));
                         Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
                         Refresh(PrintRequests),
                         Notify(

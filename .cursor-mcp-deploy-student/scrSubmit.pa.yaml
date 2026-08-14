@@ -1098,7 +1098,7 @@ Screens:
                               Italic: =true
                               Size: =12
                               Text: ="(Required)"
-                              Visible: =Len(DataCardValue30.Text) <> 16
+                              Visible: =IsBlank(DataCardValue8.Selected.Value)
                               Width: =85
                               X: =DataCardKey8.X + DataCardKey8.Width + 5
                               Y: =DataCardKey8.Y

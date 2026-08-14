@@ -84,6 +84,9 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 3 — Cancel does not wipe Notes.** Cancel no longer Patches `Notes`. It appends `"Canceled by student {date}"` to **`StaffNotes`** (pipe-separated, same as Staff Console) and sets `LastActionAt`. `lblCancelMessage` warns when status is **Ready to Print** (staff may already be preparing; email/visit lab). Cancel remains allowed in Uploaded, Pending, and Ready to Print.
 - **2026-08-14: Item 4 — My Requests filter.** Gallery `Items` prefers **`StudentEntraId = Text(varMeEntraId)`** (SharePoint text vs GUID), with **`StudentEmail = varMeEmail` or `varMeUPN`** as fallback for older rows. If Entra ID is blank, filter email only — never `StudentEntraId = Blank()`. No `Lower()` on SharePoint columns (`varMeEmail` / `varMeUPN` are already Lower in OnStart). Empty state uses **`galMyRequests.AllItemsCount = 0`**. Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.
 - **2026-08-14: Item 5 — Staff Console chrome.** `varColorHeader` is **`RGBA(77, 77, 77, 1)`** (same as Staff `recHeader`). Header height **55**. Titles are white Open Sans Semibold 18 (`Print Lab Student Portal` / `New Print Request` / `My Print Requests`). Refresh is a Staff-style header button (22px, radius 4). Welcome `Fill = Color.Transparent` (no Studio purple). Home action cards use **`varColorBgCard`**. ReqKey shows **`Job #{ID}`** until Flow A fills `ReqKey`. Rejected cards show **`RejectionComment`**, else **`RejectionReason`**. No logo — Staff live header has none.
+- **2026-08-14: Item 6 — Home “needs you” line.** `scrHome.OnVisible` counts this student’s **Pending** rows where `StudentConfirmed` is not true (same identity filter as My Requests). **`btnNeedsYou`** (Classic button, not a label) is **500px** wide and centered, orange text on a transparent fill (peach chip on hover only), and navigates to My Requests. Hidden when the count is 0. The My Requests card description switches to “N estimate(s) waiting for your OK.” Confirm success decrements `varNeedsConfirmCount`.
+- **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
+- **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 
 ### Typography
 
@@ -149,9 +152,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 |--------------|--------|----------|----------|
 | Cards & Modals | `8` | `varRadiusMedium` | Request cards, confirmation modals |
 | Buttons | `4` | `varBtnBorderRadius` | All buttons (unified style) |
-| Input Fields | `4` | `varRadiusXSmall` | Text inputs, dropdowns |
-| Status Badges | `12` | `varRadiusPill` | Rounded pill badges |
-| Tab Buttons | `20` | `varBtnBorderRadiusPill` | Status tabs (pill shape) |
+| Status badges | `14` | (hardcoded on `btnStatusBadge`) | My Requests status pill |
 
 ### Layout Dimensions (Tablet Format)
 
@@ -284,10 +285,6 @@ Set(varMeEntraId, User().EntraObjectId);
 // UPN (for SharePoint Person field Claims - must use sign-in identifier)
 Set(varMeUPN, Lower(User().Email));
 
-// === UI STATE VARIABLES ===
-// Current screen/page
-Set(varCurrentScreen, "Home");
-
 // === MODAL CONTROLS ===
 // These control which modal is visible (0 = hidden, ID = visible for that item)
 Set(varShowConfirmModal, 0);
@@ -296,9 +293,10 @@ Set(varShowCancelModal, 0);
 // Currently selected item for modals (typed blank so Power Apps knows the schema)
 Set(varSelectedItem, LookUp(PrintRequests, false));
 
+// Pending estimates waiting for the student to confirm (Home "needs you" line)
+Set(varNeedsConfirmCount, 0);
+
 // === FORM STATE ===
-// Track if form has been submitted successfully
-Set(varFormSubmitted, false);
 // Track if user attempted to submit (for showing validation errors)
 Set(varSubmitAttempted, false);
 // Track files with invalid names (populated by Attachments OnAddFile/OnRemoveFile)
@@ -307,14 +305,6 @@ Set(varHasInvalidFile, false);
 
 // === LOADING STATE ===
 Set(varIsLoading, false);
-
-// === PRICING CONFIGURATION ===
-// Matches Staff Dashboard (SharePoint stores estimates; vars kept for parity / future UI)
-Set(varFilamentRate, 0.10);
-Set(varResinDensity, 1.11);
-Set(varResinGramRate, 0.30);
-Set(varResinRate, varResinDensity * varResinGramRate);
-Set(varMinimumCost, 3.00);
 
 // ============================================
 // === STYLING / THEMING (Centralized) ===
@@ -335,8 +325,6 @@ Set(varColorInfo, RGBA(70, 130, 220, 1));          // Alias for primary
 // === COLOR HOVER/PRESSED STATES ===
 Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
 Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
-Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
-Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
 // === UI NEUTRAL COLORS ===
 Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches Staff Console)
@@ -344,85 +332,63 @@ Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive stat
 Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
 Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
-Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
 Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
 Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
-Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
 Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
-Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
 Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
 Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
 // --- BORDER RADIUS ---
-Set(varRadiusLarge, 12);    // Modals
 Set(varRadiusMedium, 8);    // Cards, large buttons
 Set(varRadiusSmall, 6);     // Standard buttons
-Set(varRadiusXSmall, 4);    // Inputs, small buttons
-Set(varRadiusPill, 14);     // Status badges (pill shape)
 
 // --- BUTTON STYLING (Unified with Staff Dashboard) ---
 Set(varBtnBorderRadius, 4);                        // Standard corner radius
-Set(varBtnBorderRadiusPill, 20);                   // Pill shape for tabs
 Set(varBtnFontSize, 12);
 Set(varBtnHeight, 36);
 Set(varBtnHeightLarge, 50);                        // Large buttons (CTAs)
-Set(varBtnHeightSmall, 40);                        // Navigation buttons
 Set(varSecondaryFade, 70%);                        // Secondary button fill lightness
 
 // --- FOCUS STYLING ---
-// Consistent focus indicator for all interactive controls (buttons, inputs, dropdowns)
 Set(varFocusedBorderThickness, 2);
 
 // --- INPUT FIELD STYLING ---
-// Cleaner borders than Power Apps defaults - gray instead of themed colors
 Set(varInputBorderColor, RGBA(128, 128, 128, 1));  // Gray border
 Set(varInputBorderThickness, 1);                   // Thin border
-Set(varInputHoverFill, RGBA(255, 255, 255, 1));    // White on hover
-Set(varInputBorderRadius, 4);                      // Match button radius
-Set(varInputFontSize, 12);                         // Standard input text size
 
 // --- DROPDOWN/COMBOBOX STYLING ---
-// Custom chevron and selection colors for a polished look
-Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron background
-Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
+Set(varChevronBackground, RGBA(128, 128, 128, 1));
+Set(varChevronFill, RGBA(255, 255, 255, 1));
 Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
-Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
-Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
-Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
-Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
-Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
+Set(varChevronHoverFill, RGBA(219, 219, 219, 1));
+Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));
+Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));
+Set(varDropdownPressedColor, RGBA(255, 255, 255, 1));
 
 // --- SIZING (Tablet Layout) ---
 Set(varHeaderHeight, 55);   // Top header bar (matches Staff Console recHeader)
 Set(varNavHeight, 60);      // Bottom navigation bar
-Set(varInputHeight, 45);    // Standard input field height
-Set(varButtonHeight, 50);   // Primary button height (legacy alias)
-Set(varButtonHeightSmall, 40); // Secondary button height (legacy alias)
+Set(varButtonHeight, 50);
+Set(varButtonHeightSmall, 40);
 
 // --- SPACING ---
-Set(varSpacingXL, 20);      // Large padding (screen edges)
-Set(varSpacingLG, 16);      // Card padding
-Set(varSpacingMD, 12);      // Form field gaps
-Set(varSpacingSM, 8);       // Small gaps
-Set(varSpacingXS, 4);       // Tiny gaps
+Set(varSpacingXL, 20);
+Set(varSpacingLG, 16);
+Set(varSpacingMD, 12);
+Set(varSpacingSM, 8);
 
 // === GALLERY DIMENSIONS ===
-Set(varRequestCardHeight, 280);                    // My Requests gallery template size
+Set(varRequestCardHeight, 280);
 
 // === CONTACT INFORMATION ===
-// Update these when location or contact details change
 Set(varSupportEmail, "coad-fablab@lsu.edu");
 Set(varPickupLocation, "Room 145 Atkinson Hall");
 Set(varPaymentMethod, "TigerCASH only");
 
 // === DATE/TIME FORMATS ===
-// Consistent date formatting across the app
-Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
-Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
+Set(varDateFormatShort, "mmm d, yyyy");
 
 // === NAVIGATION ===
-// Screen transition effect - change to customize navigation feel
 Set(varScreenTransition, ScreenTransition.Fade);
 
 // === STATUS COLORS ===
@@ -500,10 +466,8 @@ RadiusBottomRight: varRadiusXSmall
 | `varColorInfo` | Blue | Info messages |
 | `varColorText` | Dark gray | Primary text |
 | `varColorTextMuted` | Medium gray | Secondary text |
-| `varColorTextLight` | Light gray | Hints, placeholders |
 | `varColorBg` | Off-white | Screen backgrounds |
 | `varColorBgCard` | Warm Cream | Cards, modals |
-| `varColorBorder` | Gray | Input borders |
 | `varColorBorderLight` | Light gray | Card borders |
 | `varColorDisabled` | Gray | Disabled controls |
 
@@ -514,36 +478,27 @@ RadiusBottomRight: varRadiusXSmall
 | `varFocusedBorderThickness` | 2 | Focus indicator for all controls |
 | `varInputBorderColor` | Gray | Input/dropdown borders |
 | `varInputBorderThickness` | 1 | Input border width |
-| `varInputHoverFill` | White | Input hover state |
-| `varInputBorderRadius` | 4 | Input corner radius |
-| `varInputFontSize` | 12 | Input text size |
 | `varChevronBackground` | Gray | Dropdown chevron bg |
 | `varChevronFill` | White | Dropdown chevron arrow |
 | `varChevronHoverFill` | Light gray | Dropdown hover arrow |
 | `varDropdownHoverFill` | Light gray | Dropdown row hover |
 | `varDropdownPressedFill` | Gray | Dropdown pressed state |
-| `varDropdownSelectionFill` | Light gray | Selection background |
-| `varDropdownSelectionColor` | Dark gray | Selection text color |
 
-> 💡 **Consistency Rule:** All dropdowns and combo boxes should use the shared `varDropdown*` and `varChevron*` variables for hover, pressed, and selection states. Do not hardcode row state colors on individual controls.
+> Combo selected-row colors are hardcoded on Discipline/Project Type/Method/Printer/Color (`SelectionFill` `RGBA(219,219,219,1)`, `SelectionColor` `RGBA(50,50,50,1)`). Do not reintroduce unused `varDropdownSelection*` aliases unless a control binds them.
 
 #### Border Radius
 
 | Variable | Value | Use For |
 |----------|-------|---------|
-| `varRadiusLarge` | 12 | Modals |
 | `varRadiusMedium` | 8 | Cards, nav buttons |
 | `varRadiusSmall` | 6 | Primary action buttons |
-| `varRadiusXSmall` | 4 | Inputs, small buttons |
-| `varRadiusPill` | 14 | Status badges |
 
 #### Sizing
 
 | Variable | Value | Use For |
 |----------|-------|---------|
 | `varHeaderHeight` | 55 | Top header bar (matches Staff Console) |
-| `varNavHeight` | 70 | Bottom navigation |
-| `varInputHeight` | 45 | Text inputs, dropdowns |
+| `varNavHeight` | 60 | Bottom navigation |
 | `varButtonHeight` | 50 | Primary buttons |
 | `varButtonHeightSmall` | 40 | Secondary buttons |
 
@@ -555,7 +510,6 @@ RadiusBottomRight: varRadiusXSmall
 | `varSpacingLG` | 16 | Card padding |
 | `varSpacingMD` | 12 | Form field gaps |
 | `varSpacingSM` | 8 | Small gaps |
-| `varSpacingXS` | 4 | Tiny gaps |
 
 ### Other Variables
 
@@ -567,6 +521,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varMeEntraId` | Current user's Entra Object ID (GUID) — immutable, survives email changes | Text |
 | `varMeUPN` | Current user's UPN (sign-in identifier) — used for Person field Claims | Text |
 | `varShowConfirmModal` | ID of item for estimate confirmation (0=hidden) | Number |
+| `varNeedsConfirmCount` | Pending jobs waiting for student OK (Home line) | Number |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
@@ -576,9 +531,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varPickupLocation` | Physical pickup location | Text |
 | `varPaymentMethod` | Accepted payment method | Text |
 | `varDateFormatShort` | Short date format string | Text |
-| `varDateFormatFull` | Full date/time format string | Text |
 | `varScreenTransition` | Navigation transition effect | ScreenTransition |
-| `varFormSubmitted` | Track if form was submitted successfully | Boolean |
 | `varSubmitAttempted` | Track if user attempted submit (for validation display) | Boolean |
 | `varInvalidFiles` | Collection of attached files with invalid names | Table |
 | `varHasInvalidFile` | True if any attached file has invalid name | Boolean |
@@ -624,8 +577,9 @@ This app uses a **container-based architecture** for clean organization and easy
             icnSubmit               ← Printer icon
             recSubmitCardBg         ← Card background (created 1st - behind)
     ▼ conWelcome                    ← (created 2nd)
-        lblSubtitle                 ← "What would you like..." (created 2nd - top)
-        lblWelcome                  ← "Welcome, [Name]!" (created 1st - behind)
+        btnNeedsYou                 ← Pending confirm button (top, hidden if 0)
+        lblSubtitle                 ← hidden
+        lblWelcome                  ← "Welcome, [Name]!"
     ▼ conHeaderHome                 ← (created 1st - BOTTOM of tree = behind)
         imgUserPhotoHome            ← User profile photo (top right)
         lblHeaderTitleHome          ← "Print Lab Student Portal"
@@ -744,6 +698,34 @@ We use **prefixes** to identify control types at a glance:
 
 3. With `scrHome` selected, set these properties:
    - **Fill:** `varColorBg`
+   - **OnVisible:** paste the formula below (counts Pending jobs waiting for the student’s OK)
+
+**⬇️ FORMULA: Paste into scrHome OnVisible**
+
+```powerfx
+Set(
+    varNeedsConfirmCount,
+    CountRows(
+        Filter(
+            If(
+                !IsBlank(varMeEntraId),
+                Filter(
+                    PrintRequests,
+                    StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                ),
+                Filter(
+                    PrintRequests,
+                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                )
+            ),
+            Status.Value = "Pending",
+            Not(StudentConfirmed)
+        )
+    )
+)
+```
+
+> 💡 Identity match is the same as My Requests. `Not(StudentConfirmed)` runs on that student’s rows only (covers blank and false). The orange Home line is hidden when the count is 0.
 
 ---
 
@@ -867,8 +849,44 @@ We use **prefixes** to identify control types at a glance:
 | Size | `14` |
 | Color | `varColorTextMuted` |
 | Align | `Align.Center` |
+| Visible | `false` |
 
----
+#### Add “needs you” button
+
+25. Click **+ Insert** → **Button**.
+26. **Rename it:** `btnNeedsYou`
+27. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `(Parent.Width - Self.Width) / 2` |
+| Y | `lblWelcome.Y + lblWelcome.Height` |
+| Width | `500` |
+| Height | `36` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+| Color | `varColorWarning` |
+| Fill | `Color.Transparent` |
+| HoverFill | `ColorFade(varColorWarning, 85%)` |
+| HoverColor | `varColorWarning` |
+| PressedFill | `ColorFade(varColorWarning, 75%)` |
+| BorderThickness | `0` |
+| Align | `Align.Center` |
+| Visible | `varNeedsConfirmCount > 0` |
+| OnSelect | `Navigate(scrMyRequests, varScreenTransition)` |
+
+> Use a **Button**, not a Label. Labels show the text I-beam cursor; buttons show the hand pointer.
+
+**⬇️ FORMULA: Paste into btnNeedsYou Text**
+
+```powerfx
+If(
+    varNeedsConfirmCount = 1,
+    "You have a print waiting for your OK — tap to confirm",
+    "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+)
+```
 
 ### 4C: Create Action Cards Container
 
@@ -1085,7 +1103,7 @@ Navigate(scrSubmit, varScreenTransition)
 
 | Property | Value |
 |----------|-------|
-| Text | `"View status, confirm estimates, or manage your existing requests"` |
+| Text | `If(varNeedsConfirmCount > 0, If(varNeedsConfirmCount = 1, "1 estimate waiting for your OK", varNeedsConfirmCount & " estimates waiting for your OK"), "View status, confirm estimates, or manage your existing requests")` |
 | X | `varSpacingLG` |
 | Y | `lblRequestsTitle.Y + lblRequestsTitle.Height + 8` |
 | Width | `Parent.Width - (varSpacingLG * 2)` |
@@ -4549,22 +4567,14 @@ Set(varMeEntraId, User().EntraObjectId);
 Set(varMeUPN, Lower(User().Email));
 
 // === UI STATE ===
-Set(varCurrentScreen, "Home");
 Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
-Set(varFormSubmitted, false);
+Set(varNeedsConfirmCount, 0);
 Set(varSubmitAttempted, false);  // For validation message display
 Set(varInvalidFiles, Table());   // Files with invalid names
 Set(varHasInvalidFile, false);   // Quick check for submit button
 Set(varIsLoading, false);
-
-// === PRICING ===
-Set(varFilamentRate, 0.10);
-Set(varResinDensity, 1.11);
-Set(varResinGramRate, 0.30);
-Set(varResinRate, varResinDensity * varResinGramRate);
-Set(varMinimumCost, 3.00);
 
 // === STYLING ===
 Set(varAppFont, Font.'Open Sans');
@@ -4794,6 +4804,7 @@ IfError(
     Set(varIsLoading, false);
     Set(varShowConfirmModal, 0);
     Set(varSelectedItem, Blank());
+    Set(varNeedsConfirmCount, Max(0, Coalesce(varNeedsConfirmCount, 0) - 1));
     Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
     Refresh(PrintRequests),
     Notify(

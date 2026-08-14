@@ -3,6 +3,27 @@ Screens:
     Properties:
       Fill: =varColorBg
       LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
+      OnVisible: |-
+        =Set(
+            varNeedsConfirmCount,
+            CountRows(
+                Filter(
+                    If(
+                        !IsBlank(varMeEntraId),
+                        Filter(
+                            PrintRequests,
+                            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                        ),
+                        Filter(
+                            PrintRequests,
+                            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                        )
+                    ),
+                    Status.Value = "Pending",
+                    Not(StudentConfirmed)
+                )
+            )
+        )
     Children:
       - conHeaderHome:
           Control: GroupContainer
@@ -50,7 +71,6 @@ Screens:
                   Fill: =Color.Transparent
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =70
                   Size: =18
                   Text: ="Welcome, " & First(Split(varMeName, " ")).Value & "!"
                   Width: =Parent.Width
@@ -67,6 +87,38 @@ Screens:
                   Text: ="What would you like to do today?"
                   Visible: =false
                   Width: =Parent.Width
+                  Y: =lblWelcome.Y + lblWelcome.Height
+            - btnNeedsYou:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =varColorWarning
+                  Fill: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =36
+                  HoverBorderColor: =Color.Transparent
+                  HoverColor: =varColorWarning
+                  HoverFill: =ColorFade(varColorWarning, 85%)
+                  OnSelect: =Navigate(scrMyRequests, varScreenTransition)
+                  PressedBorderColor: =Color.Transparent
+                  PressedColor: =varColorWarning
+                  PressedFill: =ColorFade(varColorWarning, 75%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =14
+                  Text: |-
+                    =If(
+                        varNeedsConfirmCount = 1,
+                        "You have a print waiting for your OK — tap to confirm",
+                        "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+                    )
+                  Visible: =varNeedsConfirmCount > 0
+                  Width: =500
+                  X: =(Parent.Width - Self.Width) / 2
                   Y: =lblWelcome.Y + lblWelcome.Height
       - conActionCards:
           Control: GroupContainer
@@ -203,7 +255,16 @@ Screens:
                         Color: =varColorTextMuted
                         Font: =varAppFont
                         Height: =50
-                        Text: ="View status, confirm estimates, or manage your existing requests"
+                        Text: |-
+                          =If(
+                              varNeedsConfirmCount > 0,
+                              If(
+                                  varNeedsConfirmCount = 1,
+                                  "1 estimate waiting for your OK",
+                                  varNeedsConfirmCount & " estimates waiting for your OK"
+                              ),
+                              "View status, confirm estimates, or manage your existing requests"
+                          )
                         Width: =Parent.Width - (varSpacingLG * 2)
                         X: =varSpacingLG
                         Y: =lblRequestsTitle.Y + lblRequestsTitle.Height + 8

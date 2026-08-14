@@ -89,6 +89,8 @@ The rest of this doc is the gaps **on top of** that.
 
 **In plain English:** Startup sets about **20 memory slots nothing uses**: pricing (`varFilamentRate`, `varResinRate`, `varMinimumCost`), hover colors, unused radii, `varCurrentScreen`, `varFormSubmitted`, and so on. They do not break the lab. They make the recipe longer and the checker noisy.
 
+**Done 14 August 2026** (live app): those unused OnStart variables were removed.
+
 Same habit as Staff Console section 1.3.
 
 ### 1.3 No “you are a student” lock
@@ -142,6 +144,8 @@ The header bar is **transparent**, so it does not read as a header. The welcome 
 ### 3.3 “(Required)” on Method is wired to TigerCard
 
 **Usage.** `lblMethodRequired` shows when the TigerCard is not 16 digits, not when Method is empty. Copy-paste leftover. Harmless-looking, confusing.
+
+**Done 14 August 2026** (live app): `Visible` is `IsBlank(DataCardValue8.Selected.Value)`.
 
 ### 3.4 File rules are strict and easy to fail
 
@@ -303,9 +307,9 @@ Hover/pressed color vars are set and never bound (App Checker). Some buttons har
 3. ~~**Cancel:** append or write `StaffNotes` / LastAction only — **do not replace** `Notes`. Warn if status is Ready to Print.~~ **Done 14 August 2026** (live app).  
 4. ~~**My Requests filter** by `StudentEntraId` (plus email fallback); index those columns; `AllItemsCount` for empty state.~~ **Done 14 August 2026** (live app). Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.  
 5. ~~**Look, cheap:** header fill, logo, kill default purple welcome, show rejection text, show ReqKey or “Submitting…” if blank.~~ **Done 14 August 2026** (live app): Staff Console chrome (dark header, white 18pt titles, cream cards). ReqKey falls back to `Job #{ID}`. Rejected cards show `RejectionComment` / `RejectionReason`. No logo — Staff live header has none. Run **OnStart** in Studio to pick up `varColorHeader`.  
-6. **Home “needs you”** line for unconfirmed Pending jobs.  
-7. **Submit layout:** steps or named sections so file + method are obvious; fix Method “(Required)” visibility.  
-8. **Delete unused OnStart variables** (App Checker list).  
+6. ~~**Home “needs you”** line for unconfirmed Pending jobs.~~ **Done 14 August 2026** (live app). Orange Home line + My Requests card copy; tap goes to My Requests.  
+7. ~~**Submit layout:** steps or named sections so file + method are obvious; fix Method “(Required)” visibility.~~ **Layout skipped** (user likes current form). **Method “(Required)” fixed 14 August 2026** (live app): visible when Method is empty, not when TigerCard is short.  
+8. ~~**Delete unused OnStart variables** (App Checker list).~~ **Done 14 August 2026** (live app): 23 unused vars removed. App Checker should be down to the attachments size note.  
 9. **Later:** student messages, file download, hours banner, status filters.  
 10. **Do not:** copy Staff Console shared-login patterns into this app.
 

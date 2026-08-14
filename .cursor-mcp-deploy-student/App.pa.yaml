@@ -28,10 +28,6 @@ App:
       // UPN (for SharePoint Person field Claims - must use sign-in identifier)
       Set(varMeUPN, Lower(User().Email));
 
-      // === UI STATE VARIABLES ===
-      // Current screen/page
-      Set(varCurrentScreen, "Home");
-
       // === MODAL CONTROLS ===
       // These control which modal is visible (0 = hidden, ID = visible for that item)
       Set(varShowConfirmModal, 0);
@@ -40,9 +36,10 @@ App:
       // Currently selected item for modals (typed blank so Power Apps knows the schema)
       Set(varSelectedItem, LookUp(PrintRequests, false));
 
+      // Pending estimates waiting for the student to confirm (Home "needs you" line)
+      Set(varNeedsConfirmCount, 0);
+
       // === FORM STATE ===
-      // Track if form has been submitted successfully
-      Set(varFormSubmitted, false);
       // Track if user attempted to submit (for showing validation errors)
       Set(varSubmitAttempted, false);
       // Track files with invalid names (populated by Attachments OnAddFile/OnRemoveFile)
@@ -51,12 +48,6 @@ App:
 
       // === LOADING STATE ===
       Set(varIsLoading, false);
-
-      // === PRICING CONFIGURATION ===
-      // For display purposes (estimates shown to students)
-      Set(varFilamentRate, 0.10);
-      Set(varResinRate, 0.30);
-      Set(varMinimumCost, 3.00);
 
       // ============================================
       // === STYLING / THEMING (Centralized) ===
@@ -77,8 +68,6 @@ App:
       // === COLOR HOVER/PRESSED STATES ===
       Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
       Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
-      Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
-      Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
       // === UI NEUTRAL COLORS ===
       Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches Staff Console)
@@ -86,29 +75,21 @@ App:
       Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
       Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
       Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
-      Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
       Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
       Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
-      Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
       Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
-      Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
       Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
       Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
       // --- BORDER RADIUS ---
-      Set(varRadiusLarge, 12);    // Modals
       Set(varRadiusMedium, 8);    // Cards, large buttons
       Set(varRadiusSmall, 6);     // Standard buttons
-      Set(varRadiusXSmall, 4);    // Inputs, small buttons
-      Set(varRadiusPill, 14);     // Status badges (pill shape)
 
       // --- BUTTON STYLING (Unified with Staff Dashboard) ---
       Set(varBtnBorderRadius, 4);                        // Standard corner radius
-      Set(varBtnBorderRadiusPill, 20);                   // Pill shape for tabs
       Set(varBtnFontSize, 12);
       Set(varBtnHeight, 36);
       Set(varBtnHeightLarge, 50);                        // Large buttons (CTAs)
-      Set(varBtnHeightSmall, 40);                        // Navigation buttons
       Set(varSecondaryFade, 70%);                        // Secondary button fill lightness
 
       // --- FOCUS STYLING ---
@@ -119,12 +100,8 @@ App:
       // Cleaner borders than Power Apps defaults - gray instead of themed colors
       Set(varInputBorderColor, RGBA(128, 128, 128, 1));  // Gray border
       Set(varInputBorderThickness, 1);                   // Thin border
-      Set(varInputHoverFill, RGBA(255, 255, 255, 1));    // White on hover
-      Set(varInputBorderRadius, 4);                      // Match button radius
-      Set(varInputFontSize, 12);                         // Standard input text size
 
       // --- DROPDOWN/COMBOBOX STYLING ---
-      // Custom chevron and selection colors for a polished look
       Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron background
       Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
       Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
@@ -132,13 +109,10 @@ App:
       Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover (Staff Console)
       Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
       Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-      Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
-      Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
       // --- SIZING (Tablet Layout) ---
       Set(varHeaderHeight, 55);   // Top header bar (matches Staff Console recHeader)
       Set(varNavHeight, 60);      // Bottom navigation bar
-      Set(varInputHeight, 45);    // Standard input field height
       Set(varButtonHeight, 50);   // Primary button height (legacy alias)
       Set(varButtonHeightSmall, 40); // Secondary button height (legacy alias)
 
@@ -147,7 +121,6 @@ App:
       Set(varSpacingLG, 16);      // Card padding
       Set(varSpacingMD, 12);      // Form field gaps
       Set(varSpacingSM, 8);       // Small gaps
-      Set(varSpacingXS, 4);       // Tiny gaps
 
       // === GALLERY DIMENSIONS ===
       Set(varRequestCardHeight, 280);                    // My Requests gallery template size
@@ -159,12 +132,9 @@ App:
       Set(varPaymentMethod, "TigerCASH only");
 
       // === DATE/TIME FORMATS ===
-      // Consistent date formatting across the app
       Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
-      Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
 
       // === NAVIGATION ===
-      // Screen transition effect - change to customize navigation feel
       Set(varScreenTransition, ScreenTransition.Fade);
 
       // === STATUS COLORS ===
