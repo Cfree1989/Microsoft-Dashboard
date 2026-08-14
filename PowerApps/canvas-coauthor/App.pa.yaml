@@ -21,6 +21,21 @@ App:
                   UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
               }
           );
+      StaffModalOpen =
+          varShowRejectModal > 0 ||
+          varShowApprovalModal > 0 ||
+          varShowArchiveModal > 0 ||
+          varShowCompleteModal > 0 ||
+          varShowDetailsModal > 0 ||
+          varShowPaymentModal > 0 ||
+          varShowAddFileModal > 0 ||
+          varShowNotesModal > 0 ||
+          varShowViewMessagesModal > 0 ||
+          varShowStudentNoteModal > 0 ||
+          varShowRevertModal > 0 ||
+          varShowBatchPaymentModal > 0 ||
+          varShowBuildPlatesModal > 0 ||
+          varShowExportModal > 0
     OnStart: |-
       =// === USER IDENTIFICATION ===
       // Cache user info for performance

@@ -680,6 +680,26 @@ This column captures which printer(s) the job was actually printed on, separate 
 
 ---
 
+## Step 6b: Index columns for the Staff Console (required as the list grows)
+
+Power Apps can ask SharePoint “give me all **Uploaded** jobs” only if those columns are indexed. Without indexes, after a few thousand rows even a simple status filter gets slow or hits the list view threshold.
+
+1. Open the **PrintRequests** list → **Settings** (gear) → **List settings**
+2. Under **Columns**, click **Indexed columns**
+3. Click **Create a new index** and add these **single-column** indexes (one at a time):
+
+| Column | Why the Staff Console needs it |
+|--------|--------------------------------|
+| **Status** | Dashboard tabs and job gallery when search is empty |
+| **NeedsAttention** | Lightbulb filter (`NeedsAttention = true`) with a status tab |
+| **Created** | Queue Order / oldest-first sorts after the status filter |
+
+4. Optional later (search and child lists): **StudentEmail**, **ReqKey** on PrintRequests; **RequestID** on BuildPlates, Payments, and RequestComments; **PaymentDate** on Payments.
+
+> 💡 You cannot do this from the canvas app. It is a SharePoint list setting. Existing lists should get **Status** indexed as soon as this dashboard formula change is live.
+
+---
+
 ## Column Summary
 
 ### Student-Facing Fields (13)
@@ -764,6 +784,7 @@ This column captures which printer(s) the job was actually printed on, separate 
 - [ ] Color column formatting applied (actual filament colors)
 - [ ] LastAction column formatting applied
 - [ ] Default `Staff Queue` view created for manual staff edits
+- [ ] Indexed columns created: **Status**, **NeedsAttention**, **Created** (Staff Console idle gallery / tabs)
 
 ---
 

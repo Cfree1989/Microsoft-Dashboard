@@ -397,6 +397,8 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 4. Delete any existing content and paste this formula:
 
 > **Canonical `App.OnStart`:** Paste the block below into **App.OnStart** in Studio. It intentionally includes **one** `// === SCHEDULE SCREEN STATE ===` block (after modal flags, before batch payment) with typed `colEditShifts` seed times. If your coauthor YAML still has a **second** duplicate schedule block after `varRefreshInterval`, **delete that duplicate** so the app matches this doc — the duplicate reset `colEditShifts` with empty strings and could cause type drift on schedule dropdowns.
+>
+> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, and `StaffModalOpen` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those three named formulas out of the block below into **Formulas**.
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
@@ -433,7 +435,10 @@ Set(varNeedsAttention, false);
 Set(varExpandAll, false);
 
 // === MODAL CONTROLS ===
-// These control which modal is visible (0 = hidden, ID = visible for that item)
+// These control which modal is visible (0 = hidden, ID or 1 = visible).
+// Container Visible formulas must use `> 0` (not `<> 0`). Before OnStart finishes the
+// variable is blank; blank is not greater than zero (hidden) but blank is not equal to
+// zero (would flash the modal on a black screen). Export uses 1 when open; job modals use the request ID.
 Set(varShowRejectModal, 0);
 Set(varShowApprovalModal, 0);
 Set(varBuildPlatesOpenedFromApproval, false);
@@ -587,6 +592,22 @@ RequestCommentSummary =
             UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
         }
     );
+
+StaffModalOpen =
+    varShowRejectModal > 0 ||
+    varShowApprovalModal > 0 ||
+    varShowArchiveModal > 0 ||
+    varShowCompleteModal > 0 ||
+    varShowDetailsModal > 0 ||
+    varShowPaymentModal > 0 ||
+    varShowAddFileModal > 0 ||
+    varShowNotesModal > 0 ||
+    varShowViewMessagesModal > 0 ||
+    varShowStudentNoteModal > 0 ||
+    varShowRevertModal > 0 ||
+    varShowBatchPaymentModal > 0 ||
+    varShowBuildPlatesModal > 0 ||
+    varShowExportModal > 0;
 
 // Check if current user is a staff member (uses colStaff loaded above)
 Set(varIsStaff, CountRows(Filter(colStaff, Lower(MemberEmail) = varMeEmail)) > 0);
@@ -783,7 +804,7 @@ Set(varLoadingMessage, "")
 | `varPendingBuildPlateAddCount` | Plates added in the current Build Plates session before `StaffNotes` flush on ✕/Done | Number |
 | `varPendingBuildPlateMarkPrintingCount` | Queued→Printing marks deferred until modal ✕/Done (batched `StaffNotes`) | Number |
 | `varPendingBuildPlateMarkDoneCount` | Printing→Completed marks deferred until modal ✕/Done (batched `StaffNotes`) | Number |
-| `varShowExportModal` | Controls export modal visibility (`0` = hidden, `1` = visible) | Number |
+| `varShowExportModal` | Controls export modal visibility (`0` = hidden, `1` = visible). **`conExportModal.Visible`** must be **`varShowExportModal > 0`** (not `<> 0`) so the modal stays hidden while this variable is still blank during app startup. | Number |
 | `varBatchSelectMode` | Whether multi-select batch payment mode is active | Boolean |
 | `colBatchItems` | Collection of items selected for batch payment | Table |
 | `colBatchSucceededItems` | Batch items saved successfully in the current run | Table |
@@ -808,6 +829,7 @@ Set(varLoadingMessage, "")
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colAllRequestComments` | All `RequestComments` rows cached locally for dashboard badges and the message thread gallery | Table |
 | `RequestCommentSummary` | Named formula keyed by `RequestID` with `TotalCount` and `UnreadInboundCount` derived from `colAllRequestComments` | Table |
+| `StaffModalOpen` | Named formula: true when any dashboard popup is open (`varShow*Modal > 0`). Used to pause `tmrAutoRefresh`. Batch-select mode is not a popup and does not pause the timer. | Boolean |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
@@ -1420,7 +1442,7 @@ Collapsed version (containers closed) for quick reference:
 | Radius corners | `varBtnBorderRadius` (all four) |
 | OnSelect | `Set(varShowExportModal, 1)` |
 
-> **Export modal:** See [Step 12G](#step-12g-building-the-export-modal). The header button does not use `Launch()`; it toggles `varShowExportModal`.
+> **Export modal:** See [Step 12G](#step-12g-building-the-export-modal). The header button does not use `Launch()`; it toggles `varShowExportModal`. **`conExportModal.Visible`** is **`varShowExportModal > 0`** (same hide rule as the other modals).
 
 ### ✅ Step 4 Checklist
 
@@ -1488,7 +1510,7 @@ Table(
 | Y | `4` |
 | Width | `141` |
 | Size | `10` |
-| Text | `ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests As req, req.Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in req.Student.DisplayName || varSearchText in req.StudentEmail || varSearchText in req.ReqKey || varSearchText in req.SlicedOnComputer.Value || varSearchText in req.Printer.Value || CountRows(Filter(colAllBuildPlates, RequestID = req.ID && varSearchText in Machine.Value)) > 0), If(varNeedsAttention, req.NeedsAttention = true, true))))` |
+| Text | _(see formula below)_ |
 | Fill | `If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))` |
 | Color | `If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)` |
 | OnSelect | `Set(varSelectedStatus, ThisItem.Status)` |
@@ -1504,11 +1526,52 @@ Table(
 | HoverBorderColor | `If(varSelectedStatus = ThisItem.Status, Color.Transparent, ColorFade(Self.BorderColor, 20%))` |
 | PressedBorderColor | `Self.Fill` |
 
+**⬇️ FORMULA: Paste into btnStatusTab Text**
+
+```powerfx
+ThisItem.Status & " " & Text(
+    CountRows(
+        If(
+            IsBlank(Trim(varSearchText)),
+            If(
+                varNeedsAttention,
+                Filter(
+                    PrintRequests,
+                    Status.Value = ThisItem.Status,
+                    NeedsAttention = true
+                ),
+                Filter(
+                    PrintRequests,
+                    Status.Value = ThisItem.Status
+                )
+            ),
+            Filter(
+                PrintRequests As req,
+                req.Status.Value = ThisItem.Status,
+                varSearchText in req.Student.DisplayName ||
+                varSearchText in req.StudentEmail ||
+                varSearchText in req.ReqKey ||
+                varSearchText in req.SlicedOnComputer.Value ||
+                varSearchText in req.Printer.Value ||
+                CountRows(
+                    Filter(
+                        colAllBuildPlates,
+                        RequestID = req.ID &&
+                        varSearchText in Machine.Value
+                    )
+                ) > 0,
+                If(varNeedsAttention, req.NeedsAttention = true, true)
+            )
+        )
+    )
+)
+```
+
 > 💡 **Why these sizes?** 9 tabs at `Width = 141` with `TemplatePadding = 3` recreate the original compact tab strip while still fitting common tablet widths. Font size `10` keeps "Paid & Picked Up" readable without the rounded pill treatment.
 >
 > ⚠️ **Note:** We use `Status.Value` because Status is a **Choice field** in SharePoint. Choice fields store objects, not plain text, so `.Value` extracts the text.
 >
-> 💡 **Filtered count behavior:** Each tab count intentionally uses the same search text and Needs Attention filters as the main gallery. Search now includes student name, email, request key, slicing computer, requested printer, and any build-plate machine already assigned to the job. In this low-volume app, that keeps the badges aligned with the visible result set across all statuses, including Archived.
+> 💡 **Two query paths (idle vs search):** When the search box is empty, each tab **asks SharePoint** for `Status.Value = ThisItem.Status` only (and `NeedsAttention = true` if that checkbox is on). Do **not** put `If(IsBlank(varSearchText), true, varSearchText in …)` *inside* that Filter — Power Apps then treats the whole Filter as a tablet-side search of the first 500/2000 rows of the entire list. When staff are typing a search, the second Filter (name, email, ReqKey, computer, printer, plate machine) still runs on the tablet; tab badges stay aligned with the gallery. Index **Status** (and **NeedsAttention**) on the PrintRequests list — see `SharePoint/PrintRequests-List-Setup.md`.
 
 ### ✅ Step 5 Checklist
 
@@ -1555,12 +1618,23 @@ Your Tree view should now include:
 ```powerfx
 With(
     {
-        filteredJobs: Filter(
-            PrintRequests As req,
-            req.Status.Value = varSelectedStatus,
+        filteredJobs: If(
+            IsBlank(Trim(varSearchText)),
             If(
-                IsBlank(varSearchText),
-                true,
+                varNeedsAttention,
+                Filter(
+                    PrintRequests,
+                    Status.Value = varSelectedStatus,
+                    NeedsAttention = true
+                ),
+                Filter(
+                    PrintRequests,
+                    Status.Value = varSelectedStatus
+                )
+            ),
+            Filter(
+                PrintRequests As req,
+                req.Status.Value = varSelectedStatus,
                 varSearchText in req.Student.DisplayName ||
                 varSearchText in req.StudentEmail ||
                 varSearchText in req.ReqKey ||
@@ -1572,9 +1646,9 @@ With(
                         RequestID = req.ID &&
                         varSearchText in Machine.Value
                     )
-                ) > 0
-            ),
-            If(varNeedsAttention, req.NeedsAttention = true, true)
+                ) > 0,
+                If(varNeedsAttention, req.NeedsAttention = true, true)
+            )
         )
     },
     Switch(
@@ -1608,7 +1682,9 @@ With(
 
 > ⚠️ **Note:** Use `Status.Value` because Status is a Choice field in SharePoint. `Queue Order` preserves the operational default: attention items first, then oldest requests (longest in queue).
 >
-> 💡 **Search + sort behavior:** The search bar can now match student name, email, request key, slicing computer, requested printer, or assigned build-plate machine values like `XL` or `MK4S`. Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, `Printer A-Z`, `Print Time Low-High`, and `Print Time High-Low` from the filter bar. The print-time options sort by `EstimatedTime`, pushing blanks to the bottom in either direction.
+> 💡 **Idle vs search:** With an empty search box, `Filter(PrintRequests, Status.Value = varSelectedStatus)` is a question SharePoint can answer for the whole list (index **Status**). Putting `If(IsBlank(varSearchText), true, varSearchText in …)` *inside* Filter used to force the tablet to scan only the first 500/2000 rows of **all** jobs, so Paid / Archived / Rejected could quietly drop older rows. Typed search still uses `in` (not delegable) plus plate-machine matches in `colAllBuildPlates`. Sort options are unchanged.
+>
+> 💡 **Search + sort behavior:** The search bar can match student name, email, request key, slicing computer, requested printer, or assigned build-plate machine values like `XL` or `MK4S`. Staff can switch the gallery between `Queue Order`, `Student Name A-Z`, `Student Name Z-A`, `Oldest First`, `Newest First`, `Color A-Z`, `Computer A-Z`, `Printer A-Z`, `Print Time Low-High`, and `Print Time High-Low` from the filter bar. The print-time options sort by `EstimatedTime`, pushing blanks to the bottom in either direction.
 >
 > 💡 **Card Layout:** All details are always visible on the card. No expand/collapse functionality — this provides a cleaner, consistent layout.
 
@@ -10926,7 +11002,7 @@ Before moving on, verify:
 
 # STEP 12G: Building the Export Modal
 
-**What you're doing:** Creating a modal that lets staff generate a monthly Excel export of TigerCASH transactions for departmental accounting. The modal is triggered from the **Analytics** button in the nav bar.
+**What you're doing:** Creating a modal that lets staff generate a monthly Excel export of TigerCASH transactions for departmental accounting. The modal is triggered from the **Report** button (`btnNavAnalytics`) in the nav bar.
 
 > The lab has two spaces: **Atkinson Hall 145** (additive manufacturing — 3D printing, tracked in this dashboard) and **Art Building 123** (subtractive manufacturing — CNC, plasma, tracked separately). This export covers Atkinson Hall only. Art Building transactions are manually added to the downloaded file before sending to accounting.
 
@@ -10935,7 +11011,7 @@ Before moving on, verify:
 ### Control Hierarchy (Container-Based)
 
 ```
-▼ conExportModal                    ← Container (visibility gate)
+▼ conExportModal                    ← Container (Visible = varShowExportModal > 0)
     recExportOverlay                ← Dark overlay
     recExportBox                    ← White modal box
     lblExportTitle                  ← Title label
@@ -10985,9 +11061,11 @@ Before moving on, verify:
 | Width | `Parent.Width` |
 | Height | `Parent.Height` |
 | Fill | `RGBA(0, 0, 0, 0)` |
-| **Visible** | `varShowExportModal <> 0` |
+| **Visible** | `varShowExportModal > 0` |
 
 > 💡 **Key Point:** The `Visible` property is set ONLY on this container. All child controls automatically inherit this visibility — you do NOT need to set `Visible` on any child control!
+
+> ⚠️ **Use `> 0`, not `<> 0`.** This matches Reject, Payment, Notes, and the other job modals. `App.OnStart` sets `varShowExportModal` to `0`, and **Report** opens the modal with `Set(varShowExportModal, 1)`. Until OnStart finishes, the variable is **blank**. In Power Apps, blank is not greater than zero (stays hidden) but blank is **not equal to zero** (would show). `<> 0` caused a one-second black-screen flash of **Monthly Transaction Export** at startup.
 
 ---
 
@@ -11321,7 +11399,7 @@ Set(varLoadingMessage, "");
 
 ### ✅ Step 12G Checklist
 
-- [ ] `conExportModal` container created with `Visible: varShowExportModal <> 0`
+- [ ] `conExportModal` container created with `Visible: varShowExportModal > 0` (do **not** use `<> 0` — that flashes the modal during app load)
 - [ ] Overlay closes modal on click
 - [ ] Close button (✕) closes modal
 - [ ] Month dropdown defaults to current month
@@ -12450,6 +12528,7 @@ Reset(chkNeedsAttention)
 | RadiusBottomRight | `varBtnBorderRadius` |
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 25. Set **OnSelect:**
 
@@ -12457,14 +12536,23 @@ Reset(chkNeedsAttention)
 Concurrent(
     Refresh(PrintRequests),
     Refresh(BuildPlates),
-    Refresh(Payments)
+    Refresh(Payments),
+    Refresh(RequestComments)
 );
 ClearCollect(colAllBuildPlates, BuildPlates);
-// BuildPlateSummary recalculates automatically from colAllBuildPlates.
-ClearCollect(colAllPayments, Payments)
+ClearCollect(colAllPayments, Payments);
+ClearCollect(colAllRequestComments, RequestComments);
+ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+If(
+    varCurrentAttentionCount > varPrevAttentionCount,
+    Reset(audNotification);
+    Set(varPlaySound, true)
+);
+Set(varPrevAttentionCount, varCurrentAttentionCount)
 ```
 
-> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted or payments/plates are updated elsewhere, the tab counts, job-card summaries, and payment indicators won't update automatically. Clicking this button forces a fresh data fetch so staff see the latest submissions and accurate counts. The three `Refresh` calls run inside `Concurrent` so the app waits only for the slowest list, not the sum of all three.
+> **Why this button?** Power Apps caches SharePoint data. When new requests are submitted or payments/plates are updated elsewhere, the tab counts, job-card summaries, and payment indicators won't update automatically. Clicking this button runs the **same reload as `tmrAutoRefresh.OnTimerEnd`**, including `colNeedsAttention` so the lightbulb filter and chime baseline match the cards. The four `Refresh` calls run inside `Concurrent` so the app waits only for the slowest list. The timer still **skips** that reload while a popup is open; this button is for when staff want a fetch on demand (it is disabled while `varIsLoading`).
 
 ---
 
@@ -14383,43 +14471,51 @@ The Timer control automatically refreshes data and checks for new NeedsAttention
 | Duration | `varRefreshInterval` |
 | Repeat | `true` |
 | AutoStart | `true` |
+| Start | `!varIsLoading && !StaffModalOpen` |
 | Visible | `false` |
 
 > ⚠️ **Important:** Set `Visible` to `false` — the timer doesn't need to be seen by users.
+>
+> 💡 **Pause during popups and saves:** `Start` is false while `varIsLoading` is true or `StaffModalOpen` is true. That stops the 30-second SharePoint refresh from swapping data under an open Approve/Payment/Notes popup. Batch multi-select on the dashboard does **not** set `StaffModalOpen`.
 
 5. Set **OnTimerEnd:**
 
 **⬇️ FORMULA: Paste into tmrAutoRefresh.OnTimerEnd**
 
 ```powerfx
-// Refresh data from SharePoint concurrently
-Concurrent(
-    Refresh(PrintRequests),
-    Refresh(BuildPlates),
-    Refresh(Payments),
-    Refresh(RequestComments)
-);
-
-// Reload local collections used by job-card summaries
-ClearCollect(colAllBuildPlates, BuildPlates);
-// BuildPlateSummary recalculates automatically from colAllBuildPlates.
-ClearCollect(colAllPayments, Payments);
-
-// Reload NeedsAttention items into local collection (avoids delegation)
-ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
-
-// Count from local collection (no delegation warning)
-Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
-
-// If count increased, play notification sound
 If(
-    varCurrentAttentionCount > varPrevAttentionCount,
-    Reset(audNotification);
-    Set(varPlaySound, true)
-);
+    varIsLoading || StaffModalOpen,
+    false,
+    // Refresh data from SharePoint concurrently
+    Concurrent(
+        Refresh(PrintRequests),
+        Refresh(BuildPlates),
+        Refresh(Payments),
+        Refresh(RequestComments)
+    );
 
-// Update previous count for next comparison
-Set(varPrevAttentionCount, varCurrentAttentionCount)
+    // Reload local collections used by job-card summaries
+    ClearCollect(colAllBuildPlates, BuildPlates);
+    ClearCollect(colAllPayments, Payments);
+    ClearCollect(colAllRequestComments, RequestComments);
+    // BuildPlateSummary / RequestCommentSummary recalculate from these collections.
+
+    // Reload NeedsAttention items into local collection (avoids delegation)
+    ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+
+    // Count from local collection (no delegation warning)
+    Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+
+    // If count increased, play notification sound
+    If(
+        varCurrentAttentionCount > varPrevAttentionCount,
+        Reset(audNotification);
+        Set(varPlaySound, true)
+    );
+
+    // Update previous count for next comparison
+    Set(varPrevAttentionCount, varCurrentAttentionCount)
+)
 ```
 
 > ⚠️ **Delegation Note:** We use `ClearCollect` to load NeedsAttention items into a local collection first, then `CountRows` on that collection. This avoids delegation warnings because `CountRows` on a local collection always works correctly. The `Filter` may show a delegation warning, but since NeedsAttention items are typically a small subset, this approach is reliable.
@@ -14428,9 +14524,9 @@ Set(varPrevAttentionCount, varCurrentAttentionCount)
 
 | Step | What Happens |
 |------|--------------|
-| 1 | Timer fires every 30 seconds |
+| 1 | Timer fires every 30 seconds **only if** no popup is open and `varIsLoading` is false (`Start` + `OnTimerEnd` guard) |
 | 2 | `Concurrent(Refresh(PrintRequests), Refresh(BuildPlates), Refresh(Payments), Refresh(RequestComments))` fetches the dashboard and messaging lists in parallel |
-| 3 | `colAllBuildPlates` and `colAllPayments` are reloaded for job-card summaries |
+| 3 | `colAllBuildPlates`, `colAllPayments`, and `colAllRequestComments` are reloaded for job-card summaries |
 | 4 | Count current NeedsAttention items |
 | 5 | Compare to previous count stored in `varPrevAttentionCount` |
 | 6 | If count increased, `Reset(audNotification); Set(varPlaySound, true)` triggers audio |
@@ -14585,7 +14681,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 | Sound never plays | Wrong media file name | Check `audNotification.Media` matches your uploaded file name |
 | Sound never plays | Start not changing | Use `Reset(audNotification); Set(varPlaySound, true)` where you trigger; Audio **Start** = `varPlaySound`, **OnEnd** = `Set(varPlaySound, false)` |
 | Sound plays on app start | Initial count comparison issue | Ensure `varPrevAttentionCount` is set in `App.OnStart` |
-| Timer doesn't fire | `AutoStart` is `false` | Set `tmrAutoRefresh.AutoStart = true` |
+| Timer doesn't fire | `AutoStart` is `false`, or `Start` is false because a popup is open / `varIsLoading` | Set `tmrAutoRefresh.AutoStart = true`. Close popups and wait for saves to finish (`Start` = `!varIsLoading && !StaffModalOpen`). |
 
 ---
 
@@ -15350,15 +15446,37 @@ Table(
 ```powerfx
 ThisItem.Status & " " & Text(
     CountRows(
-        Filter(
-            PrintRequests,
-            Status.Value = ThisItem.Status,
-            If(IsBlank(varSearchText), true,
-                varSearchText in Student.DisplayName ||
-                varSearchText in StudentEmail ||
-                varSearchText in ReqKey
+        If(
+            IsBlank(Trim(varSearchText)),
+            If(
+                varNeedsAttention,
+                Filter(
+                    PrintRequests,
+                    Status.Value = ThisItem.Status,
+                    NeedsAttention = true
+                ),
+                Filter(
+                    PrintRequests,
+                    Status.Value = ThisItem.Status
+                )
             ),
-            If(varNeedsAttention, NeedsAttention = true, true)
+            Filter(
+                PrintRequests As req,
+                req.Status.Value = ThisItem.Status,
+                varSearchText in req.Student.DisplayName ||
+                varSearchText in req.StudentEmail ||
+                varSearchText in req.ReqKey ||
+                varSearchText in req.SlicedOnComputer.Value ||
+                varSearchText in req.Printer.Value ||
+                CountRows(
+                    Filter(
+                        colAllBuildPlates,
+                        RequestID = req.ID &&
+                        varSearchText in Machine.Value
+                    )
+                ) > 0,
+                If(varNeedsAttention, req.NeedsAttention = true, true)
+            )
         )
     )
 )
@@ -15367,19 +15485,41 @@ ThisItem.Status & " " & Text(
 ## Job Cards Gallery Filter
 
 ```powerfx
-// Queue Order keeps attention items first, then oldest in queue first
+// Empty search: Filter by Status only (SharePoint can answer this).
+// Typed search: in-operator path (not delegable).
 With(
     {
-        filteredJobs: Filter(
-            PrintRequests,
-            Status.Value = varSelectedStatus,
-            If(IsBlank(varSearchText), true, 
-                varSearchText in Student.DisplayName || 
-                varSearchText in StudentEmail || 
-                varSearchText in ReqKey ||
-                varSearchText in SlicedOnComputer.Value
+        filteredJobs: If(
+            IsBlank(Trim(varSearchText)),
+            If(
+                varNeedsAttention,
+                Filter(
+                    PrintRequests,
+                    Status.Value = varSelectedStatus,
+                    NeedsAttention = true
+                ),
+                Filter(
+                    PrintRequests,
+                    Status.Value = varSelectedStatus
+                )
             ),
-            If(varNeedsAttention, NeedsAttention = true, true)
+            Filter(
+                PrintRequests As req,
+                req.Status.Value = varSelectedStatus,
+                varSearchText in req.Student.DisplayName ||
+                varSearchText in req.StudentEmail ||
+                varSearchText in req.ReqKey ||
+                varSearchText in req.SlicedOnComputer.Value ||
+                varSearchText in req.Printer.Value ||
+                CountRows(
+                    Filter(
+                        colAllBuildPlates,
+                        RequestID = req.ID &&
+                        varSearchText in Machine.Value
+                    )
+                ) > 0,
+                If(varNeedsAttention, req.NeedsAttention = true, true)
+            )
         )
     },
     Switch(
@@ -15398,6 +15538,10 @@ With(
         Sort(filteredJobs, SlicedOnComputer.Value, SortOrder.Ascending),
         "Printer A-Z",
         Sort(filteredJobs, Printer.Value, SortOrder.Ascending),
+        "Print Time Low-High",
+        SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, 999999)), "SortEstimatedTime", SortOrder.Ascending),
+        "Print Time High-Low",
+        SortByColumns(AddColumns(filteredJobs, SortEstimatedTime, Coalesce(EstimatedTime, -1)), "SortEstimatedTime", SortOrder.Descending),
         SortByColumns(
             filteredJobs,
             "NeedsAttention", SortOrder.Descending,
@@ -15744,6 +15888,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 ### conExportModal
 
+**Visible (live):** `varShowExportModal > 0`. Open from **Report** (`Set(varShowExportModal, 1)`); close sets `0`. Do not use `<> 0`.
+
 | Control | Type |
 |---------|------|
 | `btnExportClose` | Classic/Button |
@@ -16087,6 +16233,9 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-04-28: Details modal — Color vs Method (Resin)** | **`ddDetailsColor`**: **`Items`** filters **`Choices([@PrintRequests].Color)`** when effective Method is **Resin** to **Black / White / Gray / Clear** (Student Portal parity). **`DefaultSelectedItems`** uses **`Coalesce(ddDetailsMethod.Selected.Value, varSelectedItem.Method.Value)`** so filament-only saved colors do not preselect under Resin. **`ddDetailsMethod.OnChange`**: **`Reset(ddDetailsPrinter); Reset(ddDetailsColor)`**. |
 | **2026-05-01: Payment modal — final pickup plate gate** | Live coauthor is now the source for **`scrDashboard`** and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` is aligned to it. **`btnPaymentConfirm.DisplayMode`** requires **all** completed plates to be checked for **Completed** jobs unless **`chkPartialPickup`** is checked; **`Printing`** remains exempt via **`Or(..., varSelectedItem.Status.Value = "Printing")`**. **`galPlatesPickup`** live: **`TemplateSize = 44`**, **`Height = Min(220, CountRows × 46)`**, **`ShowScrollbar`** when content exceeds the cap, **`lblPlateName.AutoHeight`** + **`Width = Parent.TemplateWidth - Self.X - 8`**. **Step 12C** documents the same **dynamic layout** rules. |
 | **2026-05-05: Live YAML mirror** | Pulled the working live app through coauthor MCP and mirrored it into `PowerApps/canvas-coauthor`. Live only differed in **`scrDashboard`**: **`galPlatesPickup`** row taps use **`Select(Parent)`** on **`chkPlate`** and **`lblPlateName`**; **`galBuildPlates`** row layout uses centered/auto-height **`lblPlateLabel`** at **`X=5`**, machine/status/buttons shifted right; **`txtBatchTransaction`** no longer sets centered alignment; **`btnBatchPaymentConfirm.Size`** uses **`varBtnFontSize`**; and the payment-type dropdown at **`X=743`** is **`Width=172`**. |
+| **2026-08-14: Export modal hide rule** | **`conExportModal.Visible`** is **`varShowExportModal > 0`** (same pattern as the other status modals). **`<> 0`** treated a blank switch as visible during **`App.OnStart`**, which flashed **Monthly Transaction Export** on a black screen for about a second. Report still opens with **`Set(varShowExportModal, 1)`**. |
+| **2026-08-14: Gallery + tab counts — idle vs search** | **`galJobCards.Items`** and **`btnStatusTab.Text`** use an outer **`If(IsBlank(Trim(varSearchText)), …)`**. Empty search asks SharePoint for **`Status.Value = …`** only (plus **`NeedsAttention = true`** when that filter is on). Typed search keeps the previous **`in`** / plate-machine path. Do not put **`If(IsBlank(varSearchText), true, varSearchText in …)`** inside **`Filter`**. Index **Status** and **NeedsAttention** on PrintRequests (`SharePoint/PrintRequests-List-Setup.md`). |
+| **2026-08-14: Pause auto-refresh during popups** | Named formula **`StaffModalOpen`** is true when any `varShow*Modal > 0`. **`tmrAutoRefresh.Start`** is **`!varIsLoading && !StaffModalOpen`**. **`OnTimerEnd`** no-ops if a popup is open or a save is running. **`btnRefresh.OnSelect`** now matches the timer reload (including **`colNeedsAttention`** and the chime baseline). Batch-select mode does not pause the timer. |
 
 # Next Steps
 

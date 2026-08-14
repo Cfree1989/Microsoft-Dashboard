@@ -29,37 +29,42 @@ Screens:
             HoverColor: =RGBA(255, 255, 255, 1)
             HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
             OnTimerEnd: |-
-              =// Refresh data from SharePoint concurrently
-              Concurrent(
-                  Refresh(PrintRequests),
-                  Refresh(BuildPlates),
-                  Refresh(Payments),
-                  Refresh(RequestComments)
-              );
+              =If(
+                  varIsLoading || StaffModalOpen,
+                  false,
+                  // Refresh data from SharePoint concurrently
+                  Concurrent(
+                      Refresh(PrintRequests),
+                      Refresh(BuildPlates),
+                      Refresh(Payments),
+                      Refresh(RequestComments)
+                  );
 
-              // Reload local collections used by job-card summaries
-              ClearCollect(colAllBuildPlates, BuildPlates);
-              ClearCollect(colAllPayments, Payments);
-              ClearCollect(colAllRequestComments, RequestComments);
-              // Reload NeedsAttention items into local collection (avoids delegation)
-              ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+                  // Reload local collections used by job-card summaries
+                  ClearCollect(colAllBuildPlates, BuildPlates);
+                  ClearCollect(colAllPayments, Payments);
+                  ClearCollect(colAllRequestComments, RequestComments);
+                  // Reload NeedsAttention items into local collection (avoids delegation)
+                  ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
 
-              // Count from local collection (no delegation warning)
-              Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+                  // Count from local collection (no delegation warning)
+                  Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
 
-              // If count increased, play notification sound
-              If(
-                  varCurrentAttentionCount > varPrevAttentionCount,
-                  Reset(audNotification);
-                  Set(varPlaySound, true)
-              );
+                  // If count increased, play notification sound
+                  If(
+                      varCurrentAttentionCount > varPrevAttentionCount,
+                      Reset(audNotification);
+                      Set(varPlaySound, true)
+                  );
 
-              // Update previous count for next comparison
-              Set(varPrevAttentionCount, varCurrentAttentionCount)
+                  // Update previous count for next comparison
+                  Set(varPrevAttentionCount, varCurrentAttentionCount)
+              )
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
             PressedFill: =Self.Color
             Repeat: =true
+            Start: =!varIsLoading && !StaffModalOpen
             Visible: =false
             X: =144
             Y: =652
@@ -169,12 +174,23 @@ Screens:
             Items: |-
               =With(
                   {
-                      filteredJobs: Filter(
-                          PrintRequests As req,
-                          req.Status.Value = varSelectedStatus,
+                      filteredJobs: If(
+                          IsBlank(Trim(varSearchText)),
                           If(
-                              IsBlank(varSearchText),
-                              true,
+                              varNeedsAttention,
+                              Filter(
+                                  PrintRequests,
+                                  Status.Value = varSelectedStatus,
+                                  NeedsAttention = true
+                              ),
+                              Filter(
+                                  PrintRequests,
+                                  Status.Value = varSelectedStatus
+                              )
+                          ),
+                          Filter(
+                              PrintRequests As req,
+                              req.Status.Value = varSelectedStatus,
                               varSearchText in req.Student.DisplayName ||
                               varSearchText in req.StudentEmail ||
                               varSearchText in req.ReqKey ||
@@ -186,9 +202,9 @@ Screens:
                                       RequestID = req.ID &&
                                       varSearchText in Machine.Value
                                   )
-                              ) > 0
-                          ),
-                          If(varNeedsAttention, req.NeedsAttention = true, true)
+                              ) > 0,
+                              If(varNeedsAttention, req.NeedsAttention = true, true)
+                          )
                       )
                   },
                   Switch(
@@ -1578,6 +1594,7 @@ Screens:
             BorderColor: =varColorPrimary
             Color: =Color.White
             DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
             Fill: =varColorPrimary
             FocusedBorderThickness: =varFocusedBorderThickness
             Font: =varAppFont
@@ -1595,6 +1612,14 @@ Screens:
               ClearCollect(colAllBuildPlates, BuildPlates);
               ClearCollect(colAllPayments, Payments);
               ClearCollect(colAllRequestComments, RequestComments);
+              ClearCollect(colNeedsAttention, Filter(PrintRequests, NeedsAttention = true));
+              Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
+              If(
+                  varCurrentAttentionCount > varPrevAttentionCount,
+                  Reset(audNotification);
+                  Set(varPlaySound, true)
+              );
+              Set(varPrevAttentionCount, varCurrentAttentionCount)
             PressedBorderColor: =Self.Fill
             PressedColor: =Self.Fill
             PressedFill: =ColorFade(varColorPrimary, -25%)
@@ -1651,7 +1676,43 @@ Screens:
                   PressedColor: =If(varSelectedStatus = ThisItem.Status, Color.White, varColorText)
                   PressedFill: =ColorFade(If(varSelectedStatus = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)
                   Size: =10
-                  Text: =ThisItem.Status & " " & Text(CountRows(Filter(PrintRequests As req, req.Status.Value = ThisItem.Status, If(IsBlank(varSearchText), true, varSearchText in req.Student.DisplayName || varSearchText in req.StudentEmail || varSearchText in req.ReqKey || varSearchText in req.SlicedOnComputer.Value || varSearchText in req.Printer.Value || CountRows(Filter(colAllBuildPlates, RequestID = req.ID && varSearchText in Machine.Value)) > 0), If(varNeedsAttention, req.NeedsAttention = true, true))))
+                  Text: |-
+                    =ThisItem.Status & " " & Text(
+                        CountRows(
+                            If(
+                                IsBlank(Trim(varSearchText)),
+                                If(
+                                    varNeedsAttention,
+                                    Filter(
+                                        PrintRequests,
+                                        Status.Value = ThisItem.Status,
+                                        NeedsAttention = true
+                                    ),
+                                    Filter(
+                                        PrintRequests,
+                                        Status.Value = ThisItem.Status
+                                    )
+                                ),
+                                Filter(
+                                    PrintRequests As req,
+                                    req.Status.Value = ThisItem.Status,
+                                    varSearchText in req.Student.DisplayName ||
+                                    varSearchText in req.StudentEmail ||
+                                    varSearchText in req.ReqKey ||
+                                    varSearchText in req.SlicedOnComputer.Value ||
+                                    varSearchText in req.Printer.Value ||
+                                    CountRows(
+                                        Filter(
+                                            colAllBuildPlates,
+                                            RequestID = req.ID &&
+                                            varSearchText in Machine.Value
+                                        )
+                                    ) > 0,
+                                    If(varNeedsAttention, req.NeedsAttention = true, true)
+                                )
+                            )
+                        )
+                    )
                   Width: =141
                   X: =5
                   Y: =4
@@ -8382,7 +8443,7 @@ Screens:
           Variant: ManualLayout
           Properties:
             Height: =Parent.Height
-            Visible: =varShowExportModal <> 0
+            Visible: =varShowExportModal > 0
             Width: =Parent.Width
           Children:
             - recExportOverlay:
