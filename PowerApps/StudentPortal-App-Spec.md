@@ -83,6 +83,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 2 — Confirm and Cancel saves.** `btnConfirmYes` / `btnCancelYes` wrap `Patch` in **`IfError`**, set `varIsLoading`, and toast success only after a successful save. Failure keeps the modal open and shows an error. `conLoadingOverlayMyRequests` shows **Saving...**. Confirm/Cancel buttons use `DisplayMode.Disabled` while loading.
 - **2026-08-14: Item 3 — Cancel does not wipe Notes.** Cancel no longer Patches `Notes`. It appends `"Canceled by student {date}"` to **`StaffNotes`** (pipe-separated, same as Staff Console) and sets `LastActionAt`. `lblCancelMessage` warns when status is **Ready to Print** (staff may already be preparing; email/visit lab). Cancel remains allowed in Uploaded, Pending, and Ready to Print.
 - **2026-08-14: Item 4 — My Requests filter.** Gallery `Items` prefers **`StudentEntraId = Text(varMeEntraId)`** (SharePoint text vs GUID), with **`StudentEmail = varMeEmail` or `varMeUPN`** as fallback for older rows. If Entra ID is blank, filter email only — never `StudentEntraId = Blank()`. No `Lower()` on SharePoint columns (`varMeEmail` / `varMeUPN` are already Lower in OnStart). Empty state uses **`galMyRequests.AllItemsCount = 0`**. Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.
+- **2026-08-14: Item 5 — Staff Console chrome.** `varColorHeader` is **`RGBA(77, 77, 77, 1)`** (same as Staff `recHeader`). Header height **55**. Titles are white Open Sans Semibold 18 (`Print Lab Student Portal` / `New Print Request` / `My Print Requests`). Refresh is a Staff-style header button (22px, radius 4). Welcome `Fill = Color.Transparent` (no Studio purple). Home action cards use **`varColorBgCard`**. ReqKey shows **`Job #{ID}`** until Flow A fills `ReqKey`. Rejected cards show **`RejectionComment`**, else **`RejectionReason`**. No logo — Staff live header has none.
 
 ### Typography
 
@@ -107,7 +108,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Error/Danger | Red | `RGBA(219, 3, 3, 1)` | `varColorDanger` |
 | Neutral/Cancel | Gray | `RGBA(150, 150, 150, 1)` | `varColorNeutral` |
 | Info | Blue | `RGBA(70, 130, 220, 1)` | `varColorInfo` |
-| Header Background | Transparent | `Color.Transparent` | `varColorHeader` |
+| Header Background | Dark Gray | `RGBA(77, 77, 77, 1)` | `varColorHeader` |
 | Nav Button Inactive | Gray | `RGBA(128, 128, 128, 1)` | `varNavBtnInactiveFill` |
 | Nav Button Hover | Dark Gray | `RGBA(90, 90, 90, 1)` | `varNavBtnHoverFill` |
 | Modal Overlay | Black 70% | `RGBA(0, 0, 0, 0.7)` | `varColorOverlay` |
@@ -157,7 +158,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Element | Width | Height | Notes |
 |---------|-------|--------|-------|
 | Screen | `1024` | `768` | Tablet landscape layout |
-| Header Bar | `Parent.Width` | `60` | Fixed at top |
+| Header Bar | `Parent.Width` | `55` | Fixed at top (matches Staff Console) |
 | Navigation Bar | `Parent.Width` | `60` | Fixed at bottom |
 | Content Area | `Parent.Width` | `Parent.Height - 120` | Between header and nav |
 | Form Container | `Parent.Width` | `Parent.Height - 120` | Scrollable form area |
@@ -338,7 +339,7 @@ Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
 Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
 // === UI NEUTRAL COLORS ===
-Set(varColorHeader, Color.Transparent);            // Header background
+Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches Staff Console)
 Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
 Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
 Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
@@ -393,7 +394,7 @@ Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected ro
 Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
 // --- SIZING (Tablet Layout) ---
-Set(varHeaderHeight, 60);   // Top header bar
+Set(varHeaderHeight, 55);   // Top header bar (matches Staff Console recHeader)
 Set(varNavHeight, 60);      // Bottom navigation bar
 Set(varInputHeight, 45);    // Standard input field height
 Set(varButtonHeight, 50);   // Primary button height (legacy alias)
@@ -540,7 +541,7 @@ RadiusBottomRight: varRadiusXSmall
 
 | Variable | Value | Use For |
 |----------|-------|---------|
-| `varHeaderHeight` | 80 | Top header bar |
+| `varHeaderHeight` | 55 | Top header bar (matches Staff Console) |
 | `varNavHeight` | 70 | Bottom navigation |
 | `varInputHeight` | 45 | Text inputs, dropdowns |
 | `varButtonHeight` | 50 | Primary buttons |
@@ -627,7 +628,7 @@ This app uses a **container-based architecture** for clean organization and easy
         lblWelcome                  ← "Welcome, [Name]!" (created 1st - behind)
     ▼ conHeaderHome                 ← (created 1st - BOTTOM of tree = behind)
         imgUserPhotoHome            ← User profile photo (top right)
-        lblHeaderTitleHome          ← "Student Portal" (centered)
+        lblHeaderTitleHome          ← "Print Lab Student Portal"
         recHeaderBgHome             ← Background (created 1st - behind)
 
 ▼ scrSubmit                         ← Screen 2: Submit Request Form
@@ -782,16 +783,15 @@ We use **prefixes** to identify control types at a glance:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Student Portal"` |
-| X | `(Parent.Width - Self.Width) / 2` |
-| Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `300` |
+| Text | `"Print Lab Student Portal"` |
+| X | `20` |
+| Y | `11` |
+| Width | `400` |
 | Height | `30` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `18` |
 | Color | `Color.White` |
-| Align | `Align.Center` |
 
 #### Add User Profile Image
 
@@ -845,8 +845,9 @@ We use **prefixes** to identify control types at a glance:
 | Height | `40` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `24` |
+| Size | `18` |
 | Color | `varColorText` |
+| Fill | `Color.Transparent` |
 | Align | `Align.Center` |
 
 #### Add Subtitle Label
@@ -1354,10 +1355,10 @@ Your Tree view should now look like this (first-created at bottom, last-created 
 
 | Property | Value |
 |----------|-------|
-| Text | `"Submit 3D Print Request"` |
-| X | `varSpacingXL` |
-| Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `Parent.Width - 80` |
+| Text | `"New Print Request"` |
+| X | `20` |
+| Y | `11` |
+| Width | `Parent.Width - 40` |
 | Height | `30` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3006,9 +3007,9 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 | Property | Value |
 |----------|-------|
 | Text | `"My Print Requests"` |
-| X | `varSpacingXL` |
-| Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `Parent.Width - 100` |
+| X | `20` |
+| Y | `11` |
+| Width | `Parent.Width - 120` |
 | Height | `30` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
@@ -3044,21 +3045,23 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 
 | Property | Value |
 |----------|-------|
-| Text | `"↻"` |
-| X | `Parent.Width - 55` |
-| Y | `(Parent.Height - Self.Height) / 2` |
-| Width | `40` |
-| Height | `40` |
+| Text | `"Refresh"` |
+| X | `Parent.Width - 84` |
+| Y | `15` |
+| Width | `64` |
+| Height | `22` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
 | Font | `varAppFont` |
-| Size | `18` |
+| Size | `8` |
+| HoverFill | `varColorPrimaryHover` |
+| PressedFill | `varColorPrimaryPressed` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
-| RadiusTopLeft | `varRadiusPill` |
-| RadiusTopRight | `varRadiusPill` |
-| RadiusBottomLeft | `varRadiusPill` |
-| RadiusBottomRight | `varRadiusPill` |
+| RadiusTopLeft | `varBtnBorderRadius` |
+| RadiusTopRight | `varBtnBorderRadius` |
+| RadiusBottomLeft | `varBtnBorderRadius` |
+| RadiusBottomRight | `varBtnBorderRadius` |
 
 19. Set **OnSelect:**
 
@@ -3224,7 +3227,7 @@ Now add controls **inside** the gallery template.
 
 | Property | Value |
 |----------|-------|
-| Text | `ThisItem.ReqKey` |
+| Text | `If(!IsBlank(ThisItem.ReqKey), ThisItem.ReqKey, "Job #" & ThisItem.ID)` |
 | X | `28` |
 | Y | `12` |
 | Width | `150` |
@@ -3488,17 +3491,26 @@ Set(varShowCancelModal, ThisItem.ID)
 | Width | `Parent.TemplateWidth - 60` |
 | Height | `60` |
 | Size | `11` |
-| Color | `RGBA(100, 100, 100, 1)` |
+| Color | `If(ThisItem.Status.Value = "Rejected", varColorDanger, RGBA(100, 100, 100, 1))` |
 
 42. Set **Text:**
 
 ```powerfx
 Switch(
     ThisItem.Status.Value,
-    "Printing", "Your print is currently in progress!",
-    "Completed", "Your print is ready for pickup!" & Char(10) & "📍 " & varPickupLocation & Char(10) & "💳 Payment: " & varPaymentMethod,
-    "Paid & Picked Up", "✓ Completed and picked up on " & Text(ThisItem.PaymentDate, varDateFormatShort),
-    "Rejected", "❌ Request rejected",
+    "Printing", "Your print is currently in progress.",
+    "Completed", "Ready for pickup at " & varPickupLocation & Char(10) & "Payment: " & varPaymentMethod,
+    "Paid & Picked Up", "Picked up on " & Text(ThisItem.PaymentDate, varDateFormatShort),
+    "Rejected",
+        "Rejected" & If(
+            !IsBlank(ThisItem.RejectionComment),
+            ": " & ThisItem.RejectionComment,
+            If(
+                !IsBlank(Concat(ThisItem.RejectionReason, Value, "; ")),
+                ": " & Concat(ThisItem.RejectionReason, Value, "; "),
+                ". Check your email for details."
+            )
+        ),
     "Canceled", "Request canceled by you",
     ""
 )

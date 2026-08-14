@@ -81,7 +81,7 @@ App:
       Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
       // === UI NEUTRAL COLORS ===
-      Set(varColorHeader, Color.Transparent);            // Header background
+      Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches Staff Console)
       Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
       Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
       Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
@@ -136,7 +136,7 @@ App:
       Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
       // --- SIZING (Tablet Layout) ---
-      Set(varHeaderHeight, 60);   // Top header bar
+      Set(varHeaderHeight, 55);   // Top header bar (matches Staff Console recHeader)
       Set(varNavHeight, 60);      // Bottom navigation bar
       Set(varInputHeight, 45);    // Standard input field height
       Set(varButtonHeight, 50);   // Primary button height (legacy alias)
