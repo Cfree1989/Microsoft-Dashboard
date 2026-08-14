@@ -213,9 +213,7 @@ There are cheaper ways to ask “is this list empty?”
 
 **In plain English:** When batch mode is on, clicking a Completed card adds or removes it from the checkout pile. Mixing filament and resin is blocked with a clear message. Good.
 
-What is missing: the card does **not** stop you from adding a job that still has plates queued or printing. The background payment helper is supposed to refuse that later. Staff can build a whole batch and only find out at the last click.
-
-**What we would do later:** Warn or block at the moment they add the card.
+**Fixed 14 August 2026:** Adding a job that still has plates Queued or Printing is refused immediately (card click, check icon, and Add More Items). Jobs already in the batch can still be removed. Jobs with no plates are allowed.
 
 ### 5.5 Start Print can half-succeed
 
@@ -316,7 +314,7 @@ If the helper **never returns** (timeout, outage), that check may never run. Sta
 
 **In plain English:** You can click through batch checkout as long as you picked a staff member, a payment type, a weight, a dollar amount, and at least one job. The popup does **not** check “every job is Completed and has no plates still queued or printing.” The helper should reject that. Staff only see it as an error at the end.
 
-Better: grey out the job (or the confirm button) with a short reason as soon as the batch is invalid.
+**Fixed 14 August 2026:** Process Batch warns and stays closed if any selected job still has Queued/Printing plates. Record Batch Payment stays grey until the batch is clean. Same named formula (`StaffBatchHasIneligiblePlates`) as the add-to-batch gate.
 
 ### 9.4 After a successful batch, the app still writes one audit line per job
 
@@ -325,6 +323,8 @@ Better: grey out the job (or the confirm button) with a short reason as soon as 
 ### 9.5 Partial pickup vs batch
 
 **In plain English:** One-student payment can be a **partial** pickup (some plates today, some later). Batch is **final pickup only**. That is on purpose. The batch footer does not say so. Staff who wanted “three students, but only some of Sam’s plates” have to cancel batch and use Record Payment. A one-line hint would prevent that dead end.
+
+**Fixed 14 August 2026:** The batch footer count reads “N items selected · final pickup only.” The popup title is **Final Batch Pickup**. Tooltips on the check icon and Process Batch say the same.
 
 ---
 
@@ -481,7 +481,7 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 5. ~~Build plate/message cheat sheets in one pass; look up messages once per card.~~ **Done 14 August 2026** (live app).  
 6. ~~Stop photocopying *all* payments/messages/plates for all of history.~~ **Done 14 August 2026** (live app): last **365 days** by `Created`, Report month query, Messages load that job on open.  
 7. ~~Reject: require at least one reason or a comment.~~ **Done 14 August 2026** (live app).  
-8. Batch: do not let staff add a job the payment helper will refuse.  
+8. ~~Batch: do not let staff add a job the payment helper will refuse.~~ **Done 14 August 2026** (live app).  
 9. ~~Delete leftover startup switches that nothing uses.~~ **Done 14 August 2026** (live app).  
 10. Schedule: reuse the staff list already in memory; load shifts the simple way. Do not default the name dropdown to the signed-in account.  
 11. Later: stop using StaffNotes as an event log; consider shorter cards.

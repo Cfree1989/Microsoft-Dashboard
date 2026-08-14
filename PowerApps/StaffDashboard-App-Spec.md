@@ -398,7 +398,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 > **Canonical `App.OnStart`:** Paste the block below into **App.OnStart** in Studio. It intentionally includes **one** `// === SCHEDULE SCREEN STATE ===` block (after modal flags, before batch payment) with typed `colEditShifts` seed times. If your coauthor YAML still has a **second** duplicate schedule block after `varRefreshInterval`, **delete that duplicate** so the app matches this doc — the duplicate reset `colEditShifts` with empty strings and could cause type drift on schedule dropdowns.
 >
-> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, `StaffModalOpen`, and `StaffCacheSince` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those named formulas out of the block below into **Formulas**. Plate and message cheat sheets use **`GroupBy` + `AddColumns` + `DropColumns`** (one pass per list). **`StaffCacheSince`** is today minus 365 days; startup/timer photocopies of plates, payments, and messages use `Created >= StaffCacheSince`.
+> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, `StaffModalOpen`, `StaffCacheSince`, and `StaffBatchHasIneligiblePlates` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those named formulas out of the block below into **Formulas**. Plate and message cheat sheets use **`GroupBy` + `AddColumns` + `DropColumns`** (one pass per list). **`StaffCacheSince`** is today minus 365 days; startup/timer photocopies of plates, payments, and messages use `Created >= StaffCacheSince`. **`StaffBatchHasIneligiblePlates`** is true when any job in **`colBatchItems`** still has plates Queued or Printing (`IncompleteCount > 0`). Jobs with no plates are allowed (`LookUp` blank → `Coalesce` 0).
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
@@ -610,6 +610,11 @@ StaffModalOpen =
     varShowBuildPlatesModal > 0 ||
     varShowExportModal > 0;
 StaffCacheSince = DateAdd(Today(), -365, TimeUnit.Days);
+StaffBatchHasIneligiblePlates =
+    CountIf(
+        colBatchItems,
+        Coalesce(LookUp(BuildPlateSummary, RequestID = ID).IncompleteCount, 0) > 0
+    ) > 0;
 
 // Seed both attention counters before the timer starts so the first comparison is typed and stable
 Set(varCurrentAttentionCount, CountRows(colNeedsAttention));
@@ -825,6 +830,7 @@ Set(varLoadingMessage, "")
 | `colAllRequestComments` | RequestComments created in the last 365 days. Opening Messages also loads that job’s thread from SharePoint. | Table |
 | `RequestCommentSummary` | Named formula: one-pass `GroupBy` of `colAllRequestComments` by `RequestID` (`TotalCount`, `UnreadInboundCount`) | Table |
 | `StaffModalOpen` | Named formula: true when any dashboard popup is open (`varShow*Modal > 0`). Used to pause `tmrAutoRefresh`. Batch-select mode is not a popup and does not pause the timer. | Boolean |
+| `StaffBatchHasIneligiblePlates` | Named formula: true when any `colBatchItems` row has `LookUp(BuildPlateSummary, RequestID = ID).IncompleteCount` greater than 0 (plates still Queued or Printing). Jobs with no plates count as eligible. Used to block **Process Batch** / **Record Batch Payment**. | Boolean |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
 | `colPickedUpPlates` | Plates checked for pickup in Payment Modal | Table |
@@ -1720,19 +1726,26 @@ With `galJobCards` selected, you'll add controls **inside** the gallery template
 ```powerfx
 If(
     varBatchSelectMode && ThisItem.Status.Value = "Completed",
-    // Batch mode: toggle item in collection (Filament and Resin cannot mix—same Method.Value only)
+    // Batch mode: toggle item in collection (same Method only; no Queued/Printing plates)
     If(
         ThisItem.ID in colBatchItems.ID,
         Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)),
         If(
-            CountRows(colBatchItems) = 0,
-            Collect(colBatchItems, ThisItem),
+            Coalesce(LookUp(BuildPlateSummary, RequestID = ThisItem.ID).IncompleteCount, 0) > 0,
+            Notify(
+                "This job still has plates Queued or Printing. Finish those plates before batch pickup.",
+                NotificationType.Warning
+            ),
             If(
-                ThisItem.Method.Value = First(colBatchItems).Method.Value,
+                CountRows(colBatchItems) = 0,
                 Collect(colBatchItems, ThisItem),
-                Notify(
-                    "Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.",
-                    NotificationType.Warning
+                If(
+                    ThisItem.Method.Value = First(colBatchItems).Method.Value,
+                    Collect(colBatchItems, ThisItem),
+                    Notify(
+                        "Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.",
+                        NotificationType.Warning
+                    )
                 )
             )
         )
@@ -1743,6 +1756,8 @@ If(
 ```
 
 > 💡 **Attention Styling:** Cards needing attention get a warm yellow background `RGBA(255, 235, 180, 1)` with a gray border `RGBA(102, 102, 102, 1)` and thicker border (2px vs 1.5px). In batch select mode, selected cards show a light green background with green border.
+
+> 💡 **Key Point:** Batch is **final pickup only**. Adding a job that still has plates Queued or Printing is refused immediately (same check as **`icoBatchCheck`** and **`btnAddMoreItems`**). Jobs already in the batch can still be removed. Jobs with **no** plates are allowed (`IncompleteCount` blank → 0). Keep this formula in sync with **`icoBatchCheck.OnSelect`**.
 
 > **Note:** These formulas reference `varBatchSelectMode`, `colBatchItems`, and `NeedsAttention` which are used in later steps (batch payment in Step 12C/12E, lightbulb in Step 15). The variables are initialized in App.OnStart (Step 3).
 
@@ -7858,43 +7873,45 @@ Vertical galleries use a **fixed `TemplateSize` per row**. **`AutoHeight`** on `
 
 ```powerfx
 If(
-    !(varSelectedItem.ID in colBatchItems.ID),
+    Coalesce(LookUp(BuildPlateSummary, RequestID = varSelectedItem.ID).IncompleteCount, 0) > 0 && !(varSelectedItem.ID in colBatchItems.ID),
+    Notify(
+        "This job still has plates Queued or Printing. Finish those plates before batch pickup.",
+        NotificationType.Warning
+    ),
     If(
-        CountRows(colBatchItems) = 0,
-        Collect(colBatchItems, varSelectedItem),
-        If(
-            varSelectedItem.Method.Value = First(colBatchItems).Method.Value,
-            Collect(colBatchItems, varSelectedItem),
-            Notify(
-                "Cannot mix Filament and Resin in one batch. Clear the batch or remove jobs until only one print method remains.",
-                NotificationType.Warning
-            )
-        )
+        !(varSelectedItem.ID in colBatchItems.ID) && CountRows(colBatchItems) > 0 && varSelectedItem.Method.Value <> First(colBatchItems).Method.Value,
+        Notify(
+            "Cannot mix Filament and Resin in one batch. Clear the batch or remove jobs until only one print method remains.",
+            NotificationType.Warning
+        ),
+        If(!(varSelectedItem.ID in colBatchItems.ID), Collect(colBatchItems, varSelectedItem));
+        Set(varBatchSelectMode, true);
+        Set(varShowPaymentModal, 0);
+        Set(varSelectedItem, Blank());
+        Reset(txtPaymentTransaction);
+        Reset(txtPaymentWeight);
+        Reset(txtPaymentAmount);
+        Reset(dpPaymentDate);
+        Reset(txtPaymentNotes);
+        Reset(ddPaymentStaff);
+        Reset(chkOwnMaterial);
+        Reset(chkPartialPickup);
+        Reset(ddPaymentType);
+        Reset(chkPayerSameAsStudent);
+        Reset(txtPayerName);
+        Reset(txtPayerTigerCard);
+        Clear(colPickedUpPlates);
+        Clear(colPayments);
+        Notify("Batch mode enabled. Select more Completed items, then click 'Process Batch Payment'.", NotificationType.Information)
     )
-);
-Set(varBatchSelectMode, true);
-Set(varShowPaymentModal, 0);
-Set(varSelectedItem, Blank());
-Reset(txtPaymentTransaction);
-Reset(txtPaymentWeight);
-Reset(txtPaymentAmount);
-Reset(dpPaymentDate);
-Reset(txtPaymentNotes);
-Reset(ddPaymentStaff);
-Reset(chkOwnMaterial);
-Reset(chkPartialPickup);
-Reset(ddPaymentType);
-Reset(chkPayerSameAsStudent);
-Reset(txtPayerName);
-Reset(txtPayerTigerCard);
-Clear(colPickedUpPlates);
-Clear(colPayments);
-Notify("Batch mode enabled. Select more Completed items, then click 'Process Batch Payment'.", NotificationType.Information)
+)
 ```
 
 > ⚠️ **Batch contract:** Once staff switches into batch mode, they are building a **final pickup** across multiple completed requests. For any selected request that has build plates, batch processing will mark **all remaining eligible completed plates** as `Picked Up`. If staff needs to pick up only some of a request's completed plates, they must stay in the single-request Payment Modal instead of batch mode.
 >
 > 💡 **Deduping safeguard:** `btnAddMoreItems` uses an `ID` guard so the same request cannot be appended twice through the modal path.
+>
+> 💡 **Key Point:** If this job still has Queued/Printing plates, or it would mix Filament and Resin, the button **stays on the payment popup** (does not enable batch mode). Same plate rule as clicking the card in batch mode.
 
 ---
 
@@ -9767,13 +9784,14 @@ If(
     !IsBlank(txtBatchAmount.Text) &&
     IsNumeric(txtBatchAmount.Text) &&
     Value(txtBatchAmount.Text) > 0 &&
-    CountRows(colBatchItems) > 0,
+    CountRows(colBatchItems) > 0 &&
+    !StaffBatchHasIneligiblePlates,
     DisplayMode.Edit,
     DisplayMode.Disabled
 )
 ```
 
-> **Transaction / approval ID:** The live `ddBatchPaymentType` set uses **`"Code"`** (grant/program) where a blank transaction is allowed; other types require a non-blank `txtBatchTransaction` **unless** your data-source labels differ — copy **`DisplayMode` from** **`scrDashboard.pa.yaml`**.
+> **Transaction / approval ID:** The live `ddBatchPaymentType` set uses **`"Code"`** (grant/program) where a blank transaction is allowed; other types require a non-blank `txtBatchTransaction` **unless** your data-source labels differ — copy **`DisplayMode` from** **`scrDashboard.pa.yaml`**. **`!StaffBatchHasIneligiblePlates`** keeps Confirm grey if any selected job still has Queued or Printing plates.
 
 73. Set **OnSelect:**
 
@@ -12727,11 +12745,39 @@ Set(varLoadingMessage, "")
 | Height | `28` |
 | Color | `If(ThisItem.ID in colBatchItems.ID, varColorSuccess, RGBA(180, 180, 180, 1))` |
 | Visible | `varBatchSelectMode && ThisItem.Status.Value = "Completed"` |
-| OnSelect | `If(ThisItem.ID in colBatchItems.ID, Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)), If(CountRows(colBatchItems) = 0, Collect(colBatchItems, ThisItem), If(ThisItem.Method.Value = First(colBatchItems).Method.Value, Collect(colBatchItems, ThisItem), Notify("Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.", NotificationType.Warning))))` |
+| Tooltip | `"Batch is final pickup only. Jobs with Queued or Printing plates cannot be included."` |
+
+8A. Set **OnSelect:**
+
+```powerfx
+If(
+    ThisItem.ID in colBatchItems.ID,
+    Remove(colBatchItems, LookUp(colBatchItems, ID = ThisItem.ID)),
+    If(
+        Coalesce(LookUp(BuildPlateSummary, RequestID = ThisItem.ID).IncompleteCount, 0) > 0,
+        Notify(
+            "This job still has plates Queued or Printing. Finish those plates before batch pickup.",
+            NotificationType.Warning
+        ),
+        If(
+            CountRows(colBatchItems) = 0,
+            Collect(colBatchItems, ThisItem),
+            If(
+                ThisItem.Method.Value = First(colBatchItems).Method.Value,
+                Collect(colBatchItems, ThisItem),
+                Notify(
+                    "Cannot mix Filament and Resin in one batch. Remove a job or finish checkout, then batch jobs that use the same print method only.",
+                    NotificationType.Warning
+                )
+            )
+        )
+    )
+)
+```
 
 > 💡 **Batch Selection Indicator:** This icon appears in the top-right corner of cards when batch select mode is active. Shows a filled checkmark for selected items and an empty circle for unselected items. Only appears on "Completed" status cards since batch payment only applies to those.
 
-> **Keep the guard in sync with `recCardBackground.OnSelect`.** The icon and the card body must enforce the same single-method batch rule. If the first selected item is `Filament`, the icon must refuse to add a `Resin` job (and vice versa) with the same warning notification instead of silently building an invalid mixed batch.
+> **Keep the guard in sync with `recCardBackground.OnSelect`.** The icon and the card body must enforce the same single-method **and** plate-complete batch rules. If the first selected item is `Filament`, the icon must refuse to add a `Resin` job (and vice versa). Jobs with plates still Queued or Printing are refused with a warning; jobs already in the batch can still be removed.
 
 ---
 
@@ -12810,7 +12856,7 @@ varColorBorderLight
 |----------|-------|
 | X | `20` |
 | Y | `30` |
-| Width | `200` |
+| Width | `280` |
 | Height | `20` |
 | Size | `12` |
 | Color | `varColorText` |
@@ -12818,7 +12864,7 @@ varColorBorderLight
 24. Set **Text:**
 
 ```powerfx
-CountRows(colBatchItems) & " item" & If(CountRows(colBatchItems) <> 1, "s", "") & " selected"
+CountRows(colBatchItems) & " item" & If(CountRows(colBatchItems) <> 1, "s", "") & " selected · final pickup only"
 ```
 
 ---
@@ -12934,6 +12980,7 @@ Notify("Batch selection cancelled.", NotificationType.Information)
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | DisplayMode | `If(CountRows(colBatchItems) > 0, DisplayMode.Edit, DisplayMode.Disabled)` |
+| Tooltip | `"Batch is final pickup only. Jobs with Queued or Printing plates cannot be included."` |
 
 40. Set **OnSelect:**
 
@@ -12944,11 +12991,18 @@ If(
         "Cannot open batch payment: selection mixes Filament and Resin. Remove items until only one print method remains.",
         NotificationType.Warning
     ),
-    Set(varShowBatchPaymentModal, 1)
+    If(
+        StaffBatchHasIneligiblePlates,
+        Notify(
+            "One or more selected jobs still have plates Queued or Printing. Finish those plates before batch pickup.",
+            NotificationType.Warning
+        ),
+        Set(varShowBatchPaymentModal, 1)
+    )
 )
 ```
 
-> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight, transaction info, and payment date for all selected items. The live app simply toggles `varShowBatchPaymentModal` and does **not** pre-seed a separate “batch modal date” variable; date is read from `dpBatchPaymentDate.SelectedDate` when saving. The **`Distinct`** guard enforces **one `Method.Value` per batch** (defense in depth if data ever drifts).
+> 💡 **Opens Batch Modal:** This button opens the Batch Payment Modal (Step 12E) where staff enters the combined weight, transaction info, and payment date for all selected items. The live app simply toggles `varShowBatchPaymentModal` and does **not** pre-seed a separate “batch modal date” variable; date is read from `dpBatchPaymentDate.SelectedDate` when saving. The **`Distinct`** guard enforces **one `Method.Value` per batch**. **`StaffBatchHasIneligiblePlates`** blocks opening the modal if any selected job still has plates Queued or Printing (same rule Flow I uses).
 
 ---
 
@@ -16318,6 +16372,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Plate/message cheat sheets one pass** | **`BuildPlateSummary`** / **`RequestCommentSummary`** are **`GroupBy` → `AddColumns` → `DropColumns`**. Cards still `LookUp` those tables. **Messages** button colors reuse **`Self.Fill`**. Unread badge **Visible** is **`Value(Self.Text) > 0`**. **Print Complete** uses **`TotalAll`** / **`IncompleteCount`**. Do not wrap **`galJobCards.Items`** in **`AddColumns`** (breaks idle-search delegation). |
 | **2026-08-14: Quiet real App Checker noise** | Approve plate label uses **`BuildPlateSummary`**. Approve confirm + Build Plates Close/Done count from **`colAllBuildPlates`**, not live **`BuildPlates`**. Payment/batch success is **`Text(success)` = `"true"`** only (boolean `true` still matches). Remaining ~30 warnings are Job Search / Schedule `in`/`Lower` — expected. |
 | **2026-08-14: Cache window + reject gate + dead startup** | Photocopies of plates/payments/messages use **`Created >= StaffCacheSince`** (365 days). Report preview filters **Payments** by month dates. Messages open loads that job’s thread from SharePoint. **Reject** needs a reason checkbox or a comment. Removed unused **`varQuickQueue`**, **`varExpandAll`**, **`varIsStaff`**, **`colBatchSucceededItems`**, **`colBatchFailedItems`**. |
+| **2026-08-14: Batch plate gate + final-pickup hint** | Named formula **`StaffBatchHasIneligiblePlates`**. Adding to a batch (**`recCardBackground`**, **`icoBatchCheck`**, **`btnAddMoreItems`**) refuses jobs with plates still Queued or Printing; **Remove** still works. **`btnAddMoreItems`** stays on the payment popup if the add is refused. **Process Batch** warns instead of opening the modal; **Record Batch Payment** stays disabled. Footer count says **final pickup only**; modal title is **Final Batch Pickup**. Jobs with no plates are allowed. |
 
 # Next Steps
 

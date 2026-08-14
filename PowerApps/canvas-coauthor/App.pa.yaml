@@ -46,7 +46,12 @@ App:
           varShowBatchPaymentModal > 0 ||
           varShowBuildPlatesModal > 0 ||
           varShowExportModal > 0;
-      StaffCacheSince = DateAdd(Today(), -365, TimeUnit.Days)
+      StaffCacheSince = DateAdd(Today(), -365, TimeUnit.Days);
+      StaffBatchHasIneligiblePlates =
+          CountIf(
+              colBatchItems,
+              Coalesce(LookUp(BuildPlateSummary, RequestID = ID).IncompleteCount, 0) > 0
+          ) > 0
     OnStart: |-
       =// === USER IDENTIFICATION ===
       // Cache user info for performance
