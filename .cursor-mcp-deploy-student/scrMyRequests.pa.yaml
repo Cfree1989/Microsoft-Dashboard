@@ -498,6 +498,7 @@ Screens:
                   BorderThickness: =0
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =varColorNeutral
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -527,6 +528,7 @@ Screens:
                   BorderThickness: =0
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =varColorSuccess
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -536,22 +538,25 @@ Screens:
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =ColorFade(varColorSuccess, -15%)
                   OnSelect: |-
-                    =// Update the StudentConfirmed field
-                    Patch(
-                        PrintRequests,
-                        LookUp(PrintRequests, ID = varShowConfirmModal),
-                        {StudentConfirmed: true}
-                    );
-
-                    // Close modal
-                    Set(varShowConfirmModal, 0);
-                    Set(varSelectedItem, Blank());
-
-                    // Show success
-                    Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
-
-                    // Refresh the gallery
-                    Refresh(PrintRequests)
+                    =Set(varIsLoading, true);
+                    IfError(
+                        Patch(
+                            PrintRequests,
+                            LookUp(PrintRequests, ID = varShowConfirmModal),
+                            {StudentConfirmed: true}
+                        );
+                        Set(varIsLoading, false);
+                        Set(varShowConfirmModal, 0);
+                        Set(varSelectedItem, Blank());
+                        Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
+                        Refresh(PrintRequests),
+                        Notify(
+                            "Could not confirm the estimate. Please try again.",
+                            NotificationType.Error,
+                            5000
+                        );
+                        Set(varIsLoading, false)
+                    )
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorSuccess, -25%)
@@ -586,10 +591,10 @@ Screens:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Fill: =Color.White
                   FocusedBorderThickness: =varFocusedBorderThickness
-                  Height: =300
+                  Height: =360
                   Width: =Parent.Width - 60
                   X: =30
-                  Y: =(Parent.Height - 300) / 2
+                  Y: =(Parent.Height - 360) / 2
             - lblCancelTitle:
                 Control: Label
                 Properties:
@@ -613,11 +618,16 @@ Screens:
                   Color: =RGBA(80, 80, 80, 1)
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =80
+                  Height: =120
                   Size: =12
                   Text: |-
-                    ="Are you sure you want to cancel request " & varSelectedItem.ReqKey & "?" & Char(10) & Char(10) &
-                    "This action cannot be undone. You'll need to submit a new request if you change your mind."
+                    ="Are you sure you want to cancel request " & Coalesce(varSelectedItem.ReqKey, "this print") & "?" & Char(10) & Char(10) &
+                    If(
+                        varSelectedItem.Status.Value = "Ready to Print",
+                        "Staff may already be preparing this print. If you are not sure, email " & varSupportEmail & " or visit " & varPickupLocation & " before canceling." & Char(10) & Char(10) &
+                        "This cannot be undone. You would need to submit a new request.",
+                        "This action cannot be undone. You'll need to submit a new request if you change your mind."
+                    )
                   Width: =recCancelModal.Width - 40
                   X: =recCancelModal.X + 20
                   Y: =recCancelModal.Y + 60
@@ -628,6 +638,7 @@ Screens:
                   BorderThickness: =0
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =varColorDanger
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -636,26 +647,41 @@ Screens:
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =ColorFade(varColorDanger, -15%)
                   OnSelect: |-
-                    =// Update status to Canceled (student-initiated cancellation)
-                    Patch(
-                        PrintRequests,
-                        LookUp(PrintRequests, ID = varShowCancelModal),
-                        {
-                            Status: {Value: "Canceled"},
-                            LastAction: {Value: "Canceled by Student"},
-                            Notes: "Canceled by student before printing."
-                        }
-                    );
-
-                    // Close modal
-                    Set(varShowCancelModal, 0);
-                    Set(varSelectedItem, Blank());
-
-                    // Show confirmation
-                    Notify("Request canceled successfully.", NotificationType.Information);
-
-                    // Refresh
-                    Refresh(PrintRequests)
+                    =Set(varIsLoading, true);
+                    IfError(
+                        With(
+                            {wRow: LookUp(PrintRequests, ID = varShowCancelModal)},
+                            Patch(
+                                PrintRequests,
+                                wRow,
+                                {
+                                    Status: {Value: "Canceled"},
+                                    LastAction: {Value: "Canceled by Student"},
+                                    LastActionAt: Now(),
+                                    StaffNotes: If(
+                                        IsBlank(wRow.StaffNotes),
+                                        "Canceled by student " & Text(Now(), varDateFormatShort),
+                                        Concatenate(
+                                            wRow.StaffNotes,
+                                            " | ",
+                                            "Canceled by student " & Text(Now(), varDateFormatShort)
+                                        )
+                                    )
+                                }
+                            )
+                        );
+                        Set(varIsLoading, false);
+                        Set(varShowCancelModal, 0);
+                        Set(varSelectedItem, Blank());
+                        Notify("Request canceled successfully.", NotificationType.Information);
+                        Refresh(PrintRequests),
+                        Notify(
+                            "Could not cancel the request. Please try again.",
+                            NotificationType.Error,
+                            5000
+                        );
+                        Set(varIsLoading, false)
+                    )
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorDanger, -25%)
@@ -667,7 +693,7 @@ Screens:
                   Text: ="Yes, Cancel Request"
                   Width: =recCancelModal.Width - 40
                   X: =recCancelModal.X + varSpacingXL
-                  Y: =recCancelModal.Y + 160
+                  Y: =recCancelModal.Y + 200
             - btnCancelNo:
                 Control: Classic/Button
                 Properties:
@@ -675,6 +701,7 @@ Screens:
                   BorderThickness: =0
                   Color: =Color.White
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  DisplayMode: =If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)
                   Fill: =RGBA(240, 240, 240, 1)
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -696,4 +723,44 @@ Screens:
                   Text: ="No, Keep Request"
                   Width: =recCancelModal.Width - 40
                   X: =recCancelModal.X + 20
-                  Y: =recCancelModal.Y + 160 + varBtnHeight + varSpacingXL
+                  Y: =recCancelModal.Y + 200 + varBtnHeight + varSpacingXL
+      - conLoadingOverlayMyRequests:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Fill: =Color.Transparent
+            Height: =Parent.Height
+            Visible: =varIsLoading
+            Width: =Parent.Width
+          Children:
+            - recLoadingOverlayMyRequests:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =varColorOverlay
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recLoadingBgMyRequests:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Fill: =varColorBgCard
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Width: =200
+                  X: =(Parent.Width - 200) / 2
+                  Y: =(Parent.Height - 100) / 2
+            - lblLoadingTextMyRequests:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorPrimary
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =30
+                  Size: =14
+                  Text: ="Saving..."
+                  Width: =recLoadingBgMyRequests.Width
+                  X: =recLoadingBgMyRequests.X
+                  Y: =recLoadingBgMyRequests.Y + 35

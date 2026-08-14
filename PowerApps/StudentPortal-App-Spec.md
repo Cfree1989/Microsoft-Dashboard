@@ -79,7 +79,9 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 ### Live coauthor notes
 
-- **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. `varDropdownHoverFill` / `varDropdownSelectionFill` / `varDropdownSelectionColor` match Staff Console (light gray row, dark selected text). Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` (empty in this app) instead of `Items` — that is why every dropdown looked blank. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`** like Staff Console. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white** (not `HoverFill` gray) so Resin/Form 3+ do not sit in a gray box inside the field.
+- **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` instead of `Items`. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`**. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white**.
+- **2026-08-14: Item 2 — Confirm and Cancel saves.** `btnConfirmYes` / `btnCancelYes` wrap `Patch` in **`IfError`**, set `varIsLoading`, and toast success only after a successful save. Failure keeps the modal open and shows an error. `conLoadingOverlayMyRequests` shows **Saving...**. Confirm/Cancel buttons use `DisplayMode.Disabled` while loading.
+- **2026-08-14: Item 3 — Cancel does not wipe Notes.** Cancel no longer Patches `Notes`. It appends `"Canceled by student {date}"` to **`StaffNotes`** (pipe-separated, same as Staff Console) and sets `LastActionAt`. `lblCancelMessage` warns when status is **Ready to Print** (staff may already be preparing; email/visit lab). Cancel remains allowed in Uploaded, Pending, and Ready to Print.
 
 ### Typography
 
@@ -3824,15 +3826,20 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 | X | `recCancelModal.X + 20` |
 | Y | `recCancelModal.Y + 60` |
 | Width | `recCancelModal.Width - 40` |
-| Height | `80` |
+| Height | `120` |
 | Size | `12` |
 | Color | `RGBA(80, 80, 80, 1)` |
 
 17. Set **Text:**
 
 ```powerfx
-"Are you sure you want to cancel request " & varSelectedItem.ReqKey & "?" & Char(10) & Char(10) &
-"This action cannot be undone. You'll need to submit a new request if you change your mind."
+"Are you sure you want to cancel request " & Coalesce(varSelectedItem.ReqKey, "this print") & "?" & Char(10) & Char(10) &
+If(
+    varSelectedItem.Status.Value = "Ready to Print",
+    "Staff may already be preparing this print. If you are not sure, email " & varSupportEmail & " or visit " & varPickupLocation & " before canceling." & Char(10) & Char(10) &
+    "This cannot be undone. You would need to submit a new request.",
+    "This action cannot be undone. You'll need to submit a new request if you change your mind."
+)
 ```
 
 ### Confirm Cancel Button
@@ -3866,26 +3873,41 @@ In the Tree view, ensure controls inside `conConfirmModal` are ordered (top to b
 21. Set **OnSelect:**
 
 ```powerfx
-// Update status to Canceled (student-initiated cancellation)
-Patch(
-    PrintRequests,
-    LookUp(PrintRequests, ID = varShowCancelModal),
-    {
-        Status: {Value: "Canceled"},
-        LastAction: {Value: "Canceled by Student"},
-        Notes: "Canceled by student before printing."
-    }
-);
-
-// Close modal
-Set(varShowCancelModal, 0);
-Set(varSelectedItem, Blank());
-
-// Show confirmation
-Notify("Request canceled successfully.", NotificationType.Information);
-
-// Refresh
-Refresh(PrintRequests)
+Set(varIsLoading, true);
+IfError(
+    With(
+        {wRow: LookUp(PrintRequests, ID = varShowCancelModal)},
+        Patch(
+            PrintRequests,
+            wRow,
+            {
+                Status: {Value: "Canceled"},
+                LastAction: {Value: "Canceled by Student"},
+                LastActionAt: Now(),
+                StaffNotes: If(
+                    IsBlank(wRow.StaffNotes),
+                    "Canceled by student " & Text(Now(), varDateFormatShort),
+                    Concatenate(
+                        wRow.StaffNotes,
+                        " | ",
+                        "Canceled by student " & Text(Now(), varDateFormatShort)
+                    )
+                )
+            }
+        )
+    );
+    Set(varIsLoading, false);
+    Set(varShowCancelModal, 0);
+    Set(varSelectedItem, Blank());
+    Notify("Request canceled successfully.", NotificationType.Information);
+    Refresh(PrintRequests),
+    Notify(
+        "Could not cancel the request. Please try again.",
+        NotificationType.Error,
+        5000
+    );
+    Set(varIsLoading, false)
+)
 ```
 
 ### Keep Request Button
@@ -4702,35 +4724,65 @@ SortByColumns(
 ## Confirm Estimate OnSelect
 
 ```powerfx
-Patch(
-    PrintRequests,
-    LookUp(PrintRequests, ID = varShowConfirmModal),
-    {StudentConfirmed: true}
-);
-
-Set(varShowConfirmModal, 0);
-Set(varSelectedItem, Blank());
-Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
-Refresh(PrintRequests)
+Set(varIsLoading, true);
+IfError(
+    Patch(
+        PrintRequests,
+        LookUp(PrintRequests, ID = varShowConfirmModal),
+        {StudentConfirmed: true}
+    );
+    Set(varIsLoading, false);
+    Set(varShowConfirmModal, 0);
+    Set(varSelectedItem, Blank());
+    Notify("Estimate confirmed! Your print is now in the queue.", NotificationType.Success);
+    Refresh(PrintRequests),
+    Notify(
+        "Could not confirm the estimate. Please try again.",
+        NotificationType.Error,
+        5000
+    );
+    Set(varIsLoading, false)
+)
 ```
 
 ## Cancel Request OnSelect
 
 ```powerfx
-Patch(
-    PrintRequests,
-    LookUp(PrintRequests, ID = varShowCancelModal),
-    {
-        Status: {Value: "Canceled"},
-        LastAction: {Value: "Canceled by Student"},
-        Notes: "Canceled by student before printing."
-    }
-);
-
-Set(varShowCancelModal, 0);
-Set(varSelectedItem, Blank());
-Notify("Request canceled successfully.", NotificationType.Information);
-Refresh(PrintRequests)
+Set(varIsLoading, true);
+IfError(
+    With(
+        {wRow: LookUp(PrintRequests, ID = varShowCancelModal)},
+        Patch(
+            PrintRequests,
+            wRow,
+            {
+                Status: {Value: "Canceled"},
+                LastAction: {Value: "Canceled by Student"},
+                LastActionAt: Now(),
+                StaffNotes: If(
+                    IsBlank(wRow.StaffNotes),
+                    "Canceled by student " & Text(Now(), varDateFormatShort),
+                    Concatenate(
+                        wRow.StaffNotes,
+                        " | ",
+                        "Canceled by student " & Text(Now(), varDateFormatShort)
+                    )
+                )
+            }
+        )
+    );
+    Set(varIsLoading, false);
+    Set(varShowCancelModal, 0);
+    Set(varSelectedItem, Blank());
+    Notify("Request canceled successfully.", NotificationType.Information);
+    Refresh(PrintRequests),
+    Notify(
+        "Could not cancel the request. Please try again.",
+        NotificationType.Error,
+        5000
+    );
+    Set(varIsLoading, false)
+)
 ```
 
 ## Printer Cascading Filter

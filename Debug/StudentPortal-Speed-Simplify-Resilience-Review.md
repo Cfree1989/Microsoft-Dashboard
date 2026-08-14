@@ -295,8 +295,8 @@ Hover/pressed color vars are set and never bound (App Checker). Some buttons har
 **In plain English:** Shopping list, not work happening now. Earlier numbers help students more, with less change to the rules.
 
 1. ~~**Align live with the better repo bits:** readable dropdown selection; confirm `Form 3` vs `Form 3+` against SharePoint.~~ **Done 14 August 2026** (live app): resin is **Form 3+** only; dropdown selection matches Staff Console; Printing badge is orange (`varColorWarning`). Run **OnStart** in Studio to pick up colors.  
-2. **IfError + overlay** on Confirm and Cancel; do not toast success unless the save worked.  
-3. **Cancel:** append or write `StaffNotes` / LastAction only — **do not replace** `Notes`. Warn if status is Ready to Print.  
+2. ~~**IfError + overlay** on Confirm and Cancel; do not toast success unless the save worked.~~ **Done 14 August 2026** (live app).  
+3. ~~**Cancel:** append or write `StaffNotes` / LastAction only — **do not replace** `Notes`. Warn if status is Ready to Print.~~ **Done 14 August 2026** (live app).  
 4. **My Requests filter** by `StudentEntraId` (plus email fallback); index those columns; `AllItemsCount` for empty state.  
 5. **Look, cheap:** header fill, logo, kill default purple welcome, show rejection text, show ReqKey or “Submitting…” if blank.  
 6. **Home “needs you”** line for unconfirmed Pending jobs.  

@@ -1327,6 +1327,7 @@ Screens:
                               HoverColor: =RGBA(50, 50, 50, 1)
                               HoverFill: =varDropdownHoverFill
                               InputTextPlaceholder: =""
+                              IsSearchable: =false
                               Items: |-
                                 =Filter(
                                     Choices([@PrintRequests].Color),
@@ -1338,7 +1339,6 @@ Screens:
                                         Value = "Clear"
                                     )
                                 )
-                              IsSearchable: =false
                               PressedColor: =varDropdownPressedColor
                               PressedFill: =varDropdownPressedFill
                               SearchFields: =["Value"]
