@@ -135,7 +135,7 @@ ClearCollect(
 
 > **What changed:** `StaffID`, `AidType`, and `SchedSortOrder` are added. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here. `MemberName` stays as the raw `Member.DisplayName` so dashboard screens and the schedule share the same display name.
 
-> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** builds a **separate** collection called **`colSchedStaff`** (not `colStaff`) with a stricter student-worker filter (active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`) and with a **first + last** normalized `MemberName` (`Trim(First(Split(...)).Value & " " & Last(Split(...)).Value)`). That keeps manager or misc staff records out of the schedule grid/ComboBox and collapses middle names/initials so the colored HTML blocks show `First Last` instead of the full SharePoint display name. **Do not `ClearCollect` into `colStaff` from this screen** — that would silently drop full-time and manager staff from every other dropdown in the app (which all bind to `Items: =colStaff`) until the next app reload.
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** (and a successful **Save**) builds a **separate** collection called **`colSchedStaff`** from the in-memory **`colStaff`** roster — **not** a second SharePoint query of **`Staff`**. The filter is the same: active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`, with a **first + last** normalized `MemberName`. Because **`colStaff` already stores `AidType` as text**, compare **`AidType = "Work Study"`** (not **`AidType.Value`**). That keeps manager or misc staff records out of the schedule grid/ComboBox. **Do not `ClearCollect` into `colStaff` from this screen** — that would silently drop full-time and manager staff from every other dropdown in the app (which all bind to `Items: =colStaff`) until the next app reload. New staff added in SharePoint appear on Schedule after the next **app** reload (same as other dashboard dropdowns).
 
 ### 1B — Add the colTimeSlots collection
 
@@ -266,54 +266,51 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 **OnVisible formula:**
 
 ```
-// Refresh active student-worker staff from SharePoint (picks up SchedSortOrder after reorder, etc.)
-// IMPORTANT: we build a SEPARATE collection (colSchedStaff) so we don't stomp the global
-// colStaff that every dashboard dropdown binds to. Using colStaff here would silently
-// drop managers + full-time staff from every dropdown in the app after visiting this screen.
+// Roster comes from colStaff (loaded at app start). Do not query Staff again.
+// Do not default the name dropdown from User().Email — this app always runs as the owner account.
 ClearCollect(
     colSchedStaff,
     ForAll(
         Filter(
-            Staff,
+            colStaff,
             Active = true &&
             Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
             (
-                AidType.Value = "Work Study" ||
-                AidType.Value = "Graduate Assistant" ||
-                AidType.Value = "President's Aid"
+                AidType = "Work Study" ||
+                AidType = "Graduate Assistant" ||
+                AidType = "President's Aid"
             )
         ),
         {
-            StaffID:        ID,
+            StaffID:        StaffID,
             MemberName:     Trim(
-                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                                First(Split(Trim(MemberName), " ")).Value & " " &
+                                Last(Split(Trim(MemberName), " ")).Value
                             ),
-            MemberEmail:    Member.Email,
+            MemberEmail:    Lower(Trim(MemberEmail)),
             Role:           Role,
             Active:         Active,
-            AidType:        AidType.Value,
+            AidType:        AidType,
             SchedSortOrder: Coalesce(SchedSortOrder, 10)
         }
     )
 );
 
-// Load all shift rows from SharePoint into a flat collection
-// Filter out shifts for people not in colSchedStaff (inactive users, managers, or full-time staff)
-ClearCollect(colShifts,
-    ForAll(
-        Filter(
-            StaffShifts,
-            Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-            !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+// Simple SharePoint load (email present). Match student workers on the tablet.
+ClearCollect(
+    colShifts,
+    Filter(
+        ForAll(
+            Filter(StaffShifts, !IsBlank(StaffEmail)),
+            {
+                ShiftID:    ID,
+                Email:      Lower(Trim(StaffEmail)),
+                Day:        Day.Value,
+                ShiftStart: ShiftStart.Value,
+                ShiftEnd:   ShiftEnd.Value
+            }
         ),
-        {
-            ShiftID:    ID,
-            Email:      Lower(Trim(StaffEmail)),
-            Day:        Day.Value,
-            ShiftStart: ShiftStart.Value,
-            ShiftEnd:   ShiftEnd.Value
-        }
+        !IsBlank(LookUp(colSchedStaff, MemberEmail = Email))
     )
 );
 
@@ -323,39 +320,37 @@ ClearCollect(
     ForAll(
         colShifts As sh,
         With(
-            {
-                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                cr: LookUp(
-                    colSchedColors,
-                    Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
-                )
-            },
-            {
-                ShiftID:    sh.ShiftID,
-                Email:      sh.Email,
-                Name:       sr.MemberName,
-                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                Day:        sh.Day,
-                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                ColorHex:   cr.Hex,
-                ColorLight: cr.Light,
-                SortOrder:  sr.SchedSortOrder
-            }
+            { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
+            With(
+                { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
+                {
+                    ShiftID:    sh.ShiftID,
+                    Email:      sh.Email,
+                    Name:       sr.MemberName,
+                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                    Day:        sh.Day,
+                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                    ColorHex:   cr.Hex,
+                    ColorLight: cr.Light,
+                    SortOrder:  sr.SchedSortOrder
+                }
+            )
         )
     )
 );
 
 // Reset editing + totals sort state whenever the screen becomes visible
 Set(varSchedSelectedEmail, "");
+Set(varSchedConfirmSave, false);
 Clear(colEditShifts);
 Set(varSchedTotalsSortBy, "Total");
 Set(varSchedTotalsSortDesc, true);
 Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 ```
 
-> **What `colSchedLookup` does:** One record per row in `StaffShifts`. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
+> **What `colSchedLookup` does:** One record per row in `StaffShifts` (after matching emails to `colSchedStaff`). Nested **`With`** looks up the person once (`sr`) then the color (`cr` from `sr.StaffID`) — do not `LookUp(colSchedStaff, …)` twice in one record literal. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
 
 ---
 
@@ -475,6 +470,8 @@ Use **`Classic/ComboBox`**, not DropDown — same pattern as staff pickers elsew
 | SelectMultiple | `false` |
 | IsSearchable | `false` |
 | DefaultSelectedItems | `Blank()` |
+
+> 💡 **Key Point:** Leave **`DefaultSelectedItems`** as **`Blank()`**. Do **not** pre-select `User().Email` / `varMeEmail`. This app always runs as the owner Microsoft account; student workers share that login. Same rule as **Performing Action As** on the dashboard — they pick their own name.
 | InputTextPlaceholder | `"Select Your Name"` |
 | BorderColor | `=varInputBorderColor` |
 | BorderThickness | `=varInputBorderThickness` |
@@ -904,44 +901,43 @@ If(
                 colSchedStaff,
                 ForAll(
                     Filter(
-                        Staff,
+                        colStaff,
                         Active = true &&
                         Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                         (
-                            AidType.Value = "Work Study" ||
-                            AidType.Value = "Graduate Assistant" ||
-                            AidType.Value = "President's Aid"
+                            AidType = "Work Study" ||
+                            AidType = "Graduate Assistant" ||
+                            AidType = "President's Aid"
                         )
                     ),
                     {
-                        StaffID:        ID,
+                        StaffID:        StaffID,
                         MemberName:     Trim(
-                                            First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                            Last(Split(Trim(Member.DisplayName), " ")).Value
+                                            First(Split(Trim(MemberName), " ")).Value & " " &
+                                            Last(Split(Trim(MemberName), " ")).Value
                                         ),
-                        MemberEmail:    Lower(Trim(Member.Email)),
+                        MemberEmail:    Lower(Trim(MemberEmail)),
                         Role:           Role,
                         Active:         Active,
-                        AidType:        AidType.Value,
+                        AidType:        AidType,
                         SchedSortOrder: Coalesce(SchedSortOrder, 10)
                     }
                 )
             );
             ClearCollect(
                 colShifts,
-                ForAll(
-                    Filter(
-                        StaffShifts,
-                        Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-                        !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+                Filter(
+                    ForAll(
+                        Filter(StaffShifts, !IsBlank(StaffEmail)),
+                        {
+                            ShiftID:    ID,
+                            Email:      Lower(Trim(StaffEmail)),
+                            Day:        Day.Value,
+                            ShiftStart: ShiftStart.Value,
+                            ShiftEnd:   ShiftEnd.Value
+                        }
                     ),
-                    {
-                        ShiftID:    ID,
-                        Email:      Lower(Trim(StaffEmail)),
-                        Day:        Day.Value,
-                        ShiftStart: ShiftStart.Value,
-                        ShiftEnd:   ShiftEnd.Value
-                    }
+                    !IsBlank(LookUp(colSchedStaff, MemberEmail = Email))
                 )
             );
             ClearCollect(
@@ -949,26 +945,23 @@ If(
                 ForAll(
                     colShifts As sh,
                     With(
-                        {
-                            sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                            cr: LookUp(
-                                colSchedColors,
-                                Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12)
-                            )
-                        },
-                        {
-                            ShiftID:    sh.ShiftID,
-                            Email:      sh.Email,
-                            Name:       sr.MemberName,
-                            Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                        Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                            Day:        sh.Day,
-                            StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                            EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                            ColorHex:   cr.Hex,
-                            ColorLight: cr.Light,
-                            SortOrder:  sr.SchedSortOrder
-                        }
+                        { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
+                        With(
+                            { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
+                            {
+                                ShiftID:    sh.ShiftID,
+                                Email:      sh.Email,
+                                Name:       sr.MemberName,
+                                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                                Day:        sh.Day,
+                                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                                ColorHex:   cr.Hex,
+                                ColorLight: cr.Light,
+                                SortOrder:  sr.SchedSortOrder
+                            }
+                        )
                     )
                 )
             );
@@ -984,7 +977,7 @@ If(
 );
 ```
 
-> **Why filter `colShifts` by `LookUp(colSchedStaff, …)`?** If a manager, full-time staffer, or inactive user has shifts in the `StaffShifts` SharePoint list, loading them without checking would create orphaned entries in the schedule grid (blank names, broken lookups). The filter ensures only shifts for active student-worker staff appear.
+> **Why filter `colShifts` in memory after a simple SharePoint load?** `Filter(StaffShifts, !IsBlank(StaffEmail))` is a simple “email present” question. Matching those rows to **`colSchedStaff`** happens on the tablet (`LookUp` after `ForAll`), so SharePoint is not asked “only shifts whose email is on this staff list.” Manager / inactive / full-time shift rows stay out of the grid. Keep **`OnVisible`** and **`btnSchedSave`** rebuild in sync.
 
 > **Why require a second click?** `btnSchedSave` is destructive by design: it deletes every saved `StaffShifts` row for that email and replaces them with the current edit collection. The first click turns the button orange and changes the label to `Confirm Replace`, which gives users one explicit checkpoint before wiping their previously saved schedule.
 
@@ -1120,14 +1113,14 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 - [ ] `btnNavSchedule` navigates to `scrSchedule`
 
 **scrSchedule:**
-- [ ] `OnVisible` loads `colShifts` from `StaffShifts` and builds `colSchedLookup` (one row per shift)
+- [ ] `OnVisible` builds `colSchedStaff` from in-memory **`colStaff`** (not a second `Staff` query), loads `colShifts` with `Filter(StaffShifts, !IsBlank(StaffEmail))` then matches emails on the tablet, and builds `colSchedLookup` (one `LookUp` of the person, then color from `sr.StaffID`)
 - [ ] Header bar has back button + title
 - [ ] Selecting a name fills `galEditShifts` from `colShifts`
 - [ ] **+ Add shift** appends rows; delete removes a row
 - [ ] Hour counter updates from `colEditShifts`
 - [ ] HTML grid renders with time labels and day groups
 - [ ] Grid cells color when any shift covers the slot (multiple shifts per day OK)
-- [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colSchedStaff` (managers + full-time excluded), `colShifts`, and `colSchedLookup`. **Never** `ClearCollect`s into `colStaff` — that collection stays as App.OnStart loaded it.
+- [ ] Save runs `RemoveIf` + batch `Patch(StaffShifts, ForAll(Filter(...), {...}))`, then rebuilds `colSchedStaff` from **`colStaff`** (managers + full-time excluded), `colShifts`, and `colSchedLookup` with the same formulas as **`OnVisible`**. **Never** `ClearCollect`s into `colStaff` — that collection stays as App.OnStart loaded it.
 - [ ] Cancel clears selection and `colEditShifts` without saving
 - [ ] Totals dropdown + chevron toggle sort `galSchedTotals`
 
@@ -1331,6 +1324,7 @@ To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in
 | **conSchedScrollBody.Items** | Docs previously showed `=[1]`; live app uses **`=[varSchedScrollVersion]`** as the gallery refresh key. |
 | **TemplateSize** | Live formula uses **`(80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28) + Max(CountRows(colSchedStaff), 1) * 28 + 124`**, not `* 30` for slot rows. Updated in this guide. |
 | **Root controls** | Live screen has `recSchedHeader`, `btnSchedBack`, `lblSchedTitle`, **`conSchedScrollBody`** (vertical gallery wrapping the whole scroll body). |
-| **Weekly hour caps (AidType)** | **Apr 30, 2026:** Canvas formulas enforce **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week (`lblSchedAidInfo` + totals `MaxH`). SharePoint stores only `AidType`; numeric caps are fixed in `scrSchedule` YAML. |
+| **Weekly hour caps (AidType)** | **Apr 30, 2026:** Canvas formulas enforce **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week (`lblSchedAidInfo` + totals `MaxH`). SharePoint stores only `AidType`; numeric caps are fixed in `scrSchedule` YAML. Hour counter turns red over cap; Save does **not** hard-block over-cap (hint only). |
+| **2026-08-14: Roster from memory + simple shift load** | **`OnVisible`** / **Save** rebuild `colSchedStaff` from **`colStaff`** (`AidType` compared as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once (`sr`) then color from **`sr.StaffID`**. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`** (shared owner login — do not use `User().Email`). |
 
 

@@ -3,48 +3,50 @@ Screens:
     Properties:
       Fill: =varColorBg
       OnVisible: |-
-        =ClearCollect(
+        =// Roster comes from colStaff (loaded at app start). Do not query Staff again.
+        // Do not default the name dropdown from User().Email — this app always runs as the owner account.
+        ClearCollect(
             colSchedStaff,
             ForAll(
                 Filter(
-                    Staff,
+                    colStaff,
                     Active = true &&
                     Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                     (
-                        AidType.Value = "Work Study" ||
-                        AidType.Value = "Graduate Assistant" ||
-                        AidType.Value = "President's Aid"
+                        AidType = "Work Study" ||
+                        AidType = "Graduate Assistant" ||
+                        AidType = "President's Aid"
                     )
                 ),
                 {
-                    StaffID:        ID,
+                    StaffID:        StaffID,
                     MemberName:     Trim(
-                                        First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                        Last(Split(Trim(Member.DisplayName), " ")).Value
+                                        First(Split(Trim(MemberName), " ")).Value & " " &
+                                        Last(Split(Trim(MemberName), " ")).Value
                                     ),
-                    MemberEmail:    Lower(Trim(Member.Email)),
+                    MemberEmail:    Lower(Trim(MemberEmail)),
                     Role:           Role,
                     Active:         Active,
-                    AidType:        AidType.Value,
+                    AidType:        AidType,
                     SchedSortOrder: Coalesce(SchedSortOrder, 10)
                 }
             )
         );
+        // Simple SharePoint load (email present). Match student workers on the tablet.
         ClearCollect(
             colShifts,
-            ForAll(
-                Filter(
-                    StaffShifts,
-                    Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-                    !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+            Filter(
+                ForAll(
+                    Filter(StaffShifts, !IsBlank(StaffEmail)),
+                    {
+                        ShiftID:    ID,
+                        Email:      Lower(Trim(StaffEmail)),
+                        Day:        Day.Value,
+                        ShiftStart: ShiftStart.Value,
+                        ShiftEnd:   ShiftEnd.Value
+                    }
                 ),
-                {
-                    ShiftID:    ID,
-                    Email:      Lower(Trim(StaffEmail)),
-                    Day:        Day.Value,
-                    ShiftStart: ShiftStart.Value,
-                    ShiftEnd:   ShiftEnd.Value
-                }
+                !IsBlank(LookUp(colSchedStaff, MemberEmail = Email))
             )
         );
         ClearCollect(
@@ -52,23 +54,23 @@ Screens:
             ForAll(
                 colShifts As sh,
                 With(
-                    {
-                        sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                        cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
-                    },
-                    {
-                        ShiftID:    sh.ShiftID,
-                        Email:      sh.Email,
-                        Name:       sr.MemberName,
-                        Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                    Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                        Day:        sh.Day,
-                        StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                        EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                        ColorHex:   cr.Hex,
-                        ColorLight: cr.Light,
-                        SortOrder:  sr.SchedSortOrder
-                    }
+                    { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
+                    With(
+                        { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
+                        {
+                            ShiftID:    sh.ShiftID,
+                            Email:      sh.Email,
+                            Name:       sr.MemberName,
+                            Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                        Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                            Day:        sh.Day,
+                            StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                            EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                            ColorHex:   cr.Hex,
+                            ColorLight: cr.Light,
+                            SortOrder:  sr.SchedSortOrder
+                        }
+                    )
                 )
             )
         );
@@ -425,44 +427,43 @@ Screens:
                                     colSchedStaff,
                                     ForAll(
                                         Filter(
-                                            Staff,
+                                            colStaff,
                                             Active = true &&
                                             Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                                             (
-                                                AidType.Value = "Work Study" ||
-                                                AidType.Value = "Graduate Assistant" ||
-                                                AidType.Value = "President's Aid"
+                                                AidType = "Work Study" ||
+                                                AidType = "Graduate Assistant" ||
+                                                AidType = "President's Aid"
                                             )
                                         ),
                                         {
-                                            StaffID:        ID,
+                                            StaffID:        StaffID,
                                             MemberName:     Trim(
-                                                                First(Split(Trim(Member.DisplayName), " ")).Value & " " &
-                                                                Last(Split(Trim(Member.DisplayName), " ")).Value
+                                                                First(Split(Trim(MemberName), " ")).Value & " " &
+                                                                Last(Split(Trim(MemberName), " ")).Value
                                                             ),
-                                            MemberEmail:    Lower(Trim(Member.Email)),
+                                            MemberEmail:    Lower(Trim(MemberEmail)),
                                             Role:           Role,
                                             Active:         Active,
-                                            AidType:        AidType.Value,
+                                            AidType:        AidType,
                                             SchedSortOrder: Coalesce(SchedSortOrder, 10)
                                         }
                                     )
                                 );
                                 ClearCollect(
                                     colShifts,
-                                    ForAll(
-                                        Filter(
-                                            StaffShifts,
-                                            Lower(Trim(Coalesce(StaffEmail, ""))) <> "" &&
-                                            !IsBlank(LookUp(colSchedStaff, MemberEmail = Lower(Trim(StaffEmail))))
+                                    Filter(
+                                        ForAll(
+                                            Filter(StaffShifts, !IsBlank(StaffEmail)),
+                                            {
+                                                ShiftID:    ID,
+                                                Email:      Lower(Trim(StaffEmail)),
+                                                Day:        Day.Value,
+                                                ShiftStart: ShiftStart.Value,
+                                                ShiftEnd:   ShiftEnd.Value
+                                            }
                                         ),
-                                        {
-                                            ShiftID:    ID,
-                                            Email:      Lower(Trim(StaffEmail)),
-                                            Day:        Day.Value,
-                                            ShiftStart: ShiftStart.Value,
-                                            ShiftEnd:   ShiftEnd.Value
-                                        }
+                                        !IsBlank(LookUp(colSchedStaff, MemberEmail = Email))
                                     )
                                 );
                                 ClearCollect(
@@ -470,23 +471,23 @@ Screens:
                                     ForAll(
                                         colShifts As sh,
                                         With(
-                                            {
-                                                sr: LookUp(colSchedStaff, MemberEmail = sh.Email),
-                                                cr: LookUp(colSchedColors, Idx = Mod(LookUp(colSchedStaff, MemberEmail = sh.Email).StaffID, 12))
-                                            },
-                                            {
-                                                ShiftID:    sh.ShiftID,
-                                                Email:      sh.Email,
-                                                Name:       sr.MemberName,
-                                                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                                                Day:        sh.Day,
-                                                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                                                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                                                ColorHex:   cr.Hex,
-                                                ColorLight: cr.Light,
-                                                SortOrder:  sr.SchedSortOrder
-                                            }
+                                            { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
+                                            With(
+                                                { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
+                                                {
+                                                    ShiftID:    sh.ShiftID,
+                                                    Email:      sh.Email,
+                                                    Name:       sr.MemberName,
+                                                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                                                    Day:        sh.Day,
+                                                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                                                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                                                    ColorHex:   cr.Hex,
+                                                    ColorLight: cr.Light,
+                                                    SortOrder:  sr.SchedSortOrder
+                                                }
+                                            )
                                         )
                                     )
                                 );

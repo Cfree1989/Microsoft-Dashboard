@@ -14846,6 +14846,8 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 5. **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 6. **Reorder panel sizes to content, not to screen.** Don't revert `Height` to `Parent.Height - Self.Y`; use `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` so the background hugs the last row instead of stretching to the bottom.
 7. **AidType weekly hour caps are fixed in canvas formulas (not SharePoint).** **Apr 30, 2026:** `lblSchedAidInfo` and the sortable totals (`MaxH`) use `Switch(AidType, …)` — **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week. SharePoint only stores `AidType`; changing caps requires editing those formulas in `scrSchedule` (see [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md)).
+8. **Reuse `colStaff`; load shifts simply.** `scrSchedule.OnVisible` and the Save rebuild filter **`colStaff`** in memory (compare **`AidType`** as text, not **`AidType.Value`**). Do **not** query the **`Staff`** list again. Load **`StaffShifts`** with **`!IsBlank(StaffEmail)`**, then match student-worker emails on the tablet. Nested **`With`** for **`colSchedLookup`**: person once, then color from **`sr.StaffID`**.
+9. **Name dropdown stays empty.** **`drpSchedName.DefaultSelectedItems`** is **`Blank()`**. Do **not** default from **`User().Email`** — the app always runs as the owner account.
 
 ### Authoring workflow (canvas-authoring MCP)
 
@@ -14856,7 +14858,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 4. sync_canvas    → any clean dir and diff to confirm
 ```
 
-`compile_canvas` reports **"Validation FAILED"** with ~18 pre-existing delegation warnings (on `btnStatusTab`, `galJobCards`, messages counts, `btnPickedUp`, schedule `OnVisible`, and `btnSchedSave.OnSelect`). **None** of those warnings block the push — they're the same app-wide warnings that have always been there. Only investigate *new* warnings that mention controls you just changed. Always re-sync and diff to confirm the push actually landed.
+`compile_canvas` reports **"Validation FAILED"** with ~21 pre-existing delegation warnings (on `btnStatusTab`, `galJobCards`, `btnPickedUp`, export preview, schedule `OnVisible` `!IsBlank(StaffEmail)`, and `btnSchedSave` `RemoveIf`/`Lower`). **None** of those warnings block the push. Only investigate *new* warnings that mention controls you just changed. Always re-sync and diff to confirm the push actually landed.
 
 ---
 
@@ -16373,6 +16375,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Quiet real App Checker noise** | Approve plate label uses **`BuildPlateSummary`**. Approve confirm + Build Plates Close/Done count from **`colAllBuildPlates`**, not live **`BuildPlates`**. Payment/batch success is **`Text(success)` = `"true"`** only (boolean `true` still matches). Remaining ~30 warnings are Job Search / Schedule `in`/`Lower` — expected. |
 | **2026-08-14: Cache window + reject gate + dead startup** | Photocopies of plates/payments/messages use **`Created >= StaffCacheSince`** (365 days). Report preview filters **Payments** by month dates. Messages open loads that job’s thread from SharePoint. **Reject** needs a reason checkbox or a comment. Removed unused **`varQuickQueue`**, **`varExpandAll`**, **`varIsStaff`**, **`colBatchSucceededItems`**, **`colBatchFailedItems`**. |
 | **2026-08-14: Batch plate gate + final-pickup hint** | Named formula **`StaffBatchHasIneligiblePlates`**. Adding to a batch (**`recCardBackground`**, **`icoBatchCheck`**, **`btnAddMoreItems`**) refuses jobs with plates still Queued or Printing; **Remove** still works. **`btnAddMoreItems`** stays on the payment popup if the add is refused. **Process Batch** warns instead of opening the modal; **Record Batch Payment** stays disabled. Footer count says **final pickup only**; modal title is **Final Batch Pickup**. Jobs with no plates are allowed. |
+| **2026-08-14: Schedule roster from memory + simple shift load** | **`scrSchedule.OnVisible`** and **Save** rebuild **`colSchedStaff`** from **`colStaff`** (not a second **`Staff`** query; compare **`AidType`** as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`**. See [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md). |
 
 # Next Steps
 

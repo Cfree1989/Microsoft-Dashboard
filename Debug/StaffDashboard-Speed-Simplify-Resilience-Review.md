@@ -415,11 +415,13 @@ The scary case: the overlay turns **on**, then the save crashes in a way the app
 
 **In plain English:** The dashboard already loaded the staff roster at startup. Schedule ignores that and asks SharePoint again, then loads shifts with a question SharePoint cannot fully handle (“only shifts whose email matches someone on this staff list”). Same 500/2,000 photocopy limit as section 1. If there are ever more shift rows than that, some people vanish from the grid with no error.
 
-**What we would do later:** Reuse the roster already in memory. Load shifts simply, then match names on the tablet.
+**Fixed 14 August 2026:** Schedule copies student workers from the in-memory staff list. Shifts load with a simple “email is filled in” question, then names are matched on the tablet. New people added in SharePoint show up after the next app reload (same as other dropdowns).
 
 ### 16.2 Building the color/name lookup
 
 **In plain English:** For each shift, the app looks up that person twice (once for the name, once for which color they get). Harmless at lab size. Easy to look up once.
+
+**Fixed 14 August 2026:** One person lookup, then the color comes from that row’s staff ID.
 
 ### 16.3 The colored grid
 
@@ -431,7 +433,9 @@ You cannot tab through cells or click a block to edit it. Editing is the dropdow
 
 **In plain English:** There is no “change Tuesday 2–4 to 3–5.” Save means: erase that person’s week, then write the rows on screen. If erase works and write fails, you are warned to type the week in again. That warning is important and already there.
 
-Anyone at the shared machine can pick **another** person’s name and replace **their** week. That is the same shared-login tradeoff as Performing Action As: we cannot default to “whoever is signed in,” because that is always the owner. A manager-only lock would need a separate rule, not the Microsoft account. **Do not auto-select the signed-in user here.**
+Anyone at the shared machine can pick **another** person’s name and replace **their** week. That is the same shared-login tradeoff as Performing Action As: we cannot default to “whoever is signed in,” because that is always the owner. A manager-only lock would need a separate rule, not the Microsoft account.
+
+**Confirmed 14 August 2026:** The name dropdown stays empty (`DefaultSelectedItems = Blank()`). It does not use the signed-in account.
 
 ### 16.5 Aid-hour hint
 
@@ -483,7 +487,7 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 7. ~~Reject: require at least one reason or a comment.~~ **Done 14 August 2026** (live app).  
 8. ~~Batch: do not let staff add a job the payment helper will refuse.~~ **Done 14 August 2026** (live app).  
 9. ~~Delete leftover startup switches that nothing uses.~~ **Done 14 August 2026** (live app).  
-10. Schedule: reuse the staff list already in memory; load shifts the simple way. Do not default the name dropdown to the signed-in account.  
+10. ~~Schedule: reuse the staff list already in memory; load shifts the simple way. Do not default the name dropdown to the signed-in account.~~ **Done 14 August 2026** (live app). Name dropdown stays empty on purpose.  
 11. Later: stop using StaffNotes as an event log; consider shorter cards.
 
 ---
