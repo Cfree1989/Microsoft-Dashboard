@@ -1,0 +1,5 @@
+EditorState:
+  ScreensOrder:
+    - scrHome
+    - scrSubmit
+    - scrMyRequests

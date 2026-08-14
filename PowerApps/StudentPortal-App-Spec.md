@@ -77,6 +77,10 @@ Before you start, make sure you have:
 
 This app follows consistent design patterns matching the Staff Dashboard for a professional, cohesive appearance.
 
+### Live coauthor notes
+
+- **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. `varDropdownHoverFill` / `varDropdownSelectionFill` / `varDropdownSelectionColor` match Staff Console (light gray row, dark selected text). Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` (empty in this app) instead of `Items` — that is why every dropdown looked blank. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`** like Staff Console. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white** (not `HoverFill` gray) so Resin/Form 3+ do not sit in a gray box inside the field.
+
 ### Typography
 
 | Element | Font | Size | Weight |
