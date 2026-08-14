@@ -83,6 +83,8 @@ Then each visible card looks up the cheat sheet. The Messages **button** looks i
 
 **What we would do later:** Build each cheat sheet in one pass (group plates by job once). On the card, look up messages once and reuse that for the button color.
 
+**Status (14 August 2026):** Done in the live app. Named formulas use `GroupBy` + counts on the nested group (then drop the nested table). Messages button Fill looks up once; other colors use `Self.Fill`. Unread badge Visible uses `Value(Self.Text) > 0`. Print Complete uses `TotalAll` / `IncompleteCount` from the plate cheat sheet.
+
 ### 1.3 Leftover switches that do nothing
 
 **In plain English:** When the app starts, it sets several “memory slots” that **nothing on the screens actually uses** anymore. It is like leaving unused light switches on the wall after a remodel.
@@ -191,9 +193,13 @@ There are cheaper ways to ask “is this list empty?”
 
 **In plain English:** “How many messages does this job have?” is asked once for the small header, about five times for the button’s colors, and again for the red unread bubble. Same answer, seven trips to the cheat sheet, on **every visible card**.
 
+**Fixed 14 August 2026:** The button looks up the count once for Fill; hover/pressed/border/text color follow that Fill. The unread bubble looks up once for the number and reuses it for show/hide.
+
 ### 5.2 Print Complete keeps rechecking plates
 
 **In plain English:** On Printing cards, the Complete button is greyed out until every plate is done. To decide that, each card walks the plate photocopy twice. The cheat sheet in section 1 already knows the counts. We could use that instead.
+
+**Fixed 14 August 2026:** Complete uses `BuildPlateSummary` (`TotalAll` / `IncompleteCount`) instead of scanning the plate photocopy on each card.
 
 ### 5.3 The lightbulb is tiny
 
@@ -244,6 +250,8 @@ Gaps:
 ### 7.2 The “Build Plates: 1 plate on …” label
 
 **In plain English:** That label asks SharePoint live, twice, instead of looking at the photocopy already on the tablet. Extra waiting while the popup is open, for a sentence you could answer from memory.
+
+**Fixed 14 August 2026:** The label reads **`BuildPlateSummary`**. Confirm Approval and Build Plates Close/Done count plates from **`colAllBuildPlates`**.
 
 ### 7.3 Cleaning weird characters out of comments
 
@@ -461,7 +469,7 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 2. ~~Make the default job grid (no search) ask SharePoint the simple “this status only” question, and do the same for tab counts. Add a Status thumb-tab in SharePoint.~~ **Done 14 August 2026** (live app). Index **Status** on the PrintRequests list in SharePoint if it is not indexed yet (`SharePoint/PrintRequests-List-Setup.md` Step 6b).  
 3. ~~Pause the 30-second refresh while a popup is open or a save is running. Make Refresh match the timer.~~ **Done 14 August 2026** (live app).  
 4. ~~Add the safety net (`IfError` + loading) on the saves in the table above.~~ **Done 14 August 2026** (live app).  
-5. Build plate/message cheat sheets in one pass; look up messages once per card.  
+5. ~~Build plate/message cheat sheets in one pass; look up messages once per card.~~ **Done 14 August 2026** (live app).  
 6. Stop photocopying *all* payments/messages/plates for all of history.  
 7. Reject: require at least one reason or a comment.  
 8. Batch: do not let staff add a job the payment helper will refuse.  

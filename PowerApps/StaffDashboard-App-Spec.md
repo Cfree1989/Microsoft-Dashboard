@@ -398,7 +398,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 > **Canonical `App.OnStart`:** Paste the block below into **App.OnStart** in Studio. It intentionally includes **one** `// === SCHEDULE SCREEN STATE ===` block (after modal flags, before batch payment) with typed `colEditShifts` seed times. If your coauthor YAML still has a **second** duplicate schedule block after `varRefreshInterval`, **delete that duplicate** so the app matches this doc — the duplicate reset `colEditShifts` with empty strings and could cause type drift on schedule dropdowns.
 >
-> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, and `StaffModalOpen` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those three named formulas out of the block below into **Formulas**.
+> ⚠️ **App.Formulas vs OnStart:** `BuildPlateSummary`, `RequestCommentSummary`, and `StaffModalOpen` belong on **App** → property **Formulas**, not inside `OnStart`. Studio will not accept `BuildPlateSummary =` as an OnStart statement. The live app keeps them in `App.Formulas`. Copy those three named formulas out of the block below into **Formulas**. Plate and message cheat sheets use **`GroupBy` + `AddColumns` + `DropColumns`** (one pass per list), not `ForAll(Distinct(...), Filter(whole list))`.
 
 **⬇️ FORMULA: Paste into App.OnStart**
 
@@ -572,25 +572,35 @@ ClearCollect(colSchedColors,
 
 // Named formula (App.Formulas): always stays in sync with colAllBuildPlates
 BuildPlateSummary =
-    ForAll(
-        Distinct(colAllBuildPlates, RequestID) As grp,
-        {
-            RequestID: grp.Value,
-            TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-            CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-            ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-            ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-        }
+    DropColumns(
+        AddColumns(
+            GroupBy(colAllBuildPlates, RequestID, Plates),
+            TotalCount,
+            CountRows(Filter(Plates, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+            CompletedCount,
+            CountRows(Filter(Plates, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+            ReprintTotal,
+            CountRows(Filter(Plates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+            ReprintCompleted,
+            CountRows(Filter(Plates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+            TotalAll,
+            CountRows(Plates),
+            IncompleteCount,
+            CountRows(Filter(Plates, Not(Status.Value in ["Completed", "Picked Up"])))
+        ),
+        Plates
     );
 
 RequestCommentSummary =
-    ForAll(
-        Distinct(colAllRequestComments, RequestID) As grp,
-        {
-            RequestID: grp.Value,
-            TotalCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value)),
-            UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
-        }
+    DropColumns(
+        AddColumns(
+            GroupBy(colAllRequestComments, RequestID, Comments),
+            TotalCount,
+            CountRows(Comments),
+            UnreadInboundCount,
+            CountRows(Filter(Comments, Direction.Value = "Inbound", ReadByStaff = false))
+        ),
+        Comments
     );
 
 StaffModalOpen =
@@ -825,10 +835,10 @@ Set(varLoadingMessage, "")
 | `varCurrentAttentionCount` | Current count of NeedsAttention items on the latest timer/on-start refresh | Number |
 | `varPrevAttentionCount` | Previous count of NeedsAttention items (for change detection) | Number |
 | `colAllBuildPlates` | All BuildPlates records pre-loaded at startup (avoids per-card delegation) | Table |
-| `BuildPlateSummary` | Named formula that pre-aggregates build plate counts per `RequestID` (`TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`) from `colAllBuildPlates` | Table |
+| `BuildPlateSummary` | Named formula: one-pass `GroupBy` of `colAllBuildPlates` by `RequestID`. Columns: `TotalCount`, `CompletedCount`, `ReprintTotal`, `ReprintCompleted`, `TotalAll`, `IncompleteCount` | Table |
 | `colAllPayments` | All Payments records pre-loaded for job-card payment summaries | Table |
 | `colAllRequestComments` | All `RequestComments` rows cached locally for dashboard badges and the message thread gallery | Table |
-| `RequestCommentSummary` | Named formula keyed by `RequestID` with `TotalCount` and `UnreadInboundCount` derived from `colAllRequestComments` | Table |
+| `RequestCommentSummary` | Named formula: one-pass `GroupBy` of `colAllRequestComments` by `RequestID` (`TotalCount`, `UnreadInboundCount`) | Table |
 | `StaffModalOpen` | Named formula: true when any dashboard popup is open (`varShow*Modal > 0`). Used to pause `tmrAutoRefresh`. Batch-select mode is not a popup and does not pause the timer. | Boolean |
 | `colBuildPlates` | Sorted BuildPlates records for currently selected item | Table |
 | `colBuildPlatesIndexed` | `colBuildPlates` with dynamic `PlateNum` plus resolved staff-facing labels | Table |
@@ -2910,22 +2920,22 @@ Set(varLoadingMessage, "")
 20. Set **DisplayMode:**
 
 ```powerfx
-// Completion Gate: All plates must be Completed or Picked Up
-If(
-    // Check if job has plates
-    CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0,
-    // If plates exist, all must be Completed or Picked Up
+// Completion Gate: All plates must be Completed or Picked Up (from BuildPlateSummary)
+With(
+    {wSummary: LookUp(BuildPlateSummary, RequestID = ThisItem.ID)},
     If(
-        CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0,
-        DisplayMode.Disabled,
+        Coalesce(wSummary.TotalAll, 0) > 0,
+        If(
+            Coalesce(wSummary.IncompleteCount, 0) > 0,
+            DisplayMode.Disabled,
+            DisplayMode.Edit
+        ),
         DisplayMode.Edit
-    ),
-    // If no plates, allow completion (legacy behavior)
-    DisplayMode.Edit
+    )
 )
 ```
 
-> 💡 **Completion Gate:** The button is disabled until all build plates are marked as "Completed" or "Picked Up". This prevents marking a job complete while prints are still running. Jobs without plates (legacy) can be completed normally.
+> 💡 **Completion Gate:** Disabled until all plates are **Completed** or **Picked Up**, using **`BuildPlateSummary.TotalAll`** / **`IncompleteCount`** (one lookup). Jobs with no plates (legacy) stay enabled.
 
 21. Set **OnSelect:**
 
@@ -4302,18 +4312,21 @@ If(
 57. Set **Text:**
 
 ```powerfx
-"Build Plates:  " & 
-If(
-    CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) > 0,
-    Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " plate(s) configured",
-    "1 plate on " & 
-    Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
-        Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), 
-        varSelectedItem.Printer.Value))
+"Build Plates:  " &
+With(
+    {wSummary: LookUp(BuildPlateSummary, RequestID = varSelectedItem.ID)},
+    If(
+        Coalesce(wSummary.TotalAll, 0) > 0,
+        Text(wSummary.TotalAll) & " plate(s) configured",
+        "1 plate on " &
+        Trim(If(Find("(", varSelectedItem.Printer.Value) > 0,
+            Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2),
+            varSelectedItem.Printer.Value))
+    )
 )
 ```
 
-> 💡 **Dynamic Display:** Shows "X plate(s) configured" if staff has added plates via the Build Plates modal, otherwise shows the default plate that will be auto-created upon approval.
+> 💡 **Dynamic Display:** Uses **`BuildPlateSummary.TotalAll`** (in-memory cheat sheet), not live `CountRows(Filter(BuildPlates,…))`. Shows "X plate(s) configured" if plates exist, otherwise the default printer that will be auto-created on approval.
 
 ---
 
@@ -4511,7 +4524,7 @@ Set(
     IfError(
         With(
             {
-                wBuildPlateCount: Max(1, CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)))
+                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))
             },
             Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
                 Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
@@ -4595,7 +4608,7 @@ If(
     
     // === CREATE DEFAULT BUILD PLATE ===
     // If staff didn't configure plates via "Add Plates/Printers" button, auto-create one
-    If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
+    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,
         IfError(
             Patch(BuildPlates, Defaults(BuildPlates), {
                 RequestID: varSelectedItem.ID,
@@ -8093,12 +8106,9 @@ Set(
     )
 );
 
-// Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
+// Success output may be boolean true or the string "true"/"True". Text() covers both (avoids Text vs Boolean checker warning).
 If(
-    Or(
-        varFlowResult.success = true,
-        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-    ),
+    Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
     // === SUCCESS PATH ===
     Concurrent(
@@ -8188,7 +8198,7 @@ Set(varLoadingMessage, "")
 | **Flow name errors** | Flow title in Power Automate does not match the formula | In **Data** → flow must appear as **`Flow-(H)-Payment-SaveSingle`** and **`Flow-(I)-Payment-SaveBatch`**, or change the quoted name in every `'...'.Run(` to match **exactly** (including spelling and hyphens). |
 | **`TriggerInputSchemaMismatch`** / *String `M/D/YYYY` does not validate against format `date`* | The flow trigger still has **PaymentDate** as type **Date** while Power Apps sends a **locale** date string, or the app still passes **`SelectedDate`** instead of an ISO string | Align with **`Flow-(H)-Payment-SaveSingle.md`** / **`Flow-(I)-Payment-SaveBatch.md`**: trigger **PaymentDate** = **Text**; app passes **`Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")`** (single) or **`Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")`** (batch). **Both H and I:** inline **`parseDateTime`** where SharePoint needs a datetime (**no payment-date Compose**). Remove and re-add the flow under **Data** after changing the trigger. |
 | **`parseDateTime`… `'2026-MM-02'` was not valid** / **`InvalidTemplate`** on **Create Consolidated Payment** (batch) | **`Text`** used **`"yyyy-MM-dd"`**; **`MM`** is **not** the month in Power Fx and is written literally | Use **`"yyyy-mm-dd"`** (lowercase **`mm`**) so the trigger receives a numeric month (e.g. **`2026-04-02`**). See **Power Fx date format** note above. |
-| **Red error banner but text says “Batch payment saved.” / success wording** | **`Respond to a Power App`** may return `Success` as a **boolean** `true` or as a **string** like `"True"` / `"true"` depending on connector serialization. A strict string check like `varFlowResult.success = "true"` fails and routes to the failure `Notify(...)` even though the flow succeeded. | Use the **`Or(varFlowResult.success = true, Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true")`** pattern in **`btnPaymentConfirm`** / **`btnBatchPaymentConfirm`** (this spec), **or** set the flow output to **`toLower(string(variables('varSuccess')))`** so the string is always lowercase. |
+| **Red error banner but text says “Batch payment saved.” / success wording** | **`Respond to a Power App`** may return `Success` as a **boolean** `true` or as a **string** like `"True"` / `"true"` depending on connector serialization. A strict string check like `varFlowResult.success = "true"` fails and routes to the failure `Notify(...)` even though the flow succeeded. | Use **`Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"`** in **`btnPaymentConfirm`** / **`btnBatchPaymentConfirm`** (`Text(true)` becomes `"true"`). Do **not** also compare `success = true` (App Checker: Text vs Boolean). **Or** set the flow output to **`toLower(string(variables('varSuccess')))`**. |
 
 **Correct split (this spec):** Single checkout → **`btnPaymentConfirm`** calls **`'Flow-(H)-Payment-SaveSingle'.Run(...)`** using **`varSelectedItem`** and the payment modal fields. Batch checkout → **`btnBatchPaymentConfirm`** calls **`'Flow-(I)-Payment-SaveBatch'.Run(...)`** using **`colBatchItems`**. Do not route both through one button unless every `If` branch passes valid types into `Filter` / `.Run`.
 
@@ -9796,12 +9806,9 @@ Set(
     )
 );
 
-// Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
+// Success output may be boolean true or the string "true"/"True" — Text() covers both (see btnPaymentConfirm).
 If(
-    Or(
-        varFlowResult.success = true,
-        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-    ),
+    Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
     // === SUCCESS PATH ===
     Concurrent(
@@ -9887,7 +9894,7 @@ If you see formula errors after building this modal, here are the most common ca
 
 **Cause:** **Filament** and **Resin** were previously allowed in one batch; **EstimatedWeight** for resin is often **mL** while filament is **grams**, so summing estimates and splitting proportionally produced misleading UI and odd totals.
 
-**Fix:** This spec **blocks mixed-method batches** in the gallery, on **Process Batch Payment**, and in **`Flow-(I)-Payment-SaveBatch`**. Rebuild those formulas and publish. For the modal not closing after payment, also confirm **`btnBatchPaymentConfirm`** uses the **`Or(varFlowResult.success = true, Lower(Trim(...)) = "true")`** success test and the flow’s **Respond** action uses **`toLower(string(variables('varSuccess')))`** so the success branch actually runs.
+**Fix:** This spec **blocks mixed-method batches** in the gallery, on **Process Batch Payment**, and in **`Flow-(I)-Payment-SaveBatch`**. Rebuild those formulas and publish. For the modal not closing after payment, also confirm **`btnBatchPaymentConfirm`** uses **`Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"`** and the flow’s **Respond** action uses **`toLower(string(variables('varSuccess')))`** so the success branch actually runs.
 
 #### Error: "Name isn't valid. 'Text' isn't recognized."
 
@@ -10169,7 +10176,7 @@ If(
             wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
             wTS: Text(Now(), "m/d h:mmam/pm"),
             wMachList: Concat(
-                Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID && Status.Value = "Printing"), Machine.Value),
+                Distinct(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"), Machine.Value),
                 Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)),
                 ", "
             )
@@ -10178,7 +10185,7 @@ If(
             {
                 wAddLine: If(
                     varPendingBuildPlateAddCount > 0,
-                    "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                    "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
                     Blank()
                 ),
                 wPrintLine: If(
@@ -13413,11 +13420,11 @@ Go back inside `galJobCards` gallery template to add the messages display.
 | Width | `100` |
 | Height | `varBtnHeight` |
 | Fill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))` |
-| Color | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))` |
+| Color | `If(Self.Fill = Color.White, varColorPrimary, RGBA(255, 255, 255, 1))` |
 | HoverColor | `Color.White` |
-| HoverFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))` |
-| PressedFill | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))` |
-| BorderColor | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))` |
+| HoverFill | `If(Self.Fill = Color.White, varColorPrimary, RGBA(220, 40, 40, 1))` |
+| PressedFill | `If(Self.Fill = Color.White, ColorFade(varColorPrimary, -15%), RGBA(200, 35, 35, 1))` |
+| BorderColor | `If(Self.Fill = Color.White, varColorPrimary, RGBA(184, 0, 0, 1))` |
 | BorderThickness | `varInputBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -13434,7 +13441,7 @@ Set(varShowViewMessagesModal, ThisItem.ID);
 Set(varSelectedItem, ThisItem)
 ```
 
-> **Note:** This button opens the View Messages Modal (Step 17D) which displays the full conversation thread in a scrollable modal.
+> **Note:** This button opens the View Messages Modal (Step 17D). **Fill** looks up the message cheat sheet once. **Color / HoverFill / PressedFill / BorderColor** reuse **`Self.Fill = Color.White`** so they do not look up again.
 
 ---
 
@@ -13455,7 +13462,7 @@ Set(varSelectedItem, ThisItem)
 | Fill | `RGBA(209, 52, 56, 1)` |
 | Color | `Color.White` |
 | Align | `Align.Center` |
-| Visible | `With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)` |
+| Visible | `Value(Self.Text) > 0` |
 
 > **Note:** The unread badge uses two layered controls: a rounded rectangle (`recUnreadBadge`) for the circular red background, and a label (`lblUnreadBadge`) for the white text on top. Both share the same visibility condition so they appear/disappear together.
 
@@ -16290,6 +16297,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Gallery + tab counts — idle vs search** | **`galJobCards.Items`** and **`btnStatusTab.Text`** use an outer **`If(IsBlank(Trim(varSearchText)), …)`**. Empty search asks SharePoint for **`Status.Value = …`** only (plus **`NeedsAttention = true`** when that filter is on). Typed search keeps the previous **`in`** / plate-machine path. Do not put **`If(IsBlank(varSearchText), true, varSearchText in …)`** inside **`Filter`**. Index **Status** and **NeedsAttention** on PrintRequests (`SharePoint/PrintRequests-List-Setup.md`). |
 | **2026-08-14: Pause auto-refresh during popups** | Named formula **`StaffModalOpen`** is true when any `varShow*Modal > 0`. **`tmrAutoRefresh.Start`** is **`!varIsLoading && !StaffModalOpen`**. **`OnTimerEnd`** no-ops if a popup is open or a save is running. **`btnRefresh.OnSelect`** now matches the timer reload (including **`colNeedsAttention`** and the chime baseline). Batch-select mode does not pause the timer. |
 | **2026-08-14: IfError on remaining saves** | **Start Print** job Patch + Flow C, **Approve** default plate, **Add Note** (loading + disable while saving), **Send Message**, **Files** form **OnFailure**, **Remove plate**, and **Payment / Batch** `Flow.Run` (timeout → “did not respond”). Success toasts only after the write works. `IfError(Patch(...), Notify(...))` is invalid — use `IfError(Patch(...); true, Notify(...); false)`. |
+| **2026-08-14: Plate/message cheat sheets one pass** | **`BuildPlateSummary`** / **`RequestCommentSummary`** are **`GroupBy` → `AddColumns` → `DropColumns`**. Cards still `LookUp` those tables. **Messages** button colors reuse **`Self.Fill`**. Unread badge **Visible** is **`Value(Self.Text) > 0`**. **Print Complete** uses **`TotalAll`** / **`IncompleteCount`**. Do not wrap **`galJobCards.Items`** in **`AddColumns`** (breaks idle-search delegation). |
+| **2026-08-14: Quiet real App Checker noise** | Approve plate label uses **`BuildPlateSummary`**. Approve confirm + Build Plates Close/Done count from **`colAllBuildPlates`**, not live **`BuildPlates`**. Payment/batch success is **`Text(success)` = `"true"`** only (boolean `true` still matches). Remaining ~30 warnings are Job Search / Schedule `in`/`Lower` — expected. |
 
 # Next Steps
 

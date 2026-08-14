@@ -1023,18 +1023,18 @@ Screens:
                   Color: =Color.White
                   DisabledBorderColor: =varSecondaryBtnBorderColor
                   DisplayMode: |-
-                    =// Completion Gate: All plates must be Completed or Picked Up
-                    If(
-                        // Check if job has plates
-                        CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID)) > 0,
-                        // If plates exist, all must be Completed or Picked Up
+                    =// Completion Gate: All plates must be Completed or Picked Up (from BuildPlateSummary)
+                    With(
+                        {wSummary: LookUp(BuildPlateSummary, RequestID = ThisItem.ID)},
                         If(
-                            CountRows(Filter(colAllBuildPlates, RequestID = ThisItem.ID, Not(Status.Value in ["Completed", "Picked Up"]))) > 0,
-                            DisplayMode.Disabled,
+                            Coalesce(wSummary.TotalAll, 0) > 0,
+                            If(
+                                Coalesce(wSummary.IncompleteCount, 0) > 0,
+                                DisplayMode.Disabled,
+                                DisplayMode.Edit
+                            ),
                             DisplayMode.Edit
-                        ),
-                        // If no plates, allow completion (legacy behavior)
-                        DisplayMode.Edit
+                        )
                     )
                   Fill: =varColorPrimary
                   FocusedBorderThickness: =varFocusedBorderThickness
@@ -1276,11 +1276,9 @@ Screens:
             - btnViewMessages:
                 Control: Classic/Button
                 Properties:
-                  BorderColor: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(184, 0, 0, 1), varColorPrimary))
+                  BorderColor: =If(Self.Fill = Color.White, varColorPrimary, RGBA(184, 0, 0, 1))
                   BorderThickness: =varInputBorderThickness
-                  Color: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 255, 255, 1), varColorPrimary))
+                  Color: =If(Self.Fill = Color.White, varColorPrimary, RGBA(255, 255, 255, 1))
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   Fill: |-
                     =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(255, 46, 46, 1), Color.White))
@@ -1289,15 +1287,13 @@ Screens:
                   Height: =varBtnHeight
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =Color.White
-                  HoverFill: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(220, 40, 40, 1), varColorPrimary))
+                  HoverFill: =If(Self.Fill = Color.White, varColorPrimary, RGBA(220, 40, 40, 1))
                   OnSelect: |-
                     =Set(varShowViewMessagesModal, ThisItem.ID);
                     Set(varSelectedItem, ThisItem)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
-                  PressedFill: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, If(Coalesce(wSummary.TotalCount, 0) > 0, RGBA(200, 35, 35, 1), ColorFade(varColorPrimary, -15%)))
+                  PressedFill: =If(Self.Fill = Color.White, ColorFade(varColorPrimary, -15%), RGBA(200, 35, 35, 1))
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
@@ -1324,8 +1320,7 @@ Screens:
                   Size: =7
                   Text: |-
                     =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Text(Coalesce(wSummary.UnreadInboundCount, 0)))
-                  Visible: |-
-                    =With({wSummary: LookUp(RequestCommentSummary, RequestID = ThisItem.ID)}, Coalesce(wSummary.UnreadInboundCount, 0) > 0)
+                  Visible: =Value(Self.Text) > 0
                   Width: =10
                   X: =94
                   Y: =363
@@ -2520,7 +2515,7 @@ Screens:
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =ColorFade(varColorSuccess, -15%)
-                  OnSelect: "=// === SHOW LOADING ===\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Approving request...\");\n\n// Calculate cost (base then own-material discount; must match lblApprovalCostValue)\nSet(\n    varCalculatedCost,\n    With(\n        {\n            wBase: Max(\n                varMinimumCost,\n                Value(txtEstimatedWeight.Text) * If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    varResinRate,\n                    varFilamentRate\n                )\n            )\n        },\n        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)\n    )\n);\n\n// Update SharePoint item with error handling\n// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names\n// Using LookUp to get fresh record avoids concurrency conflicts\nSet(\n    varApprovalSaved,\n    IfError(\n        With(\n            {\n                wBuildPlateCount: Max(1, CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)))\n            },\n            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {\n                Status: LookUp(Choices(PrintRequests.Status), Value = \"Pending\"),\n                NeedsAttention: false,\n                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = \"Status Change\"),\n                LastActionBy: {\n                    Claims: \"i:0#.f|membership|\" & ddApprovalStaff.Selected.MemberEmail,\n                    Discipline: \"\",\n                    DisplayName: ddApprovalStaff.Selected.MemberName,\n                    Email: ddApprovalStaff.Selected.MemberEmail,\n                    JobTitle: \"\",\n                    Picture: \"\"\n                },\n                LastActionAt: Now(),\n                EstimatedWeight: Value(txtEstimatedWeight.Text),\n                EstimatedTime: Value(txtEstimatedTime.Text),\n                EstimatedCost: varCalculatedCost,\n                StudentOwnMaterial: chkApprovalOwnMaterial.Value,\n                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},\n                ApprovalComment: txtApprovalComments.Text,\n                StaffNotes: Concatenate(\n                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), \"\", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & \" | \"),\n                    \"APPROVED by \" &\n                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(\" \", n) - 1) & \" \" & Left(Last(Split(n, \" \")).Value, 1) & \".\") &\n                    \": [Summary] \" & txtEstimatedWeight.Text &\n                    If(varSelectedItem.Method.Value = \"Resin\", \"mL\", \"g\") &\n                    \", $\" & Text(varCalculatedCost, \"[$-en-US]#,##0.00\") &\n                    \" [Changes] [Reason] [Context] \" &\n                    \" [Comment] \" &\n                    Trim(\n                        Substitute(\n                            Substitute(\n                                Substitute(\n                                    Substitute(\n                                        Substitute(\n                                            Substitute(\n                                                Substitute(txtApprovalComments.Text, \" | \", \"; \"),\n                                                \" ~~ \",\n                                                \"; \"\n                                            ),\n                                            \"[Summary]\",\n                                            \"(Summary)\"\n                                        ),\n                                        \"[Changes]\",\n                                        \"(Changes)\"\n                                    ),\n                                    \"[Reason]\",\n                                    \"(Reason)\"\n                                ),\n                                \"[Context]\",\n                                \"(Context)\"\n                            ),\n                            \"[Comment]\",\n                            \"(Comment)\"\n                        )\n                    ) &\n                    \" - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            })\n        );\n        true,\n        Set(varIsLoading, false);\n        Notify(\"Failed to save approval. Please try again.\", NotificationType.Error);\n        false\n    )\n);\n\nIf(\n    varApprovalSaved,\n    IfError(\n        'Flow-(C)-Action-LogAction'.Run(\n            Text(varSelectedItem.ID),              // RequestID\n            \"Approved\",                            // Action\n            \"Status\",                              // FieldName\n            \"Pending\",                             // NewValue\n            ddApprovalStaff.Selected.MemberEmail   // ActorEmail\n        ),\n        Notify(\"Approved, but could not log to audit.\", NotificationType.Warning)\n    );\n    Notify(\"Approved! Student will receive estimate email.\", NotificationType.Success);\n    \n    // === CREATE DEFAULT BUILD PLATE ===\n    // If staff didn't configure plates via \"Add Plates/Printers\" button, auto-create one\n    If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,\n        IfError(\n            Patch(BuildPlates, Defaults(BuildPlates), {\n                RequestID: varSelectedItem.ID,\n                ReqKey: varSelectedItem.ReqKey,\n                PlateKey: Text(GUID()),\n                Machine: If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    Coalesce(\n                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),\n                        LookUp(\n                            Choices([@BuildPlates].Machine),\n                            Or(StartsWith(Value, \"Form 3+\"), StartsWith(Value, \"Form 3 (\"))\n                        )\n                    ),\n                    varSelectedItem.Printer\n                ),\n                Status: {Value: \"Queued\"},\n                DisplayLabel: Blank()\n            });\n            true,\n            Notify(\"Request approved, but the default plate could not be created. Add a plate from Build Plates.\", NotificationType.Warning);\n            false\n        )\n    );\n    // Refresh plate collections for job cards\n    ClearCollect(colAllBuildPlates, BuildPlates);\n    \n    // Close modal and reset\n    Set(varShowApprovalModal, 0);\n    Set(varSelectedItem, Blank());\n    Reset(txtEstimatedWeight);\n    Reset(txtEstimatedTime);\n    Reset(txtApprovalComments);\n    Reset(ddApprovalStaff);\n    Reset(ddSlicedOnComputer);\n    Reset(chkApprovalOwnMaterial)\n);\n\n// === HIDE LOADING ===\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")"
+                  OnSelect: "=// === SHOW LOADING ===\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Approving request...\");\n\n// Calculate cost (base then own-material discount; must match lblApprovalCostValue)\nSet(\n    varCalculatedCost,\n    With(\n        {\n            wBase: Max(\n                varMinimumCost,\n                Value(txtEstimatedWeight.Text) * If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    varResinRate,\n                    varFilamentRate\n                )\n            )\n        },\n        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)\n    )\n);\n\n// Update SharePoint item with error handling\n// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names\n// Using LookUp to get fresh record avoids concurrency conflicts\nSet(\n    varApprovalSaved,\n    IfError(\n        With(\n            {\n                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))\n            },\n            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {\n                Status: LookUp(Choices(PrintRequests.Status), Value = \"Pending\"),\n                NeedsAttention: false,\n                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = \"Status Change\"),\n                LastActionBy: {\n                    Claims: \"i:0#.f|membership|\" & ddApprovalStaff.Selected.MemberEmail,\n                    Discipline: \"\",\n                    DisplayName: ddApprovalStaff.Selected.MemberName,\n                    Email: ddApprovalStaff.Selected.MemberEmail,\n                    JobTitle: \"\",\n                    Picture: \"\"\n                },\n                LastActionAt: Now(),\n                EstimatedWeight: Value(txtEstimatedWeight.Text),\n                EstimatedTime: Value(txtEstimatedTime.Text),\n                EstimatedCost: varCalculatedCost,\n                StudentOwnMaterial: chkApprovalOwnMaterial.Value,\n                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},\n                ApprovalComment: txtApprovalComments.Text,\n                StaffNotes: Concatenate(\n                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), \"\", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & \" | \"),\n                    \"APPROVED by \" &\n                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(\" \", n) - 1) & \" \" & Left(Last(Split(n, \" \")).Value, 1) & \".\") &\n                    \": [Summary] \" & txtEstimatedWeight.Text &\n                    If(varSelectedItem.Method.Value = \"Resin\", \"mL\", \"g\") &\n                    \", $\" & Text(varCalculatedCost, \"[$-en-US]#,##0.00\") &\n                    \" [Changes] [Reason] [Context] \" &\n                    \" [Comment] \" &\n                    Trim(\n                        Substitute(\n                            Substitute(\n                                Substitute(\n                                    Substitute(\n                                        Substitute(\n                                            Substitute(\n                                                Substitute(txtApprovalComments.Text, \" | \", \"; \"),\n                                                \" ~~ \",\n                                                \"; \"\n                                            ),\n                                            \"[Summary]\",\n                                            \"(Summary)\"\n                                        ),\n                                        \"[Changes]\",\n                                        \"(Changes)\"\n                                    ),\n                                    \"[Reason]\",\n                                    \"(Reason)\"\n                                ),\n                                \"[Context]\",\n                                \"(Context)\"\n                            ),\n                            \"[Comment]\",\n                            \"(Comment)\"\n                        )\n                    ) &\n                    \" - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            })\n        );\n        true,\n        Set(varIsLoading, false);\n        Notify(\"Failed to save approval. Please try again.\", NotificationType.Error);\n        false\n    )\n);\n\nIf(\n    varApprovalSaved,\n    IfError(\n        'Flow-(C)-Action-LogAction'.Run(\n            Text(varSelectedItem.ID),              // RequestID\n            \"Approved\",                            // Action\n            \"Status\",                              // FieldName\n            \"Pending\",                             // NewValue\n            ddApprovalStaff.Selected.MemberEmail   // ActorEmail\n        ),\n        Notify(\"Approved, but could not log to audit.\", NotificationType.Warning)\n    );\n    Notify(\"Approved! Student will receive estimate email.\", NotificationType.Success);\n    \n    // === CREATE DEFAULT BUILD PLATE ===\n    // If staff didn't configure plates via \"Add Plates/Printers\" button, auto-create one\n    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,\n        IfError(\n            Patch(BuildPlates, Defaults(BuildPlates), {\n                RequestID: varSelectedItem.ID,\n                ReqKey: varSelectedItem.ReqKey,\n                PlateKey: Text(GUID()),\n                Machine: If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    Coalesce(\n                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),\n                        LookUp(\n                            Choices([@BuildPlates].Machine),\n                            Or(StartsWith(Value, \"Form 3+\"), StartsWith(Value, \"Form 3 (\"))\n                        )\n                    ),\n                    varSelectedItem.Printer\n                ),\n                Status: {Value: \"Queued\"},\n                DisplayLabel: Blank()\n            });\n            true,\n            Notify(\"Request approved, but the default plate could not be created. Add a plate from Build Plates.\", NotificationType.Warning);\n            false\n        )\n    );\n    // Refresh plate collections for job cards\n    ClearCollect(colAllBuildPlates, BuildPlates);\n    \n    // Close modal and reset\n    Set(varShowApprovalModal, 0);\n    Set(varSelectedItem, Blank());\n    Reset(txtEstimatedWeight);\n    Reset(txtEstimatedTime);\n    Reset(txtApprovalComments);\n    Reset(ddApprovalStaff);\n    Reset(ddSlicedOnComputer);\n    Reset(chkApprovalOwnMaterial)\n);\n\n// === HIDE LOADING ===\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")"
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorSuccess, -25%)
@@ -2584,14 +2579,17 @@ Screens:
                   Height: =23
                   Size: =11
                   Text: |-
-                    ="Build Plates:  " & 
-                    If(
-                        CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) > 0,
-                        Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " plate(s) configured",
-                        "1 plate on " & 
-                        Trim(If(Find("(", varSelectedItem.Printer.Value) > 0, 
-                            Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2), 
-                            varSelectedItem.Printer.Value))
+                    ="Build Plates:  " &
+                    With(
+                        {wSummary: LookUp(BuildPlateSummary, RequestID = varSelectedItem.ID)},
+                        If(
+                            Coalesce(wSummary.TotalAll, 0) > 0,
+                            Text(wSummary.TotalAll) & " plate(s) configured",
+                            "1 plate on " &
+                            Trim(If(Find("(", varSelectedItem.Printer.Value) > 0,
+                                Left(varSelectedItem.Printer.Value, Find("(", varSelectedItem.Printer.Value) - 2),
+                                varSelectedItem.Printer.Value))
+                        )
                     )
                   Width: =324
                   X: =649
@@ -5329,12 +5327,9 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" depending on flow serialization — strict = "true" misses "True" and wrongly shows Notify(..., Error) with the success message.
+                    // Success output may be boolean true or the string "true"/"True". Text() covers both (avoids Text vs Boolean checker warning).
                     If(
-                        Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                        ),
+                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
                         // === SUCCESS PATH ===
                         Concurrent(
@@ -5856,7 +5851,7 @@ Screens:
                                 wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
                                 wTS: Text(Now(), "m/d h:mmam/pm"),
                                 wMachList: Concat(
-                                    Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID && Status.Value = "Printing"), Machine.Value),
+                                    Distinct(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"), Machine.Value),
                                     Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)),
                                     ", "
                                 )
@@ -5865,7 +5860,7 @@ Screens:
                                 {
                                     wAddLine: If(
                                         varPendingBuildPlateAddCount > 0,
-                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
                                         Blank()
                                     ),
                                     wPrintLine: If(
@@ -6429,7 +6424,7 @@ Screens:
                                 wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
                                 wTS: Text(Now(), "m/d h:mmam/pm"),
                                 wMachList: Concat(
-                                    Distinct(Filter(BuildPlates, RequestID = varSelectedItem.ID && Status.Value = "Printing"), Machine.Value),
+                                    Distinct(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"), Machine.Value),
                                     Trim(If(Find("(", ThisRecord.Value) > 0, Left(ThisRecord.Value, Find("(", ThisRecord.Value) - 2), ThisRecord.Value)),
                                     ", "
                                 )
@@ -6438,7 +6433,7 @@ Screens:
                                 {
                                     wAddLine: If(
                                         varPendingBuildPlateAddCount > 0,
-                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                                        "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
                                         Blank()
                                     ),
                                     wPrintLine: If(
@@ -7016,12 +7011,9 @@ Screens:
                         )
                     );
 
-                    // Success output may be boolean true or the string "true"/"True" — see btnPaymentConfirm success check.
+                    // Success output may be boolean true or the string "true"/"True" — Text() covers both (see btnPaymentConfirm).
                     If(
-                        Or(
-                            varFlowResult.success = true,
-                            Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true"
-                        ),
+                        Lower(Trim(Coalesce(Text(varFlowResult.success), ""))) = "true",
 
                         // === SUCCESS PATH ===
                         Concurrent(

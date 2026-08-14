@@ -2,24 +2,34 @@ App:
   Properties:
     Formulas: |-
       =BuildPlateSummary =
-          ForAll(
-              Distinct(colAllBuildPlates, RequestID) As grp,
-              {
-                  RequestID: grp.Value,
-                  TotalCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                  CompletedCount: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
-                  ReprintTotal: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
-                  ReprintCompleted: CountRows(Filter(colAllBuildPlates, RequestID = grp.Value, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up")))
-              }
+          DropColumns(
+              AddColumns(
+                  GroupBy(colAllBuildPlates, RequestID, Plates),
+                  TotalCount,
+                  CountRows(Filter(Plates, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  CompletedCount,
+                  CountRows(Filter(Plates, !StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                  ReprintTotal,
+                  CountRows(Filter(Plates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"))),
+                  ReprintCompleted,
+                  CountRows(Filter(Plates, StartsWith(Trim(Coalesce(DisplayLabel, "")), "Reprint"), Or(Status.Value = "Completed", Status.Value = "Picked Up"))),
+                  TotalAll,
+                  CountRows(Plates),
+                  IncompleteCount,
+                  CountRows(Filter(Plates, Not(Status.Value in ["Completed", "Picked Up"])))
+              ),
+              Plates
           );
       RequestCommentSummary =
-          ForAll(
-              Distinct(colAllRequestComments, RequestID) As grp,
-              {
-                  RequestID: grp.Value,
-                  TotalCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value)),
-                  UnreadInboundCount: CountRows(Filter(colAllRequestComments, RequestID = grp.Value, Direction.Value = "Inbound", ReadByStaff = false))
-              }
+          DropColumns(
+              AddColumns(
+                  GroupBy(colAllRequestComments, RequestID, Comments),
+                  TotalCount,
+                  CountRows(Comments),
+                  UnreadInboundCount,
+                  CountRows(Filter(Comments, Direction.Value = "Inbound", ReadByStaff = false))
+              ),
+              Comments
           );
       StaffModalOpen =
           varShowRejectModal > 0 ||
