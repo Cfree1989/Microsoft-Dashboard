@@ -225,6 +225,8 @@ There are cheaper ways to ask “is this list empty?”
 
 **In plain English:** Every card always shows the full details (class, notes, messages, which computer). That is why cards are so tall and why you see fewer jobs at once. A short row that expands when you tap would show more of the queue and give the tablet less to calculate.
 
+**Skipped 14 August 2026:** Not collapsing or shortening cards.
+
 ---
 
 ## 6. Reject popup
@@ -367,6 +369,8 @@ Problems a beginner will feel:
 
 **What we would do later (big):** Keep a short “staff notes” box for humans, and let the existing audit log store events. **Sooner:** check for save errors, block double-clicks, warn when the box is almost full.
 
+**Skipped 14 August 2026:** Not splitting StaffNotes off the event log. Save errors / double-click on Add Note are already fixed. Near-full warning and a separate audit-only diary are out of scope.
+
 ---
 
 ## 12. Files (attachments) popup
@@ -488,7 +492,7 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 8. ~~Batch: do not let staff add a job the payment helper will refuse.~~ **Done 14 August 2026** (live app).  
 9. ~~Delete leftover startup switches that nothing uses.~~ **Done 14 August 2026** (live app).  
 10. ~~Schedule: reuse the staff list already in memory; load shifts the simple way. Do not default the name dropdown to the signed-in account.~~ **Done 14 August 2026** (live app). Name dropdown stays empty on purpose.  
-11. Later: stop using StaffNotes as an event log; consider shorter cards.
+11. ~~Later: stop using StaffNotes as an event log; consider shorter cards.~~ **Skipped 14 August 2026** — leave the diary-in-`StaffNotes` design and full-height cards as they are.
 
 ---
 
