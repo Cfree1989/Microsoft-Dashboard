@@ -178,13 +178,17 @@ Filter(
 
 `Lower()` on a SharePoint column is **not delegable**. Power Apps downloads a stack (often 500, sometimes 2,000) and filters that stack. Same failure mode as Staff Console tabs before the August 2026 fix — except here the victim is **one student’s history**, not a status tab.
 
-We already save `StudentEntraId`. Filtering `StudentEntraId = varMeEntraId` (no `Lower`) is the durable question.
+We already save `StudentEntraId`. Filtering `StudentEntraId = Text(varMeEntraId)` (no `Lower`) is the durable question.
 
 **What we would do later:** Prefer Entra ID equality (delegable if the column is indexed). Keep email as a fallback for old rows with a blank Entra ID. Index `StudentEmail` and `StudentEntraId` in SharePoint.
+
+**Done 14 August 2026** (live app): gallery prefers Entra ID with email fallback; empty state uses `AllItemsCount`. Index those two columns in SharePoint list settings (cannot be done from the app).
 
 ### 4.2 Empty state unpacks every card
 
 **Speed.** `lblEmptyState` uses `CountRows(galMyRequests.AllItems) = 0`. App Checker: use `galMyRequests.AllItemsCount` instead. Same class as Staff Console 4.3.
+
+**Done 14 August 2026** (live app): `Visible` is `galMyRequests.AllItemsCount = 0`.
 
 ### 4.3 Refresh recopies the whole list
 
@@ -297,7 +301,7 @@ Hover/pressed color vars are set and never bound (App Checker). Some buttons har
 1. ~~**Align live with the better repo bits:** readable dropdown selection; confirm `Form 3` vs `Form 3+` against SharePoint.~~ **Done 14 August 2026** (live app): resin is **Form 3+** only; dropdown selection matches Staff Console; Printing badge is orange (`varColorWarning`). Run **OnStart** in Studio to pick up colors.  
 2. ~~**IfError + overlay** on Confirm and Cancel; do not toast success unless the save worked.~~ **Done 14 August 2026** (live app).  
 3. ~~**Cancel:** append or write `StaffNotes` / LastAction only — **do not replace** `Notes`. Warn if status is Ready to Print.~~ **Done 14 August 2026** (live app).  
-4. **My Requests filter** by `StudentEntraId` (plus email fallback); index those columns; `AllItemsCount` for empty state.  
+4. ~~**My Requests filter** by `StudentEntraId` (plus email fallback); index those columns; `AllItemsCount` for empty state.~~ **Done 14 August 2026** (live app). Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.  
 5. **Look, cheap:** header fill, logo, kill default purple welcome, show rejection text, show ReqKey or “Submitting…” if blank.  
 6. **Home “needs you”** line for unconfirmed Pending jobs.  
 7. **Submit layout:** steps or named sections so file + method are obvious; fix Method “(Required)” visibility.  

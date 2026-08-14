@@ -82,6 +82,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` instead of `Items`. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`**. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white**.
 - **2026-08-14: Item 2 — Confirm and Cancel saves.** `btnConfirmYes` / `btnCancelYes` wrap `Patch` in **`IfError`**, set `varIsLoading`, and toast success only after a successful save. Failure keeps the modal open and shows an error. `conLoadingOverlayMyRequests` shows **Saving...**. Confirm/Cancel buttons use `DisplayMode.Disabled` while loading.
 - **2026-08-14: Item 3 — Cancel does not wipe Notes.** Cancel no longer Patches `Notes`. It appends `"Canceled by student {date}"` to **`StaffNotes`** (pipe-separated, same as Staff Console) and sets `LastActionAt`. `lblCancelMessage` warns when status is **Ready to Print** (staff may already be preparing; email/visit lab). Cancel remains allowed in Uploaded, Pending, and Ready to Print.
+- **2026-08-14: Item 4 — My Requests filter.** Gallery `Items` prefers **`StudentEntraId = Text(varMeEntraId)`** (SharePoint text vs GUID), with **`StudentEmail = varMeEmail` or `varMeUPN`** as fallback for older rows. If Entra ID is blank, filter email only — never `StudentEntraId = Blank()`. No `Lower()` on SharePoint columns (`varMeEmail` / `varMeUPN` are already Lower in OnStart). Empty state uses **`galMyRequests.AllItemsCount = 0`**. Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.
 
 ### Typography
 
@@ -1814,7 +1815,7 @@ false
 
 #### StudentEmail_DataCard1 (Auto-fill) - CRITICAL FOR FILTERING
 
-> ⚠️ **This field is THE KEY to My Requests working correctly.** The `StudentEmail` field stores the user's **primary SMTP email address** (retrieved via Office 365 Users connector in `App.OnStart`). This is what the gallery filter matches against.
+> ⚠️ **This field is still required.** New My Requests filtering prefers `StudentEntraId`, but `StudentEmail` remains the fallback for older rows and when Entra ID is blank. Store the user's **primary SMTP** from `Office365Users.MyProfileV2().mail` (`varMeEmail`).
 
 24. Click on `StudentEmail_DataCard1` itself (the DataCard, not the TextInput inside).
 25. Set these properties:
@@ -1846,7 +1847,7 @@ varMeEmail
 
 #### StudentEntraId_DataCard1 (Hidden - Auto-fill)
 
-> **Purpose:** This hidden field stores the student's Entra Object ID (GUID), which is immutable and survives email/name changes. Used by Flow E to validate email sender identity, solving the UPN vs SMTP mismatch issue.
+> **Purpose:** Hidden field stores the student's Entra Object ID (GUID). My Requests filters on this first (`StudentEntraId = Text(varMeEntraId)`). Flow E also uses it to validate email sender identity.
 
 28. In the Fields pane, click **+ Add field** and select `StudentEntraId`.
 29. Click on `StudentEntraId_DataCard1` itself (the DataCard).
@@ -3141,21 +3142,32 @@ Notify("Requests refreshed!", NotificationType.Information)
 **⬇️ FORMULA: Paste into galMyRequests Items**
 
 ```powerfx
-SortByColumns(
-    Filter(
-        PrintRequests,
-        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+If(
+    !IsBlank(varMeEntraId),
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
     ),
-    "Created",
-    SortOrder.Descending
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
+    )
 )
 ```
 
-> 💡 **How it works:** This filters to show only requests where the `StudentEmail` field matches either the user's SMTP email (`varMeEmail`) OR their UPN (`varMeUPN`), sorted newest first.
+> 💡 **How it works:** Prefer **Entra Object ID** (immutable). `User().EntraObjectId` is a GUID; SharePoint `StudentEntraId` is text, so compare with `Text(varMeEntraId)`. Email fallback still matches SMTP (`varMeEmail`) or UPN (`varMeUPN`) for older rows with a blank Entra ID. Newest first.
 
-> ⚠️ **Why two conditions?** This handles the transition period where older records may have been saved with the UPN (e.g., `jsmith3@lsu.edu`) while new records use the SMTP address (e.g., `john.smith@lsu.edu`). Both identifiers point to the same student. After all legacy records are backfilled to use SMTP, you can simplify to just `StudentEmail = varMeEmail`.
+> ⚠️ **If Entra ID is blank:** Do **not** write `StudentEntraId = Blank()` — that would match every row with an empty Entra ID. The outer `If` uses email-only when `varMeEntraId` is blank.
 
-> 💡 **Delegation note:** The `||` (OR) operator with equality checks on text columns is fully delegable to SharePoint. The `Lower()` wrapper ensures case-insensitive matching for any legacy records that might have mixed case.
+> 💡 **Delegation:** Equality on text columns is delegable. Do **not** wrap SharePoint columns in `Lower()` — `varMeEmail` and `varMeUPN` are already Lower in `App.OnStart`. Index **StudentEntraId** and **StudentEmail** in SharePoint list settings (see PrintRequests list setup Step 6b).
 
 ### Empty State Label
 
@@ -3174,7 +3186,7 @@ SortByColumns(
 | Align | `Align.Center` |
 | Size | `14` |
 | Color | `RGBA(100, 100, 100, 1)` |
-| Visible | `CountRows(galMyRequests.AllItems) = 0` |
+| Visible | `galMyRequests.AllItemsCount = 0` |
 
 ---
 
@@ -4165,11 +4177,18 @@ Set(varMeEmail, Lower(Coalesce(varUserProfile.mail, User().Email)));
 Set(varMeUPN, Lower(User().Email));
 ```
 
-Then filter with fallback for both email formats:
+Then filter by Entra ID first, with email fallback (no `Lower()` on SharePoint columns — emails are already Lower in OnStart):
 ```powerfx
-Filter(
-    PrintRequests,
-    Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+If(
+    !IsBlank(varMeEntraId),
+    Filter(
+        PrintRequests,
+        StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+    ),
+    Filter(
+        PrintRequests,
+        StudentEmail = varMeEmail || StudentEmail = varMeUPN
+    )
 )
 ```
 
@@ -4222,19 +4241,30 @@ Both are valid email aliases for the same student, but if the record was saved w
 Use a filter that matches BOTH email formats to handle the transition period:
 
 ```powerfx
-SortByColumns(
-    Filter(
-        PrintRequests,
-        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+If(
+    !IsBlank(varMeEntraId),
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
     ),
-    "Created",
-    SortOrder.Descending
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
+    )
 )
 ```
 
-> 💡 **Why two conditions?** This catches records saved with either the UPN or SMTP address. After backfilling legacy records, you can simplify to just `StudentEmail = varMeEmail`.
+> 💡 **Why Entra ID plus email?** `StudentEntraId` is the durable match (survives email changes). Email still catches older rows with a blank Entra ID, and both SMTP and UPN. Do not wrap SharePoint columns in `Lower()`.
 
-> ⚠️ **Why `StudentEmail` instead of `Student.Claims`?** The `StudentEmail` text field is auto-populated and never modified, making it reliable for filtering. Text comparison is simpler and more delegable than Person field comparisons.
+> ⚠️ **Why `StudentEmail` instead of `Student.Claims`?** The `StudentEmail` text field is auto-populated and never modified, making it reliable for filtering. Text comparison is simpler and more delegable than Person field comparisons. `StudentEntraId` is also text; compare with `Text(varMeEntraId)` because `User().EntraObjectId` is a GUID.
 
 **Quick fix for existing records:**
 
@@ -4250,7 +4280,7 @@ Create a Power Automate flow to normalize all existing records:
 1. Trigger: Manual or scheduled
 2. Get all PrintRequests items
 3. For each item: Look up the user by current `StudentEmail`, get their SMTP from Graph API, update the field
-4. Optionally add a `StudentEntraId` column for future-proof matching
+4. Index **StudentEntraId** and **StudentEmail** in SharePoint (list settings → Indexed columns) so the gallery filter stays delegable as the list grows.
 
 **Prevention:**
 
@@ -4451,13 +4481,20 @@ Common error messages:
 
 **My Requests Gallery:**
 ```powerfx
-Filter(
-    PrintRequests,
-    Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+If(
+    !IsBlank(varMeEntraId),
+    Filter(
+        PrintRequests,
+        StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+    ),
+    Filter(
+        PrintRequests,
+        StudentEmail = varMeEmail || StudentEmail = varMeUPN
+    )
 )
 ```
 
-> 💡 Uses `StudentEmail` with dual-filter to match both SMTP email (`varMeEmail`) and UPN (`varMeUPN`). This handles legacy records that may use either format. After backfilling all records to SMTP, simplify to just `StudentEmail = varMeEmail`.
+> 💡 Prefer Entra ID (`Text(varMeEntraId)` because SharePoint stores text). Email fallback matches SMTP and UPN for older rows. No `Lower()` on columns.
 
 **Printer by Method:**
 ```powerfx
@@ -4711,13 +4748,24 @@ Separate "(Required)" labels positioned next to field names. Common properties:
 ## My Requests Gallery Items
 
 ```powerfx
-SortByColumns(
-    Filter(
-        PrintRequests,
-        Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+If(
+    !IsBlank(varMeEntraId),
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
     ),
-    "Created",
-    SortOrder.Descending
+    SortByColumns(
+        Filter(
+            PrintRequests,
+            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        ),
+        "Created",
+        SortOrder.Descending
+    )
 )
 ```
 

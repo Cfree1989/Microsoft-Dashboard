@@ -173,13 +173,24 @@ Screens:
                   BorderColor: =RGBA(0, 18, 107, 1)
                   Height: =Parent.Height - 170
                   Items: |-
-                    =SortByColumns(
-                        Filter(
-                            PrintRequests,
-                            Lower(StudentEmail) = varMeEmail || Lower(StudentEmail) = varMeUPN
+                    =If(
+                        !IsBlank(varMeEntraId),
+                        SortByColumns(
+                            Filter(
+                                PrintRequests,
+                                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                            ),
+                            "Created",
+                            SortOrder.Descending
                         ),
-                        "Created",
-                        SortOrder.Descending
+                        SortByColumns(
+                            Filter(
+                                PrintRequests,
+                                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                            ),
+                            "Created",
+                            SortOrder.Descending
+                        )
                     )
                   TemplatePadding: =8
                   TemplateSize: =varRequestCardHeight
@@ -381,7 +392,7 @@ Screens:
             Height: =200
             Size: =14
             Text: ="You haven't submitted any print requests yet. Tap 'Submit' to create your first request!"
-            Visible: =CountRows(galMyRequests.AllItems) = 0
+            Visible: =galMyRequests.AllItemsCount = 0
             Width: =Parent.Width - 40
             X: =20
             Y: =Parent.Height / 2 - 100

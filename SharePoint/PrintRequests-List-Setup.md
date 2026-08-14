@@ -694,7 +694,8 @@ Power Apps can ask SharePoint “give me all **Uploaded** jobs” only if those 
 | **NeedsAttention** | Lightbulb filter (`NeedsAttention = true`) with a status tab |
 | **Created** | Queue Order / oldest-first sorts after the status filter |
 
-4. Optional later (search and child lists): **StudentEmail**, **ReqKey** on PrintRequests; **RequestID** on BuildPlates, Payments, and RequestComments; **PaymentDate** on Payments.
+4. For the **Student Portal** My Requests gallery, also index **StudentEntraId** and **StudentEmail** (equality filters; no `Lower()`).
+5. Optional later (search and child lists): **ReqKey** on PrintRequests; **RequestID** on BuildPlates, Payments, and RequestComments; **PaymentDate** on Payments.
 
 > 💡 You cannot do this from the canvas app. It is a SharePoint list setting. Existing lists should get **Status** indexed as soon as this dashboard formula change is live.
 
