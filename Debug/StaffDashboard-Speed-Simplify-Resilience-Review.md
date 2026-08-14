@@ -209,9 +209,9 @@ What is missing: the card does **not** stop you from adding a job that still has
 
 ### 5.5 Start Print can half-succeed
 
-**In plain English:** Start Print first tries to mark the only queued plate as Printing (and checks if that worked). Then it tries to mark the **job** as Printing — **without** the same safety net.
+**In plain English:** Start Print first tries to mark the only queued plate as Printing (and checks if that worked). Then it tries to mark the **job** as Printing.
 
-If the job save fails after the plate save worked, you can get: plate says Printing, job still says Ready to Print, and a “Print started!” toast that is not fully true.
+**Fixed 14 August 2026:** The job save is also checked. “Print started!” and the audit helper only run if the job save worked. If the plate already moved but the job did not, staff see a warning to refresh and try again.
 
 ### 5.6 Cards cannot collapse
 
@@ -237,9 +237,9 @@ Gaps:
 
 ### 7.1 The automatic first plate
 
-**In plain English:** If staff never opened “Add plates,” the app creates one default plate after a successful approve. That create is **not** checked for failure. You can end up with a Pending job and **zero plates**. Complete then still allows finishing a job that has no plates (old behavior for jobs from before plates existed).
+**In plain English:** If staff never opened “Add plates,” the app creates one default plate after a successful approve.
 
-Staff would see a successful approve toast and only notice the missing plate later.
+**Fixed 14 August 2026:** If that plate create fails, the job stays approved and staff see a warning to add a plate from Build Plates (instead of a silent Pending job with zero plates).
 
 ### 7.2 The “Build Plates: 1 plate on …” label
 
@@ -430,13 +430,13 @@ Anyone at the shared machine can pick **another** person’s name and replace **
 
 | What the staff member clicked | What they might see if SharePoint/Flow fails |
 |-------------------------------|-----------------------------------------------|
-| Start Print | Plate moved, job did not; “Print started!” may still appear |
-| Approve (auto first plate) | Job is Pending with no plates |
-| Add a note | Nothing, or the note appears twice |
-| Send a message | “Sent” toast, student never gets it |
-| Save files | Nothing happens, no error |
-| Remove a plate | Diary and plates disagree |
-| Record payment / batch | Stuck overlay or a blank error |
+| Start Print | **Fixed 14 Aug 2026** — job save checked; no false “Print started!” |
+| Approve (auto first plate) | **Fixed 14 Aug 2026** — warning if the default plate write fails |
+| Add a note | **Fixed 14 Aug 2026** — loading + error toast; no success unless saved |
+| Send a message | **Fixed 14 Aug 2026** — error if comment save fails |
+| Save files | **Fixed 14 Aug 2026** — form OnFailure toast |
+| Remove a plate | **Fixed 14 Aug 2026** — notes/gallery refresh only if Remove worked |
+| Record payment / batch | **Fixed 14 Aug 2026** — Flow timeout treated as “did not respond” |
 | Lightbulb | Already protected |
 
 ### One diary field doing too many jobs
@@ -460,7 +460,7 @@ The app often re-reads the job from SharePoint right before saving, which helps 
 1. ~~Hide the export popup the same way as every other popup (`greater than zero`), so it does not flash on a black screen at startup.~~ **Done 14 August 2026** (live app).  
 2. ~~Make the default job grid (no search) ask SharePoint the simple “this status only” question, and do the same for tab counts. Add a Status thumb-tab in SharePoint.~~ **Done 14 August 2026** (live app). Index **Status** on the PrintRequests list in SharePoint if it is not indexed yet (`SharePoint/PrintRequests-List-Setup.md` Step 6b).  
 3. ~~Pause the 30-second refresh while a popup is open or a save is running. Make Refresh match the timer.~~ **Done 14 August 2026** (live app).  
-4. Add the safety net (`IfError` + loading) on the saves in the table above.  
+4. ~~Add the safety net (`IfError` + loading) on the saves in the table above.~~ **Done 14 August 2026** (live app).  
 5. Build plate/message cheat sheets in one pass; look up messages once per card.  
 6. Stop photocopying *all* payments/messages/plates for all of history.  
 7. Reject: require at least one reason or a comment.  

@@ -2812,34 +2812,58 @@ If(
 
 If(
     varStartPrintProceed,
-    Patch(PrintRequests, varCurrentItem, {
-        Status: LookUp(Choices(PrintRequests.Status), Value = "Printing"),
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
-        LastActionAt: Now(),
-        LastActionBy: {
-            Claims: "i:0#.f|membership|" & User().Email,
-            Discipline: "",
-            DisplayName: User().FullName,
-            Email: User().Email,
-            JobTitle: "",
-            Picture: ""
-        },
-        StaffNotes: Concatenate(
-            If(IsBlank(varCurrentItem.StaffNotes), "", varCurrentItem.StaffNotes & " | "),
-            "STATUS: [Summary] Ready to Print -> Printing [Changes] [Reason] [Context] [Comment] - " &
-            Text(Now(), "m/d h:mmam/pm")
+    Set(
+        varStartPrintSaved,
+        IfError(
+            Patch(PrintRequests, varCurrentItem, {
+                Status: LookUp(Choices(PrintRequests.Status), Value = "Printing"),
+                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+                LastActionAt: Now(),
+                LastActionBy: {
+                    Claims: "i:0#.f|membership|" & User().Email,
+                    Discipline: "",
+                    DisplayName: User().FullName,
+                    Email: User().Email,
+                    JobTitle: "",
+                    Picture: ""
+                },
+                StaffNotes: Concatenate(
+                    If(IsBlank(varCurrentItem.StaffNotes), "", varCurrentItem.StaffNotes & " | "),
+                    "STATUS: [Summary] Ready to Print -> Printing [Changes] [Reason] [Context] [Comment] - " &
+                    Text(Now(), "m/d h:mmam/pm")
+                )
+            });
+            true,
+            false
         )
-    });
-    'Flow-(C)-Action-LogAction'.Run(
-        Text(varCurrentItem.ID),      // RequestID
-        "Status Change",              // Action
-        "Status",                     // FieldName
-        "Printing",                   // NewValue
-        varMeEmail                    // ActorEmail
     );
-    Notify(
-        If(varStartPrintAutoPlate, "Print started! Plate moved to Printing.", "Print started!"),
-        NotificationType.Success
+    If(
+        varStartPrintSaved,
+        IfError(
+            'Flow-(C)-Action-LogAction'.Run(
+                Text(varCurrentItem.ID),      // RequestID
+                "Status Change",              // Action
+                "Status",                     // FieldName
+                "Printing",                   // NewValue
+                varMeEmail                    // ActorEmail
+            );
+            true,
+            Notify("Print started, but could not log to audit.", NotificationType.Warning);
+            false
+        );
+        Notify(
+            If(varStartPrintAutoPlate, "Print started! Plate moved to Printing.", "Print started!"),
+            NotificationType.Success
+        ),
+        Notify(
+            If(
+                varStartPrintAutoPlate,
+                "Plate is Printing, but the job status could not be updated. Refresh and try Start Print again.",
+                "Could not start print. Please try again."
+            ),
+            NotificationType.Error,
+            4000
+        )
     )
 );
 
@@ -2849,6 +2873,8 @@ Set(varLoadingMessage, "")
 ```
 
 > **Single build plate:** When `colAllBuildPlates` shows exactly one row for the request and that plate is `Queued`, **Start Print** `LookUp`s the live `BuildPlates` row by ID, patches it to `Printing` (same preserved fields as **Mark Printing** in the Build Plates modal) **before** patching the job. If that plate patch fails, the job is not advanced and Flow C is not run. Jobs with zero or multiple plates behave as before. `varPendingBuildPlateMarkPrintingCount` is not incremented here (that counter is for modal **Done** StaffNotes merge only).
+
+> **Job save safety net:** The PrintRequests patch is wrapped in **`IfError` → `varStartPrintSaved`**. Success toast and Flow C run only when that save works. If the auto plate already moved to Printing but the job patch fails, staff see a warning to refresh and try again — not a false “Print started!” toast.
 
 > 💡 **Flow C Parameters:** Pass 5 parameters: RequestID, Action, FieldName, NewValue, ActorEmail. The flow auto-populates ClientApp ("Power Apps") and Notes.
 
@@ -4570,24 +4596,29 @@ If(
     // === CREATE DEFAULT BUILD PLATE ===
     // If staff didn't configure plates via "Add Plates/Printers" button, auto-create one
     If(CountRows(Filter(BuildPlates, RequestID = varSelectedItem.ID)) = 0,
-        Patch(BuildPlates, Defaults(BuildPlates), {
-            RequestID: varSelectedItem.ID,
-            ReqKey: varSelectedItem.ReqKey,
-            PlateKey: Text(GUID()),
-            Machine: If(
-                varSelectedItem.Method.Value = "Resin",
-                Coalesce(
-                    LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
-                    LookUp(
-                        Choices([@BuildPlates].Machine),
-                        Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 ("))
-                    )
+        IfError(
+            Patch(BuildPlates, Defaults(BuildPlates), {
+                RequestID: varSelectedItem.ID,
+                ReqKey: varSelectedItem.ReqKey,
+                PlateKey: Text(GUID()),
+                Machine: If(
+                    varSelectedItem.Method.Value = "Resin",
+                    Coalesce(
+                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
+                        LookUp(
+                            Choices([@BuildPlates].Machine),
+                            Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 ("))
+                        )
+                    ),
+                    varSelectedItem.Printer
                 ),
-                varSelectedItem.Printer
-            ),
-            Status: {Value: "Queued"},
-            DisplayLabel: Blank()
-        })
+                Status: {Value: "Queued"},
+                DisplayLabel: Blank()
+            });
+            true,
+            Notify("Request approved, but the default plate could not be created. Add a plate from Build Plates.", NotificationType.Warning);
+            false
+        )
     );
     // Refresh plate collections for job cards
     ClearCollect(colAllBuildPlates, BuildPlates);
@@ -4613,7 +4644,9 @@ Set(varLoadingMessage, "")
 > - `varApprovalSaved` captures whether the request save succeeded
 > - `IfError(...)` is used only for failure handling, not as a mixed success/error branch
 > - Flow logging is attempted only after the save succeeds, and the success `Notify(...)` is called separately
+> - Default plate create (when the job has zero plates) is also `IfError`; approval still stands if that plate write fails — staff get a warning to add a plate from Build Plates
 > - Loading overlay prevents double-clicks during operation
+> - `IfError(Patch(...), Notify(...))` is invalid (Patch returns a record, Notify a boolean). Use `IfError(Patch(...); true, Notify(...); false)` so both branches are boolean.
 
 ---
 
@@ -8030,26 +8063,33 @@ Set(varEffectivePaymentRate, varFinalCost / Value(txtPaymentWeight.Text));
 // Call Flow H to handle all writes server-side
 Set(
     varFlowResult,
-    'Flow-(H)-Payment-SaveSingle'.Run(
-        varSelectedItem.ID,
-        Value(txtPaymentWeight.Text),
-        varEffectivePaymentRate,
-        varEffectivePaymentRate,
-        0,
-        1,
-        If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
-        ddPaymentType.Selected.Value,
-        If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
-        If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
-        ddPaymentStaff.Selected.MemberEmail,
-        ddPaymentStaff.Selected.MemberName,
-        varPickedPlateIDsList,
-        varPickedPlatesText,
-        varPickedPlateIDsText,
-        If(IsBlank(Trim(txtPaymentNotes.Text)), " ", Trim(txtPaymentNotes.Text)),
-        chkOwnMaterial.Value,
-        chkPartialPickup.Value,
-        Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")
+    IfError(
+        'Flow-(H)-Payment-SaveSingle'.Run(
+            varSelectedItem.ID,
+            Value(txtPaymentWeight.Text),
+            varEffectivePaymentRate,
+            varEffectivePaymentRate,
+            0,
+            1,
+            If(IsBlank(Trim(txtPaymentTransaction.Text)), "", Trim(txtPaymentTransaction.Text)),
+            ddPaymentType.Selected.Value,
+            If(chkPayerSameAsStudent.Value, varSelectedItem.Student.DisplayName, txtPayerName.Text),
+            If(chkPayerSameAsStudent.Value, varSelectedItem.TigerCardNumber, txtPayerTigerCard.Text),
+            ddPaymentStaff.Selected.MemberEmail,
+            ddPaymentStaff.Selected.MemberName,
+            varPickedPlateIDsList,
+            varPickedPlatesText,
+            varPickedPlateIDsText,
+            If(IsBlank(Trim(txtPaymentNotes.Text)), " ", Trim(txtPaymentNotes.Text)),
+            chkOwnMaterial.Value,
+            chkPartialPickup.Value,
+            Text(dpPaymentDate.SelectedDate, "yyyy-mm-dd")
+        ),
+        {
+            success: "false",
+            message: "Payment service did not respond. Please try again.",
+            paymentid: ""
+        }
     )
 );
 
@@ -9731,21 +9771,28 @@ Set(varBatchFinalCost, Value(txtBatchAmount.Text));
 Set(varBatchEffectivePaymentRate, varBatchFinalCost / Value(txtBatchWeight.Text));
 Set(
     varFlowResult,
-    'Flow-(I)-Payment-SaveBatch'.Run(
-        Value(txtBatchWeight.Text),
-        varBatchEffectivePaymentRate,
-        varBatchEffectivePaymentRate,
-        0,
-        1,
-        Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
-        Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
-        If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
-        ddBatchPaymentType.Selected.Value,
-        Trim(txtBatchPayerName.Text),
-        ddBatchStaff.Selected.MemberEmail,
-        ddBatchStaff.Selected.MemberName,
-        chkBatchOwnMaterial.Value,
-        Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")
+    IfError(
+        'Flow-(I)-Payment-SaveBatch'.Run(
+            Value(txtBatchWeight.Text),
+            varBatchEffectivePaymentRate,
+            varBatchEffectivePaymentRate,
+            0,
+            1,
+            Concat(SortByColumns(colBatchItems, "ID", SortOrder.Ascending), Text(ID), ", "),
+            Concat(SortByColumns(colBatchItems, "ReqKey", SortOrder.Ascending), ReqKey, ", "),
+            If(IsBlank(Trim(txtBatchTransaction.Text)), "", Trim(txtBatchTransaction.Text)),
+            ddBatchPaymentType.Selected.Value,
+            Trim(txtBatchPayerName.Text),
+            ddBatchStaff.Selected.MemberEmail,
+            ddBatchStaff.Selected.MemberName,
+            chkBatchOwnMaterial.Value,
+            Text(dpBatchPaymentDate.SelectedDate, "yyyy-mm-dd")
+        ),
+        {
+            success: "false",
+            message: "Payment service did not respond. Please try again.",
+            paymentid: ""
+        }
     )
 );
 
@@ -10722,47 +10769,58 @@ ClearCollect(colAllBuildPlates, BuildPlates);
 If(
     Coalesce(varSelectedItem.BuildPlateLabelsLocked, false) && !StartsWith(ThisItem.ResolvedPlateLabel, "Reprint"),
     Notify("Original locked plates cannot be deleted. Add a reprint instead.", NotificationType.Warning),
-    With(
-        {
-            wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
-        },
-        Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
-        Patch(
-            PrintRequests,
-            wFreshRequest,
+    If(
+        IfError(
+            Remove(BuildPlates, LookUp(BuildPlates, ID = ThisItem.ID));
+            true,
+            Notify("Could not remove the plate. Please try again.", NotificationType.Error);
+            false
+        ),
+        With(
             {
-                StaffNotes: Concatenate(
-                    If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                    "BUILD PLATE: [Summary] Removed " & ThisItem.ResolvedPlateLabel &
-                    " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
-                )
-            }
-        )
-    );
-    ClearCollect(colBuildPlates,
-        Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
-    );
-    ClearCollect(colBuildPlatesIndexed,
-        AddColumns(
-            colBuildPlates As plate,
-            PlateNum,
-            CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-            ResolvedPlateLabel,
-            With(
-                {
-                    wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
-                    wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
-                },
-                If(
-                    !IsBlank(wStoredLabel),
-                    wStoredLabel,
-                    Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+                wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID)
+            },
+            IfError(
+                Patch(
+                    PrintRequests,
+                    wFreshRequest,
+                    {
+                        StaffNotes: Concatenate(
+                            If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
+                            "BUILD PLATE: [Summary] Removed " & ThisItem.ResolvedPlateLabel &
+                            " [Changes] [Reason] [Context] [Comment] - " & Text(Now(), "m/d h:mmam/pm")
+                        )
+                    }
+                );
+                true,
+                Notify("Plate removed, but could not update staff notes.", NotificationType.Warning);
+                false
+            )
+        );
+        ClearCollect(colBuildPlates,
+            Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
+        );
+        ClearCollect(colBuildPlatesIndexed,
+            AddColumns(
+                colBuildPlates As plate,
+                PlateNum,
+                CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                ResolvedPlateLabel,
+                With(
+                    {
+                        wDynamicNum: CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID)),
+                        wStoredLabel: Trim(Coalesce(plate.DisplayLabel, ""))
+                    },
+                    If(
+                        !IsBlank(wStoredLabel),
+                        wStoredLabel,
+                        Text(wDynamicNum) & "/" & Text(CountRows(colBuildPlates))
+                    )
                 )
             )
-        )
-    );
-    ClearCollect(colAllBuildPlates, BuildPlates);
-    // BuildPlateSummary recalculates automatically from colAllBuildPlates.
+        );
+        ClearCollect(colAllBuildPlates, BuildPlates)
+    )
 )
 ```
 
@@ -11967,72 +12025,44 @@ Reset(ddNotesStaff)
 43. Set **DisplayMode:**
 
 ```powerfx
-If(IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
+If(varIsLoading || IsBlank(txtAddNote.Text) || IsBlank(ddNotesStaff.Selected), DisplayMode.Disabled, DisplayMode.Edit)
 ```
 
 44. Set **OnSelect:**
 
 ```powerfx
-With(
-    {
-        wFreshRequest: LookUp(PrintRequests, ID = varSelectedItem.ID),
-        wNoteShortName: With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & "."),
-        wSafeNoteText:
-            Trim(
-                Substitute(
-                    Substitute(
-                        Substitute(
-                            Substitute(
-                                Substitute(
-                                    Substitute(
-                                        Substitute(txtAddNote.Text, " | ", "; "),
-                                        " ~~ ",
-                                        "; "
-                                    ),
-                                    "[Summary]",
-                                    "(Summary)"
-                                ),
-                                "[Changes]",
-                                "(Changes)"
-                            ),
-                            "[Reason]",
-                            "(Reason)"
-                        ),
-                        "[Context]",
-                        "(Context)"
-                    ),
-                    "[Comment]",
-                    "(Comment)"
-                )
-            )
-    },
-    Patch(
-        PrintRequests,
-        wFreshRequest,
+Set(varIsLoading, true);
+Set(varLoadingMessage, "Saving note...");
+
+// Append the new note to StaffNotes with [NOTE] prefix for manual notes
+// Using LookUp to get fresh record avoids concurrency conflicts
+If(
+    IfError(
+        Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID),
         {
             StaffNotes: Concatenate(
-                If(IsBlank(wFreshRequest.StaffNotes), "", wFreshRequest.StaffNotes & " | "),
-                "[NOTE] " & wNoteShortName &
-                ": [Summary] [Changes] [Reason] [Context] [Comment] " & wSafeNoteText &
-                " - " & Text(Now(), "m/d h:mmam/pm")
+                If(IsBlank(varSelectedItem.StaffNotes), "", varSelectedItem.StaffNotes & " | "),
+                "[NOTE] " &
+                With({n: ddNotesStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                ": " & txtAddNote.Text & " - " & Text(Now(), "m/d h:mmam/pm")
             )
-        }
-    )
+        });
+        true,
+        false
+    ),
+    Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
+    Reset(txtAddNote);
+    Notify("Note added successfully!", NotificationType.Success),
+    Notify("Could not save the note. Please try again.", NotificationType.Error)
 );
 
-// Refresh the selected item to show updated notes
-Set(varSelectedItem, LookUp(PrintRequests, ID = varSelectedItem.ID));
-
-// Clear the input
-Reset(txtAddNote);
-
-// Show success notification
-Notify("Note added successfully!", NotificationType.Success)
+Set(varIsLoading, false);
+Set(varLoadingMessage, "")
 ```
 
-> 💡 **Note Format:** Manual notes are still prefixed with `[NOTE]` so the job card counter continues to count only human-authored notes. Inside the entry, manual notes now use the same token blocks as automated entries.
->
-> ⚠️ **Reserved Tokens:** The ` | ` character sequence still separates entries, and the renderer also depends on `[Summary]`, `[Changes]`, `[Reason]`, `[Context]`, `[Comment]`, and ` ~~ `. Sanitize free text before saving so users cannot accidentally break the parser.
+> 💡 **Note Format:** Manual notes are still prefixed with `[NOTE]` so the job card counter continues to count only human-authored notes.
+
+> ⚠️ **Safety net:** Loading overlay + disabled button while saving. Success toast and field reset run only if the Patch succeeds.
 
 ---
 
@@ -13151,8 +13181,45 @@ Reset(ddFileActor)
 | Width | `460` |
 | Height | `200` |
 
-25. In the **Fields** panel (right side), click **Edit fields**.
-26. Remove all fields except **Attachments**.
+25. Set **OnFailure:**
+
+```powerfx
+Notify("Could not save attachments. Please try again.", NotificationType.Error)
+```
+
+26. Set **OnSuccess:**
+
+```powerfx
+IfError(
+    Patch(
+        PrintRequests,
+        frmAttachmentsEdit.LastSubmit,
+        {
+            LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "File Added"),
+            LastActionBy: {
+                Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
+                Discipline: "",
+                DisplayName: ddFileActor.Selected.MemberName,
+                Email: ddFileActor.Selected.MemberEmail,
+                JobTitle: "",
+                Picture: ""
+            },
+            LastActionAt: Now()
+        }
+    );
+    true,
+    Notify("Attachments saved, but could not update the job stamp.", NotificationType.Warning);
+    false
+);
+
+Set(varShowAddFileModal, 0);
+Set(varSelectedItem, Blank());
+Reset(ddFileActor);
+Notify("Attachments updated", NotificationType.Success)
+```
+
+27. In the **Fields** panel (right side), click **Edit fields**.
+28. Remove all fields except **Attachments**.
 
 #### Resizing the Attachments Data Card
 
@@ -13168,32 +13235,6 @@ Reset(ddFileActor)
 
 31. Inside the data card, click on the **DataCardValue** control (the actual attachments control).
 32. Set its **Height** to `100`.
-
-27. Set **OnSuccess:**
-
-```powerfx
-Patch(
-    PrintRequests,
-    frmAttachmentsEdit.LastSubmit,
-    {
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "File Added"),
-        LastActionBy: {
-            Claims: "i:0#.f|membership|" & ddFileActor.Selected.MemberEmail,
-            Discipline: "",
-            DisplayName: ddFileActor.Selected.MemberName,
-            Email: ddFileActor.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now()
-    }
-);
-
-Set(varShowAddFileModal, 0);
-Set(varSelectedItem, Blank());
-Reset(ddFileActor);
-Notify("Attachments updated", NotificationType.Success)
-```
 
 ---
 
@@ -14061,65 +14102,77 @@ Set(varIsLoading, true);
 Set(varLoadingMessage, "Sending message...");
 
 // Create the message in RequestComments with Direction field
-Patch(
-    RequestComments,
-    Defaults(RequestComments),
-    {
-        Title: txtViewMsgSubject.Text,
-        RequestID: varSelectedItem.ID,
-        ReqKey: varSelectedItem.ReqKey,
-        Message: txtViewMsgBody.Text,
-        Author0: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
-            Department: "",
-            DisplayName: ddViewMsgStaff.Selected.MemberName,
-            Email: ddViewMsgStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
-        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
-        SentAt: Now(),
-        ReadByStudent: false,
-        ReadByStaff: true,
-        StudentEmail: varSelectedItem.StudentEmail
-    }
-);
-ClearCollect(colAllRequestComments, RequestComments);
-
-// Update PrintRequest to mark last action
-Patch(
-    PrintRequests,
-    LookUp(PrintRequests, ID = varSelectedItem.ID),
-    {
-        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
-        LastActionBy: {
-            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
-            Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
-            Department: "",
-            DisplayName: ddViewMsgStaff.Selected.MemberName,
-            Email: ddViewMsgStaff.Selected.MemberEmail,
-            JobTitle: "",
-            Picture: ""
-        },
-        LastActionAt: Now()
-    }
+Set(
+    varMessageSaved,
+    IfError(
+        Patch(
+            RequestComments,
+            Defaults(RequestComments),
+            {
+                Title: txtViewMsgSubject.Text,
+                RequestID: varSelectedItem.ID,
+                ReqKey: varSelectedItem.ReqKey,
+                Message: txtViewMsgBody.Text,
+                Author0: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                    Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+                    Department: "",
+                    DisplayName: ddViewMsgStaff.Selected.MemberName,
+                    Email: ddViewMsgStaff.Selected.MemberEmail,
+                    JobTitle: "",
+                    Picture: ""
+                },
+                AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+                Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
+                SentAt: Now(),
+                ReadByStudent: false,
+                ReadByStaff: true,
+                StudentEmail: varSelectedItem.StudentEmail
+            }
+        );
+        true,
+        false
+    )
 );
 
-// Reset compose fields but keep modal open to see new message
-Reset(txtViewMsgSubject);
-Reset(txtViewMsgBody);
-Reset(ddViewMsgStaff);
+If(
+    varMessageSaved,
+    ClearCollect(colAllRequestComments, RequestComments);
+    IfError(
+        Patch(
+            PrintRequests,
+            LookUp(PrintRequests, ID = varSelectedItem.ID),
+            {
+                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Comment Added"),
+                LastActionBy: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                    Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
+                    Discipline: "",
+                    DisplayName: ddViewMsgStaff.Selected.MemberName,
+                    Email: ddViewMsgStaff.Selected.MemberEmail,
+                    JobTitle: "",
+                    Picture: ""
+                },
+                LastActionAt: Now()
+            }
+        );
+        true,
+        Notify("Message saved, but could not update the job stamp.", NotificationType.Warning);
+        false
+    );
+    Reset(txtViewMsgSubject);
+    Reset(txtViewMsgBody);
+    Reset(ddViewMsgStaff);
+    Notify("Message sent! Student will receive email notification.", NotificationType.Success),
+    Notify("Could not send the message. Please try again.", NotificationType.Error)
+);
 
 // === HIDE LOADING ===
 Set(varIsLoading, false);
-Set(varLoadingMessage, "");
-
-Notify("Message sent! Student will receive email notification.", NotificationType.Success)
+Set(varLoadingMessage, "")
 ```
 
-> **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages.
+> **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages. If the comment Patch fails, staff see an error and the job stamp is not updated. If the comment saves but LastAction fails, they still get a warning, not a silent miss.
 
 ---
 
@@ -16236,6 +16289,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Export modal hide rule** | **`conExportModal.Visible`** is **`varShowExportModal > 0`** (same pattern as the other status modals). **`<> 0`** treated a blank switch as visible during **`App.OnStart`**, which flashed **Monthly Transaction Export** on a black screen for about a second. Report still opens with **`Set(varShowExportModal, 1)`**. |
 | **2026-08-14: Gallery + tab counts — idle vs search** | **`galJobCards.Items`** and **`btnStatusTab.Text`** use an outer **`If(IsBlank(Trim(varSearchText)), …)`**. Empty search asks SharePoint for **`Status.Value = …`** only (plus **`NeedsAttention = true`** when that filter is on). Typed search keeps the previous **`in`** / plate-machine path. Do not put **`If(IsBlank(varSearchText), true, varSearchText in …)`** inside **`Filter`**. Index **Status** and **NeedsAttention** on PrintRequests (`SharePoint/PrintRequests-List-Setup.md`). |
 | **2026-08-14: Pause auto-refresh during popups** | Named formula **`StaffModalOpen`** is true when any `varShow*Modal > 0`. **`tmrAutoRefresh.Start`** is **`!varIsLoading && !StaffModalOpen`**. **`OnTimerEnd`** no-ops if a popup is open or a save is running. **`btnRefresh.OnSelect`** now matches the timer reload (including **`colNeedsAttention`** and the chime baseline). Batch-select mode does not pause the timer. |
+| **2026-08-14: IfError on remaining saves** | **Start Print** job Patch + Flow C, **Approve** default plate, **Add Note** (loading + disable while saving), **Send Message**, **Files** form **OnFailure**, **Remove plate**, and **Payment / Batch** `Flow.Run` (timeout → “did not respond”). Success toasts only after the write works. `IfError(Patch(...), Notify(...))` is invalid — use `IfError(Patch(...); true, Notify(...); false)`. |
 
 # Next Steps
 
