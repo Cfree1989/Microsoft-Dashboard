@@ -116,7 +116,7 @@ Flow
 **UI steps:**
 1. Go to **Power Automate** → **My flows**
 2. **Create** → **Scheduled cloud flow**
-3. **Flow name:** Type `PR-LabStatus: Refresh queue snapshot` (or `Flow J (PR-LabStatus)`)
+3. **Flow name:** Type `PR-LabStatus: Refresh queue snapshot` (or `Flow-(J)-PR-LabStatus`
 4. **Starting:** Pick today’s date
 5. **Repeat every:** `15` `Minute`
 6. Click **Create**
