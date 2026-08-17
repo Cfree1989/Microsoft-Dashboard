@@ -98,6 +98,8 @@ SharePoint already created **Title**. Leave it. You will type `Current` in that 
 
 #### Optional: Color the BusyLevel pill
 
+Same pill shape as PrintRequests **Status** / **LastAction** (`SharePoint/Formating/BusyLevel-Column-Formatting.json`). Colors stay Quiet green, Typical gold, Busy orange, Packed red.
+
 8. Click the **BusyLevel** column header → **Column settings** → **Format this column**
 9. Click **Advanced mode**
 10. Paste:
@@ -107,14 +109,39 @@ SharePoint already created **Title**. Leave it. You will type `Current` in that 
   "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
   "elmType": "div",
   "style": {
-    "color": "=if(@currentField == 'Typical', '#000000', '#ffffff')",
-    "background-color": "=if(@currentField == 'Quiet', '#107C10', if(@currentField == 'Typical', '#FFB900', if(@currentField == 'Busy', '#FF8C00', if(@currentField == 'Packed', '#D13438', '#333333'))))",
-    "border-radius": "10px",
-    "padding": "4px 10px",
-    "font-weight": "600",
-    "display": "inline-block"
+    "flex-wrap": "wrap",
+    "display": "flex"
   },
-  "txtContent": "@currentField"
+  "children": [
+    {
+      "elmType": "div",
+      "style": {
+        "box-sizing": "border-box",
+        "padding": "4px 8px 5px 8px",
+        "display": "flex",
+        "border-radius": "16px",
+        "height": "24px",
+        "align-items": "center",
+        "white-space": "nowrap",
+        "overflow": "hidden",
+        "margin": "4px 4px 4px 4px",
+        "font-weight": "600",
+        "color": "=if(@currentField == 'Typical', '#000000', '#ffffff')",
+        "background-color": "=if(@currentField == 'Quiet', '#107C10', if(@currentField == 'Typical', '#FFB900', if(@currentField == 'Busy', '#FF8C00', if(@currentField == 'Packed', '#D13438', '#333333'))))"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "style": {
+            "overflow": "hidden",
+            "text-overflow": "ellipsis",
+            "padding": "0 3px"
+          },
+          "txtContent": "@currentField"
+        }
+      ]
+    }
+  ]
 }
 ```
 

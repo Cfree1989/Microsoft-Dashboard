@@ -1,0 +1,38 @@
+{
+  "$schema": "https://microsoft.github.io/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "flex-wrap": "wrap",
+    "display": "flex"
+  },
+  "children": [
+    {
+      "elmType": "div",
+      "style": {
+        "box-sizing": "border-box",
+        "padding": "4px 8px 5px 8px",
+        "display": "flex",
+        "border-radius": "16px",
+        "height": "24px",
+        "align-items": "center",
+        "white-space": "nowrap",
+        "overflow": "hidden",
+        "margin": "4px 4px 4px 4px",
+        "font-weight": "600",
+        "color": "=if(@currentField == 'Typical', '#000000', '#ffffff')",
+        "background-color": "=if(@currentField == 'Quiet', '#107C10', if(@currentField == 'Typical', '#FFB900', if(@currentField == 'Busy', '#FF8C00', if(@currentField == 'Packed', '#D13438', '#333333'))))"
+      },
+      "children": [
+        {
+          "elmType": "span",
+          "style": {
+            "overflow": "hidden",
+            "text-overflow": "ellipsis",
+            "padding": "0 3px"
+          },
+          "txtContent": "@currentField"
+        }
+      ]
+    }
+  ]
+}
