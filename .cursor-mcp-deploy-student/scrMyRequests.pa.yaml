@@ -293,27 +293,28 @@ Screens:
                   - recCardBg:
                       Control: Rectangle
                       Properties:
-                        BorderColor: =RGBA(128, 128, 128, 1)
-                        BorderThickness: =1
+                        BorderColor: =varColorBorderLight
+                        BorderThickness: =1.5
                         Fill: =varColorBgCard
                         FocusedBorderThickness: =varFocusedBorderThickness
-                        Height: =Parent.TemplateHeight - varSpacingSM
-                        Width: =Parent.TemplateWidth - 32
-                        X: =varSpacingLG
+                        Height: =Parent.TemplateHeight
+                        Width: =Parent.TemplateWidth
                   - lblReqKey:
                       Control: Label
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =RGBA(50, 50, 50, 1)
+                        Color: =varColorText
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
                         FontWeight: =FontWeight.Semibold
                         Height: =24
                         OnSelect: =Select(Parent)
+                        Size: =14
                         Text: |-
                           =If(!IsBlank(ThisItem.ReqKey), ThisItem.ReqKey, "Job #" & ThisItem.ID)
-                        X: =28
-                        Y: =12
+                        Width: =Parent.TemplateWidth - 240
+                        X: =12
+                        Y: =14
                   - btnStatusBadge:
                       Control: Classic/Button
                       Properties:
@@ -335,57 +336,193 @@ Screens:
                         Size: =10
                         Text: =ThisItem.Status.Value
                         Width: =120
-                        X: =Parent.TemplateWidth - 150
+                        X: =Parent.TemplateWidth - 132
                         Y: =10
                   - lblSubmitDate:
                       Control: Label
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =RGBA(100, 100, 100, 1)
+                        Color: =varColorTextMuted
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
                         Height: =22
                         OnSelect: =Select(Parent)
-                        Size: =11
+                        Size: =9
                         Text: |-
                           ="Submitted: " & Text(ThisItem.Created, varDateFormatShort)
-                        Width: =200
-                        X: =28
-                        Y: =42
-                  - lblPrintDetails:
+                        Width: =Parent.TemplateWidth - 24
+                        X: =13
+                        Y: =45
+                  - lblFilename:
                       Control: Label
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =RGBA(80, 80, 80, 1)
-                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Color: =varColorTextMuted
+                        Font: =varAppFont
+                        Height: =20
+                        OnSelect: =Select(Parent)
+                        Size: =9
+                        Text: |-
+                          =With(
+                              {
+                                  wParts: Split(
+                                      Trim(Coalesce(ThisItem.Student.DisplayName, varMeName)),
+                                      " "
+                                  )
+                              },
+                              Lower(First(wParts).Value & Last(wParts).Value) & "_" &
+                              Lower(ThisItem.Method.Value) & "_" &
+                              Substitute(Lower(ThisItem.Color.Value), " ", "")
+                          )
+                        Width: =Parent.TemplateWidth - 24
+                        X: =13
+                        Y: =72
+                  - lblSubmittedTime:
+                      Control: Label
+                      Properties:
+                        Align: =Align.Right
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =varColorDanger
                         Font: =varAppFont
                         Height: =22
                         OnSelect: =Select(Parent)
-                        Size: =11
+                        Size: =8
                         Text: |-
-                          =ThisItem.Method.Value & " • " & 
-                          Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value)) & 
-                          " • " & ThisItem.Color.Value
-                        Width: =Parent.TemplateWidth - 60
-                        X: =28
-                        Y: =70
-                  - lblEstimate:
+                          =With(
+                              {varMinutes: DateDiff(ThisItem.Created, Now(), TimeUnit.Minutes)},
+                              If(
+                                  varMinutes < 1,
+                                  "Just now",
+                                  If(
+                                      varMinutes >= 1440,
+                                      Text(RoundDown(varMinutes / 1440, 0)) & "d " &
+                                      If(
+                                          Mod(RoundDown(varMinutes / 60, 0), 24) > 0,
+                                          Text(Mod(RoundDown(varMinutes / 60, 0), 24)) & "h",
+                                          ""
+                                      ),
+                                      If(
+                                          varMinutes >= 60,
+                                          Text(RoundDown(varMinutes / 60, 0)) & "h ",
+                                          ""
+                                      ) &
+                                      Text(Mod(varMinutes, 60)) & "m"
+                                  )
+                              )
+                          )
+                        Width: =90
+                        X: =Parent.TemplateWidth - 230
+                        Y: =16
+                  - cirColorDotBackdrop:
+                      Control: Circle
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Fill: =RGBA(149, 149, 149, 1)
+                        Height: =16
+                        OnSelect: =Select(Parent)
+                        Visible: =ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"
+                        Width: =16
+                        X: =16
+                        Y: =103
+                  - cirColorDot:
+                      Control: Circle
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Fill: |-
+                          =Switch(
+                              ThisItem.Color.Value,
+                              "Black", RGBA(26, 26, 26, 1),
+                              "Matte Black", RGBA(26, 26, 26, 1),
+                              "White", RGBA(255, 255, 255, 1),
+                              "Matte White", RGBA(255, 255, 255, 1),
+                              "Gray", RGBA(128, 128, 128, 1),
+                              "Light Gray", RGBA(211, 211, 211, 1),
+                              "Matte Light Gray", RGBA(211, 211, 211, 1),
+                              "Red", RGBA(204, 0, 0, 1),
+                              "Matte Red", RGBA(204, 0, 0, 1),
+                              "Orange", RGBA(255, 102, 0, 1),
+                              "Matte Orange", RGBA(255, 102, 0, 1),
+                              "Yellow", RGBA(255, 215, 0, 1),
+                              "Matte Yellow", RGBA(255, 215, 0, 1),
+                              "Gold", RGBA(255, 215, 0, 1),
+                              "Green", RGBA(76, 175, 80, 1),
+                              "Matte Green", RGBA(76, 175, 80, 1),
+                              "Forest Green", RGBA(34, 139, 34, 1),
+                              "Blue", RGBA(0, 71, 171, 1),
+                              "Matte Blue", RGBA(0, 71, 171, 1),
+                              "Cobalt Blue", RGBA(0, 102, 204, 1),
+                              "Purple", RGBA(107, 63, 160, 1),
+                              "Matte Purple", RGBA(107, 63, 160, 1),
+                              "Brown", RGBA(93, 64, 55, 1),
+                              "Light Brown", RGBA(196, 164, 132, 1),
+                              "Chocolate Brown", RGBA(123, 63, 0, 1),
+                              "Matte Chocolate", RGBA(123, 63, 0, 1),
+                              "Copper", RGBA(184, 115, 51, 1),
+                              "Bronze", RGBA(205, 127, 50, 1),
+                              "Silver", RGBA(192, 192, 192, 1),
+                              "Clear", RGBA(245, 245, 245, 1),
+                              "Any", RGBA(224, 224, 224, 1),
+                              RGBA(153, 153, 153, 1)
+                          )
+                        Height: =12
+                        OnSelect: =Select(Parent)
+                        Width: =12
+                        X: =18
+                        Y: =105
+                  - lblColorText:
                       Control: Label
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =varColorPrimary
-                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Color: =varColorTextMuted
                         Font: =varAppFont
-                        FontWeight: =FontWeight.Semibold
-                        Height: =24
+                        Height: =20
                         OnSelect: =Select(Parent)
-                        Size: =11
+                        Size: =10
+                        Text: =ThisItem.Color.Value
+                        Width: =140
+                        X: =36
+                        Y: =101
+                  - lblPrinter:
+                      Control: Label
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =varColorTextMuted
+                        Font: =varAppFont
+                        Height: =20
+                        OnSelect: =Select(Parent)
+                        Size: =8
                         Text: |-
-                          ="Estimated Cost: " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00")
-                        Visible: =!IsBlank(ThisItem.EstimatedCost)
-                        Width: =Parent.TemplateWidth - 60
-                        X: =28
-                        Y: =126
+                          ="🖨 " & Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value))
+                        Width: =Parent.TemplateWidth - 196
+                        X: =180
+                        Y: =101
+                  - lblEstimates:
+                      Control: Label
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =varColorTextMuted
+                        Font: =varAppFont
+                        Height: =20
+                        OnSelect: =Select(Parent)
+                        Size: =10
+                        Text: |-
+                          =If(
+                              ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.FinalCost),
+                              "⚖ " & Text(ThisItem.FinalWeight) & "g" &
+                              " · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
+                              If(
+                                  !IsBlank(ThisItem.EstimatedWeight),
+                                  "⚖ " & Text(ThisItem.EstimatedWeight) &
+                                  If(ThisItem.Method.Value = "Resin", "mL", "g") &
+                                  If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
+                                  If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
+                                  If(!IsBlank(ThisItem.EstimatedCost), "💲 " & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), "")
+                              )
+                          )
+                        Visible: =!IsBlank(ThisItem.EstimatedWeight) || !IsBlank(ThisItem.FinalWeight) || !IsBlank(ThisItem.EstimatedCost)
+                        Width: =Parent.TemplateWidth - 24
+                        X: =12
+                        Y: =128
                   - btnConfirmEstimate:
                       Control: Classic/Button
                       Properties:
@@ -413,9 +550,9 @@ Screens:
                         Size: =varBtnFontSize
                         Text: ="Confirm Estimate"
                         Visible: =ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
-                        Width: =Parent.TemplateWidth - 60
-                        X: =28
-                        Y: =160
+                        Width: =Parent.TemplateWidth - 24
+                        X: =12
+                        Y: =165
                   - btnCancelRequest:
                       Control: Classic/Button
                       Properties:
@@ -444,8 +581,8 @@ Screens:
                         Text: ="Cancel Request"
                         Visible: =ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]
                         Width: =150
-                        X: =28
-                        Y: =214
+                        X: =12
+                        Y: =218
                   - lblStatusMessage:
                       Control: Label
                       Properties:
@@ -476,22 +613,9 @@ Screens:
                               ""
                           )
                         Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
-                        Width: =Parent.TemplateWidth - 60
-                        X: =28
-                        Y: =160
-                  - lblFilename:
-                      Control: Label
-                      Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
-                        Color: =varColorTextMuted
-                        Font: =varAppFont
-                        Height: =22
-                        OnSelect: =Select(Parent)
-                        Size: =11
-                        Text: =Lower(First(Split(ThisItem.Student.DisplayName, " ")).Value & Last(Split(ThisItem.Student.DisplayName, " ")).Value) & "_" & Lower(ThisItem.Method.Value) & "_" & Lower(ThisItem.Color.Value)
-                        Width: =Parent.TemplateWidth - 60
-                        X: =28
-                        Y: =98
+                        Width: =Parent.TemplateWidth - 24
+                        X: =12
+                        Y: =155
                   - btnViewMessages:
                       Control: Classic/Button
                       Properties:
@@ -520,8 +644,8 @@ Screens:
                         Size: =10
                         Text: ="Messages"
                         Width: =110
-                        X: =188
-                        Y: =214
+                        X: =172
+                        Y: =218
                   - btnViewFiles:
                       Control: Classic/Button
                       Properties:
@@ -549,8 +673,8 @@ Screens:
                         Size: =10
                         Text: ="Files"
                         Width: =90
-                        X: =308
-                        Y: =214
+                        X: =292
+                        Y: =218
       - lblEmptyState:
           Control: Label
           Properties:

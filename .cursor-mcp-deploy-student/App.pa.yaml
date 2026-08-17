@@ -129,7 +129,7 @@ App:
       Set(varSpacingSM, 8);       // Small gaps
 
       // === GALLERY DIMENSIONS ===
-      Set(varRequestCardHeight, 280);                    // My Requests gallery template size
+      Set(varRequestCardHeight, 300);                    // My Requests gallery template (Staff-like card rows)
 
       // === CONTACT INFORMATION ===
       // Update these when location or contact details change

@@ -93,6 +93,10 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-17: Item 9 — Lab hours banner.** Home (`lblHoursBanner`) and My Requests (`lblHoursBannerMyRequests`) show a page footer above the nav (not on cards). Copy uses **`varLabHours`** (`Mon–Fri 8:30 AM – 4:30 PM`) and **`varPickupLocation`**. **Open now** (green) weekdays 8:30–4:30 local time; otherwise **Closed now** (orange). Classic button, `DisplayMode.View` (no I-beam). Run **OnStart**.
 - **2026-08-17: Item 9 — File download.** My Requests **Files** opens `conFilesModal`, sized like Staff (`500×450`, cream). Title **Attachments - ReqKey** (18–20pt primary). View-only Attachments control: grey chips (`ItemFill = varChevronBackground`, white text), **Attachments** field label, no attach/delete, no Performing Action As. **Close** is the Staff grey Cancel button. Tap the file name to download.
 - **2026-08-17: Card buttons match Staff Console.** Status badge is always tab blue `RGBA(70, 130, 220, 1)` (white text, radius 10). **Cancel Request** matches Staff **Reject** (solid `varColorDanger`, white text, `varBtnHeight`). **Confirm Estimate** matches Staff **Approve** (solid green, `varBtnHeight`, not bold shouty). **Messages** and **Files** match Staff **Files** (white fill, blue border/text, fill blue on hover).
+- **2026-08-17: My Requests card layout matches Staff job cards.** Same cream card, then **ReqKey** (not student name), relative age (`lblSubmittedTime`, danger red, `2d 21h`), submitted date (email-row slot), Staff filename, **color swatch** (`cirColorDotBackdrop` + `cirColorDot` + `lblColorText`, same Switch as Staff), printer (`🖨` trimmed, no build plates), then weight/time/cost (`lblEstimates`). No Details grid, Notes, or Build Plates. Template height **`varRequestCardHeight` = 300**. Status stays a blue badge (Open mixes statuses). Student email is omitted.
+- **2026-08-17: Card filename and printer type.** Filename is Open Sans **9**, muted, **not italic**. Printer (`lblPrinter`) is **size 8** (smaller than filename 9 and color name 10).
+- **2026-08-17: Card filename formula.** `lblFilename` is `firstnameLastname_method_color` with **spaces stripped from color** (`mattegreen`, not `matte green`) so it matches Submit `Name_Method_Color`. Name uses `ThisItem.Student.DisplayName`, or `varMeName` if that Person field is blank.
+- **2026-08-17: Confirm Estimate Y.** Live Studio moved `btnConfirmEstimate` to **Y = 165** (was 155). Cancel / Messages / Files stay at **Y = 218**.
 
 ### Typography
 
@@ -387,7 +391,7 @@ Set(varSpacingMD, 12);
 Set(varSpacingSM, 8);
 
 // === GALLERY DIMENSIONS ===
-Set(varRequestCardHeight, 280);
+Set(varRequestCardHeight, 300);
 
 // === CONTACT INFORMATION ===
 Set(varSupportEmail, "coad-fablab@lsu.edu");
@@ -3282,14 +3286,20 @@ Now add controls **inside** the gallery template.
 | Property | Value |
 |----------|-------|
 | Text | `If(!IsBlank(ThisItem.ReqKey), ThisItem.ReqKey, "Job #" & ThisItem.ID)` |
-| X | `28` |
-| Y | `12` |
-| Width | `150` |
+| X | `12` |
+| Y | `14` |
+| Width | `Parent.TemplateWidth - 240` |
 | Height | `24` |
-| Font | `Font.'Open Sans'` |
+| Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
-| Color | `RGBA(50, 50, 50, 1)` |
+| Color | `varColorText` |
+
+#### Relative age (Staff `lblSubmittedTime`)
+
+14A. Click **+ Insert** → **Text label**.
+14B. **Rename it:** `lblSubmittedTime`
+14C. Align right, `Color = varColorDanger`, Size 8, `X = Parent.TemplateWidth - 230`, `Y = 16`, Width 90. Use the Staff `DateDiff` minutes formula (`Just now` / `2d 21h` / `3h 12m`).
 
 #### Status Badge
 
@@ -3300,30 +3310,16 @@ Now add controls **inside** the gallery template.
 | Property | Value |
 |----------|-------|
 | Text | `ThisItem.Status.Value` |
-| X | `Parent.TemplateWidth - 150` |
+| X | `Parent.TemplateWidth - 132` |
 | Y | `10` |
 | Width | `120` |
-| Height | `40` |
 | Size | `10` |
-| RadiusTopLeft | `14` |
-| RadiusTopRight | `14` |
-| RadiusBottomLeft | `14` |
-| RadiusBottomRight | `14` |
+| Radius (all) | `10` |
 | DisplayMode | `DisplayMode.View` |
+| Fill | `RGBA(70, 130, 220, 1)` |
+| Color | `Color.White` |
 
-18. Set **Fill:**
-
-```powerfx
-LookUp(varStatusColors, Status = ThisItem.Status.Value, Color)
-```
-
-19. Set **Color:**
-
-```powerfx
-If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
-```
-
-#### Submission Date
+#### Submission Date (email-row slot)
 
 20. Click **+ Insert** → **Text label**.
 21. **Rename it:** `lblSubmitDate`
@@ -3332,71 +3328,42 @@ If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
 | Property | Value |
 |----------|-------|
 | Text | `"Submitted: " & Text(ThisItem.Created, varDateFormatShort)` |
-| X | `28` |
-| Y | `40` |
-| Width | `200` |
-| Height | `20` |
-| Size | `11` |
-| Color | `RGBA(100, 100, 100, 1)` |
+| X | `13` |
+| Y | `45` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `22` |
+| Size | `9` |
+| Color | `varColorTextMuted` |
 
-#### Print Details Row
+#### Filename (Staff formula)
 
-23. Click **+ Insert** → **Text label**.
-24. **Rename it:** `lblPrintDetails`
-25. Set these properties:
-
-| Property | Value |
-|----------|-------|
-| X | `58` |
-| Y | `86` |
-| Width | `Parent.TemplateWidth - 132` |
-| Height | `20` |
-| Size | `11` |
-| Color | `RGBA(80, 80, 80, 1)` |
-| Font | `varAppFont` |
-
-26. Set **Text:**
+22A. Click **+ Insert** → **Text label**. Rename `lblFilename`. Size **9**, Open Sans, muted, **not italic**, `FontWeight.Normal`, `X = 13`, `Y = 72`. Printer (`lblPrinter`) is **size 8**; color name (`lblColorText`) is **size 10**.
 
 ```powerfx
-ThisItem.Color.Value & " • " &
-ThisItem.Method.Value & " • " &
-Trim(
-    If(
-        Find("(", ThisItem.Printer.Value) > 0,
-        Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1),
-        ThisItem.Printer.Value
-    )
+With(
+    {
+        wParts: Split(
+            Trim(Coalesce(ThisItem.Student.DisplayName, varMeName)),
+            " "
+        )
+    },
+    Lower(First(wParts).Value & Last(wParts).Value) & "_" &
+    Lower(ThisItem.Method.Value) & "_" &
+    Substitute(Lower(ThisItem.Color.Value), " ", "")
 )
 ```
 
-26A. Click **+ Insert** → **Icons** → **Circle**.
-26B. **Rename it:** `cirPrintColorBackdrop`
-26C. Set these properties:
+#### Color swatch + printer (Staff names)
 
-| Property | Value |
-|----------|-------|
-| X | `28` |
-| Y | `81` |
-| Width | `30` |
-| Height | `30` |
-| Fill | `RGBA(45, 45, 48, 1)` |
-| Visible | `ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"` |
-| AccessibleLabel | `""` |
+23. Insert two **Circle** controls: `cirColorDotBackdrop` (16×16, X 16, Y 103, gray fill, visible for light colors) then `cirColorDot` (12×12, X 18, Y 105) so the fill sits in front.
+24. **Rename** the color label `lblColorText` — Text `ThisItem.Color.Value`, Size 10, X 36, Y 101.
+25. **Rename** the printer label `lblPrinter` — Size 8, X 180, Y 101. Do **not** look up build plates.
 
-26D. Click **+ Insert** → **Icons** → **Circle** again.
-26E. **Rename it:** `cirPrintColorDot`
-26F. Set these properties:
+```powerfx
+"🖨 " & Trim(If(Find("(", ThisItem.Printer.Value) > 0, Left(ThisItem.Printer.Value, Find("(", ThisItem.Printer.Value) - 1), ThisItem.Printer.Value))
+```
 
-| Property | Value |
-|----------|-------|
-| X | `cirPrintColorBackdrop.X + 2` |
-| Y | `cirPrintColorBackdrop.Y + 2` |
-| Width | `26` |
-| Height | `26` |
-| Fill | See formula below |
-| AccessibleLabel | `""` |
-
-26G. Set **Fill** for `cirPrintColorDot`:
+26. Set **Fill** for `cirColorDot` (same Switch as Staff `galJobCards`):
 
 ```powerfx
 Switch(
@@ -3436,29 +3403,46 @@ Switch(
 )
 ```
 
-> 💡 **UI Update:** This matches your card layout by keeping one readable details label with `Color • Method • Printer`, while the swatch stays on the left for quick scanning.
+Backdrop **Visible** (light colors only):
 
-#### Estimate Display (Only when available)
+```powerfx
+ThisItem.Color.Value = "White" || ThisItem.Color.Value = "Matte White" || ThisItem.Color.Value = "Clear" || ThisItem.Color.Value = "Light Gray" || ThisItem.Color.Value = "Matte Light Gray" || ThisItem.Color.Value = "Silver" || ThisItem.Color.Value = "Any" || ThisItem.Color.Value = "Yellow" || ThisItem.Color.Value = "Matte Yellow" || ThisItem.Color.Value = "Gold"
+```
+
+> 💡 Student cards skip Staff-only rows: student name/email, lightbulb, Build Plates, Notes, Details grid.
+
+#### Estimates (Staff `lblEstimates`)
 
 27. Click **+ Insert** → **Text label**.
-28. **Rename it:** `lblEstimate`
+28. **Rename it:** `lblEstimates`
 29. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| X | `28` |
-| Y | `85` |
-| Width | `Parent.TemplateWidth - 60` |
-| Height | `24` |
-| Size | `13` |
-| FontWeight | `FontWeight.Semibold` |
-| Color | `varColorPrimary` |
-| Visible | `!IsBlank(ThisItem.EstimatedCost)` |
+| X | `12` |
+| Y | `128` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `20` |
+| Size | `10` |
+| Color | `varColorTextMuted` |
+| Visible | `!IsBlank(ThisItem.EstimatedWeight)` or FinalWeight or EstimatedCost |
 
-30. Set **Text:**
+30. Set **Text** (weight · time · cost; Resin uses mL; Paid & Picked Up uses finals; cost-only fallback if weight is blank):
 
 ```powerfx
-"Estimated Cost: " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00")
+If(
+    ThisItem.Status.Value = "Paid & Picked Up" && !IsBlank(ThisItem.FinalCost),
+    "⚖ " & Text(ThisItem.FinalWeight) & "g" &
+    " · 💲" & Text(ThisItem.FinalCost, "[$-en-US]#,##0.00"),
+    If(
+        !IsBlank(ThisItem.EstimatedWeight),
+        "⚖ " & Text(ThisItem.EstimatedWeight) &
+        If(ThisItem.Method.Value = "Resin", "mL", "g") &
+        If(!IsBlank(ThisItem.EstimatedTime), " · ⏱ ~" & Text(ThisItem.EstimatedTime) & "h", "") &
+        If(!IsBlank(ThisItem.EstimatedCost), " · 💲" & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), ""),
+        If(!IsBlank(ThisItem.EstimatedCost), "💲 " & Text(ThisItem.EstimatedCost, "[$-en-US]#,##0.00"), "")
+    )
+)
 ```
 
 #### Action: Confirm Estimate Button (Pending status only)
@@ -3469,11 +3453,11 @@ Switch(
 
 | Property | Value |
 |----------|-------|
-| Text | `"✓ CONFIRM ESTIMATE"` |
-| X | `28` |
-| Y | `115` |
-| Width | `Parent.TemplateWidth - 60` |
-| Height | `45` |
+| Text | `"Confirm Estimate"` |
+| X | `12` |
+| Y | `165` |
+| Width | `Parent.TemplateWidth - 24` |
+| Height | `varBtnHeight` |
 | Fill | `varColorSuccess` |
 | Color | `Color.White` |
 | HoverFill | `ColorFade(varColorSuccess, -15%)` |
@@ -3482,8 +3466,7 @@ Switch(
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | Font | `varAppFont` |
-| FontWeight | `FontWeight.Bold` |
-| Size | `13` |
+| Size | `varBtnFontSize` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
 | RadiusBottomLeft | `varBtnBorderRadius` |
@@ -3506,14 +3489,14 @@ Set(varShowConfirmModal, ThisItem.ID)
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel Request"` |
-| X | `28` |
-| Y | `165` |
+| X | `12` |
+| Y | `218` |
 | Width | `150` |
-| Height | `28` |
-| Fill | `ColorFade(varColorDanger, varSecondaryFade)` |
-| Color | `varColorDanger` |
-| HoverFill | `ColorFade(varColorDanger, 55%)` |
-| PressedFill | `ColorFade(varColorDanger, 45%)` |
+| Height | `varBtnHeight` |
+| Fill | `varColorDanger` |
+| Color | `Color.White` |
+| HoverFill | `ColorFade(varColorDanger, -15%)` |
+| PressedFill | `ColorFade(varColorDanger, -25%)` |
 | BorderColor | `Transparent` |
 | BorderThickness | `0` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
@@ -3534,7 +3517,7 @@ Set(varShowCancelModal, ThisItem.ID)
 
 #### Action: Messages Button (Read-only thread)
 
-38b. Click **+ Insert** → **Button**. Rename it `btnViewMessages`. Place it to the right of Cancel (`X = 188`, `Y = 214`, `Width = 110`, `Height = 28`). Style it as a primary button (`Fill = varColorPrimary`, white text). Visible on every card.
+38b. Click **+ Insert** → **Button**. Rename it `btnViewMessages`. Place it to the right of Cancel (`X = 172`, `Y = 218`, `Width = 110`, `Height = varBtnHeight`). White fill, `varColorPrimary` border and text (Staff Files style). Visible on every card.
 
 38c. Set **OnSelect:**
 
@@ -3548,7 +3531,7 @@ ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = This
 
 #### Action: Files Button (Download attachments)
 
-38d. Click **+ Insert** → **Button**. Rename it `btnViewFiles`. Place it to the right of Messages (`X = 308`, `Y = 214`, `Width = 90`, `Height = 28`). Primary fill. Visible on every card.
+38d. Click **+ Insert** → **Button**. Rename it `btnViewFiles`. Place it to the right of Messages (`X = 292`, `Y = 218`, `Width = 90`, `Height = varBtnHeight`). Same outline style as Messages. Visible on every card.
 
 38e. Set **OnSelect:**
 
@@ -3565,9 +3548,9 @@ Set(varShowFilesModal, ThisItem.ID)
 
 | Property | Value |
 |----------|-------|
-| X | `28` |
-| Y | `115` |
-| Width | `Parent.TemplateWidth - 60` |
+| X | `12` |
+| Y | `155` |
+| Width | `Parent.TemplateWidth - 24` |
 | Height | `60` |
 | Size | `11` |
 | Color | `If(ThisItem.Status.Value = "Rejected", varColorDanger, RGBA(100, 100, 100, 1))` |
