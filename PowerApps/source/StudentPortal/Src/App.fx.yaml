@@ -157,7 +157,7 @@ App As appinfo:
         // === CONTACT INFORMATION ===
         // Update these when location or contact details change
         Set(varSupportEmail, "coad-fablab@lsu.edu");
-        Set(varPickupLocation, "Room 145 Atkinson Hall");
+        Set(varPickupLocation, "Room 113 Art Building");
         Set(varPaymentMethod, "TigerCASH only");
         
         // === DATE/TIME FORMATS ===

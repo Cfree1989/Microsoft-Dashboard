@@ -68,7 +68,7 @@ Home and My Requests otherwise match. **Do not overwrite the repo from live** un
 - File names are checked **before** submit (type + `Name_Method_Color`). Students used to get a confusing rejection email after the fact.
 - Submit shows a **Submitting…** overlay, and **OnFailure** actually tells the student the error. That is better than several Staff Console saves were before August 2026.
 - Confirm-estimate and cancel exist, with a dark overlay so you cannot click the gallery behind them.
-- Colors, fonts, radii, and the help email / Room 145 text live in `App.OnStart`, so a visual pass does not have to hunt every control.
+- Colors, fonts, radii, and the help email / Room 113 text live in `App.OnStart`, so a visual pass does not have to hunt every control.
 - TigerCard is 16 digits, with a photo of where the POS number is. Method/printer/color cascade (printer and color stay off until method is picked).
 
 The rest of this doc is the gaps **on top of** that.
@@ -205,7 +205,7 @@ We already save `StudentEntraId`. Filtering `StudentEntraId = Text(varMeEntraId)
 - Rejection **reason** (only “Request rejected”)
 - Staff messages
 - Attached file names / download
-- Pickup hours beyond Room 145 + TigerCASH on Completed
+- Pickup hours beyond Room 113 + TigerCASH on Completed
 - A simple timeline (Uploaded → Pending → Printing → Ready)
 
 ReqKey comes from Flow A. Until that flow runs, the title on the card can be **blank**, which matches a card that looks like it has no job ID.

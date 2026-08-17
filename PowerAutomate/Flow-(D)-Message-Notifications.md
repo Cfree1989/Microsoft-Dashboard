@@ -309,7 +309,7 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 6. **Body:** Click **Code View button (`</>`)** at top right of the Body field, then paste the HTML below:
 
 ```html
-<p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author0']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 145 Atkinson Hall<br>coad-fablab@lsu.edu</p>
+<p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author0']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 113 Art Building<br>coad-fablab@lsu.edu</p>
 ```
 
 > 💡 **HTML Email:** The Message field contains HTML from the Rich Text Editor, which may include embedded images as base64 data URIs. Any pasted screenshots will display inline in the email.

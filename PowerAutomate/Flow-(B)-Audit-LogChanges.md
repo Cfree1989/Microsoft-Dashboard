@@ -727,7 +727,7 @@ Some display names differ from internal field names. Always use internal names i
 
    Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
    Email: coad-fablab@lsu.edu
-   Location: Room 145 Atkinson Hall
+   Location: Room 113 Art Building
    ```
 
 **⚠️ Loop Warning:** Power Automate will show a circular loop warning because this action updates an item that triggers the flow. This is safe because:
@@ -901,7 +901,7 @@ Some display names differ from internal field names. Always use internal names i
 > **Approval note behavior:** The email template below uses `ApprovalComment` as the student-facing note source. The conditional expression omits the entire **STAFF NOTE** section when the field is blank.
 
 ```
-<p class="editor-paragraph">Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},<br><br>Your 3D print estimate is Approved! Before we start printing, please review and confirm the details below.<br><br>⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.<br><br>ESTIMATE DETAILS:<br>- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}<br>- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}<br>- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}<br>- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}@{if(empty(outputs('Get_Current_Pending_Data')?['body/ApprovalComment']), '', concat('<br><br>STAFF NOTE:<br>', outputs('Get_Current_Pending_Data')?['body/ApprovalComment']))}<br><br>TO CONFIRM THIS ESTIMATE:</p><br><p class="editor-paragraph"><a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8" class="editor-link">Open Student Portal</a><br><br>1. Click the link above to open the Student Portal<br>2. Click "VIEW REQUESTS" to see your print requests<br>3. Find your request showing "Pending" status with the estimate<br>4. Click the green "CONFIRM ESTIMATE" button on your request card<br>5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"<br><br>If you have any questions or concerns about the estimate, please contact us before confirming.<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br>Email: coad-fablab@lsu.edu<br>Location: Room 145 Atkinson Hall<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
+<p class="editor-paragraph">Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},<br><br>Your 3D print estimate is Approved! Before we start printing, please review and confirm the details below.<br><br>⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.<br><br>ESTIMATE DETAILS:<br>- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}<br>- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}<br>- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}<br>- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}@{if(empty(outputs('Get_Current_Pending_Data')?['body/ApprovalComment']), '', concat('<br><br>STAFF NOTE:<br>', outputs('Get_Current_Pending_Data')?['body/ApprovalComment']))}<br><br>TO CONFIRM THIS ESTIMATE:</p><br><p class="editor-paragraph"><a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8" class="editor-link">Open Student Portal</a><br><br>1. Click the link above to open the Student Portal<br>2. Click "VIEW REQUESTS" to see your print requests<br>3. Find your request showing "Pending" status with the estimate<br>4. Click the green "CONFIRM ESTIMATE" button on your request card<br>5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"<br><br>If you have any questions or concerns about the estimate, please contact us before confirming.<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br>Email: coad-fablab@lsu.edu<br>Location: Room 113 Art Building<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
 ```
 
 **✅ STUDENT PORTAL APP LINK:** The confirmation link opens the **Student Portal Power App** where students can view and confirm their estimates. This approach:
@@ -994,7 +994,7 @@ Some display names differ from internal field names. Always use internal names i
 Your print is ready for pick up in the Fabrication Lab!
 
 PICKUP INFORMATION:
-📍 Location: Room 145 Atkinson Hall
+📍 Location: Room 113 Art Building
 💳 Payment: TigerCASH only
 🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 
@@ -1170,7 +1170,7 @@ To customize the email templates:
 ### Email Template Customization Points
 Update these sections in the email templates for your lab:
 - **Lab hours**: Currently set to "Monday-Friday 8:30 AM - 4:30 PM"
-- **Lab location**: Currently "Room 145 Atkinson Hall"
+- **Lab location**: Currently "Room 113 Art Building"
 - **Contact information**: Update any phone numbers or additional contact methods
 - **Pickup procedures**: Modify payment and ID verification requirements
 

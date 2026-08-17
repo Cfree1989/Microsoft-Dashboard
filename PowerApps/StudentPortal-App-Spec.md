@@ -87,6 +87,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 6 — Home “needs you” line.** `scrHome.OnVisible` counts this student’s **Pending** rows where `StudentConfirmed` is not true (same identity filter as My Requests). **`btnNeedsYou`** (Classic button, not a label) is **500px** wide and centered, orange text on a transparent fill (peach chip on hover only), and navigates to My Requests. Hidden when the count is 0. The My Requests card description switches to “N estimate(s) waiting for your OK.” Confirm success decrements `varNeedsConfirmCount`.
 - **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
+- **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up. Emails from Flow B / Flow D still need the same string in Power Automate.
 
 ### Typography
 
@@ -382,7 +383,7 @@ Set(varRequestCardHeight, 280);
 
 // === CONTACT INFORMATION ===
 Set(varSupportEmail, "coad-fablab@lsu.edu");
-Set(varPickupLocation, "Room 145 Atkinson Hall");
+Set(varPickupLocation, "Room 113 Art Building");
 Set(varPaymentMethod, "TigerCASH only");
 
 // === DATE/TIME FORMATS ===

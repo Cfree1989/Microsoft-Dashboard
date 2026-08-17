@@ -1268,7 +1268,7 @@ My Requests link present: [ ] Yes  [ ] No
 - [ ] Email received
 - [ ] Subject: "Your 3D print is ready for pickup – REQ-#####"
 - [ ] Body includes:
-  - [ ] Pickup location: Room 145 Atkinson Hall
+  - [ ] Pickup location: Room 113 Art Building
   - [ ] Payment method: TigerCASH only
   - [ ] Lab hours
   - [ ] What to bring (student ID)

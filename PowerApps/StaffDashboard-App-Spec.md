@@ -731,7 +731,7 @@ Set(varOwnMaterialDiscount, 0.30);                 // 30% of base cost when usin
 // === CONTACT INFORMATION ===
 // Update these when location or contact details change
 Set(varSupportEmail, "coad-fablab@lsu.edu");
-Set(varPickupLocation, "Room 145 Atkinson Hall");
+Set(varPickupLocation, "Room 113 Art Building");
 Set(varPaymentMethod, "TigerCASH only");
 
 // === DATE/TIME FORMATS ===
@@ -11094,7 +11094,7 @@ Before moving on, verify:
 
 **What you're doing:** Creating a modal that lets staff generate a monthly Excel export of TigerCASH transactions for departmental accounting. The modal is triggered from the **Report** button (`btnNavAnalytics`) in the nav bar.
 
-> The lab has two spaces: **Atkinson Hall 145** (additive manufacturing — 3D printing, tracked in this dashboard) and **Art Building 123** (subtractive manufacturing — CNC, plasma, tracked separately). This export covers Atkinson Hall only. Art Building transactions are manually added to the downloaded file before sending to accounting.
+> The lab has two spaces: **Art Building 113** (additive manufacturing — 3D printing, tracked in this dashboard) and **Art Building 123** (subtractive manufacturing — CNC, plasma, tracked separately). This export covers the 3D print lab (Art Building 113) only. Subtractive (Art Building 123) transactions are manually added to the downloaded file before sending to accounting.
 
 > 🎯 **Using Containers:** This modal uses a **Container** to group all controls together. Setting `Visible` on the container automatically shows/hides all child controls!
 
@@ -16376,6 +16376,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Cache window + reject gate + dead startup** | Photocopies of plates/payments/messages use **`Created >= StaffCacheSince`** (365 days). Report preview filters **Payments** by month dates. Messages open loads that job’s thread from SharePoint. **Reject** needs a reason checkbox or a comment. Removed unused **`varQuickQueue`**, **`varExpandAll`**, **`varIsStaff`**, **`colBatchSucceededItems`**, **`colBatchFailedItems`**. |
 | **2026-08-14: Batch plate gate + final-pickup hint** | Named formula **`StaffBatchHasIneligiblePlates`**. Adding to a batch (**`recCardBackground`**, **`icoBatchCheck`**, **`btnAddMoreItems`**) refuses jobs with plates still Queued or Printing; **Remove** still works. **`btnAddMoreItems`** stays on the payment popup if the add is refused. **Process Batch** warns instead of opening the modal; **Record Batch Payment** stays disabled. Footer count says **final pickup only**; modal title is **Final Batch Pickup**. Jobs with no plates are allowed. |
 | **2026-08-14: Schedule roster from memory + simple shift load** | **`scrSchedule.OnVisible`** and **Save** rebuild **`colSchedStaff`** from **`colStaff`** (not a second **`Staff`** query; compare **`AidType`** as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`**. See [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md). |
+| **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. Run **OnStart**. Live Staff coauthor session was not available to push; YAML in repo is updated. |
 
 # Next Steps
 

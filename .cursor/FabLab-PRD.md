@@ -448,7 +448,7 @@ A comprehensive Microsoft 365-based workflow management system consisting of:
 - File storage requirements will remain within SharePoint attachment limits
 
 ### Decision Points Requiring Stakeholder Input
-- ~~**Lab Hours Information:** Specific operating hours for inclusion in pickup notifications~~ **RESOLVED:** Monday-Friday 8:30 AM - 4:30 PM, Room 145 Atkinson Hall
+- ~~**Lab Hours Information:** Specific operating hours for inclusion in pickup notifications~~ **RESOLVED:** Monday-Friday 8:30 AM - 4:30 PM, Room 113 Art Building
 - ~~**Payment Process:** Integration with existing payment systems or manual process continuation~~ **RESOLVED:** TigerCASH, check, or grant code at pickup
 - **Staff Role Hierarchy:** Detailed role definitions beyond Manager/Technician/Student Worker
 - ~~**File Retention Policy:** Long-term storage requirements for completed requests and audit logs~~ **RESOLVED:** See Appendix F: Audit Retention Policy
@@ -704,7 +704,7 @@ LSU Digital Fabrication Lab
 
 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 Email: coad-fablab@lsu.edu
-Location: Room 145 Atkinson Hall
+Location: Room 113 Art Building
 
 ---
 This is an automated message from the LSU Digital Fabrication Lab.
@@ -788,7 +788,7 @@ Subject: Your 3D print is ready for pickup – [ReqKey]
 Your print is ready for pick up in the Fabrication Lab!
 
 PICKUP INFORMATION:
-📍 Location: Room 145 Atkinson Hall
+📍 Location: Room 113 Art Building
 💳 Payment: TigerCASH, check, or grant code
 🕐 Lab Hours: Monday-Friday 8:30 AM - 4:30 PM
 
@@ -887,7 +887,7 @@ FinalCost = Max($3.00, FinalWeight × Payment_Rate)
 #### Payment Collection
 
 **Method:** TigerCASH, check, or grant code  
-**Location:** Room 145 Atkinson Hall  
+**Location:** Room 113 Art Building  
 **When:** At pickup (Status: Completed)  
 **Requirements:** Student ID for verification
 
