@@ -39,6 +39,9 @@ App:
       // Pending estimates waiting for the student to confirm (Home "needs you" line)
       Set(varNeedsConfirmCount, 0);
 
+      // My Requests status chips: Open | Done | All
+      Set(varMyRequestsFilter, "Open");
+
       // === FORM STATE ===
       // Track if user attempted to submit (for showing validation errors)
       Set(varSubmitAttempted, false);

@@ -172,22 +172,35 @@ Screens:
                 Variant: Vertical
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =Parent.Height - 170
+                  Height: =Parent.Height - 70
                   Items: |-
-                    =If(
-                        !IsBlank(varMeEntraId),
+                    =With(
+                        {
+                            wMine: If(
+                                !IsBlank(varMeEntraId),
+                                Filter(
+                                    PrintRequests,
+                                    StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                                ),
+                                Filter(
+                                    PrintRequests,
+                                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                                )
+                            )
+                        },
                         SortByColumns(
-                            Filter(
-                                PrintRequests,
-                                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                            ),
-                            "Created",
-                            SortOrder.Descending
-                        ),
-                        SortByColumns(
-                            Filter(
-                                PrintRequests,
-                                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                            If(
+                                varMyRequestsFilter = "Open",
+                                Filter(
+                                    wMine,
+                                    Status.Value in ["Uploaded", "Pending", "Ready to Print", "Printing"]
+                                ),
+                                varMyRequestsFilter = "Done",
+                                Filter(
+                                    wMine,
+                                    Status.Value in ["Completed", "Paid & Picked Up", "Rejected", "Canceled", "Archived"]
+                                ),
+                                wMine
                             ),
                             "Created",
                             SortOrder.Descending
@@ -197,7 +210,7 @@ Screens:
                   TemplateSize: =varRequestCardHeight
                   Width: =Parent.Width
                   WrapCount: =3
-                  Y: =90
+                  Y: =52
                 Children:
                   - recCardBg:
                       Control: Rectangle
@@ -257,14 +270,14 @@ Screens:
                         Color: =RGBA(100, 100, 100, 1)
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        Height: =20
+                        Height: =22
                         OnSelect: =Select(Parent)
                         Size: =11
                         Text: |-
                           ="Submitted: " & Text(ThisItem.Created, varDateFormatShort)
                         Width: =200
                         X: =28
-                        Y: =40
+                        Y: =42
                   - lblPrintDetails:
                       Control: Label
                       Properties:
@@ -272,7 +285,7 @@ Screens:
                         Color: =RGBA(80, 80, 80, 1)
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        Height: =20
+                        Height: =22
                         OnSelect: =Select(Parent)
                         Size: =11
                         Text: |-
@@ -281,7 +294,7 @@ Screens:
                           " • " & ThisItem.Color.Value
                         Width: =Parent.TemplateWidth - 60
                         X: =28
-                        Y: =62
+                        Y: =70
                   - lblEstimate:
                       Control: Label
                       Properties:
@@ -292,12 +305,13 @@ Screens:
                         FontWeight: =FontWeight.Semibold
                         Height: =24
                         OnSelect: =Select(Parent)
+                        Size: =11
                         Text: |-
                           ="Estimated Cost: " & Text(ThisItem.EstimatedCost, "[$-en-US]$#,##0.00")
                         Visible: =!IsBlank(ThisItem.EstimatedCost)
                         Width: =Parent.TemplateWidth - 60
                         X: =28
-                        Y: =85
+                        Y: =126
                   - btnConfirmEstimate:
                       Control: Classic/Button
                       Properties:
@@ -328,7 +342,7 @@ Screens:
                         Visible: =ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
                         Width: =Parent.TemplateWidth - 60
                         X: =28
-                        Y: =115
+                        Y: =160
                   - btnCancelRequest:
                       Control: Classic/Button
                       Properties:
@@ -359,7 +373,7 @@ Screens:
                         Visible: =ThisItem.Status.Value in ["Uploaded", "Pending", "Ready to Print"]
                         Width: =150
                         X: =28
-                        Y: =165
+                        Y: =214
                   - lblStatusMessage:
                       Control: Label
                       Properties:
@@ -392,7 +406,89 @@ Screens:
                         Visible: =ThisItem.Status.Value in ["Printing", "Completed", "Paid & Picked Up", "Rejected", "Canceled"]
                         Width: =Parent.TemplateWidth - 60
                         X: =28
-                        Y: =115
+                        Y: =160
+                  - lblFilename:
+                      Control: Label
+                      Properties:
+                        BorderColor: =RGBA(0, 18, 107, 1)
+                        Color: =varColorTextMuted
+                        Font: =varAppFont
+                        Height: =22
+                        OnSelect: =Select(Parent)
+                        Size: =11
+                        Text: =Lower(First(Split(ThisItem.Student.DisplayName, " ")).Value & Last(Split(ThisItem.Student.DisplayName, " ")).Value) & "_" & Lower(ThisItem.Method.Value) & "_" & Lower(ThisItem.Color.Value)
+                        Width: =Parent.TemplateWidth - 60
+                        X: =28
+                        Y: =98
+            - btnFilterOpen:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  Fill: =If(varMyRequestsFilter = "Open", varColorPrimary, varNavBtnInactiveFill)
+                  Font: =varAppFont
+                  Height: =22
+                  HoverColor: =Color.White
+                  HoverFill: =If(varMyRequestsFilter = "Open", varColorPrimaryHover, varNavBtnHoverFill)
+                  OnSelect: =Set(varMyRequestsFilter, "Open")
+                  PressedColor: =Color.White
+                  PressedFill: =If(varMyRequestsFilter = "Open", varColorPrimaryPressed, varNavBtnHoverFill)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =8
+                  Text: ="Open"
+                  Width: =90
+                  X: =(Parent.Width - 294) / 2
+                  Y: =12
+            - btnFilterDone:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  Fill: =If(varMyRequestsFilter = "Done", varColorPrimary, varNavBtnInactiveFill)
+                  Font: =varAppFont
+                  Height: =22
+                  HoverColor: =Color.White
+                  HoverFill: =If(varMyRequestsFilter = "Done", varColorPrimaryHover, varNavBtnHoverFill)
+                  OnSelect: =Set(varMyRequestsFilter, "Done")
+                  PressedColor: =Color.White
+                  PressedFill: =If(varMyRequestsFilter = "Done", varColorPrimaryPressed, varNavBtnHoverFill)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =8
+                  Text: ="Done"
+                  Width: =90
+                  X: =btnFilterOpen.X + 102
+                  Y: =12
+            - btnFilterAll:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =Color.White
+                  Fill: =If(varMyRequestsFilter = "All", varColorPrimary, varNavBtnInactiveFill)
+                  Font: =varAppFont
+                  Height: =22
+                  HoverColor: =Color.White
+                  HoverFill: =If(varMyRequestsFilter = "All", varColorPrimaryHover, varNavBtnHoverFill)
+                  OnSelect: =Set(varMyRequestsFilter, "All")
+                  PressedColor: =Color.White
+                  PressedFill: =If(varMyRequestsFilter = "All", varColorPrimaryPressed, varNavBtnHoverFill)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =8
+                  Text: ="All"
+                  Width: =90
+                  X: =btnFilterDone.X + 102
+                  Y: =12
       - lblEmptyState:
           Control: Label
           Properties:
@@ -402,7 +498,14 @@ Screens:
             Font: =varAppFont
             Height: =200
             Size: =14
-            Text: ="You haven't submitted any print requests yet. Tap 'Submit' to create your first request!"
+            Text: |-
+              =If(
+                  varMyRequestsFilter = "Open",
+                  "No open print requests. Try Done or All.",
+                  varMyRequestsFilter = "Done",
+                  "No completed requests yet.",
+                  "You haven't submitted any print requests yet. Tap 'Submit' to create your first request!"
+              )
             Visible: =galMyRequests.AllItemsCount = 0
             Width: =Parent.Width - 40
             X: =20

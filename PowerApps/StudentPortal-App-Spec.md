@@ -88,6 +88,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 - **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up. Emails from Flow B / Flow D still need the same string in Power Automate.
+- **2026-08-17: Item 9 — My Requests filters + filename.** Chips **Open** / **Done** / **All** (`varMyRequestsFilter`, default Open). Open = Uploaded, Pending, Ready to Print, Printing. Done = Completed, Paid & Picked Up, Rejected, Canceled, Archived. Identity filter stays the same; status `in` runs on that student’s rows. `lblFilename` matches Staff Console: `firstnameLastname_method_color` from the job’s Student / Method / Color, **Size 11** with the other card lines. Empty copy changes with the chip.
 
 ### Typography
 
@@ -523,6 +524,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varMeUPN` | Current user's UPN (sign-in identifier) — used for Person field Claims | Text |
 | `varShowConfirmModal` | ID of item for estimate confirmation (0=hidden) | Number |
 | `varNeedsConfirmCount` | Pending jobs waiting for student OK (Home line) | Number |
+| `varMyRequestsFilter` | My Requests chip: Open, Done, or All | Text |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
