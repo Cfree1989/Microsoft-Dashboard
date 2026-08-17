@@ -33,6 +33,7 @@ App:
       Set(varShowConfirmModal, 0);
       Set(varShowCancelModal, 0);
       Set(varShowViewMessagesModal, 0);
+      Set(varShowFilesModal, 0);
       Set(varMessageBubbleWidth, 0.85);
 
       // Currently selected item for modals (typed blank so Power Apps knows the schema)
@@ -135,6 +136,7 @@ App:
       Set(varSupportEmail, "coad-fablab@lsu.edu");
       Set(varPickupLocation, "Room 113 Art Building");
       Set(varPaymentMethod, "TigerCASH only");
+      Set(varLabHours, "Mon–Fri 8:30 AM – 4:30 PM");
 
       // === DATE/TIME FORMATS ===
       Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"

@@ -87,9 +87,11 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 6 — Home “needs you” line.** `scrHome.OnVisible` counts this student’s **Pending** rows where `StudentConfirmed` is not true (same identity filter as My Requests). **`btnNeedsYou`** (Classic button, not a label) is **500px** wide and centered, orange text on a transparent fill (peach chip on hover only), and navigates to My Requests. Hidden when the count is 0. The My Requests card description switches to “N estimate(s) waiting for your OK.” Confirm success decrements `varNeedsConfirmCount`.
 - **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
-- **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up. Emails from Flow B / Flow D still need the same string in Power Automate.
+- **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up.
 - **2026-08-17: Item 9 — My Requests filters + filename.** Chips **Open** / **Done** / **All** (`varMyRequestsFilter`, default Open). Open = Uploaded, Pending, Ready to Print, Printing. Done = Completed, Paid & Picked Up, Rejected, Canceled, Archived. Identity filter stays the same; status `in` runs on that student’s rows. `lblFilename` matches Staff Console: `firstnameLastname_method_color` from the job’s Student / Method / Color, **Size 11** with the other card lines. Empty copy changes with the chip.
 - **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
+- **2026-08-17: Item 9 — Lab hours banner.** Home (`lblHoursBanner`) and My Requests (`lblHoursBannerMyRequests`) show a page footer above the nav (not on cards). Copy uses **`varLabHours`** (`Mon–Fri 8:30 AM – 4:30 PM`) and **`varPickupLocation`**. **Open now** (green) weekdays 8:30–4:30 local time; otherwise **Closed now** (orange). Classic button, `DisplayMode.View` (no I-beam). Run **OnStart**.
+- **2026-08-17: Item 9 — File download.** My Requests **Files** button opens `conFilesModal` (cream box, same chrome as messages). Lists `varSelectedItem.Attachments`; **Open** runs `Launch(ThisItem.Value)` so the student can download a copy. Empty copy: **No files attached.** View only — no add/remove.
 
 ### Typography
 
@@ -293,6 +295,7 @@ Set(varMeUPN, Lower(User().Email));
 Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
 Set(varShowViewMessagesModal, 0);
+Set(varShowFilesModal, 0);
 Set(varMessageBubbleWidth, 0.85);
 
 // Currently selected item for modals (typed blank so Power Apps knows the schema)
@@ -389,6 +392,7 @@ Set(varRequestCardHeight, 280);
 Set(varSupportEmail, "coad-fablab@lsu.edu");
 Set(varPickupLocation, "Room 113 Art Building");
 Set(varPaymentMethod, "TigerCASH only");
+Set(varLabHours, "Mon–Fri 8:30 AM – 4:30 PM");
 
 // === DATE/TIME FORMATS ===
 Set(varDateFormatShort, "mmm d, yyyy");
@@ -530,6 +534,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varMyRequestsFilter` | My Requests chip: Open, Done, or All | Text |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varShowViewMessagesModal` | ID of item for message history modal (0=hidden) | Number |
+| `varShowFilesModal` | ID of item for file download modal (0=hidden) | Number |
 | `varMessageBubbleWidth` | Message bubble width as a fraction of the gallery template | Number |
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
@@ -537,6 +542,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varRequestCardHeight` | My Requests gallery template size | Number |
 | `varSupportEmail` | Help/support email address | Text |
 | `varPickupLocation` | Physical pickup location | Text |
+| `varLabHours` | Posted lab hours (Home / My Requests banner) | Text |
 | `varPaymentMethod` | Accepted payment method | Text |
 | `varDateFormatShort` | Short date format string | Text |
 | `varScreenTransition` | Navigation transition effect | ScreenTransition |
@@ -569,7 +575,7 @@ This app uses a **container-based architecture** for clean organization and easy
         btnNavSubmitHome            ← "New Request" (created 3rd)
         btnNavHomeActive            ← "Home" active (created 2nd)
         recNavBgHome                ← Dark background (created 1st inside - behind)
-    lblHelpText                     ← "Need help?" (created 4th)
+    lblHoursBanner                  ← Open/Closed hours + pickup room (above nav)
     ▼ conActionCards                ← (created 3rd)
         ▼ conRequestsCard           ← Right card (created 3rd inside)
             btnViewRequests         ← "VIEW REQUESTS" (created last - top)
@@ -1157,23 +1163,44 @@ Navigate(scrMyRequests, varScreenTransition)
 
 ---
 
-### 4G: Create Help Footer
+### 4G: Create Hours Banner
 
-60. With `scrHome` selected, click **+ Insert** → **Text label**.
-61. **Rename it:** `lblHelpText`
+60. With `scrHome` selected, click **+ Insert** → **Button** (Classic).
+61. **Rename it:** `lblHoursBanner`
 62. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Text | `"Need help? Visit " & varPickupLocation & " or email " & varSupportEmail` |
+| DisplayMode | `DisplayMode.View` |
+| Fill | `Color.Transparent` |
+| BorderThickness | `0` |
 | X | `0` |
-| Y | `Parent.Height - varNavHeight - 50` |
+| Y | `Parent.Height - varNavHeight - 42` |
 | Width | `Parent.Width` |
-| Height | `30` |
+| Height | `32` |
 | Font | `varAppFont` |
-| Size | `11` |
-| Color | `varColorTextMuted` |
+| Size | `12` |
 | Align | `Align.Center` |
+
+63. Set **Text:**
+
+```powerfx
+With(
+    {
+        wDay: Weekday(Now(), StartOfWeek.Monday),
+        wMin: Hour(Now()) * 60 + Minute(Now())
+    },
+    If(
+        wDay <= 5 && wMin >= 510 && wMin < 990,
+        "Open now  ·  " & varLabHours & "  ·  " & varPickupLocation,
+        "Closed now  ·  " & varLabHours & "  ·  " & varPickupLocation
+    )
+)
+```
+
+64. Set **Color** to the same `With(...)` but return `varColorSuccess` when open and `varColorWarning` when closed.
+
+Hours are **8:30 AM–4:30 PM** (`510` / `990` minutes). Duplicate this control on `scrMyRequests` as `lblHoursBannerMyRequests` (`Y = Parent.Height - varNavHeight - 34`, gallery area height minus 36). Do not put hours on each request card.
 
 ---
 
@@ -1299,7 +1326,7 @@ Your Tree view should now look like this (first-created at bottom, last-created 
         btnNavSubmitHome
         btnNavHomeActive
         recNavBgHome
-    lblHelpText
+    lblHoursBanner
     ▼ conActionCards
         ▼ conRequestsCard           ← created after conSubmitCard
             btnViewRequests
@@ -3518,6 +3545,17 @@ ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = This
 
 > Requires the **RequestComments** SharePoint list as a data source (same site as PrintRequests). Do not `ClearCollect` the whole comments list on OnStart.
 
+#### Action: Files Button (Download attachments)
+
+38d. Click **+ Insert** → **Button**. Rename it `btnViewFiles`. Place it to the right of Messages (`X = 308`, `Y = 214`, `Width = 90`, `Height = 28`). Primary fill. Visible on every card.
+
+38e. Set **OnSelect:**
+
+```powerfx
+Set(varSelectedItem, ThisItem);
+Set(varShowFilesModal, ThisItem.ID)
+```
+
 #### Status Message (For statuses with no actions)
 
 39. Click **+ Insert** → **Text label**.
@@ -4011,6 +4049,10 @@ Set(varSelectedItem, Blank())
 ### Read-only Messages Modal (`conViewMessagesModal`)
 
 Screen-level container, **Visible** = `varShowViewMessagesModal > 0`. Cream modal (`varColorBgCard`) 560 tall, max 600 wide. Gallery `galViewMessages` is variable-height; **Items** = `Sort(colStudentRequestComments, SentAt, SortOrder.Descending)`. Bubbles match Staff Console: Outbound = staff (blue, right, SENT), Inbound = student (cream, left, REPLY). Author uses `Author0.DisplayName`. Close (`btnViewMsgClose`) clears the collection. Empty state: **No messages yet.** Footer hint: reply by email. No compose, no Patch.
+
+### Read-only Files Modal (`conFilesModal`)
+
+Screen-level container, **Visible** = `varShowFilesModal > 0`. Cream modal 420 tall. Gallery **Items** = `varSelectedItem.Attachments`. Row label `ThisItem.DisplayName`. **Open** = `Launch(ThisItem.Value)`. Empty when `CountRows(varSelectedItem.Attachments) = 0`. Students cannot add or remove files here.
 
 ---
 
@@ -4508,6 +4550,7 @@ Common error messages:
 | `varShowConfirmModal` | Number | ID of item for confirmation (0=hidden) |
 | `varShowCancelModal` | Number | ID of item for cancellation (0=hidden) |
 | `varShowViewMessagesModal` | Number | ID of item for message history (0=hidden) |
+| `varShowFilesModal` | Number | ID of item for file download (0=hidden) |
 | `varMessageBubbleWidth` | Number | Message bubble width fraction (0.85) |
 | `varSelectedItem` | Record | Currently selected PrintRequest item |
 | `varStatusColors` | Table | Status → Color mapping |

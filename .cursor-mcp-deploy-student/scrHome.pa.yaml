@@ -296,19 +296,42 @@ Screens:
                         Width: =Parent.Width - (varSpacingLG * 2)
                         X: =varSpacingLG
                         Y: =Parent.Height - 70
-      - lblHelpText:
-          Control: Label
+      - lblHoursBanner:
+          Control: Classic/Button
           Properties:
-            Align: =Align.Center
-            BorderColor: =RGBA(0, 18, 107, 1)
-            Color: =varColorTextMuted
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: |-
+              =With(
+                  {
+                      wDay: Weekday(Now(), StartOfWeek.Monday),
+                      wMin: Hour(Now()) * 60 + Minute(Now())
+                  },
+                  If(
+                      wDay <= 5 && wMin >= 510 && wMin < 990,
+                      varColorSuccess,
+                      varColorWarning
+                  )
+              )
+            DisplayMode: =DisplayMode.View
             Fill: =Color.Transparent
             Font: =varAppFont
-            Height: =30
-            Size: =11
-            Text: ="Need help? Visit " & varPickupLocation & " or email " & varSupportEmail
+            Height: =32
+            Size: =12
+            Text: |-
+              =With(
+                  {
+                      wDay: Weekday(Now(), StartOfWeek.Monday),
+                      wMin: Hour(Now()) * 60 + Minute(Now())
+                  },
+                  If(
+                      wDay <= 5 && wMin >= 510 && wMin < 990,
+                      "Open now  ·  " & varLabHours & "  ·  " & varPickupLocation,
+                      "Closed now  ·  " & varLabHours & "  ·  " & varPickupLocation
+                  )
+              )
             Width: =Parent.Width
-            Y: =Parent.Height - varNavHeight - 50
+            Y: =Parent.Height - varNavHeight - 42
       - conNavBarHome:
           Control: GroupContainer
           Variant: ManualLayout

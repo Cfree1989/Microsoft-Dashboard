@@ -163,7 +163,7 @@ Screens:
           Variant: ManualLayout
           Properties:
             Fill: =Color.Transparent
-            Height: =Parent.Height - varHeaderHeight - varNavHeight
+            Height: =Parent.Height - varHeaderHeight - varNavHeight - 36
             Width: =Parent.Width
             Y: =varHeaderHeight
           Children:
@@ -449,6 +449,35 @@ Screens:
                         Text: ="Messages"
                         Width: =110
                         X: =188
+                        Y: =214
+                  - btnViewFiles:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =Color.White
+                        DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                        Fill: =varColorPrimary
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        Height: =28
+                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =varColorPrimaryHover
+                        OnSelect: |-
+                          =Set(varSelectedItem, ThisItem);
+                          Set(varShowFilesModal, ThisItem.ID)
+                        PressedBorderColor: =Self.Fill
+                        PressedColor: =Self.Fill
+                        PressedFill: =varColorPrimaryPressed
+                        RadiusBottomLeft: =varBtnBorderRadius
+                        RadiusBottomRight: =varBtnBorderRadius
+                        RadiusTopLeft: =varBtnBorderRadius
+                        RadiusTopRight: =varBtnBorderRadius
+                        Size: =varBtnFontSize
+                        Text: ="Files"
+                        Width: =90
+                        X: =308
                         Y: =214
             - btnFilterOpen:
                 Control: Classic/Button
@@ -1047,6 +1076,185 @@ Screens:
                   Width: =30
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 40
                   Y: =recViewMsgModal.Y + 10
+      - conFilesModal:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Height: =Parent.Height
+            Visible: =varShowFilesModal > 0
+            Width: =Parent.Width
+          Children:
+            - recFilesOverlay:
+                Control: Rectangle
+                Properties:
+                  Fill: =varColorOverlay
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recFilesModal:
+                Control: Rectangle
+                Properties:
+                  Fill: =varColorBgCard
+                  Height: =420
+                  Width: =Min(520, Parent.Width - 40)
+                  X: =(Parent.Width - Min(520, Parent.Width - 40)) / 2
+                  Y: =(Parent.Height - 420) / 2
+            - lblFilesTitle:
+                Control: Label
+                Properties:
+                  Color: =varColorPrimary
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =30
+                  Size: =18
+                  Text: |-
+                    ="Files - " & Coalesce(varSelectedItem.ReqKey, "Job #" & varSelectedItem.ID)
+                  Width: =recFilesModal.Width - 70
+                  X: =recFilesModal.X + 20
+                  Y: =recFilesModal.Y + 15
+            - lblFilesHint:
+                Control: Label
+                Properties:
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =36
+                  Size: =11
+                  Text: ="Tap Open to download a copy. Staff may add files later."
+                  Width: =recFilesModal.Width - 40
+                  X: =recFilesModal.X + 20
+                  Y: =recFilesModal.Y + recFilesModal.Height - 48
+            - lblFilesEmpty:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =60
+                  Size: =12
+                  Text: ="No files attached."
+                  Visible: =CountRows(varSelectedItem.Attachments) = 0
+                  Width: =recFilesModal.Width - 40
+                  X: =recFilesModal.X + 20
+                  Y: =recFilesModal.Y + 180
+            - galStudentFiles:
+                Control: Gallery
+                Variant: Vertical
+                Properties:
+                  Height: =recFilesModal.Height - 130
+                  Items: =varSelectedItem.Attachments
+                  TemplatePadding: =6
+                  TemplateSize: =52
+                  Visible: =CountRows(varSelectedItem.Attachments) > 0
+                  Width: =recFilesModal.Width - 40
+                  X: =recFilesModal.X + 20
+                  Y: =recFilesModal.Y + 55
+                Children:
+                  - recFileRowBg:
+                      Control: Rectangle
+                      Properties:
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.TemplateHeight - 8
+                        Width: =Parent.TemplateWidth
+                  - lblFileRowName:
+                      Control: Label
+                      Properties:
+                        Color: =varColorText
+                        Font: =varAppFont
+                        Height: =Parent.TemplateHeight - 12
+                        Size: =12
+                        Text: =ThisItem.DisplayName
+                        Width: =Parent.TemplateWidth - 120
+                        X: =12
+                        Y: =4
+                  - btnOpenFile:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =Color.White
+                        Fill: =varColorPrimary
+                        Font: =varAppFont
+                        Height: =28
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =varColorPrimaryHover
+                        OnSelect: =Launch(ThisItem.Value)
+                        PressedColor: =Color.White
+                        PressedFill: =varColorPrimaryPressed
+                        RadiusBottomLeft: =varBtnBorderRadius
+                        RadiusBottomRight: =varBtnBorderRadius
+                        RadiusTopLeft: =varBtnBorderRadius
+                        RadiusTopRight: =varBtnBorderRadius
+                        Size: =11
+                        Text: ="Open"
+                        Width: =90
+                        X: =Parent.TemplateWidth - 102
+                        Y: =(Parent.TemplateHeight - 28) / 2
+            - btnFilesClose:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =varColorTextMuted
+                  Fill: =Color.Transparent
+                  Font: =varAppFont
+                  Height: =30
+                  HoverBorderColor: =Color.Transparent
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorDanger, -15%)
+                  OnSelect: |-
+                    =Set(varShowFilesModal, 0);
+                    Set(varSelectedItem, Blank())
+                  PaddingBottom: =0
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PressedBorderColor: =Color.Transparent
+                  PressedColor: =RGBA(245, 245, 245, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =14
+                  Text: ="✕"
+                  Width: =30
+                  X: =recFilesModal.X + recFilesModal.Width - 40
+                  Y: =recFilesModal.Y + 10
+      - lblHoursBannerMyRequests:
+          Control: Classic/Button
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: |-
+              =With(
+                  {
+                      wDay: Weekday(Now(), StartOfWeek.Monday),
+                      wMin: Hour(Now()) * 60 + Minute(Now())
+                  },
+                  If(
+                      wDay <= 5 && wMin >= 510 && wMin < 990,
+                      varColorSuccess,
+                      varColorWarning
+                  )
+              )
+            DisplayMode: =DisplayMode.View
+            Fill: =Color.Transparent
+            Font: =varAppFont
+            Height: =32
+            Size: =11
+            Text: |-
+              =With(
+                  {
+                      wDay: Weekday(Now(), StartOfWeek.Monday),
+                      wMin: Hour(Now()) * 60 + Minute(Now())
+                  },
+                  If(
+                      wDay <= 5 && wMin >= 510 && wMin < 990,
+                      "Open now  ·  " & varLabHours & "   " & varPickupLocation,
+                      "Closed now  ·  " & varLabHours & "  ·  " & varPickupLocation
+                  )
+              )
+            Width: =Parent.Width
+            Y: =Parent.Height - varNavHeight - 34
       - conLoadingOverlayMyRequests:
           Control: GroupContainer
           Variant: ManualLayout

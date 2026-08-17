@@ -310,7 +310,7 @@ Hover/pressed color vars are set and never bound (App Checker). Some buttons har
 6. ~~**Home “needs you”** line for unconfirmed Pending jobs.~~ **Done 14 August 2026** (live app). Orange Home line + My Requests card copy; tap goes to My Requests.  
 7. ~~**Submit layout:** steps or named sections so file + method are obvious; fix Method “(Required)” visibility.~~ **Layout skipped** (user likes current form). **Method “(Required)” fixed 14 August 2026** (live app): visible when Method is empty, not when TigerCard is short.  
 8. ~~**Delete unused OnStart variables** (App Checker list).~~ **Done 14 August 2026** (live app): 23 unused vars removed. App Checker should be down to the attachments size note.  
-9. **Later:** student messages, file download, hours banner, status filters. **Filters + Staff-style filename on cards: done 17 August 2026** (live app). Messages still undecided (email remains the reply path). Hours banner not built.  
+9. ~~**Later:** student messages, file download, hours banner, status filters.~~ **Done 17 August 2026** (live app): Open/Done/All chips, Staff-style filename, read-only message history, hours banner, file download modal.  
 10. **Do not:** copy Staff Console shared-login patterns into this app.
 
 ---
