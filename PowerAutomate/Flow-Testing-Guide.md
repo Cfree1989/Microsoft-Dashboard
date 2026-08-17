@@ -2475,6 +2475,84 @@ _____________________________________________
 
 ---
 
+## Flow J Tests (PR-LabStatus)
+
+**Full steps and troubleshooting:** [Flow-(J)-LabStatus-Refresh.md](./Flow-(J)-LabStatus-Refresh.md)  
+**List setup:** [LabStatus-List-Setup.md](../SharePoint/LabStatus-List-Setup.md)
+
+**Estimated Time:** 20 minutes  
+**Prerequisites:**
+- [ ] `LabStatus` list exists with one row, Title = `Current`
+- [ ] Flow J saved; connection is a **staff** account
+- [ ] You can see all PrintRequests (not a student login)
+
+### TEST J-001: Manual run matches staff queue
+
+**Steps:** Run Flow J **Test → Manually**. Refresh LabStatus **Current**.
+
+**Pass:**
+- [ ] Run **Succeeded**
+- [ ] `JobsWaiting` = count of Status **Ready to Print** (staff view)
+- [ ] `JobsPrinting` = count of Status **Printing**
+- [ ] `FilamentWaiting + ResinWaiting` = `JobsWaiting`
+- [ ] `BusyLevel` follows 0–5 Quiet / 6–15 Typical / 16–30 Busy / 31+ Packed
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### TEST J-002: Staff text is not wiped
+
+**Steps:** Set StaffMessage to `TEST message — delete me`, run Flow J, refresh.
+
+**Pass:**
+- [ ] Message still present
+- [ ] LabHours / PickupLocation unchanged
+- [ ] Test message deleted afterward
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### TEST J-003: ManualOverride pins BusyLevel
+
+**Steps:** BusyLevel = `Packed`, ManualOverride = Yes, run flow. Then Override = No, run again.
+
+**Pass:**
+- [ ] First run: counts update, BusyLevel stays Packed
+- [ ] Second run: BusyLevel follows the waiting-count table
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### TEST J-004: Student privacy
+
+**Steps:** Open LabStatus (or Home, once wired) as a student test account.
+
+**Pass:**
+- [ ] Student can read the snapshot
+- [ ] Student cannot edit it
+- [ ] Student still only sees their own PrintRequests
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+### Flow J Test Summary
+
+**Test Date:** _______________  
+**Tester:** _______________  
+
+```
+PASSED: _____ / 4
+FAILED: _____ / 4
+```
+
+**Proceed to Integration Tests:** [ ] Yes  [ ] No
+
+---
+
 ## Integration Tests
 
 ### Overview
@@ -3318,6 +3396,7 @@ Based on Power Automate documentation:
 - **Site:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
 - **PrintRequests List:** `/Lists/PrintRequests`
 - **AuditLog List:** `/Lists/AuditLog`
+- **LabStatus List:** `/Lists/LabStatus` (one row, Title = `Current`)
 - **My Requests View (SharePoint):** `/Lists/PrintRequests/My%20Requests.aspx`
 - **Student Portal App:** `https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8`
 
@@ -3329,6 +3408,10 @@ Based on Power Automate documentation:
 - [Flow D (PR-Message): Send notifications](./Flow-(D)-Message-Notifications.md)
 - [Flow E (PR-Mailbox): Process inbound replies](./Flow-(E)-Mailbox-InboundReplies.md)
 - [Flow F (PR-Cleanup): Audit retention](./Flow-(F)-Cleanup-AuditRetention.md)
+- [Flow G (Export-MonthlyTransactions)](./Flow-(G)-Export-MonthlyTransactions.md)
+- [Flow H (Payment-SaveSingle)](./Flow-(H)-Payment-SaveSingle.md)
+- [Flow I (Payment-SaveBatch)](./Flow-(I)-Payment-SaveBatch.md)
+- [Flow J (PR-LabStatus): Refresh queue snapshot](./Flow-(J)-LabStatus-Refresh.md)
 
 ### Key Expressions Reference
 
@@ -3362,6 +3445,7 @@ Join: join(body('Format_Action'), '; ')
 | 1.0 | 2025-10-13 | System | Initial comprehensive test guide created |
 | 1.1 | 2025-12-17 | System | Cleaned up removed Flow F, Flow G references |
 | 1.2 | 2026-02-09 | System | Added Flow F (PR-Cleanup) test cases for audit retention |
+| 1.3 | 2026-08-17 | System | Added Flow J (PR-LabStatus) tests for the LabStatus snapshot |
 
 ---
 

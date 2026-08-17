@@ -21,6 +21,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 - **AuditLog List:** `SharePoint/AuditLog-List-Setup.md`
 - **BuildPlates List:** `SharePoint/BuildPlates-List-Setup.md`
 - **Payments List:** `SharePoint/Payments-List-Setup.md`
+- **LabStatus List:** `SharePoint/LabStatus-List-Setup.md` — student-readable queue snapshot (not a copy of this list)
 - **Staff Dashboard App Spec:** `PowerApps/StaffDashboard-App-Spec.md`
 
 ---
