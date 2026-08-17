@@ -10,6 +10,7 @@
 > - **Tablet layout (1024×768)** — optimized for computer submission, works on mobile
 > - **Modular container structure** — clean organization, reusable patterns
 > - **Staff Dashboard styling** — consistent look across student and staff apps
+> - **Lab today card** — Quiet / Typical / Busy / Packed plus waiting and printing counts (from `LabStatus`, not other students’ jobs)
 
 ---
 
@@ -21,7 +22,7 @@
 4. [Adding Data Connections](#step-2-adding-data-connections)
 5. [Setting Up App.OnStart](#step-3-setting-up-apponstart)
 6. [Understanding Where Things Go](#understanding-where-things-go-read-this) ← **READ THIS FIRST!**
-7. [Building Screen 1: Home (Landing)](#step-4-building-screen-1-home-landing) ← **NEW! Welcome screen**
+7. [Building Screen 1: Home (Landing)](#step-4-building-screen-1-home-landing) ← Welcome, **Lab today**, action cards
 8. [Building Screen 2: Submit Request](#step-5-building-screen-2-submit-request)
 9. [Building the Submit Form (EditForm)](#step-6-building-the-submit-form-editform) ← **Uses EditForm for attachments**
 10. [Configuring Form Fields](#step-7-configuring-form-fields)
@@ -44,8 +45,8 @@
 
 Before you start, make sure you have:
 
-- [ ] **SharePoint lists created**: `PrintRequests`, `AuditLog`
-- [ ] **Power Automate flows working**: Flow A (PR-Create), Flow B (PR-Audit)
+- [ ] **SharePoint lists created**: `PrintRequests`, `AuditLog`, `LabStatus` (one row, Title = `Current`)
+- [ ] **Power Automate flows working**: Flow A (PR-Create), Flow B (PR-Audit), Flow J (PR-LabStatus)
 - [ ] **Power Apps license**: Standard license included with Microsoft 365
 
 > ⚠️ **IMPORTANT:** Complete Phases 1 and 2 (SharePoint + Flows) before building the Student Portal. The app depends on these being set up correctly.
@@ -88,7 +89,8 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 - **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up.
-- **2026-08-17: LabStatus snapshot (list + Flow J, Home card not wired yet).** Students cannot count `PrintRequests` (item-level security). Build the one-row **LabStatus** list and **Flow J** first: [LabStatus-List-Setup.md](../SharePoint/LabStatus-List-Setup.md), [Flow-(J)-LabStatus-Refresh.md](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md). Home will later `LookUp` Title = `Current` for BusyLevel / waiting / printing. Hours and pickup can move from `varLabHours` / `varPickupLocation` onto that row.
+- **2026-08-17: LabStatus snapshot (list + Flow J).** Students cannot count `PrintRequests` (item-level security). Build the one-row **LabStatus** list and **Flow J** first: [LabStatus-List-Setup.md](../SharePoint/LabStatus-List-Setup.md), [Flow-(J)-LabStatus-Refresh.md](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md).
+- **2026-08-17: Home Lab today card (staff business).** `conLabToday` sits under the welcome line. `LookUp(LabStatus, Title = "Current")` into `varLabStatus`. Shows BusyLevel pill (Quiet / Typical / Busy / Packed), waiting vs printing, Filament vs Resin waiting, `TypicalWaitText`, optional `StaffMessage`, and `UpdatedAt`. Hours/pickup banners still use `varLabHours` / `varPickupLocation`, now filled from that row when present. Card Height is `0` if the row is missing. Do not count `PrintRequests` for lab-wide totals.
 - **2026-08-17: Item 9 — My Requests filters + filename.** Open / Done / All are a **horizontal gallery** (`galMyRequestTabs`) like Staff `galStatusTabs`: Height 55, TemplateSize 148, TemplatePadding 3, button Width 141 / Size 10 / X 5 / Y 4. Left under the header. Selected uses `ThisItem.Color` (`RGBA(70, 130, 220, 1)`); idle is light gray + 1px border. Counts are this student’s rows. Names stay Open / Done / All.
 - **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
 - **2026-08-17: Item 9 — Lab hours banner.** Home (`lblHoursBanner`) and My Requests (`lblHoursBannerMyRequests`) show a page footer above the nav (not on cards). Copy uses **`varLabHours`** (`Mon–Fri 8:30 AM – 4:30 PM`) and **`varPickupLocation`**. **Open now** (green) weekdays 8:30–4:30 local time; otherwise **Closed now** (orange). Classic button, `DisplayMode.View` (no I-beam). Run **OnStart**.
@@ -145,6 +147,17 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Canceled | Gray | `RGBA(138, 136, 134, 1)` |
 | Archived | Gray | `RGBA(96, 94, 92, 1)` |
 
+### BusyLevel Colors (Home Lab today pill)
+
+Same words and colors as the SharePoint `BusyLevel` column ([BusyLevel-Column-Formatting.json](../SharePoint/Formating/BusyLevel-Column-Formatting.json)). Typical uses **black** text; the others use **white**.
+
+| BusyLevel | Meaning (waiting jobs) | Fill | Text |
+|-----------|------------------------|------|------|
+| Quiet | 0–5 | `RGBA(16, 124, 16, 1)` | White |
+| Typical | 6–15 | `RGBA(255, 185, 0, 1)` | Black |
+| Busy | 16–30 | `varColorWarning` | White |
+| Packed | 31+ | `RGBA(209, 52, 56, 1)` | White |
+
 ### Button Styles
 
 | Type | Fill | Color | Border |
@@ -164,6 +177,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 | Cards & Modals | `8` | `varRadiusMedium` | Request cards, confirmation modals |
 | Buttons | `4` | `varBtnBorderRadius` | All buttons (unified style) |
 | Status badges | `14` | (hardcoded on `btnStatusBadge`) | My Requests status pill |
+| BusyLevel pill | `14` | (hardcoded on `btnBusyLevel`) | Home Lab today Quiet/Typical/Busy/Packed |
 
 ### Layout Dimensions (Tablet Format)
 
@@ -230,9 +244,14 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 ```
 
 8. Click **Connect**.
-9. Check the box for this list:
+9. Check the boxes for these lists:
    - [x] **PrintRequests**
+   - [x] **LabStatus** ← one-row queue snapshot for the Home Lab today card
 10. Click **Connect**.
+
+> 💡 **Already built the app?** Click **+ Add data** → **SharePoint** → the same site URL → check **LabStatus** only → **Connect**. You do not recreate PrintRequests.
+
+> ⚠️ **LabStatus is not PrintRequests.** Students read **one** scoreboard row (`Title` = `Current`). They still only see **their own** print jobs. Never add LabStatus to a gallery of requests.
 
 ### Add Office 365 Users Connector (Critical for User Identity)
 
@@ -249,9 +268,10 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 
 **In the Data panel**, you should see:
 - ✅ PrintRequests
+- ✅ LabStatus
 - ✅ Office365Users
 
-> 💡 **Note:** Students don't need access to AuditLog or Staff lists—those are staff-only.
+> 💡 **Note:** Students don't need access to AuditLog or Staff lists—those are staff-only. `LabStatus` is the exception: it is a **public totals** row, not a job list.
 
 ---
 
@@ -400,6 +420,15 @@ Set(varPickupLocation, "Room 113 Art Building");
 Set(varPaymentMethod, "TigerCASH only");
 Set(varLabHours, "Mon–Fri 8:30 AM – 4:30 PM");
 
+// === LAB STATUS SNAPSHOT ===
+// One student-readable row. Do not CountRows(PrintRequests) for lab-wide totals.
+Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+If(
+    !IsBlank(varLabStatus),
+    Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+    Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+);
+
 // === DATE/TIME FORMATS ===
 Set(varDateFormatShort, "mmm d, yyyy");
 
@@ -547,8 +576,9 @@ RadiusBottomRight: varRadiusXSmall
 | `varStatusColors` | Status-to-color mapping table | Table |
 | `varRequestCardHeight` | My Requests gallery template size | Number |
 | `varSupportEmail` | Help/support email address | Text |
-| `varPickupLocation` | Physical pickup location | Text |
-| `varLabHours` | Posted lab hours (Home / My Requests banner) | Text |
+| `varPickupLocation` | Physical pickup location (from LabStatus when present) | Text |
+| `varLabHours` | Posted lab hours (from LabStatus when present) | Text |
+| `varLabStatus` | `LookUp` of LabStatus Title = `Current` (BusyLevel, counts, wait text) | Record |
 | `varPaymentMethod` | Accepted payment method | Text |
 | `varDateFormatShort` | Short date format string | Text |
 | `varScreenTransition` | Navigation transition effect | ScreenTransition |
@@ -582,7 +612,7 @@ This app uses a **container-based architecture** for clean organization and easy
         btnNavHomeActive            ← "Home" active (created 2nd)
         recNavBgHome                ← Dark background (created 1st inside - behind)
     lblHoursBanner                  ← Open/Closed hours + pickup room (above nav)
-    ▼ conActionCards                ← (created 3rd)
+    ▼ conActionCards                ← (created 4th)
         ▼ conRequestsCard           ← Right card (created 3rd inside)
             btnViewRequests         ← "VIEW REQUESTS" (created last - top)
             lblRequestsDesc         ← Description text
@@ -596,6 +626,14 @@ This app uses a **container-based architecture** for clean organization and easy
             lblSubmitTitle          ← "Submit New Request"
             icnSubmit               ← Printer icon
             recSubmitCardBg         ← Card background (created 1st - behind)
+    ▼ conLabToday                   ← Lab today / staff business (created 3rd)
+        lblLabStaffMessage          ← optional note (hidden if blank)
+        lblLabWait                  ← typical wait sentence
+        lblLabMethodSplit           ← Filament / Resin waiting
+        lblLabCounts                ← waiting · printing
+        btnBusyLevel                ← Quiet / Typical / Busy / Packed pill
+        lblLabUpdated               ← Flow J time
+        lblLabTodayTitle            ← "Lab today"
     ▼ conWelcome                    ← (created 2nd)
         btnNeedsYou                 ← Pending confirm button (top, hidden if 0)
         lblSubtitle                 ← hidden
@@ -705,7 +743,7 @@ We use **prefixes** to identify control types at a glance:
 
 # STEP 4: Building Screen 1: Home (Landing)
 
-**What you're doing:** Creating a welcoming landing screen that gives students a clear choice between submitting a new request or viewing their existing requests.
+**What you're doing:** Creating a welcoming landing screen that shows how busy the lab is (Lab today) and gives students a clear choice between submitting a new request or viewing their existing requests.
 
 > 💡 **Why a landing screen?** Instead of dropping students directly into a form, this screen provides a personalized welcome and two clear paths. Return visitors can quickly check their request status without scrolling past a form.
 
@@ -718,11 +756,19 @@ We use **prefixes** to identify control types at a glance:
 
 3. With `scrHome` selected, set these properties:
    - **Fill:** `varColorBg`
-   - **OnVisible:** paste the formula below (counts Pending jobs waiting for the student’s OK)
+   - **OnVisible:** paste the formula below (loads the LabStatus snapshot, then counts Pending jobs waiting for the student’s OK)
 
 **⬇️ FORMULA: Paste into scrHome OnVisible**
 
 ```powerfx
+Refresh(LabStatus);
+Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+If(
+    !IsBlank(varLabStatus),
+    Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+    Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+);
+
 Set(
     varNeedsConfirmCount,
     CountRows(
@@ -746,6 +792,8 @@ Set(
 ```
 
 > 💡 Identity match is the same as My Requests. `Not(StudentConfirmed)` runs on that student’s rows only (covers blank and false). The orange Home line is hidden when the count is 0.
+
+> 💡 **Lab today:** `Refresh` + `LookUp` on `LabStatus` is one row. Do **not** `CountRows(Filter(PrintRequests, Status.Value = "Ready to Print"))` — that only counts **this student’s** jobs, not the lab.
 
 ---
 
@@ -827,7 +875,7 @@ Set(
 | Property | Value |
 |----------|-------|
 | X | `0` |
-| Y | `varHeaderHeight + 30` |
+| Y | `varHeaderHeight + 20` |
 | Width | `Parent.Width` |
 | Height | `80` |
 | Fill | `Transparent` |
@@ -908,7 +956,248 @@ If(
 )
 ```
 
-### 4C: Create Action Cards Container
+---
+
+### 4C: Create Lab Today Card (staff business)
+
+**What you're doing:** Adding a cream card under the welcome line that answers “how busy is the lab?” Students are not allowed to see other people’s `PrintRequests`, so this card reads the one `LabStatus` row named `Current` (written by Flow J).
+
+> ⚠️ **Build [LabStatus](../SharePoint/LabStatus-List-Setup.md) and [Flow J](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md) first.** If the list is missing, `LookUp` fails and this card stays hidden (`Height` = `0`).
+
+> 💡 **What students see:** Quiet / Typical / Busy / Packed, how many jobs are waiting vs printing, Filament vs Resin waiting, a typical-wait sentence, and an optional staff note. They never see other students’ names, files, or ReqKeys.
+
+28. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
+29. **Rename it:** `conLabToday`
+30. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `varSpacingXL` |
+| Y | `conWelcome.Y + conWelcome.Height + 8` |
+| Width | `Parent.Width - (varSpacingXL * 2)` |
+| Height | `If(IsBlank(varLabStatus), 0, If(IsBlank(varLabStatus.StaffMessage), 88, 118))` |
+| Fill | `varColorBgCard` |
+| BorderColor | `varColorBorderLight` |
+| BorderThickness | `1` |
+| RadiusTopLeft | `varRadiusMedium` |
+| RadiusTopRight | `varRadiusMedium` |
+| RadiusBottomLeft | `varRadiusMedium` |
+| RadiusBottomRight | `varRadiusMedium` |
+| Visible | `!IsBlank(varLabStatus)` |
+
+> 💡 **Height = 0 when missing:** `Visible = false` still occupies space in canvas apps. Collapsing Height lets the action cards move up. Keep **Y** even when Height is 0.
+
+#### Add title
+
+31. With `conLabToday` selected, click **+ Insert** → **Text label**.
+32. **Rename it:** `lblLabTodayTitle`
+33. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"Lab today"` |
+| X | `16` |
+| Y | `10` |
+| Width | `150` |
+| Height | `22` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `12` |
+| Color | `varColorText` |
+
+#### Add updated time
+
+34. Click **+ Insert** → **Text label**.
+35. **Rename it:** `lblLabUpdated`
+36. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `16` |
+| Y | `32` |
+| Width | `150` |
+| Height | `18` |
+| Font | `varAppFont` |
+| Size | `10` |
+| Color | `varColorTextMuted` |
+
+**⬇️ FORMULA: Paste into lblLabUpdated Text**
+
+```powerfx
+If(
+    IsBlank(varLabStatus.UpdatedAt),
+    "",
+    "Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
+)
+```
+
+#### Add BusyLevel pill
+
+37. Click **+ Insert** → **Button** (Classic).
+38. **Rename it:** `btnBusyLevel`
+39. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| DisplayMode | `DisplayMode.View` |
+| X | `16` |
+| Y | `52` |
+| Width | `90` |
+| Height | `26` |
+| Size | `11` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| BorderThickness | `0` |
+| RadiusTopLeft | `14` |
+| RadiusTopRight | `14` |
+| RadiusBottomLeft | `14` |
+| RadiusBottomRight | `14` |
+| Align | `Align.Center` |
+| Text | `Coalesce(varLabStatus.BusyLevel.Value, "—")` |
+| HoverFill | `Self.Fill` |
+| HoverColor | `Self.Color` |
+| PressedFill | `Self.Fill` |
+| PressedColor | `Self.Color` |
+
+> Use a **Button** in **View** mode (same trick as the hours banner). A Label shows the I-beam; this pill is not tappable.
+
+**⬇️ FORMULA: Paste into btnBusyLevel Fill**
+
+```powerfx
+Switch(
+    varLabStatus.BusyLevel.Value,
+    "Quiet",
+    RGBA(16, 124, 16, 1),
+    "Typical",
+    RGBA(255, 185, 0, 1),
+    "Busy",
+    varColorWarning,
+    "Packed",
+    RGBA(209, 52, 56, 1),
+    varColorNeutral
+)
+```
+
+**⬇️ FORMULA: Paste into btnBusyLevel Color**
+
+```powerfx
+If(
+    varLabStatus.BusyLevel.Value = "Typical",
+    RGBA(0, 0, 0, 1),
+    Color.White
+)
+```
+
+> 💡 Typical is gold with **black** text (same as the SharePoint column). Quiet / Busy / Packed use white text.
+
+#### Add waiting / printing counts
+
+40. Click **+ Insert** → **Text label**.
+41. **Rename it:** `lblLabCounts`
+42. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `180` |
+| Y | `14` |
+| Width | `420` |
+| Height | `26` |
+| Font | `varAppFont` |
+| FontWeight | `FontWeight.Semibold` |
+| Size | `14` |
+| Color | `varColorText` |
+
+**⬇️ FORMULA: Paste into lblLabCounts Text**
+
+```powerfx
+Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+```
+
+#### Add Filament / Resin split
+
+43. Click **+ Insert** → **Text label**.
+44. **Rename it:** `lblLabMethodSplit`
+45. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `180` |
+| Y | `44` |
+| Width | `420` |
+| Height | `22` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+
+**⬇️ FORMULA: Paste into lblLabMethodSplit Text**
+
+```powerfx
+"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0) & " waiting  ·  Resin " & Coalesce(varLabStatus.ResinWaiting, 0) & " waiting"
+```
+
+> 💡 This split is **waiting** (Ready to Print) only. Printing is the total on the line above. Do not show `ManualOverride`.
+
+#### Add typical-wait sentence
+
+46. Click **+ Insert** → **Text label**.
+47. **Rename it:** `lblLabWait`
+48. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `620` |
+| Y | `14` |
+| Width | `Parent.Width - 636` |
+| Height | `64` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `varColorTextMuted` |
+| Wrap | `true` |
+
+**⬇️ FORMULA: Paste into lblLabWait Text**
+
+```powerfx
+Coalesce(
+    varLabStatus.TypicalWaitText,
+    "Typical wait after you confirm: 1–3 lab days"
+)
+```
+
+> ⚠️ This is **not** a clock time. Queue order is not FIFO in a way students can trust to the minute. Staff edit `TypicalWaitText` on the `Current` row; Flow J does not overwrite it.
+
+#### Add optional staff message
+
+49. Click **+ Insert** → **Text label**.
+50. **Rename it:** `lblLabStaffMessage`
+51. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| X | `16` |
+| Y | `88` |
+| Width | `Parent.Width - 32` |
+| Height | `24` |
+| Font | `varAppFont` |
+| Size | `11` |
+| Color | `varColorWarning` |
+| Visible | `!IsBlank(varLabStatus.StaffMessage)` |
+| Text | `varLabStatus.StaffMessage` |
+| Wrap | `true` |
+
+> 💡 Examples: `XL down today — expect longer filament waits.` Leave the SharePoint field blank on quiet days. Flow J does **not** clear this field.
+
+**Do not put on this card**
+
+| Leave off | Why |
+|-----------|-----|
+| Other students’ names, emails, files, ReqKeys | Privacy — not on `LabStatus` |
+| `ManualOverride` | Staff-only switch |
+| Build plates / which printer is running | Staff-only lists |
+| A promised finish clock (`Tuesday 3:14 PM`) | The lab cannot guarantee that |
+
+---
+
+### 4D: Create Action Cards Container
 
 25. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
 26. **Rename it:** `conActionCards`
@@ -917,14 +1206,14 @@ If(
 | Property | Value |
 |----------|-------|
 | X | `varSpacingXL` |
-| Y | `conWelcome.Y + conWelcome.Height + 30` |
+| Y | `conLabToday.Y + conLabToday.Height + 10` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `350` |
 | Fill | `Transparent` |
 
 ---
 
-### 4D: Create "Submit New Request" Card (Left)
+### 4E: Create "Submit New Request" Card (Left)
 
 28. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
 29. **Rename it:** `conSubmitCard`
@@ -1032,7 +1321,7 @@ Navigate(scrSubmit, varScreenTransition)
 
 ---
 
-### 4E: Add "OR" Divider
+### 4F: Add "OR" Divider
 
 41. With `conActionCards` selected, click **+ Insert** → **Text label**.
 42. **Rename it:** `lblOrDivider`
@@ -1061,7 +1350,7 @@ Navigate(scrSubmit, varScreenTransition)
 
 ---
 
-### 4F: Create "My Requests" Card (Right)
+### 4G: Create "My Requests" Card (Right)
 
 44. With `conActionCards` selected, click **+ Insert** → **Layout** → **Container**.
 45. **Rename it:** `conRequestsCard`
@@ -1169,7 +1458,7 @@ Navigate(scrMyRequests, varScreenTransition)
 
 ---
 
-### 4G: Create Hours Banner
+### 4H: Create Hours Banner
 
 60. With `scrHome` selected, click **+ Insert** → **Button** (Classic).
 61. **Rename it:** `lblHoursBanner`
@@ -1206,11 +1495,11 @@ With(
 
 64. Set **Color** to the same `With(...)` but return `varColorSuccess` when open and `varColorWarning` when closed.
 
-Hours are **8:30 AM–4:30 PM** (`510` / `990` minutes). Duplicate this control on `scrMyRequests` as `lblHoursBannerMyRequests` (`Y = Parent.Height - varNavHeight - 34`, gallery area height minus 36). Do not put hours on each request card.
+Hours are **8:30 AM–4:30 PM** (`510` / `990` minutes) for the Open/Closed color. That window stays in this formula even when staff change the **display** string on LabStatus (`LabHours` / `PickupLocation` flow into `varLabHours` / `varPickupLocation` from Home OnVisible). Duplicate this control on `scrMyRequests` as `lblHoursBannerMyRequests` (`Y = Parent.Height - varNavHeight - 34`, gallery area height minus 36). Do not put hours on each request card.
 
 ---
 
-### 4H: Create Navigation Bar
+### 4I: Create Navigation Bar
 
 63. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
 64. **Rename it:** `conNavBarHome`
@@ -1347,7 +1636,16 @@ Your Tree view should now look like this (first-created at bottom, last-created 
             lblSubmitTitle
             icnSubmit
             recSubmitCardBg         ← background at bottom
+    ▼ conLabToday
+        lblLabStaffMessage
+        lblLabWait
+        lblLabMethodSplit
+        lblLabCounts
+        btnBusyLevel
+        lblLabUpdated
+        lblLabTodayTitle
     ▼ conWelcome
+        btnNeedsYou
         lblSubtitle
         lblWelcome
     ▼ conHeaderHome                 ← created first (bottom = behind)
@@ -3126,6 +3424,13 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 
 ```powerfx
 Refresh(PrintRequests);
+Refresh(LabStatus);
+Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+If(
+    !IsBlank(varLabStatus),
+    Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+    Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+);
 Notify("Requests refreshed!", NotificationType.Information)
 ```
 
@@ -4191,6 +4496,25 @@ Have staff move a request through different statuses and verify:
 - [ ] Completed: Shows pickup instructions
 - [ ] Paid & Picked Up: Shows completion date
 
+### Test 7: Home Lab today (staff business)
+
+Requires [LabStatus](../SharePoint/LabStatus-List-Setup.md) + [Flow J](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md).
+
+1. Run Flow J (or wait for the 15-minute schedule)
+2. Open the Student Portal as a **student** test account (not a staff account that can see every PrintRequests row)
+3. On Home, verify:
+   - [ ] Cream **Lab today** card appears under the welcome line
+   - [ ] BusyLevel pill matches the `Current` row (Quiet / Typical / Busy / Packed)
+   - [ ] Waiting and printing counts match LabStatus (not the student’s own job count)
+   - [ ] Filament / Resin waiting numbers match
+   - [ ] Typical-wait sentence shows
+   - [ ] Hours banner still shows Open/Closed + pickup
+4. In SharePoint, type a **StaffMessage** on `Current` (for example `XL down today`) and refresh Home
+   - [ ] Orange note appears and the card grows
+5. Clear StaffMessage, refresh
+   - [ ] Note hides and the card shrinks
+6. Confirm the student **cannot** see other people’s jobs anywhere on Home
+
 ---
 
 # STEP 15: Embedding in SharePoint
@@ -4521,6 +4845,23 @@ Common error messages:
 
 ---
 
+## Problem: Home Lab today card is missing or blank
+
+**Symptom:** Welcome and the two action cards show, but there is no cream **Lab today** card (or it is empty).
+
+**Checks (in order):**
+
+1. **LabStatus data source** — Data panel must list `LabStatus`. If it is missing, add it (same site as PrintRequests).
+2. **The `Current` row** — SharePoint LabStatus must have **exactly one** item with Title = `Current`.
+3. **Item-level security** — LabStatus **Read access** must be **Read all items**. If it is “only their own,” students cannot see a row staff created.
+4. **Student Read permission** — The student account must have **Read** on LabStatus (not Contribute).
+5. **Run OnStart / reopen Home** — `varLabStatus` is set in App.OnStart and `scrHome.OnVisible`. Click **Run OnStart**, then open Home.
+6. **Flow J has run** — Counts stay `0` / BusyLevel `Quiet` until Flow J runs. The card should still appear.
+
+Do **not** “fix” this by counting `PrintRequests` from the student app. That either fails or shows only that student’s jobs.
+
+---
+
 # Quick Reference Card
 
 ## Key Variables
@@ -4538,7 +4879,9 @@ Common error messages:
 | `varShowFilesModal` | Number | ID of item for file download (0=hidden) |
 | `varMessageBubbleWidth` | Number | Message bubble width fraction (0.85) |
 | `varSelectedItem` | Record | Currently selected PrintRequest item |
-| `varStatusColors` | Table | Status → Color mapping |
+| `varLabStatus` | Record | `LookUp(LabStatus, Title = "Current")` — Home Lab today card |
+| `varLabHours` | Text | Posted hours (LabStatus when present) |
+| `varPickupLocation` | Text | Pickup room (LabStatus when present) |
 
 ## Screen Navigation
 
@@ -4632,6 +4975,14 @@ Set(varInvalidFiles, Table());   // Files with invalid names
 Set(varHasInvalidFile, false);   // Quick check for submit button
 Set(varIsLoading, false);
 
+// Lab today snapshot (after Set(varLabHours) / Set(varPickupLocation) defaults)
+Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+If(
+    !IsBlank(varLabStatus),
+    Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+    Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+);
+
 // === STYLING ===
 Set(varAppFont, Font.'Open Sans');
 
@@ -4648,6 +4999,63 @@ Set(varStatusColors, Table(
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
 ```
+
+## Home Lab today (staff business)
+
+**Load snapshot** (`App.OnStart` and `scrHome.OnVisible`; also `btnRefresh`):
+
+```powerfx
+Refresh(LabStatus);
+Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+If(
+    !IsBlank(varLabStatus),
+    Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+    Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+)
+```
+
+**conLabToday Height:**
+
+```powerfx
+If(IsBlank(varLabStatus), 0, If(IsBlank(varLabStatus.StaffMessage), 88, 118))
+```
+
+**btnBusyLevel Fill / Color / Text:**
+
+```powerfx
+Switch(
+    varLabStatus.BusyLevel.Value,
+    "Quiet", RGBA(16, 124, 16, 1),
+    "Typical", RGBA(255, 185, 0, 1),
+    "Busy", varColorWarning,
+    "Packed", RGBA(209, 52, 56, 1),
+    varColorNeutral
+)
+
+If(varLabStatus.BusyLevel.Value = "Typical", RGBA(0, 0, 0, 1), Color.White)
+
+Coalesce(varLabStatus.BusyLevel.Value, "—")
+```
+
+**Counts and method split:**
+
+```powerfx
+Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+
+"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0) & " waiting  ·  Resin " & Coalesce(varLabStatus.ResinWaiting, 0) & " waiting"
+```
+
+**Typical wait and staff note:**
+
+```powerfx
+Coalesce(varLabStatus.TypicalWaitText, "Typical wait after you confirm: 1–3 lab days")
+
+varLabStatus.StaffMessage
+```
+
+`lblLabStaffMessage.Visible` = `!IsBlank(varLabStatus.StaffMessage)`
+
+---
 
 ## Submit Button OnSelect
 

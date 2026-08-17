@@ -704,7 +704,7 @@ Edit **Calculate BusyLevel** in Step 5. Keep the same four words that exist on t
 
 1. Confirm TEST J-001 through J-007
 2. Add `LabStatus` as a data source in the Student Portal
-3. Build the Home **Lab today** card using [StudentPortal-App-Spec.md](../PowerApps/StudentPortal-App-Spec.md)
+3. Build the Home **Lab today** card: [StudentPortal-App-Spec.md](../PowerApps/StudentPortal-App-Spec.md) Step 4C
 
 ---
 

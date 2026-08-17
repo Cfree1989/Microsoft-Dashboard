@@ -387,11 +387,13 @@ Flow J **updates** this row. It does not create it. If the row is missing, the f
 
 ---
 
-## Power Apps (later)
+## Power Apps (Student Portal Home)
 
-Add **LabStatus** as a data source in the **Student Portal** (same site as PrintRequests). Home will `LookUp(LabStatus, Title = "Current")` and show those fields. Do **not** add this list to a student gallery of jobs.
+Add **LabStatus** as a data source in the **Student Portal** (same site as PrintRequests). Home **Lab today** (`conLabToday`) does `LookUp(LabStatus, Title = "Current")` into `varLabStatus`. Click-by-click controls and formulas: [StudentPortal-App-Spec.md](../PowerApps/StudentPortal-App-Spec.md) Step 4C.
 
-Staff do not need this list on the Staff Console for v1. They can edit `StaffMessage`, hours, and `ManualOverride` directly in SharePoint.
+Do **not** add this list to a student gallery of jobs. Do **not** `CountRows` on `PrintRequests` for lab-wide totals.
+
+Staff do not need this list on the Staff Console for v1. They can edit `StaffMessage`, hours, `TypicalWaitText`, and `ManualOverride` directly in SharePoint.
 
 ---
 
@@ -415,4 +417,4 @@ Staff do not need this list on the Staff Console for v1. They can edit `StaffMes
 
 1. Build the refresh flow: [Flow-(J)-LabStatus-Refresh.md](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md)
 2. After Flow J runs once, confirm the `Current` row numbers match a staff count of Ready to Print / Printing in PrintRequests
-3. Wire the Student Portal Home card (see [StudentPortal-App-Spec.md](../PowerApps/StudentPortal-App-Spec.md))
+3. Wire the Student Portal Home **Lab today** card: [StudentPortal-App-Spec.md](../PowerApps/StudentPortal-App-Spec.md) Step 4C
