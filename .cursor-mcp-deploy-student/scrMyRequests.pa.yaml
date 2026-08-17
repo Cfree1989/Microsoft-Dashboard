@@ -10,6 +10,10 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =varHeaderHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: =Parent.Width
           Children:
             - recHeaderBg2:
@@ -158,21 +162,95 @@ Screens:
                   Width: =(Parent.Width - 80) / 3
                   X: =Parent.Width - Self.Width - varSpacingXL
                   Y: =(Parent.Height - Self.Height) / 2
+      - galMyRequestTabs:
+          Control: Gallery
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            FocusedBorderThickness: =0
+            Height: =55
+            Items: |-
+              =Table(
+                  {Status: "Open", Color: RGBA(70, 130, 220, 1)},
+                  {Status: "Done", Color: RGBA(70, 130, 220, 1)},
+                  {Status: "All", Color: RGBA(70, 130, 220, 1)}
+              )
+            TemplatePadding: =3
+            TemplateSize: =148
+            Transition: =Transition.Push
+            Width: =Parent.Width
+            Y: =varHeaderHeight
+          Children:
+            - btnMyRequestTab:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =If(varMyRequestsFilter = ThisItem.Status, Color.Transparent, varInputBorderColor)
+                  BorderThickness: =1
+                  Color: =If(varMyRequestsFilter = ThisItem.Status, Color.White, varColorText)
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =If(varMyRequestsFilter = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1))
+                  FocusedBorderColor: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  HoverBorderColor: =If(varMyRequestsFilter = ThisItem.Status, Color.Transparent, ColorFade(Self.BorderColor, 20%))
+                  HoverColor: =If(varMyRequestsFilter = ThisItem.Status, Color.White, varColorText)
+                  HoverFill: =ColorFade(If(varMyRequestsFilter = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -10%)
+                  OnSelect: =Set(varMyRequestsFilter, ThisItem.Status)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =If(varMyRequestsFilter = ThisItem.Status, Color.White, varColorText)
+                  PressedFill: =ColorFade(If(varMyRequestsFilter = ThisItem.Status, ThisItem.Color, RGBA(245, 245, 245, 1)), -20%)
+                  Size: =10
+                  Text: |-
+                    =With(
+                        {
+                            wMine: If(
+                                !IsBlank(varMeEntraId),
+                                Filter(
+                                    PrintRequests,
+                                    StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                                ),
+                                Filter(
+                                    PrintRequests,
+                                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                                )
+                            )
+                        },
+                        ThisItem.Status & " " & Text(
+                            CountRows(
+                                If(
+                                    ThisItem.Status = "Open",
+                                    Filter(
+                                        wMine,
+                                        Status.Value in ["Uploaded", "Pending", "Ready to Print", "Printing"]
+                                    ),
+                                    ThisItem.Status = "Done",
+                                    Filter(
+                                        wMine,
+                                        Status.Value in ["Completed", "Paid & Picked Up", "Rejected", "Canceled", "Archived"]
+                                    ),
+                                    wMine
+                                )
+                            )
+                        )
+                    )
+                  Width: =141
+                  X: =5
+                  Y: =4
       - conGalleryArea:
           Control: GroupContainer
           Variant: ManualLayout
           Properties:
             Fill: =Color.Transparent
-            Height: =Parent.Height - varHeaderHeight - varNavHeight - 36
+            Height: =Parent.Height - varHeaderHeight - 55 - varNavHeight - 36
             Width: =Parent.Width
-            Y: =varHeaderHeight
+            Y: =varHeaderHeight + 55
           Children:
             - galMyRequests:
                 Control: Gallery
                 Variant: Vertical
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =Parent.Height - 70
+                  Height: =Parent.Height - 16
                   Items: |-
                     =With(
                         {
@@ -210,7 +288,7 @@ Screens:
                   TemplateSize: =varRequestCardHeight
                   Width: =Parent.Width
                   WrapCount: =3
-                  Y: =52
+                  Y: =8
                 Children:
                   - recCardBg:
                       Control: Rectangle
@@ -239,26 +317,22 @@ Screens:
                   - btnStatusBadge:
                       Control: Classic/Button
                       Properties:
-                        BorderColor: =ColorFade(Self.Fill, -15%)
+                        BorderColor: =Color.Transparent
                         BorderThickness: =0
-                        Color: =If(ThisItem.Status.Value = "Pending", Color.Black, Color.White)
+                        Color: =Color.White
                         DisabledBorderColor: =RGBA(166, 166, 166, 1)
                         DisplayMode: =DisplayMode.View
-                        Fill: =LookUp(varStatusColors, Status = ThisItem.Status.Value, Color)
+                        Fill: =RGBA(70, 130, 220, 1)
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
-                        HoverColor: =RGBA(255, 255, 255, 1)
-                        HoverFill: =varColorPrimaryHover
+                        HoverBorderColor: =Color.Transparent
+                        HoverColor: =Color.White
+                        HoverFill: =RGBA(70, 130, 220, 1)
                         OnSelect: =Select(Parent)
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: =Self.Color
-                        RadiusBottomLeft: =14
-                        RadiusBottomRight: =14
-                        RadiusTopLeft: =14
-                        RadiusTopRight: =14
-                        Size: =12
+                        Size: =10
                         Text: =ThisItem.Status.Value
                         Width: =120
                         X: =Parent.TemplateWidth - 150
@@ -322,8 +396,7 @@ Screens:
                         Fill: =varColorSuccess
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        FontWeight: =FontWeight.Bold
-                        Height: =45
+                        Height: =varBtnHeight
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                         HoverColor: =RGBA(255, 255, 255, 1)
                         HoverFill: =ColorFade(varColorSuccess, -15%)
@@ -337,8 +410,8 @@ Screens:
                         RadiusBottomRight: =varBtnBorderRadius
                         RadiusTopLeft: =varBtnBorderRadius
                         RadiusTopRight: =varBtnBorderRadius
-                        Size: =13
-                        Text: ="✓ CONFIRM ESTIMATE"
+                        Size: =varBtnFontSize
+                        Text: ="Confirm Estimate"
                         Visible: =ThisItem.Status.Value = "Pending" && !ThisItem.StudentConfirmed
                         Width: =Parent.TemplateWidth - 60
                         X: =28
@@ -348,22 +421,21 @@ Screens:
                       Properties:
                         BorderColor: =Color.Transparent
                         BorderThickness: =0
-                        Color: =varColorDanger
+                        Color: =Color.White
                         DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                        Fill: =ColorFade(varColorDanger, varSecondaryFade)
+                        Fill: =varColorDanger
                         FocusedBorderThickness: =varFocusedBorderThickness
-                        Font: =Font.'Open Sans'
-                        FontWeight: =FontWeight.Bold
-                        Height: =28
+                        Font: =varAppFont
+                        Height: =varBtnHeight
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
-                        HoverColor: =RGBA(255, 255, 255, 1)
-                        HoverFill: =ColorFade(varColorDanger, 55%)
+                        HoverColor: =Color.White
+                        HoverFill: =ColorFade(varColorDanger, -15%)
                         OnSelect: |-
                           =Set(varSelectedItem, ThisItem);
                           Set(varShowCancelModal, ThisItem.ID)
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
-                        PressedFill: =ColorFade(varColorDanger, 45%)
+                        PressedFill: =ColorFade(varColorDanger, -25%)
                         RadiusBottomLeft: =varBtnBorderRadius
                         RadiusBottomRight: =varBtnBorderRadius
                         RadiusTopLeft: =varBtnBorderRadius
@@ -423,29 +495,29 @@ Screens:
                   - btnViewMessages:
                       Control: Classic/Button
                       Properties:
-                        BorderColor: =Color.Transparent
-                        BorderThickness: =0
-                        Color: =Color.White
+                        BorderColor: =varColorPrimary
+                        BorderThickness: =varInputBorderThickness
+                        Color: =varColorPrimary
                         DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                        Fill: =varColorPrimary
+                        Fill: =Color.White
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        Height: =28
+                        Height: =varBtnHeight
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
-                        HoverColor: =RGBA(255, 255, 255, 1)
-                        HoverFill: =varColorPrimaryHover
+                        HoverColor: =Color.White
+                        HoverFill: =varColorPrimary
                         OnSelect: |-
                           =Set(varSelectedItem, ThisItem);
                           Set(varShowViewMessagesModal, ThisItem.ID);
                           ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
-                        PressedFill: =varColorPrimaryPressed
+                        PressedFill: =ColorFade(varColorPrimary, -15%)
                         RadiusBottomLeft: =varBtnBorderRadius
                         RadiusBottomRight: =varBtnBorderRadius
                         RadiusTopLeft: =varBtnBorderRadius
                         RadiusTopRight: =varBtnBorderRadius
-                        Size: =varBtnFontSize
+                        Size: =10
                         Text: ="Messages"
                         Width: =110
                         X: =188
@@ -453,101 +525,32 @@ Screens:
                   - btnViewFiles:
                       Control: Classic/Button
                       Properties:
-                        BorderColor: =Color.Transparent
-                        BorderThickness: =0
-                        Color: =Color.White
+                        BorderColor: =varColorPrimary
+                        BorderThickness: =varInputBorderThickness
+                        Color: =varColorPrimary
                         DisabledBorderColor: =RGBA(166, 166, 166, 1)
-                        Fill: =varColorPrimary
+                        Fill: =Color.White
                         FocusedBorderThickness: =varFocusedBorderThickness
                         Font: =varAppFont
-                        Height: =28
+                        Height: =varBtnHeight
                         HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
-                        HoverColor: =RGBA(255, 255, 255, 1)
-                        HoverFill: =varColorPrimaryHover
+                        HoverColor: =Color.White
+                        HoverFill: =varColorPrimary
                         OnSelect: |-
                           =Set(varSelectedItem, ThisItem);
                           Set(varShowFilesModal, ThisItem.ID)
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
-                        PressedFill: =varColorPrimaryPressed
+                        PressedFill: =ColorFade(varColorPrimary, -15%)
                         RadiusBottomLeft: =varBtnBorderRadius
                         RadiusBottomRight: =varBtnBorderRadius
                         RadiusTopLeft: =varBtnBorderRadius
                         RadiusTopRight: =varBtnBorderRadius
-                        Size: =varBtnFontSize
+                        Size: =10
                         Text: ="Files"
                         Width: =90
                         X: =308
                         Y: =214
-            - btnFilterOpen:
-                Control: Classic/Button
-                Properties:
-                  BorderColor: =Color.Transparent
-                  BorderThickness: =0
-                  Color: =Color.White
-                  Fill: =If(varMyRequestsFilter = "Open", varColorPrimary, varNavBtnInactiveFill)
-                  Font: =varAppFont
-                  Height: =22
-                  HoverColor: =Color.White
-                  HoverFill: =If(varMyRequestsFilter = "Open", varColorPrimaryHover, varNavBtnHoverFill)
-                  OnSelect: =Set(varMyRequestsFilter, "Open")
-                  PressedColor: =Color.White
-                  PressedFill: =If(varMyRequestsFilter = "Open", varColorPrimaryPressed, varNavBtnHoverFill)
-                  RadiusBottomLeft: =varBtnBorderRadius
-                  RadiusBottomRight: =varBtnBorderRadius
-                  RadiusTopLeft: =varBtnBorderRadius
-                  RadiusTopRight: =varBtnBorderRadius
-                  Size: =8
-                  Text: ="Open"
-                  Width: =90
-                  X: =(Parent.Width - 294) / 2
-                  Y: =12
-            - btnFilterDone:
-                Control: Classic/Button
-                Properties:
-                  BorderColor: =Color.Transparent
-                  BorderThickness: =0
-                  Color: =Color.White
-                  Fill: =If(varMyRequestsFilter = "Done", varColorPrimary, varNavBtnInactiveFill)
-                  Font: =varAppFont
-                  Height: =22
-                  HoverColor: =Color.White
-                  HoverFill: =If(varMyRequestsFilter = "Done", varColorPrimaryHover, varNavBtnHoverFill)
-                  OnSelect: =Set(varMyRequestsFilter, "Done")
-                  PressedColor: =Color.White
-                  PressedFill: =If(varMyRequestsFilter = "Done", varColorPrimaryPressed, varNavBtnHoverFill)
-                  RadiusBottomLeft: =varBtnBorderRadius
-                  RadiusBottomRight: =varBtnBorderRadius
-                  RadiusTopLeft: =varBtnBorderRadius
-                  RadiusTopRight: =varBtnBorderRadius
-                  Size: =8
-                  Text: ="Done"
-                  Width: =90
-                  X: =btnFilterOpen.X + 102
-                  Y: =12
-            - btnFilterAll:
-                Control: Classic/Button
-                Properties:
-                  BorderColor: =Color.Transparent
-                  BorderThickness: =0
-                  Color: =Color.White
-                  Fill: =If(varMyRequestsFilter = "All", varColorPrimary, varNavBtnInactiveFill)
-                  Font: =varAppFont
-                  Height: =22
-                  HoverColor: =Color.White
-                  HoverFill: =If(varMyRequestsFilter = "All", varColorPrimaryHover, varNavBtnHoverFill)
-                  OnSelect: =Set(varMyRequestsFilter, "All")
-                  PressedColor: =Color.White
-                  PressedFill: =If(varMyRequestsFilter = "All", varColorPrimaryPressed, varNavBtnHoverFill)
-                  RadiusBottomLeft: =varBtnBorderRadius
-                  RadiusBottomRight: =varBtnBorderRadius
-                  RadiusTopLeft: =varBtnBorderRadius
-                  RadiusTopRight: =varBtnBorderRadius
-                  Size: =8
-                  Text: ="All"
-                  Width: =90
-                  X: =btnFilterDone.X + 102
-                  Y: =12
       - lblEmptyState:
           Control: Label
           Properties:
@@ -1094,21 +1097,21 @@ Screens:
                 Control: Rectangle
                 Properties:
                   Fill: =varColorBgCard
-                  Height: =420
-                  Width: =Min(520, Parent.Width - 40)
-                  X: =(Parent.Width - Min(520, Parent.Width - 40)) / 2
-                  Y: =(Parent.Height - 420) / 2
+                  Height: =450
+                  Width: =500
+                  X: =(Parent.Width - 500) / 2
+                  Y: =(Parent.Height - 450) / 2
             - lblFilesTitle:
                 Control: Label
                 Properties:
                   Color: =varColorPrimary
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Height: =30
-                  Size: =18
+                  Height: =35
+                  Size: =20
                   Text: |-
-                    ="Files - " & Coalesce(varSelectedItem.ReqKey, "Job #" & varSelectedItem.ID)
-                  Width: =recFilesModal.Width - 70
+                    ="Attachments - " & Coalesce(varSelectedItem.ReqKey, "Job #" & varSelectedItem.ID)
+                  Width: =440
                   X: =recFilesModal.X + 20
                   Y: =recFilesModal.Y + 15
             - lblFilesHint:
@@ -1116,78 +1119,78 @@ Screens:
                 Properties:
                   Color: =varColorTextMuted
                   Font: =varAppFont
-                  Height: =36
+                  Height: =24
                   Size: =11
-                  Text: ="Tap Open to download a copy. Staff may add files later."
-                  Width: =recFilesModal.Width - 40
+                  Text: ="Tap a file name to download it."
+                  Width: =460
                   X: =recFilesModal.X + 20
-                  Y: =recFilesModal.Y + recFilesModal.Height - 48
-            - lblFilesEmpty:
-                Control: Label
+                  Y: =recFilesModal.Y + 52
+            - frmStudentFiles:
+                Control: Form
+                Variant: Classic
+                Layout: Vertical
                 Properties:
-                  Align: =Align.Center
-                  Color: =varColorTextMuted
-                  Font: =varAppFont
-                  Height: =60
-                  Size: =12
-                  Text: ="No files attached."
-                  Visible: =CountRows(varSelectedItem.Attachments) = 0
-                  Width: =recFilesModal.Width - 40
+                  BorderColor: =Color.Transparent
+                  DataSource: =PrintRequests
+                  DefaultMode: =FormMode.View
+                  Height: =220
+                  Item: =LookUp(PrintRequests, ID = varShowFilesModal)
+                  NumberOfColumns: =1
+                  Width: =460
                   X: =recFilesModal.X + 20
-                  Y: =recFilesModal.Y + 180
-            - galStudentFiles:
-                Control: Gallery
-                Variant: Vertical
-                Properties:
-                  Height: =recFilesModal.Height - 130
-                  Items: =varSelectedItem.Attachments
-                  TemplatePadding: =6
-                  TemplateSize: =52
-                  Visible: =CountRows(varSelectedItem.Attachments) > 0
-                  Width: =recFilesModal.Width - 40
-                  X: =recFilesModal.X + 20
-                  Y: =recFilesModal.Y + 55
+                  Y: =recFilesModal.Y + 80
                 Children:
-                  - recFileRowBg:
-                      Control: Rectangle
+                  - Attachments_DataCardView:
+                      Control: TypedDataCard
+                      Variant: ClassicAttachmentsEdit
                       Properties:
-                        Fill: =RGBA(255, 255, 255, 1)
-                        Height: =Parent.TemplateHeight - 8
-                        Width: =Parent.TemplateWidth
-                  - lblFileRowName:
-                      Control: Label
-                      Properties:
-                        Color: =varColorText
-                        Font: =varAppFont
-                        Height: =Parent.TemplateHeight - 12
-                        Size: =12
-                        Text: =ThisItem.DisplayName
-                        Width: =Parent.TemplateWidth - 120
-                        X: =12
-                        Y: =4
-                  - btnOpenFile:
-                      Control: Classic/Button
-                      Properties:
-                        BorderColor: =Color.Transparent
-                        BorderThickness: =0
-                        Color: =Color.White
-                        Fill: =varColorPrimary
-                        Font: =varAppFont
-                        Height: =28
-                        HoverColor: =RGBA(255, 255, 255, 1)
-                        HoverFill: =varColorPrimaryHover
-                        OnSelect: =Launch(ThisItem.Value)
-                        PressedColor: =Color.White
-                        PressedFill: =varColorPrimaryPressed
-                        RadiusBottomLeft: =varBtnBorderRadius
-                        RadiusBottomRight: =varBtnBorderRadius
-                        RadiusTopLeft: =varBtnBorderRadius
-                        RadiusTopRight: =varBtnBorderRadius
-                        Size: =11
-                        Text: ="Open"
-                        Width: =90
-                        X: =Parent.TemplateWidth - 102
-                        Y: =(Parent.TemplateHeight - 28) / 2
+                        DataField: ="{Attachments}"
+                        Default: =ThisItem.Attachments
+                        DisplayMode: =DisplayMode.View
+                        DisplayName: ="Attachments"
+                        Height: =180
+                        Required: =false
+                        Update: =attStudentFiles.Attachments
+                        Width: =460
+                        X: =0
+                        Y: =0
+                      Children:
+                        - attStudentFiles:
+                            Control: Attachments
+                            Properties:
+                              AddedItemFill: =varChevronFill
+                              BorderColor: =varInputBorderColor
+                              BorderThickness: =varInputBorderThickness
+                              DisplayMode: =DisplayMode.View
+                              DropTargetBorderStyle: =BorderStyle.Solid
+                              FocusedBorderThickness: =varFocusedBorderThickness
+                              Font: =varAppFont
+                              Height: =120
+                              HoverFill: =varDropdownHoverFill
+                              ItemColor: =RGBA(255, 255, 255, 1)
+                              ItemFill: =varChevronBackground
+                              ItemHoverFill: =varDropdownHoverFill
+                              Items: =Parent.Default
+                              MaxAttachmentSize: =50
+                              PaddingBottom: =5
+                              PaddingRight: =5
+                              PaddingTop: =5
+                              PressedColor: =varDropdownPressedColor
+                              PressedFill: =varDropdownPressedFill
+                              Tooltip: =Parent.DisplayName
+                              Width: =450
+                              X: =5
+                              Y: =lblFilesFieldName.Y + lblFilesFieldName.Height + 4
+                        - lblFilesFieldName:
+                            Control: Label
+                            Properties:
+                              Color: =RGBA(51, 51, 51, 1)
+                              Font: =varAppFont
+                              Height: =28
+                              Text: =Parent.DisplayName
+                              Width: =Parent.Width - 10
+                              Wrap: =false
+                              Y: =4
             - btnFilesClose:
                 Control: Classic/Button
                 Properties:
@@ -1219,6 +1222,33 @@ Screens:
                   Width: =30
                   X: =recFilesModal.X + recFilesModal.Width - 40
                   Y: =recFilesModal.Y + 10
+            - btnFilesCancel:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  BorderThickness: =varInputBorderThickness
+                  Color: =Color.White
+                  Fill: =varColorNeutral
+                  Font: =varAppFont
+                  Height: =36
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorNeutral, -15%)
+                  OnSelect: |-
+                    =Set(varShowFilesModal, 0);
+                    Set(varSelectedItem, Blank())
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =ColorFade(varColorNeutral, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =varBtnFontSize
+                  Text: ="Close"
+                  Width: =120
+                  X: =recFilesModal.X + 190
+                  Y: =recFilesModal.Y + 390
       - lblHoursBannerMyRequests:
           Control: Classic/Button
           Properties:
