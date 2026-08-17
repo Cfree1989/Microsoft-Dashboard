@@ -420,6 +420,36 @@ Screens:
                         Width: =Parent.TemplateWidth - 60
                         X: =28
                         Y: =98
+                  - btnViewMessages:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =Color.White
+                        DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                        Fill: =varColorPrimary
+                        FocusedBorderThickness: =varFocusedBorderThickness
+                        Font: =varAppFont
+                        Height: =28
+                        HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                        HoverColor: =RGBA(255, 255, 255, 1)
+                        HoverFill: =varColorPrimaryHover
+                        OnSelect: |-
+                          =Set(varSelectedItem, ThisItem);
+                          Set(varShowViewMessagesModal, ThisItem.ID);
+                          ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
+                        PressedBorderColor: =Self.Fill
+                        PressedColor: =Self.Fill
+                        PressedFill: =varColorPrimaryPressed
+                        RadiusBottomLeft: =varBtnBorderRadius
+                        RadiusBottomRight: =varBtnBorderRadius
+                        RadiusTopLeft: =varBtnBorderRadius
+                        RadiusTopRight: =varBtnBorderRadius
+                        Size: =varBtnFontSize
+                        Text: ="Messages"
+                        Width: =110
+                        X: =188
+                        Y: =214
             - btnFilterOpen:
                 Control: Classic/Button
                 Properties:
@@ -850,6 +880,173 @@ Screens:
                   Width: =recCancelModal.Width - 40
                   X: =recCancelModal.X + 20
                   Y: =recCancelModal.Y + 200 + varBtnHeight + varSpacingXL
+      - conViewMessagesModal:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Height: =Parent.Height
+            Visible: =varShowViewMessagesModal > 0
+            Width: =Parent.Width
+          Children:
+            - recViewMsgOverlay:
+                Control: Rectangle
+                Properties:
+                  Fill: =varColorOverlay
+                  Height: =Parent.Height
+                  Width: =Parent.Width
+            - recViewMsgModal:
+                Control: Rectangle
+                Properties:
+                  Fill: =varColorBgCard
+                  Height: =560
+                  Width: =Min(600, Parent.Width - 40)
+                  X: =(Parent.Width - Min(600, Parent.Width - 40)) / 2
+                  Y: =(Parent.Height - 560) / 2
+            - lblViewMsgTitle:
+                Control: Label
+                Properties:
+                  Color: =varColorPrimary
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =30
+                  Size: =18
+                  Text: |-
+                    ="Messages - " & Coalesce(varSelectedItem.ReqKey, "Job #" & varSelectedItem.ID)
+                  Width: =recViewMsgModal.Width - 70
+                  X: =recViewMsgModal.X + 20
+                  Y: =recViewMsgModal.Y + 15
+            - lblViewMsgHint:
+                Control: Label
+                Properties:
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =36
+                  Size: =11
+                  Text: ="Reply by email if staff writes to you about this print."
+                  Width: =recViewMsgModal.Width - 40
+                  X: =recViewMsgModal.X + 20
+                  Y: =recViewMsgModal.Y + recViewMsgModal.Height - 48
+            - lblViewMsgEmpty:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =60
+                  Size: =12
+                  Text: ="No messages yet."
+                  Visible: =CountRows(colStudentRequestComments) = 0
+                  Width: =recViewMsgModal.Width - 40
+                  X: =recViewMsgModal.X + 20
+                  Y: =recViewMsgModal.Y + 200
+            - galViewMessages:
+                Control: Gallery
+                Variant: VariableHeight
+                Properties:
+                  Height: =recViewMsgModal.Height - 130
+                  Items: =Sort(colStudentRequestComments, SentAt, SortOrder.Descending)
+                  TemplatePadding: =8
+                  TemplateSize: =80
+                  Visible: =CountRows(colStudentRequestComments) > 0
+                  Width: =recViewMsgModal.Width - 40
+                  X: =recViewMsgModal.X + 20
+                  Y: =recViewMsgModal.Y + 55
+                Children:
+                  - recVMsgBg:
+                      Control: Rectangle
+                      Properties:
+                        Fill: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 0.1), RGBA(255, 248, 230, 1))
+                        Height: =Max(56, lblVMsgContent.Y + lblVMsgContent.Height + 10)
+                        OnSelect: =Select(Parent)
+                        Width: =Parent.TemplateWidth * varMessageBubbleWidth
+                        X: =If(ThisItem.Direction.Value = "Outbound", Parent.TemplateWidth * (1 - varMessageBubbleWidth), 0)
+                  - icoVMsgDirection:
+                      Control: Classic/Icon
+                      Properties:
+                        Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(200, 150, 50, 1))
+                        DisplayMode: =DisplayMode.View
+                        Height: =16
+                        Icon: =If(ThisItem.Direction.Value = "Outbound", Icon.ChevronRight, Icon.ChevronLeft)
+                        OnSelect: =Select(Parent)
+                        Width: =16
+                        X: =recVMsgBg.X + 10
+                        Y: =8
+                  - lblVMsgAuthor:
+                      Control: Label
+                      Properties:
+                        AutoHeight: =true
+                        Color: =If(ThisItem.Direction.Value = "Outbound", varColorPrimary, RGBA(180, 130, 40, 1))
+                        Font: =Font.'Open Sans'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =0
+                        OnSelect: =Select(Parent)
+                        Size: =10
+                        Text: |-
+                          =If(IsBlank(ThisItem.Author0.DisplayName), "Unknown", With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value)) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")
+                        Width: =recVMsgBg.Width - 95
+                        X: =recVMsgBg.X + 32
+                        Y: =6
+                  - lblVMsgDirectionBadge:
+                      Control: Label
+                      Properties:
+                        Align: =Align.Right
+                        Color: =If(ThisItem.Direction.Value = "Outbound", RGBA(70, 130, 220, 1), RGBA(180, 130, 40, 1))
+                        Font: =Font.'Open Sans'
+                        Height: =16
+                        Italic: =true
+                        OnSelect: =Select(Parent)
+                        Size: =9
+                        Text: =If(ThisItem.Direction.Value = "Outbound", "SENT", "REPLY")
+                        Width: =45
+                        X: =recVMsgBg.X + recVMsgBg.Width - 55
+                        Y: =6
+                  - lblVMsgContent:
+                      Control: Label
+                      Properties:
+                        AutoHeight: =true
+                        Color: =varColorText
+                        Font: =Font.'Open Sans'
+                        Height: =0
+                        OnSelect: =Select(Parent)
+                        Size: =11
+                        Text: =ThisItem.Message
+                        VerticalAlign: =VerticalAlign.Top
+                        Width: =recVMsgBg.Width - 20
+                        X: =recVMsgBg.X + 10
+                        Y: =lblVMsgAuthor.Y + lblVMsgAuthor.Height + 8
+            - btnViewMsgClose:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =Color.Transparent
+                  BorderThickness: =0
+                  Color: =varColorTextMuted
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =Color.Transparent
+                  Font: =varAppFont
+                  Height: =30
+                  HoverBorderColor: =Color.Transparent
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(varColorDanger, -15%)
+                  OnSelect: |-
+                    =Set(varShowViewMessagesModal, 0);
+                    Set(varSelectedItem, Blank());
+                    Clear(colStudentRequestComments)
+                  PaddingBottom: =0
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PressedBorderColor: =Color.Transparent
+                  PressedColor: =RGBA(245, 245, 245, 1)
+                  PressedFill: =ColorFade(varColorDanger, -25%)
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =14
+                  Text: ="✕"
+                  Width: =30
+                  X: =recViewMsgModal.X + recViewMsgModal.Width - 40
+                  Y: =recViewMsgModal.Y + 10
       - conLoadingOverlayMyRequests:
           Control: GroupContainer
           Variant: ManualLayout

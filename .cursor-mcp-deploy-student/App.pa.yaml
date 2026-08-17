@@ -32,6 +32,8 @@ App:
       // These control which modal is visible (0 = hidden, ID = visible for that item)
       Set(varShowConfirmModal, 0);
       Set(varShowCancelModal, 0);
+      Set(varShowViewMessagesModal, 0);
+      Set(varMessageBubbleWidth, 0.85);
 
       // Currently selected item for modals (typed blank so Power Apps knows the schema)
       Set(varSelectedItem, LookUp(PrintRequests, false));

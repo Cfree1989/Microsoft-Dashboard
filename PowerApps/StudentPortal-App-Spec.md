@@ -89,6 +89,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 - **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up. Emails from Flow B / Flow D still need the same string in Power Automate.
 - **2026-08-17: Item 9 — My Requests filters + filename.** Chips **Open** / **Done** / **All** (`varMyRequestsFilter`, default Open). Open = Uploaded, Pending, Ready to Print, Printing. Done = Completed, Paid & Picked Up, Rejected, Canceled, Archived. Identity filter stays the same; status `in` runs on that student’s rows. `lblFilename` matches Staff Console: `firstnameLastname_method_color` from the job’s Student / Method / Color, **Size 11** with the other card lines. Empty copy changes with the chip.
+- **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
 
 ### Typography
 
@@ -291,6 +292,8 @@ Set(varMeUPN, Lower(User().Email));
 // These control which modal is visible (0 = hidden, ID = visible for that item)
 Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
+Set(varShowViewMessagesModal, 0);
+Set(varMessageBubbleWidth, 0.85);
 
 // Currently selected item for modals (typed blank so Power Apps knows the schema)
 Set(varSelectedItem, LookUp(PrintRequests, false));
@@ -526,6 +529,8 @@ RadiusBottomRight: varRadiusXSmall
 | `varNeedsConfirmCount` | Pending jobs waiting for student OK (Home line) | Number |
 | `varMyRequestsFilter` | My Requests chip: Open, Done, or All | Text |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
+| `varShowViewMessagesModal` | ID of item for message history modal (0=hidden) | Number |
+| `varMessageBubbleWidth` | Message bubble width as a fraction of the gallery template | Number |
 | `varSelectedItem` | Item currently selected for modal | Record |
 | `varIsLoading` | Shows loading state during operations | Boolean |
 | `varStatusColors` | Status-to-color mapping table | Table |
@@ -3499,6 +3504,20 @@ Set(varSelectedItem, ThisItem);
 Set(varShowCancelModal, ThisItem.ID)
 ```
 
+#### Action: Messages Button (Read-only thread)
+
+38b. Click **+ Insert** → **Button**. Rename it `btnViewMessages`. Place it to the right of Cancel (`X = 188`, `Y = 214`, `Width = 110`, `Height = 28`). Style it as a primary button (`Fill = varColorPrimary`, white text). Visible on every card.
+
+38c. Set **OnSelect:**
+
+```powerfx
+Set(varSelectedItem, ThisItem);
+Set(varShowViewMessagesModal, ThisItem.ID);
+ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
+```
+
+> Requires the **RequestComments** SharePoint list as a data source (same site as PrintRequests). Do not `ClearCollect` the whole comments list on OnStart.
+
 #### Status Message (For statuses with no actions)
 
 39. Click **+ Insert** → **Text label**.
@@ -3988,6 +4007,10 @@ IfError(
 Set(varShowCancelModal, 0);
 Set(varSelectedItem, Blank())
 ```
+
+### Read-only Messages Modal (`conViewMessagesModal`)
+
+Screen-level container, **Visible** = `varShowViewMessagesModal > 0`. Cream modal (`varColorBgCard`) 560 tall, max 600 wide. Gallery `galViewMessages` is variable-height; **Items** = `Sort(colStudentRequestComments, SentAt, SortOrder.Descending)`. Bubbles match Staff Console: Outbound = staff (blue, right, SENT), Inbound = student (cream, left, REPLY). Author uses `Author0.DisplayName`. Close (`btnViewMsgClose`) clears the collection. Empty state: **No messages yet.** Footer hint: reply by email. No compose, no Patch.
 
 ---
 
@@ -4484,6 +4507,8 @@ Common error messages:
 | `varMeUPN` | Text | Current user's UPN (sign-in identifier) — used for Person field Claims |
 | `varShowConfirmModal` | Number | ID of item for confirmation (0=hidden) |
 | `varShowCancelModal` | Number | ID of item for cancellation (0=hidden) |
+| `varShowViewMessagesModal` | Number | ID of item for message history (0=hidden) |
+| `varMessageBubbleWidth` | Number | Message bubble width fraction (0.85) |
 | `varSelectedItem` | Record | Currently selected PrintRequest item |
 | `varStatusColors` | Table | Status → Color mapping |
 
