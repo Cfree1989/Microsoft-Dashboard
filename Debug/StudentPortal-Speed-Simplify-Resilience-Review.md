@@ -37,7 +37,7 @@ This follows the same method as `Debug/StaffDashboard-Speed-Simplify-Resilience-
 
 **In plain English:** Unlike the Staff Console, **each student signs in as themselves**. There is no shared lab login and no “Performing Action As” dropdown. The app should know who they are from Microsoft 365.
 
-That is why startup spends time asking Office 365 for the student’s real email, display name, and Entra ID. If that identity is wrong, **My Requests looks empty** even though the job is in SharePoint. That already happened in the lab (`Debug/My Requests Solutions.md`). The current filter is better than the old Person-field filter, but it is still fragile (section 4).
+That is why startup spends time asking Office 365 for the student’s real email, display name, and Entra ID. If that identity is wrong, **My Requests looks empty** even though the job is in SharePoint. That already happened in the lab. The current filter is better than the old Person-field filter, but it is still fragile (section 4).
 
 Students typically submit from a **computer** (files live there), then check status later on the same app. The layout is tablet-sized (`1366×768` in the live app, spec still says `1024×768`).
 

@@ -1,0 +1,16 @@
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor
+*.swp
+*~
+
+# Local MCP backups (never commit)
+.cursor-mcp-deploy-student-backup-messages/
+.cursor-mcp-deploy-*-backup*/
+
+# PAC unpack noise if someone unpacks locally
+**/Entropy/
+**/*.editorstate.json

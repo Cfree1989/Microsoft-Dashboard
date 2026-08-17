@@ -87,7 +87,7 @@ The PrintRequests list is the core data store for the Fabrication Lab 3D Print R
 5. **Require that this column contains information:** No
 6. Click **Save**
 
-> **Purpose:** This column stores the student's Entra Object ID (GUID), which is immutable and doesn't change even if the student's email aliases change. Used by Flow E to validate email sender identity, solving the UPN vs SMTP mismatch issue documented in Email Identity Solutions.md.
+> **Purpose:** This column stores the student's Entra Object ID (GUID), which is immutable and doesn't change even if the student's email aliases change. Used by Flow E to validate email sender identity when UPN and SMTP aliases differ.
 
 ### Column 5: TigerCardNumber (Single line of text)
 
