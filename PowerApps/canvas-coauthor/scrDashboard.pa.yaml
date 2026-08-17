@@ -465,7 +465,7 @@ Screens:
                   Visible: =!IsBlank(ThisItem.EstimatedWeight) || !IsBlank(ThisItem.FinalWeight)
                   Width: =Parent.TemplateWidth - 24
                   X: =12
-                  Y: =128
+                  Y: =131
             - lblBuildPlatesProgress:
                 Control: Label
                 Properties:
@@ -598,7 +598,7 @@ Screens:
                   Size: =8
                   Text: =ThisItem.ReqKey
                   Width: =120
-                  X: =80
+                  X: =75
                   Y: =231
             - lblcreated:
                 Control: Label
@@ -726,7 +726,7 @@ Screens:
                   OnSelect: =Select(recCardBackground)
                   Size: =8
                   Text: =Coalesce(Text(ThisItem.'Course Number'), "")
-                  X: =80
+                  X: =75
                   Y: =279
             - icoLightbulb:
                 Control: Classic/Icon

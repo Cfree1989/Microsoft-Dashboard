@@ -2025,7 +2025,7 @@ Switch(
 | Property | Value |
 |----------|-------|
 | X | `12` |
-| Y | `95` |
+| Y | `131` |
 | Width | `Parent.TemplateWidth - 24` |
 | Height | `20` |
 | Size | `10` |
@@ -2305,7 +2305,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Property | Value |
 |----------|-------|
 | Text | `ThisItem.ReqKey` |
-| X | `80` |
+| X | `75` |
 | Y | `185` |
 | Width | `120` |
 | Height | `20` |
@@ -2367,7 +2367,7 @@ These labels show additional info when the card is expanded. All have the same V
 | Property | Value |
 |----------|-------|
 | Text | `ThisItem.Discipline.Value` |
-| X | `80` |
+| X | `75` |
 | Y | `205` |
 | Width | `120` |
 | Height | `20` |
@@ -2430,7 +2430,7 @@ These labels show additional info when the card is expanded. All have the same V
 |----------|-------|
 | Text | `Coalesce(Text(ThisItem.'Course Number'), "—")` |
 | _Note_ | Use `Text()` for numeric columns to avoid the runtime error "The value '' cannot be converted to a number." |
-| X | `80` |
+| X | `75` |
 | Y | `225` |
 | Width | `150` |
 | Height | `20` |
@@ -16377,6 +16377,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-14: Batch plate gate + final-pickup hint** | Named formula **`StaffBatchHasIneligiblePlates`**. Adding to a batch (**`recCardBackground`**, **`icoBatchCheck`**, **`btnAddMoreItems`**) refuses jobs with plates still Queued or Printing; **Remove** still works. **`btnAddMoreItems`** stays on the payment popup if the add is refused. **Process Batch** warns instead of opening the modal; **Record Batch Payment** stays disabled. Footer count says **final pickup only**; modal title is **Final Batch Pickup**. Jobs with no plates are allowed. |
 | **2026-08-14: Schedule roster from memory + simple shift load** | **`scrSchedule.OnVisible`** and **Save** rebuild **`colSchedStaff`** from **`colStaff`** (not a second **`Staff`** query; compare **`AidType`** as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`**. See [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md). |
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
+| **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 
 # Next Steps
 
