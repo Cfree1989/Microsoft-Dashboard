@@ -11,11 +11,9 @@ Screens:
                 Filter(
                     colStaff,
                     Active = true &&
-                    Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                     (
-                        AidType = "Work Study" ||
-                        AidType = "Graduate Assistant" ||
-                        AidType = "President's Aid"
+                        Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                        Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
                     )
                 ),
                 {
@@ -213,7 +211,7 @@ Screens:
                   Color: |-
                     =With(
                         {
-                            maxHrs: Switch(drpSchedName.Selected.AidType, "Work Study", 13, "Graduate Assistant", 20, 7),
+                            maxHrs: If(drpSchedName.Selected.AidType = "Work Study", 13, drpSchedName.Selected.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(drpSchedName.Selected.Role.Value, ""))) = "graduate assistant", 20, 7),
                             hrs:    Sum(
                                 Filter(
                                     colEditShifts,
@@ -233,7 +231,7 @@ Screens:
                     =With(
                         {
                             aidType: drpSchedName.Selected.AidType,
-                            maxHrs:  Switch(drpSchedName.Selected.AidType, "Work Study", 13, "Graduate Assistant", 20, 7),
+                            maxHrs:  If(drpSchedName.Selected.AidType = "Work Study", 13, drpSchedName.Selected.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(drpSchedName.Selected.Role.Value, ""))) = "graduate assistant", 20, 7),
                             hrs:     Sum(
                                 Filter(
                                     colEditShifts,
@@ -429,11 +427,9 @@ Screens:
                                         Filter(
                                             colStaff,
                                             Active = true &&
-                                            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                                             (
-                                                AidType = "Work Study" ||
-                                                AidType = "Graduate Assistant" ||
-                                                AidType = "President's Aid"
+                                                Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                                                Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
                                             )
                                         ),
                                         {
@@ -865,13 +861,13 @@ Screens:
                                         wH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Wednesday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
                                         thH:  Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Thursday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
                                         fH:   Sum(Filter(colSchedLookup, Email = p.MemberEmail && Day = "Friday" && StartSlot >= 0), (EndSlot - StartSlot) / 2),
-                                        maxH: Switch(p.AidType, "Work Study", 13, "Graduate Assistant", 20, 7)
+                                        maxH: If(p.AidType = "Work Study", 13, p.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(p.Role.Value, ""))) = "graduate assistant", 20, 7)
                                     },
                                     {
                                         StaffID:   p.StaffID,
                                         MemberName:p.MemberName,
                                         MemberEmail:p.MemberEmail,
-                                        RoleAbbr:  Switch(p.AidType, "Work Study", "WS", "Graduate Assistant", "GA", "President's Aid", "PA", "-"),
+                                        RoleAbbr:  If(p.AidType = "Work Study", "WS", p.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(p.Role.Value, ""))) = "graduate assistant", "GA", "CSA"),
                                         MonH:      mH,
                                         TueH:      tuH,
                                         WedH:      wH,

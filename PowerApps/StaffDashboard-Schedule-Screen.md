@@ -135,7 +135,7 @@ ClearCollect(
 
 > **What changed:** `StaffID`, `AidType`, and `SchedSortOrder` are added. All shift times are stored in **StaffShifts** — loaded on the Schedule screen, not here. `MemberName` stays as the raw `Member.DisplayName` so dashboard screens and the schedule share the same display name.
 
-> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** (and a successful **Save**) builds a **separate** collection called **`colSchedStaff`** from the in-memory **`colStaff`** roster — **not** a second SharePoint query of **`Staff`**. The filter is the same: active only, role not `"Manager"`, `AidType` ∈ `"Work Study" | "Graduate Assistant" | "President's Aid"`, with a **first + last** normalized `MemberName`. Because **`colStaff` already stores `AidType` as text**, compare **`AidType = "Work Study"`** (not **`AidType.Value`**). That keeps manager or misc staff records out of the schedule grid/ComboBox. **Do not `ClearCollect` into `colStaff` from this screen** — that would silently drop full-time and manager staff from every other dropdown in the app (which all bind to `Items: =colStaff`) until the next app reload. New staff added in SharePoint appear on Schedule after the next **app** reload (same as other dashboard dropdowns).
+> **Schedule screen only:** When users open **`scrSchedule`**, its **`OnVisible`** (and a successful **Save**) builds a **separate** collection called **`colSchedStaff`** from the in-memory **`colStaff`** roster — **not** a second SharePoint query of **`Staff`**. The filter is the same: active only, **Role** is `"Student Worker"` or `"Graduate Assistant"` (not Manager/Technician), with a **first + last** normalized `MemberName`. Aid type is used for hour caps and the totals abbreviation, not for who appears. Because **`colStaff` already stores `AidType` as text**, hour-cap formulas compare **`AidType = "Work Study"`** (not **`AidType.Value`**). That keeps manager or misc staff records out of the schedule grid/ComboBox. **Do not `ClearCollect` into `colStaff` from this screen** — that would silently drop full-time and manager staff from every other dropdown in the app (which all bind to `Items: =colStaff`) until the next app reload. New staff added in SharePoint appear on Schedule after the next **app** reload (same as other dashboard dropdowns).
 
 ### 1B — Add the colTimeSlots collection
 
@@ -274,11 +274,9 @@ ClearCollect(
         Filter(
             colStaff,
             Active = true &&
-            Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
             (
-                AidType = "Work Study" ||
-                AidType = "Graduate Assistant" ||
-                AidType = "President's Aid"
+                Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
             )
         ),
         {
@@ -534,10 +532,11 @@ If(
 =With(
     {
         aidType: drpSchedName.Selected.AidType,
-        maxHrs: Switch(
-            drpSchedName.Selected.AidType,
-            "Work Study",         13,
-            "Graduate Assistant", 20,
+        maxHrs: If(
+            drpSchedName.Selected.AidType = "Work Study",
+            13,
+            drpSchedName.Selected.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(drpSchedName.Selected.Role.Value, ""))) = "graduate assistant",
+            20,
             7
         ),
         mins: Sum(
@@ -563,9 +562,10 @@ If(
 
 ```
 =With(
-    {maxHrs: Switch(drpSchedName.Selected.AidType,
-                 "Work Study",         13,
-                 "Graduate Assistant", 20,
+    {maxHrs: If(drpSchedName.Selected.AidType = "Work Study",
+                 13,
+                 drpSchedName.Selected.AidType = "Graduate Assistant" || Lower(Trim(Coalesce(drpSchedName.Selected.Role.Value, ""))) = "graduate assistant",
+                 20,
                  7)},
     If(
         Value(Mid(lblSchedAidInfo.Text, Find("·", lblSchedAidInfo.Text) + 2, 4)) > maxHrs,
@@ -903,11 +903,9 @@ If(
                     Filter(
                         colStaff,
                         Active = true &&
-                        Lower(Trim(Coalesce(Role.Value, ""))) <> "manager" &&
                         (
-                            AidType = "Work Study" ||
-                            AidType = "Graduate Assistant" ||
-                            AidType = "President's Aid"
+                            Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                            Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
                         )
                     ),
                     {
@@ -1069,7 +1067,7 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 - Select your name from the ComboBox (`Select Your Name` placeholder when empty)
 - In the gallery, set Day **Monday**, Start **9:00 AM**, End **1:00 PM**
 - Click **+ Add shift** and add **Wednesday** 10:00 AM – 2:00 PM
-- Hour counter should show "8 / 13 hrs" (or "8 / 7 hrs" for President's Aid), etc.
+- Hour counter should show "8 / 13 hrs" (or "8 / 7 hrs" for Chancellor's Student Aid), etc.
 - Click **Save Schedule**
 - Grid should update with your colored blocks
 
@@ -1324,7 +1322,9 @@ To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in
 | **conSchedScrollBody.Items** | Docs previously showed `=[1]`; live app uses **`=[varSchedScrollVersion]`** as the gallery refresh key. |
 | **TemplateSize** | Live formula uses **`(80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28) + Max(CountRows(colSchedStaff), 1) * 28 + 124`**, not `* 30` for slot rows. Updated in this guide. |
 | **Root controls** | Live screen has `recSchedHeader`, `btnSchedBack`, `lblSchedTitle`, **`conSchedScrollBody`** (vertical gallery wrapping the whole scroll body). |
-| **Weekly hour caps (AidType)** | **Apr 30, 2026:** Canvas formulas enforce **Work Study 13**, **President's Aid 7**, **Graduate Assistant 20** hrs/week (`lblSchedAidInfo` + totals `MaxH`). SharePoint stores only `AidType`; numeric caps are fixed in `scrSchedule` YAML. Hour counter turns red over cap; Save does **not** hard-block over-cap (hint only). |
+| **Weekly hour caps (AidType)** | Canvas formulas enforce **Work Study 13**, **Chancellor's Student Aid 7**, **Graduate Assistant 20** hrs/week (`lblSchedAidInfo` + totals `MaxH`). SharePoint stores only `AidType`; numeric caps are fixed in `scrSchedule` YAML. Hour counter turns red over cap; Save does **not** hard-block over-cap (hint only). |
 | **2026-08-14: Roster from memory + simple shift load** | **`OnVisible`** / **Save** rebuild `colSchedStaff` from **`colStaff`** (`AidType` compared as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once (`sr`) then color from **`sr.StaffID`**. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`** (shared owner login — do not use `User().Email`). |
+| **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` choice is **Chancellor's Student Aid**. Hour caps still **WS 13 / CSA 7 / GA 20**; totals abbrev **CSA**. |
+| **2026-08-18: Roster by Role, not AidType text** | **`colSchedStaff`** includes active **Student Worker** and **Graduate Assistant** only. Exact `AidType` string match was dropping CSA people after the rename (Power Apps did not treat the new choice as equal to the formula). |
 
 

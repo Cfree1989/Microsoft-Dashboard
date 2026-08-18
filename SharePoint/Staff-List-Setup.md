@@ -68,7 +68,7 @@ The Staff list manages team member information and role assignments. Power Apps 
 2. **Name:** `AidType`
 3. **Description:** `Financial aid type — determines maximum weekly hours`
 4. **Choices:**
-   - `President's Aid`
+   - `Chancellor's Student Aid`
    - `Work Study`
    - `Graduate Assistant`
 5. **Default value:** Leave blank
@@ -79,23 +79,24 @@ The app uses `AidType` to enforce weekly hour limits:
 
 | Aid Type | Abbrev | Max Hours/Week | Fund (Annual) |
 |----------|--------|----------------|---------------|
-| President's Aid | PA | 7 hrs | $1,550 |
+| Chancellor's Student Aid | CSA | 7 hrs | $1,550 |
 | Work Study | WS | 13 hrs | $3,000 |
 | Graduate Assistant | GA | 20 hrs | — |
 
-> **How WS/PA limits relate to funding:** A rough planning formula is annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr. **Apr 30, 2026:** The Staff Dashboard Schedule screen enforces **fixed** weekly caps in Power Fx (**PA 7**, **WS 13**, **GA 20**). Changing caps requires updating those formulas (see [`PowerApps/StaffDashboard-Schedule-Screen.md`](../PowerApps/StaffDashboard-Schedule-Screen.md)), not this list alone.
+> **How WS/CSA limits relate to funding:** A rough planning formula is annual fund ÷ 2 semesters ÷ 14 weeks ÷ $10/hr. The Staff Dashboard Schedule screen enforces **fixed** weekly caps in Power Fx (**CSA 7**, **WS 13**, **GA 20**). Changing caps requires updating those formulas (see [`PowerApps/StaffDashboard-Schedule-Screen.md`](../PowerApps/StaffDashboard-Schedule-Screen.md)), not this list alone. The choice text must match the canvas filter exactly (`Chancellor's Student Aid`).
 
 ### Column 5: SchedSortOrder (Number)
 
-Controls the left-to-right column order in the schedule grid. The app's reorder arrows update this automatically.
+Controls the left-to-right column order in the schedule grid. Assign a unique number per person (lower = further left). Leave blank until you set an order.
 
 1. Click **+ Add column** → **Number**
 2. **Name:** `SchedSortOrder`
 3. **Description:** `Controls column order in the schedule grid (lower number = further left)`
 4. **Number of decimal places:** 0
-5. **Default value:** `10`
+5. **Default value:** Leave blank (do not default to `10` — a shared default collides with **Enforce unique values**)
 6. **Require that this column contains information:** No
-7. Click **Save**
+7. **Enforce unique values:** Yes (leave blank until you assign an order; multiple blanks are allowed)
+8. Click **Save**
 
 ---
 
@@ -135,7 +136,7 @@ Controls the left-to-right column order in the schedule grid. The app's reorder 
 
 1. Click **Edit in grid view** in the toolbar
 2. For each active staff member, click their `AidType` cell and select:
-   - **President's Aid (PA)** — ~7 hrs/week cap (enforced in app)
+   - **Chancellor's Student Aid (CSA)** — ~7 hrs/week cap (enforced in app)
    - **Work Study (WS)** — ~13 hrs/week cap (enforced in app)
    - **Graduate Assistant (GA)** — ~20 hrs/week cap
    - Leave blank if not on a financial aid program
@@ -164,8 +165,8 @@ This preserves historical records while removing access. Optionally delete or cl
 | Member | Person | Yes | — | Staff member's LSU account |
 | Role | Choice | Yes | — | Manager; Technician; Student Worker |
 | Active | Yes/No | No | Yes | Employment status |
-| AidType | Choice | No | — | President's Aid; Work Study; Graduate Assistant |
-| SchedSortOrder | Number | No | 10 | Left-to-right grid column order |
+| AidType | Choice | No | — | Chancellor's Student Aid; Work Study; Graduate Assistant |
+| SchedSortOrder | Number | No | — | Left-to-right grid column order (unique when filled) |
 
 ---
 
@@ -197,8 +198,8 @@ To clear all shifts at once, open **StaffShifts** in SharePoint and delete rows 
 - [ ] Member column is Person type (required)
 - [ ] Role has choices: Manager, Technician, Student Worker
 - [ ] Active defaults to Yes
-- [ ] AidType has choices: `President's Aid`, `Work Study`, `Graduate Assistant`
-- [ ] `SchedSortOrder` added as Number, default 10, not required
+- [ ] AidType has choices: `Chancellor's Student Aid`, `Work Study`, `Graduate Assistant`
+- [ ] `SchedSortOrder` added as Number, unique when filled, no default, not required
 - [ ] Active Staff and All Staff views created
 - [ ] At least one staff member added for testing
 - [ ] `AidType` populated for all active student workers
