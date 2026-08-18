@@ -90,7 +90,16 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 - **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up.
 - **2026-08-17: LabStatus snapshot (list + Flow J).** Students cannot count `PrintRequests` (item-level security). Build the one-row **LabStatus** list and **Flow J** first: [LabStatus-List-Setup.md](../SharePoint/LabStatus-List-Setup.md), [Flow-(J)-LabStatus-Refresh.md](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md).
-- **2026-08-17: Home Lab today card (staff business).** `conLabToday` sits under the welcome line. `LookUp(LabStatus, Title = "Current")` into `varLabStatus`. Shows BusyLevel pill (Quiet / Typical / Busy / Packed), waiting vs printing, Filament vs Resin waiting, `TypicalWaitText`, optional `StaffMessage`, and `UpdatedAt`. Hours/pickup banners still use `varLabHours` / `varPickupLocation`, now filled from that row when present. Card Height is `0` if the row is missing. Do not count `PrintRequests` for lab-wide totals.
+- **2026-08-18: Home cards square; icons restored.** Header, welcome, nav, My Requests card, and overlay containers use **Radius = 0**. **`conLabToday` and `conSubmitCard` do not set Radius** (Studio default rounding — restored 2026-08-18). Submit/My Requests icons are the original 80px blue **Add** / green **DetailList**. Live Lab today: title **Lab Status:**, Width **620**, BusyLevel pill at **X = 148**. Button/chip radii stay 14.
+- **2026-08-18: Lab Status chip borders.** Classic buttons in **View** drop the chrome, so `BorderColor` / `DisabledBorderColor` never showed. Live chips are **Edit**, `OnSelect = false`, white fill, **2px** `varInputBorderColor` stroke, radius `12`.
+- **2026-08-18: Lab Status + Welcome on one row.** Removed **How it works**. Lab Status is **left**; Welcome is **right**. Submit / My Requests sit under that row.
+- **2026-08-18: Home Studio layout (live).** Welcome **X = 715**, greeting **Size 30** / Height **57** / **Y = 11**. Lab Status **X = 28**. BusyLevel pill **X = 140**, Width **467**. Counts **Size 14**, **Y = 61**, copy is **“N waiting · N printing”** (no “jobs”). Filament **X = 379** / Resin **X = 507**, both **Y = 61**. Wait line centered, **Y = 114**. Action cards **Height = 395**, **Y = 12**; Submit **X = 8**, My Requests **X = 695**. `DropShadow.None` on welcome and action-card row. My Requests card radius omitted again (Studio default).
+- **2026-08-18: Home pickup line.** `varPickupReadyCount` is this student’s **Completed** rows (same identity filter as confirm). `btnNeedsYou` shows confirm first (orange); if none, pickup (green). Visible when either count > 0. My Requests card copy follows the same priority. Recount on Home **OnVisible** and My Requests **Refresh**.
+- **2026-08-18: Submit required labels.** Added `lblDisciplineRequired` and `lblProjectTypeRequired` (`IsBlank(Selected.Value)`). `lblAttachmentsRequired` X/Y sit on `DataCardKey32` (was 955/85). Method/Printer/Color/TigerCard already used field-specific Visible.
+- **2026-08-18: Required tag clip.** `DataCardKey6` / `DataCardKey7` were `Parent.Width - 60`, so “(Required)” started past the card edge and showed as “(Re”. Live widths match the other field names: Discipline **112**, Project Type **135** (Method 79, Printer 78, Color 59, TigerCard 171).
+- **2026-08-18: Submit layout restored.** Dropdowns, field Y, Attachments Size 20, and Printer **Height 200** are back to the original form. Discipline / Project Type “(Required)” use `Min(DataCardKey.Width, 108|128) + 8` so the tag stays next to the title if the FieldName width stretches.
+- **2026-08-18: Submit cards 440.** Visible DataCards are **Width = 440** (were 442). Three 442 cards overflowed the form and clipped “(Required)” into the next column. Hidden Status / StudentEntraId stay **442**. Course Number **Height = 99**. `frmSubmit` border is `varColorBorderLight` / `varInputBorderThickness`. `lblAttachmentsRequired` is **X = 786, Y = 11** (file-picker column), not `DataCardKey32.Width + 5`.
+- **2026-08-18: Messages button alert.** `btnViewMessages` is solid `varColorDanger` (white text) when `LookUp(RequestComments, RequestID = ThisItem.ID)` finds a row; otherwise the blue outline. Label stays **Messages** — no count.
 - **2026-08-17: Item 9 — My Requests filters + filename.** Open / Done / All are a **horizontal gallery** (`galMyRequestTabs`) like Staff `galStatusTabs`: Height 55, TemplateSize 148, TemplatePadding 3, button Width 141 / Size 10 / X 5 / Y 4. Left under the header. Selected uses `ThisItem.Color` (`RGBA(70, 130, 220, 1)`); idle is light gray + 1px border. Counts are this student’s rows. Names stay Open / Done / All.
 - **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
 - **2026-08-17: Item 9 — Lab hours banner.** Home (`lblHoursBanner`) and My Requests (`lblHoursBannerMyRequests`) show a page footer above the nav (not on cards). Copy uses **`varLabHours`** (`Mon–Fri 8:30 AM – 4:30 PM`) and **`varPickupLocation`**. **Open now** (green) weekdays 8:30–4:30 local time; otherwise **Closed now** (orange). Classic button, `DisplayMode.View` (no I-beam). Run **OnStart**.
@@ -329,6 +338,7 @@ Set(varSelectedItem, LookUp(PrintRequests, false));
 
 // Pending estimates waiting for the student to confirm (Home "needs you" line)
 Set(varNeedsConfirmCount, 0);
+Set(varPickupReadyCount, 0);
 
 // === FORM STATE ===
 // Track if user attempted to submit (for showing validation errors)
@@ -566,6 +576,7 @@ RadiusBottomRight: varRadiusXSmall
 | `varMeUPN` | Current user's UPN (sign-in identifier) — used for Person field Claims | Text |
 | `varShowConfirmModal` | ID of item for estimate confirmation (0=hidden) | Number |
 | `varNeedsConfirmCount` | Pending jobs waiting for student OK (Home line) | Number |
+| `varPickupReadyCount` | Completed jobs ready for pickup (Home line) | Number |
 | `varMyRequestsFilter` | My Requests chip: Open, Done, or All | Text |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varShowViewMessagesModal` | ID of item for message history modal (0=hidden) | Number |
@@ -624,17 +635,17 @@ This app uses a **container-based architecture** for clean organization and easy
             btnGetStarted           ← "GET STARTED" (created last - top)
             lblSubmitDesc           ← Description text
             lblSubmitTitle          ← "Submit New Request"
-            icnSubmit               ← Printer icon
+            icnSubmit               ← Add icon
             recSubmitCardBg         ← Card background (created 1st - behind)
-    ▼ conLabToday                   ← Lab today / staff business (created 3rd)
+    ▼ conLabToday                   ← Lab today / staff business (left, aligns with Submit)
         lblLabStaffMessage          ← optional note (hidden if blank)
-        lblLabWait                  ← typical wait sentence
-        lblLabMethodSplit           ← Filament / Resin waiting
-        lblLabCounts                ← waiting · printing
-        btnBusyLevel                ← Quiet / Typical / Busy / Packed pill
-        lblLabUpdated               ← Flow J time
-        lblLabTodayTitle            ← "Lab today"
-    ▼ conWelcome                    ← (created 2nd)
+        lblLabWait                  ← typical wait · Updated
+        lblResinChip                ← Resin N pill
+        lblFilamentChip             ← Filament N pill
+        lblLabCounts                ← N waiting · N printing
+        btnBusyLevel                ← Quiet / Typical / Busy / Packed
+        lblLabTodayTitle            ← "Lab Status:"
+    ▼ conWelcome                    ← (right, same row as Lab Status, aligns with My Requests)
         btnNeedsYou                 ← Pending confirm button (top, hidden if 0)
         lblSubtitle                 ← hidden
         lblWelcome                  ← "Welcome, [Name]!"
@@ -756,7 +767,7 @@ We use **prefixes** to identify control types at a glance:
 
 3. With `scrHome` selected, set these properties:
    - **Fill:** `varColorBg`
-   - **OnVisible:** paste the formula below (loads the LabStatus snapshot, then counts Pending jobs waiting for the student’s OK)
+   - **OnVisible:** paste the formula below (loads the LabStatus snapshot, then counts this student’s Pending-confirm jobs and Completed-pickup jobs)
 
 **⬇️ FORMULA: Paste into scrHome OnVisible**
 
@@ -768,30 +779,43 @@ If(
     Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
     Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
 );
-
-Set(
-    varNeedsConfirmCount,
-    CountRows(
-        Filter(
-            If(
-                !IsBlank(varMeEntraId),
-                Filter(
-                    PrintRequests,
-                    StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                ),
-                Filter(
-                    PrintRequests,
-                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                )
+With(
+    {
+        wMine: If(
+            !IsBlank(varMeEntraId),
+            Filter(
+                PrintRequests,
+                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
             ),
-            Status.Value = "Pending",
-            Not(StudentConfirmed)
+            Filter(
+                PrintRequests,
+                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            )
+        )
+    },
+    Set(
+        varNeedsConfirmCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Pending",
+                Not(StudentConfirmed)
+            )
+        )
+    );
+    Set(
+        varPickupReadyCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Completed"
+            )
         )
     )
 )
 ```
 
-> 💡 Identity match is the same as My Requests. `Not(StudentConfirmed)` runs on that student’s rows only (covers blank and false). The orange Home line is hidden when the count is 0.
+> 💡 Identity match is the same as My Requests. `Not(StudentConfirmed)` runs on that student’s rows only (covers blank and false). Confirm (orange) takes priority over pickup (green). The Home line is hidden when both counts are 0.
 
 > 💡 **Lab today:** `Refresh` + `LookUp` on `LabStatus` is one row. Do **not** `CountRows(Filter(PrintRequests, Status.Value = "Ready to Print"))` — that only counts **this student’s** jobs, not the lab.
 
@@ -874,11 +898,14 @@ Set(
 
 | Property | Value |
 |----------|-------|
-| X | `0` |
-| Y | `varHeaderHeight + 20` |
-| Width | `Parent.Width` |
-| Height | `80` |
+| X | `conActionCards.X + conRequestsCard.X` |
+| Y | `conLabToday.Y` |
+| Width | `conRequestsCard.Width` |
+| Height | `conLabToday.Height` |
 | Fill | `Transparent` |
+| DropShadow | `DropShadow.None` |
+
+> 💡 **Same row as Lab Status:** Welcome sits on the **right**, stacked above My Requests. `X` / `Width` bind to the My Requests card so the column stays aligned when the window resizes. Radius stays **0**.
 
 #### Add Welcome Label
 
@@ -889,13 +916,13 @@ Set(
 | Property | Value |
 |----------|-------|
 | Text | `"Welcome, " & First(Split(varMeName, " ")).Value & "!"` |
-| X | `0` |
-| Y | `0` |
-| Width | `Parent.Width` |
-| Height | `40` |
+| X | `16` |
+| Y | `11` |
+| Width | `Parent.Width - 32` |
+| Height | `57` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `18` |
+| Size | `30` |
 | Color | `varColorText` |
 | Fill | `Color.Transparent` |
 | Align | `Align.Center` |
@@ -927,21 +954,20 @@ Set(
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - Self.Width) / 2` |
-| Y | `lblWelcome.Y + lblWelcome.Height` |
-| Width | `500` |
-| Height | `36` |
+| X | `16` |
+| Y | `lblWelcome.Y + lblWelcome.Height + 4` |
+| Width | `Parent.Width - 32` |
+| Height | `61` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `14` |
-| Color | `varColorWarning` |
+| Color | `If(varNeedsConfirmCount > 0, varColorWarning, varColorSuccess)` |
 | Fill | `Color.Transparent` |
-| HoverFill | `ColorFade(varColorWarning, 85%)` |
-| HoverColor | `varColorWarning` |
-| PressedFill | `ColorFade(varColorWarning, 75%)` |
+| HoverFill | `ColorFade(Self.Color, 85%)` |
+| HoverColor | `Self.Color` |
+| PressedFill | `ColorFade(Self.Color, 75%)` |
 | BorderThickness | `0` |
 | Align | `Align.Center` |
-| Visible | `varNeedsConfirmCount > 0` |
+| Visible | `varNeedsConfirmCount > 0 \|\| varPickupReadyCount > 0` |
 | OnSelect | `Navigate(scrMyRequests, varScreenTransition)` |
 
 > Use a **Button**, not a Label. Labels show the text I-beam cursor; buttons show the hand pointer.
@@ -950,9 +976,17 @@ Set(
 
 ```powerfx
 If(
-    varNeedsConfirmCount = 1,
-    "You have a print waiting for your OK — tap to confirm",
-    "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+    varNeedsConfirmCount > 0,
+    If(
+        varNeedsConfirmCount = 1,
+        "You have a print waiting for your OK — tap to confirm",
+        "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+    ),
+    If(
+        varPickupReadyCount = 1,
+        "You have a print ready for pickup — tap to view",
+        "You have " & varPickupReadyCount & " prints ready for pickup — tap to view"
+    )
 )
 ```
 
@@ -960,9 +994,9 @@ If(
 
 ### 4C: Create Lab Today Card (staff business)
 
-**What you're doing:** Adding a cream card under the welcome line that answers “how busy is the lab?” Students are not allowed to see other people’s `PrintRequests`, so this card reads the one `LabStatus` row named `Current` (written by Flow J).
+**What you're doing:** Adding a cream card on the **left** of the same row as Welcome. Students are not allowed to see other people’s `PrintRequests`, so this card reads the one `LabStatus` row named `Current` (written by Flow J).
 
-> ⚠️ **Build [LabStatus](../SharePoint/LabStatus-List-Setup.md) and [Flow J](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md) first.** If the list is missing, `LookUp` fails and this card stays hidden (`Height` = `0`).
+> ⚠️ **Build [LabStatus](../SharePoint/LabStatus-List-Setup.md) and [Flow J](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md) first.** If the list is missing, counts show as 0 / —. The card still keeps its height so Welcome stays aligned on the right.
 
 > 💡 **What students see:** Quiet / Typical / Busy / Packed, how many jobs are waiting vs printing, Filament vs Resin waiting, a typical-wait sentence, and an optional staff note. They never see other students’ names, files, or ReqKeys.
 
@@ -972,20 +1006,15 @@ If(
 
 | Property | Value |
 |----------|-------|
-| X | `varSpacingXL` |
-| Y | `conWelcome.Y + conWelcome.Height + 8` |
-| Width | `Parent.Width - (varSpacingXL * 2)` |
-| Height | `If(IsBlank(varLabStatus), 0, If(IsBlank(varLabStatus.StaffMessage), 88, 118))` |
+| X | `conActionCards.X + conSubmitCard.X` |
+| Y | `varHeaderHeight + 20` |
+| Width | `conSubmitCard.Width` |
+| Height | `If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)` |
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
-| Visible | `!IsBlank(varLabStatus)` |
 
-> 💡 **Height = 0 when missing:** `Visible = false` still occupies space in canvas apps. Collapsing Height lets the action cards move up. Keep **Y** even when Height is 0.
+> 💡 **Same row as Welcome:** Lab Status is **left** (`X` / `Width` bind to Submit). Welcome is **right**. Height stays **148 / 178**. Do **not** set Radius on this container — omit it so Studio’s default rounding applies (`conSubmitCard` is the same).
 
 #### Add title
 
@@ -995,55 +1024,29 @@ If(
 
 | Property | Value |
 |----------|-------|
-| Text | `"Lab today"` |
+| Text | `"Lab Status:"` |
 | X | `16` |
-| Y | `10` |
-| Width | `150` |
-| Height | `22` |
+| Y | `12` |
+| Width | `124` |
+| Height | `28` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
-| Size | `12` |
+| Size | `14` |
 | Color | `varColorText` |
 
-#### Add updated time
+#### Add BusyLevel pill (top right)
 
-34. Click **+ Insert** → **Text label**.
-35. **Rename it:** `lblLabUpdated`
+34. Click **+ Insert** → **Button** (Classic).
+35. **Rename it:** `btnBusyLevel`
 36. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| X | `16` |
-| Y | `32` |
-| Width | `150` |
-| Height | `18` |
-| Font | `varAppFont` |
-| Size | `10` |
-| Color | `varColorTextMuted` |
-
-**⬇️ FORMULA: Paste into lblLabUpdated Text**
-
-```powerfx
-If(
-    IsBlank(varLabStatus.UpdatedAt),
-    "",
-    "Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
-)
-```
-
-#### Add BusyLevel pill
-
-37. Click **+ Insert** → **Button** (Classic).
-38. **Rename it:** `btnBusyLevel`
-39. Set these properties:
-
-| Property | Value |
-|----------|-------|
 | DisplayMode | `DisplayMode.View` |
-| X | `16` |
-| Y | `52` |
-| Width | `90` |
-| Height | `26` |
+| X | `lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM` |
+| Y | `12` |
+| Width | `Parent.Width - (lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM) - 16` |
+| Height | `28` |
 | Size | `11` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
@@ -1098,10 +1101,10 @@ If(
 
 | Property | Value |
 |----------|-------|
-| X | `180` |
-| Y | `14` |
-| Width | `420` |
-| Height | `26` |
+| X | `16` |
+| Y | `61` |
+| Width | `lblFilamentChip.X - Self.X - varSpacingSM` |
+| Height | `28` |
 | Font | `varAppFont` |
 | FontWeight | `FontWeight.Semibold` |
 | Size | `14` |
@@ -1110,34 +1113,26 @@ If(
 **⬇️ FORMULA: Paste into lblLabCounts Text**
 
 ```powerfx
-Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+If(
+    Coalesce(varLabStatus.JobsWaiting, 0) = 1,
+    "1 waiting",
+    Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
+) & "  ·  " & If(
+    Coalesce(varLabStatus.JobsPrinting, 0) = 1,
+    "1 printing",
+    Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+)
 ```
 
-#### Add Filament / Resin split
+#### Add Filament / Resin chips
 
-43. Click **+ Insert** → **Text label**.
-44. **Rename it:** `lblLabMethodSplit`
-45. Set these properties:
+43. Click **+ Insert** → **Button** (Classic). Rename it `lblFilamentChip`.
+44. Click **+ Insert** → **Button** (Classic). Rename it `lblResinChip`.
+45. Both chips: Height `28`, Size `11`, Fill `Color.White`, radius `12`, Color `varColorText`, **Y `61`**. **Do not use DisplayMode.View**. Use **Edit**, `OnSelect` `false`, `TabIndex` `-1`. Border: thickness `2`, `BorderColor` / Hover / Pressed / Focused all `varInputBorderColor`. Filament: Width `120`, X `lblResinChip.X - Self.Width - varSpacingSM`. Resin: Width `100`, X `Parent.Width - 16 - Self.Width`.
 
-| Property | Value |
-|----------|-------|
-| X | `180` |
-| Y | `44` |
-| Width | `420` |
-| Height | `22` |
-| Font | `varAppFont` |
-| Size | `11` |
-| Color | `varColorTextMuted` |
+> 💡 These chips are **waiting** (Ready to Print) only. Printing is the total on the line above. Labels cannot round corners — use Classic buttons in View mode. Do not show `ManualOverride`.
 
-**⬇️ FORMULA: Paste into lblLabMethodSplit Text**
-
-```powerfx
-"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0) & " waiting  ·  Resin " & Coalesce(varLabStatus.ResinWaiting, 0) & " waiting"
-```
-
-> 💡 This split is **waiting** (Ready to Print) only. Printing is the total on the line above. Do not show `ManualOverride`.
-
-#### Add typical-wait sentence
+#### Add typical-wait footer
 
 46. Click **+ Insert** → **Text label**.
 47. **Rename it:** `lblLabWait`
@@ -1145,13 +1140,14 @@ Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus
 
 | Property | Value |
 |----------|-------|
-| X | `620` |
-| Y | `14` |
-| Width | `Parent.Width - 636` |
-| Height | `64` |
+| X | `16` |
+| Y | `114` |
+| Width | `Parent.Width - 32` |
+| Height | `29` |
 | Font | `varAppFont` |
-| Size | `11` |
+| Size | `10` |
 | Color | `varColorTextMuted` |
+| Align | `Align.Center` |
 | Wrap | `true` |
 
 **⬇️ FORMULA: Paste into lblLabWait Text**
@@ -1160,6 +1156,10 @@ Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus
 Coalesce(
     varLabStatus.TypicalWaitText,
     "Typical wait after you confirm: 1–3 lab days"
+) & If(
+    IsBlank(varLabStatus.UpdatedAt),
+    "",
+    "  ·  Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
 )
 ```
 
@@ -1174,7 +1174,7 @@ Coalesce(
 | Property | Value |
 |----------|-------|
 | X | `16` |
-| Y | `88` |
+| Y | `144` |
 | Width | `Parent.Width - 32` |
 | Height | `24` |
 | Font | `varAppFont` |
@@ -1206,9 +1206,9 @@ Coalesce(
 | Property | Value |
 |----------|-------|
 | X | `varSpacingXL` |
-| Y | `conLabToday.Y + conLabToday.Height + 10` |
+| Y | `conLabToday.Y + conLabToday.Height + 12` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
-| Height | `350` |
+| Height | `lblHoursBanner.Y - Self.Y - 12` |
 | Fill | `Transparent` |
 
 ---
@@ -1221,27 +1221,23 @@ Coalesce(
 
 | Property | Value |
 |----------|-------|
-| X | `0` |
-| Y | `0` |
-| Width | `(Parent.Width - 80) / 2` |
-| Height | `Parent.Height` |
+| X | `varSpacingSM` |
+| Y | `varSpacingMD` |
+| Width | `(Parent.Width - varSpacingSM * 2 - varSpacingXL) / 2` |
+| Height | `Parent.Height - varSpacingMD * 2` |
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
 
 #### Add Submit Icon
 
-30. With `conSubmitCard` selected, click **+ Insert** → **Icons** → **Add** (or use a relevant icon like "Upload" or "Document").
+30. With `conSubmitCard` selected, click **+ Insert** → **Icons** → **Add**.
 31. **Rename it:** `icnSubmit`
 32. Set these properties:
 
 | Property | Value |
 |----------|-------|
-| Icon | `Icon.Add` (or `Icon.Upload`) |
+| Icon | `Icon.Add` |
 | X | `(Parent.Width - 80) / 2` |
 | Y | `40` |
 | Width | `80` |
@@ -1358,21 +1354,17 @@ Navigate(scrSubmit, varScreenTransition)
 
 | Property | Value |
 |----------|-------|
-| X | `Parent.Width - conSubmitCard.Width` |
-| Y | `0` |
-| Width | `(Parent.Width - 80) / 2` |
-| Height | `Parent.Height` |
+| X | `conSubmitCard.X + conSubmitCard.Width + varSpacingXL` |
+| Y | `varSpacingMD` |
+| Width | `(Parent.Width - varSpacingSM * 2 - varSpacingXL) / 2` |
+| Height | `Parent.Height - varSpacingMD * 2` |
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
-| RadiusTopLeft | `varRadiusMedium` |
-| RadiusTopRight | `varRadiusMedium` |
-| RadiusBottomLeft | `varRadiusMedium` |
-| RadiusBottomRight | `varRadiusMedium` |
 
 #### Add Requests Icon
 
-47. With `conRequestsCard` selected, click **+ Insert** → **Icons** → **DetailList** (or similar list icon).
+47. With `conRequestsCard` selected, click **+ Insert** → **Icons** → **DetailList**.
 48. **Rename it:** `icnRequests`
 49. Set these properties:
 
@@ -1412,7 +1404,29 @@ Navigate(scrSubmit, varScreenTransition)
 
 | Property | Value |
 |----------|-------|
-| Text | `If(varNeedsConfirmCount > 0, If(varNeedsConfirmCount = 1, "1 estimate waiting for your OK", varNeedsConfirmCount & " estimates waiting for your OK"), "View status, confirm estimates, or manage your existing requests")` |
+| Text | See formula below |
+
+**⬇️ FORMULA: Paste into lblRequestsDesc Text**
+
+```powerfx
+If(
+    varNeedsConfirmCount > 0,
+    If(
+        varNeedsConfirmCount = 1,
+        "1 estimate waiting for your OK",
+        varNeedsConfirmCount & " estimates waiting for your OK"
+    ),
+    If(
+        varPickupReadyCount > 0,
+        If(
+            varPickupReadyCount = 1,
+            "1 print ready for pickup",
+            varPickupReadyCount & " prints ready for pickup"
+        ),
+        "View status, confirm estimates, or manage your existing requests"
+    )
+)
+```
 | X | `varSpacingLG` |
 | Y | `lblRequestsTitle.Y + lblRequestsTitle.Height + 8` |
 | Width | `Parent.Width - (varSpacingLG * 2)` |
@@ -1639,10 +1653,10 @@ Your Tree view should now look like this (first-created at bottom, last-created 
     ▼ conLabToday
         lblLabStaffMessage
         lblLabWait
-        lblLabMethodSplit
+        lblResinChip
+        lblFilamentChip
         lblLabCounts
         btnBusyLevel
-        lblLabUpdated
         lblLabTodayTitle
     ▼ conWelcome
         btnNeedsYou
@@ -1973,6 +1987,8 @@ In Tree view, ensure controls inside `conLoadingOverlay` are ordered:
 | Y | `varSpacingXL` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `Parent.Height - (varSpacingXL * 2) - 120` |
+| BorderColor | `varColorBorderLight` |
+| BorderThickness | `varInputBorderThickness` |
 
 7. After setting the DataSource, Power Apps will **auto-generate DataCards** for all columns in PrintRequests.
 
@@ -1983,6 +1999,8 @@ In Tree view, ensure controls inside `conLoadingOverlay` are ordered:
 ### 6C: Configure Form Fields
 
 Now we'll configure which fields are visible and how they behave.
+
+> **Card width:** Set every **visible** DataCard **Width** to `440`. Three `442` cards overflow the form and clip “(Required)” into the next column. Hidden Status / StudentEntraId can stay `442`.
 
 #### Open the Fields Panel
 
@@ -2303,7 +2321,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 #### Course Number_DataCard1
 
-40. Expand `Course Number_DataCard1` in Tree view.
+40. Expand `Course Number_DataCard1` in Tree view. Set the **card** **Height** to `99` and **Width** to `440` (same Width as the other visible Submit cards).
 41. Click on the **TextInput control inside**.
 42. Set these properties:
 
@@ -2345,6 +2363,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 | SelectionColor | `varDropdownSelectionColor` |
 
 > ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
+
+45b. Click `DataCardKey6` (the “Discipline” field name). Set **Width** to `112` — not `Parent.Width - 60`, or the Required tag clips.
 
 46. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
 47. Set these properties:
@@ -2399,6 +2419,8 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 |----------|-------|
 | DisplayName | `"Project Type"` |
 | Required | `true` |
+
+50b. Click `DataCardKey7` (the “Project Type” field name). Set **Width** to `135` — not `Parent.Width - 60`.
 
 > 💡 **Why required?** Project Type (e.g., Class Project, Personal, Research) helps staff understand urgency and billing context.
 
@@ -2726,6 +2748,46 @@ Switch(
 
 For each required field below, add a new label inside the DataCard positioned next to the field name.
 
+#### Discipline Required Label
+
+1. Expand `Discipline_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblDisciplineRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey6.X + Min(DataCardKey6.Width, 108) + 8` |
+| Y | `DataCardKey6.Y` |
+| Width | `85` |
+| Height | `DataCardKey6.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `IsBlank(DataCardValue6.Selected.Value)` |
+
+#### Project Type Required Label
+
+1. Expand `ProjectType_DataCard1` in Tree view.
+2. Click **+ Insert** → **Text label**.
+3. **Rename it:** `lblProjectTypeRequired`
+4. Set these properties:
+
+| Property | Value |
+|----------|-------|
+| Text | `"(Required)"` |
+| X | `DataCardKey7.X + Min(DataCardKey7.Width, 128) + 8` |
+| Y | `DataCardKey7.Y` |
+| Width | `85` |
+| Height | `DataCardKey7.Height` |
+| Color | `varColorDanger` |
+| Font | `varAppFont` |
+| FontStyle | `FontStyle.Italic` |
+| Size | `12` |
+| Visible | `IsBlank(DataCardValue7.Selected.Value)` |
+
 #### TigerCardNumber Required Label
 
 1. Expand `TigerCardNumber_DataCard1` in Tree view.
@@ -2816,8 +2878,8 @@ For each required field below, add a new label inside the DataCard positioned ne
 | Property | Value |
 |----------|-------|
 | Text | `"(Required)"` |
-| X | `DataCardKey32.X + DataCardKey32.Width + 5` |
-| Y | `DataCardKey32.Y` |
+| X | `786` |
+| Y | `11` |
 | Width | `85` |
 | Height | `DataCardKey32.Height` |
 | Color | `varColorDanger` |
@@ -2827,6 +2889,8 @@ For each required field below, add a new label inside the DataCard positioned ne
 | Visible | `CountRows(DataCardValue31.Attachments) = 0` |
 
 > 💡 **How it works:** Each "(Required)" label is positioned right after the field name and only shows when the field is empty. The red italic text provides clear visual feedback that disappears as students complete each required field.
+
+> ⚠️ **Field name width:** `DataCardKey` must be sized to the word, not `Parent.Width - 60`. Otherwise the Required label starts past the card edge and clips to “(Re”. Live: Discipline **112**, Project Type **135**, Method **79**, Printer **78**, Color **59**, TigerCard Number **171**. Discipline / Project Type also cap the tag X with `Min(DataCardKey.Width, 108|128) + 8`. Visible Submit DataCards are **Width = 440** (not 442) so three columns fit without covering the tag.
 
 ---
 
@@ -3431,6 +3495,40 @@ If(
     Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
     Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
 );
+With(
+    {
+        wMine: If(
+            !IsBlank(varMeEntraId),
+            Filter(
+                PrintRequests,
+                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            ),
+            Filter(
+                PrintRequests,
+                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            )
+        )
+    },
+    Set(
+        varNeedsConfirmCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Pending",
+                Not(StudentConfirmed)
+            )
+        )
+    );
+    Set(
+        varPickupReadyCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Completed"
+            )
+        )
+    )
+);
 Notify("Requests refreshed!", NotificationType.Information)
 ```
 
@@ -3823,7 +3921,20 @@ Set(varShowCancelModal, ThisItem.ID)
 
 #### Action: Messages Button (Read-only thread)
 
-38b. Click **+ Insert** → **Button**. Rename it `btnViewMessages`. Place it to the right of Cancel (`X = 172`, `Y = 218`, `Width = 110`, `Height = varBtnHeight`). White fill, `varColorPrimary` border and text (Staff Files style). Visible on every card.
+38b. Click **+ Insert** → **Button**. Rename it `btnViewMessages`. Place it to the right of Cancel (`X = 172`, `Y = 218`, `Width = 110`, `Height = varBtnHeight`). Visible on every card. **Text stays `"Messages"`** — do not put a count on the button.
+
+| Property | Value |
+|----------|-------|
+| Text | `"Messages"` |
+| Fill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), varColorDanger, Color.White)` |
+| Color | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), Color.White, varColorPrimary)` |
+| BorderColor | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), varColorDanger, varColorPrimary)` |
+| BorderThickness | `varInputBorderThickness` |
+| HoverFill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -15%), varColorPrimary)` |
+| HoverColor | `Color.White` |
+| HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
+| PressedFill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -25%), ColorFade(varColorPrimary, -15%))` |
+| Size | `10` |
 
 38c. Set **OnSelect:**
 
@@ -4428,6 +4539,7 @@ scrHome
 2. Verify:
    - [ ] Home screen appears as the landing page
    - [ ] Welcome message shows your name ("Welcome, [Your Name]!")
+   - [ ] With no Pending-confirm and no Completed jobs, the “needs you” line is hidden
    - [ ] Two cards are visible: "Submit New Request" and "My Requests"
    - [ ] "OR" divider appears between cards
 3. Click "GET STARTED" button
@@ -4444,6 +4556,7 @@ scrHome
    - [ ] Student Name shows your name
    - [ ] Student Email shows your email
 3. Fill in required fields:
+   - [ ] Red “(Required)” appears next to Discipline, Project Type, Method, Printer, Color, Tiger Card, and Attachments until each is filled
    - [ ] Tiger Card Number
    - [ ] Discipline
    - [ ] Project Type
@@ -4482,11 +4595,13 @@ scrHome
 3. Verify:
    - [ ] Request shows estimated cost
    - [ ] Green "CONFIRM ESTIMATE" button appears
+   - [ ] Home “needs you” line is orange and says the print is waiting for OK
 4. Click the button
 5. Verify:
    - [ ] Modal shows estimate details
    - [ ] Click "I CONFIRM" → StudentConfirmed becomes true
    - [ ] Flow B should automatically change status to "Ready to Print"
+   - [ ] After confirming, the orange Home line hides (unless another job still needs OK)
 
 ### Test 6: Different Status States
 
@@ -4494,6 +4609,8 @@ Have staff move a request through different statuses and verify:
 - [ ] Ready to Print: Shows "in queue" message
 - [ ] Printing: Shows "in progress" message
 - [ ] Completed: Shows pickup instructions
+- [ ] Home “needs you” line is green (“ready for pickup”) when this student has a Completed job and no Pending-confirm jobs
+- [ ] My Requests **Messages** is red with white text when that job has any `RequestComments`; blue outline with no count when it does not
 - [ ] Paid & Picked Up: Shows completion date
 
 ### Test 7: Home Lab today (staff business)
@@ -4970,6 +5087,7 @@ Set(varShowConfirmModal, 0);
 Set(varShowCancelModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
 Set(varNeedsConfirmCount, 0);
+Set(varPickupReadyCount, 0);
 Set(varSubmitAttempted, false);  // For validation message display
 Set(varInvalidFiles, Table());   // Files with invalid names
 Set(varHasInvalidFile, false);   // Quick check for submit button
@@ -5017,7 +5135,29 @@ If(
 **conLabToday Height:**
 
 ```powerfx
-If(IsBlank(varLabStatus), 0, If(IsBlank(varLabStatus.StaffMessage), 88, 118))
+If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)
+```
+
+**Align Lab Status (left) and Welcome (right) to the action cards:**
+
+```powerfx
+// conSubmitCard / conRequestsCard (equal columns)
+X left: varSpacingSM
+X right: conSubmitCard.X + conSubmitCard.Width + varSpacingXL
+Width: (Parent.Width - varSpacingSM * 2 - varSpacingXL) / 2
+Height: Parent.Height - varSpacingMD * 2
+Y: varSpacingMD
+
+// conLabToday
+X: conActionCards.X + conSubmitCard.X
+Y: varHeaderHeight + 20
+Width: conSubmitCard.Width
+
+// conWelcome
+X: conActionCards.X + conRequestsCard.X
+Y: conLabToday.Y
+Width: conRequestsCard.Width
+Height: conLabToday.Height
 ```
 
 **btnBusyLevel Fill / Color / Text:**
@@ -5037,20 +5177,28 @@ If(varLabStatus.BusyLevel.Value = "Typical", RGBA(0, 0, 0, 1), Color.White)
 Coalesce(varLabStatus.BusyLevel.Value, "—")
 ```
 
-**Counts and method split:**
+**Counts and chips:**
 
 ```powerfx
-Coalesce(varLabStatus.JobsWaiting, 0) & " waiting  ·  " & Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+If(
+    Coalesce(varLabStatus.JobsWaiting, 0) = 1,
+    "1 waiting",
+    Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
+) & "  ·  " & If(
+    Coalesce(varLabStatus.JobsPrinting, 0) = 1,
+    "1 printing",
+    Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+)
 
-"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0) & " waiting  ·  Resin " & Coalesce(varLabStatus.ResinWaiting, 0) & " waiting"
+"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0)
+"Resin " & Coalesce(varLabStatus.ResinWaiting, 0)
 ```
 
-**Typical wait and staff note:**
+**Typical wait footer:**
 
 ```powerfx
 Coalesce(varLabStatus.TypicalWaitText, "Typical wait after you confirm: 1–3 lab days")
-
-varLabStatus.StaffMessage
+    & If(IsBlank(varLabStatus.UpdatedAt), "", "  ·  Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime))
 ```
 
 `lblLabStaffMessage.Visible` = `!IsBlank(varLabStatus.StaffMessage)`
@@ -5226,10 +5374,12 @@ Separate "(Required)" labels positioned next to field names. Common properties:
 | Label | DataCard | Position X | Position Y | Height | Visible |
 |-------|----------|------------|------------|--------|---------|
 | `lblTigerCardRequired` | TigerCardNumber | `DataCardKey31.X + DataCardKey31.Width + 5` | `DataCardKey31.Y` | `DataCardKey31.Height` | `Len(DataCardValue30.Text) <> 16` |
+| `lblDisciplineRequired` | Discipline | `DataCardKey6.X + Min(DataCardKey6.Width, 108) + 8` | `DataCardKey6.Y` | `DataCardKey6.Height` | `IsBlank(DataCardValue6.Selected.Value)` |
+| `lblProjectTypeRequired` | Project Type | `DataCardKey7.X + Min(DataCardKey7.Width, 128) + 8` | `DataCardKey7.Y` | `DataCardKey7.Height` | `IsBlank(DataCardValue7.Selected.Value)` |
 | `lblMethodRequired` | Method | `DataCardKey8.X + DataCardKey8.Width + 5` | `DataCardKey8.Y` | `DataCardKey8.Height` | `IsBlank(DataCardValue8.Selected.Value)` |
 | `lblPrinterRequired` | Printer | `DataCardKey10.X + DataCardKey10.Width + 5` | `DataCardKey10.Y` | `DataCardKey10.Height` | `IsBlank(DataCardValue10.Selected.Value)` |
 | `lblColorRequired` | Color | `DataCardKey9.X + DataCardKey9.Width + 5` | `DataCardKey9.Y` | `DataCardKey9.Height` | `IsBlank(DataCardValue9.Selected.Value)` |
-| `lblAttachmentsRequired` | Attachments | `DataCardKey32.X + DataCardKey32.Width + 5` | `DataCardKey32.Y` | `DataCardKey32.Height` | `CountRows(DataCardValue31.Attachments) = 0` |
+| `lblAttachmentsRequired` | Attachments | `786` | `11` | `DataCardKey32.Height` | `CountRows(DataCardValue31.Attachments) = 0` |
 
 ## My Requests Gallery Items
 

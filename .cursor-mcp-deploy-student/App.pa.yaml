@@ -41,6 +41,8 @@ App:
 
       // Pending estimates waiting for the student to confirm (Home "needs you" line)
       Set(varNeedsConfirmCount, 0);
+      // Completed jobs waiting at the window (Home pickup line)
+      Set(varPickupReadyCount, 0);
 
       // My Requests status chips: Open | Done | All
       Set(varMyRequestsFilter, "Open");
@@ -137,6 +139,15 @@ App:
       Set(varPickupLocation, "Room 113 Art Building");
       Set(varPaymentMethod, "TigerCASH only");
       Set(varLabHours, "Mon–Fri 8:30 AM – 4:30 PM");
+
+      // === LAB STATUS SNAPSHOT ===
+      // One student-readable row. Do not CountRows(PrintRequests) for lab-wide totals.
+      Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+      If(
+          !IsBlank(varLabStatus),
+          Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+          Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+      );
 
       // === DATE/TIME FORMATS ===
       Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"

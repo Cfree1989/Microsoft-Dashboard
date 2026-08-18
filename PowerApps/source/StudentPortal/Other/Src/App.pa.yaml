@@ -1,11 +1,3 @@
-# ************************************************************************************************
-# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
-# Use the maker portal to create and edit your Power Apps.
-# 
-# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
-# 
-# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
-# ************************************************************************************************
 App:
   Properties:
     OnStart: |-
@@ -36,21 +28,26 @@ App:
       // UPN (for SharePoint Person field Claims - must use sign-in identifier)
       Set(varMeUPN, Lower(User().Email));
 
-      // === UI STATE VARIABLES ===
-      // Current screen/page
-      Set(varCurrentScreen, "Home");
-
       // === MODAL CONTROLS ===
       // These control which modal is visible (0 = hidden, ID = visible for that item)
       Set(varShowConfirmModal, 0);
       Set(varShowCancelModal, 0);
+      Set(varShowViewMessagesModal, 0);
+      Set(varShowFilesModal, 0);
+      Set(varMessageBubbleWidth, 0.85);
 
       // Currently selected item for modals (typed blank so Power Apps knows the schema)
       Set(varSelectedItem, LookUp(PrintRequests, false));
 
+      // Pending estimates waiting for the student to confirm (Home "needs you" line)
+      Set(varNeedsConfirmCount, 0);
+      // Completed jobs waiting at the window (Home pickup line)
+      Set(varPickupReadyCount, 0);
+
+      // My Requests status chips: Open | Done | All
+      Set(varMyRequestsFilter, "Open");
+
       // === FORM STATE ===
-      // Track if form has been submitted successfully
-      Set(varFormSubmitted, false);
       // Track if user attempted to submit (for showing validation errors)
       Set(varSubmitAttempted, false);
       // Track files with invalid names (populated by Attachments OnAddFile/OnRemoveFile)
@@ -59,14 +56,6 @@ App:
 
       // === LOADING STATE ===
       Set(varIsLoading, false);
-
-      // === PRICING CONFIGURATION ===
-      // Matches Staff Dashboard (SharePoint stores estimates; vars kept for parity / future UI)
-      Set(varFilamentRate, 0.10);
-      Set(varResinDensity, 1.11);
-      Set(varResinGramRate, 0.30);
-      Set(varResinRate, varResinDensity * varResinGramRate);
-      Set(varMinimumCost, 3.00);
 
       // ============================================
       // === STYLING / THEMING (Centralized) ===
@@ -87,38 +76,28 @@ App:
       // === COLOR HOVER/PRESSED STATES ===
       Set(varColorPrimaryHover, ColorFade(varColorPrimary, -15%));
       Set(varColorPrimaryPressed, ColorFade(varColorPrimary, -25%));
-      Set(varColorSuccessHover, ColorFade(varColorSuccess, -15%));
-      Set(varColorDangerHover, ColorFade(varColorDanger, -15%));
 
       // === UI NEUTRAL COLORS ===
-      Set(varColorHeader, Color.Transparent);            // Header background
+      Set(varColorHeader, RGBA(77, 77, 77, 1));          // Header background (matches Staff Console)
       Set(varNavBtnInactiveFill, RGBA(128, 128, 128, 1));  // Nav button inactive state
       Set(varNavBtnHoverFill, RGBA(90, 90, 90, 1));      // Nav button hover state
       Set(varColorText, RGBA(50, 50, 50, 1));            // Primary text
       Set(varColorTextMuted, RGBA(100, 100, 100, 1));    // Secondary/muted text
-      Set(varColorTextLight, RGBA(150, 150, 150, 1));    // Hint text
       Set(varColorBg, RGBA(248, 248, 248, 1));           // Screen background
       Set(varColorBgCard, RGBA(247, 237, 223, 1));        // Card/modal background (warm cream)
-      Set(varColorBorder, RGBA(200, 200, 200, 1));       // Input borders
       Set(varColorBorderLight, RGBA(220, 220, 220, 1)); // Card borders
-      Set(varSecondaryBtnBorderColor, RGBA(166, 166, 166, 1)); // Secondary button borders
       Set(varColorOverlay, RGBA(0, 0, 0, 0.7));          // Modal overlay
       Set(varColorDisabled, RGBA(180, 180, 180, 1));    // Disabled state
 
       // --- BORDER RADIUS ---
-      Set(varRadiusLarge, 12);    // Modals
       Set(varRadiusMedium, 8);    // Cards, large buttons
       Set(varRadiusSmall, 6);     // Standard buttons
-      Set(varRadiusXSmall, 4);    // Inputs, small buttons
-      Set(varRadiusPill, 14);     // Status badges (pill shape)
 
       // --- BUTTON STYLING (Unified with Staff Dashboard) ---
       Set(varBtnBorderRadius, 4);                        // Standard corner radius
-      Set(varBtnBorderRadiusPill, 20);                   // Pill shape for tabs
       Set(varBtnFontSize, 12);
       Set(varBtnHeight, 36);
       Set(varBtnHeightLarge, 50);                        // Large buttons (CTAs)
-      Set(varBtnHeightSmall, 40);                        // Navigation buttons
       Set(varSecondaryFade, 70%);                        // Secondary button fill lightness
 
       // --- FOCUS STYLING ---
@@ -129,26 +108,19 @@ App:
       // Cleaner borders than Power Apps defaults - gray instead of themed colors
       Set(varInputBorderColor, RGBA(128, 128, 128, 1));  // Gray border
       Set(varInputBorderThickness, 1);                   // Thin border
-      Set(varInputHoverFill, RGBA(255, 255, 255, 1));    // White on hover
-      Set(varInputBorderRadius, 4);                      // Match button radius
-      Set(varInputFontSize, 12);                         // Standard input text size
 
       // --- DROPDOWN/COMBOBOX STYLING ---
-      // Custom chevron and selection colors for a polished look
       Set(varChevronBackground, RGBA(128, 128, 128, 1));     // Gray chevron background
       Set(varChevronFill, RGBA(255, 255, 255, 1));           // White chevron arrow
       Set(varChevronHoverBackground, RGBA(128, 128, 128, 1));
       Set(varChevronHoverFill, RGBA(219, 219, 219, 1));      // Light gray on hover
-      Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover
+      Set(varDropdownHoverFill, RGBA(219, 219, 219, 1));     // Light gray row hover (Staff Console)
       Set(varDropdownPressedFill, RGBA(128, 128, 128, 1));   // Gray when pressed
       Set(varDropdownPressedColor, RGBA(255, 255, 255, 1)); // White text when pressed
-      Set(varDropdownSelectionFill, RGBA(219, 219, 219, 1)); // Light gray selected row background
-      Set(varDropdownSelectionColor, varColorText); // Dark text so selected items remain readable
 
       // --- SIZING (Tablet Layout) ---
-      Set(varHeaderHeight, 60);   // Top header bar
+      Set(varHeaderHeight, 55);   // Top header bar (matches Staff Console recHeader)
       Set(varNavHeight, 60);      // Bottom navigation bar
-      Set(varInputHeight, 45);    // Standard input field height
       Set(varButtonHeight, 50);   // Primary button height (legacy alias)
       Set(varButtonHeightSmall, 40); // Secondary button height (legacy alias)
 
@@ -157,24 +129,30 @@ App:
       Set(varSpacingLG, 16);      // Card padding
       Set(varSpacingMD, 12);      // Form field gaps
       Set(varSpacingSM, 8);       // Small gaps
-      Set(varSpacingXS, 4);       // Tiny gaps
 
       // === GALLERY DIMENSIONS ===
-      Set(varRequestCardHeight, 280);                    // My Requests gallery template size
+      Set(varRequestCardHeight, 300);                    // My Requests gallery template (Staff-like card rows)
 
       // === CONTACT INFORMATION ===
       // Update these when location or contact details change
       Set(varSupportEmail, "coad-fablab@lsu.edu");
       Set(varPickupLocation, "Room 113 Art Building");
       Set(varPaymentMethod, "TigerCASH only");
+      Set(varLabHours, "Mon–Fri 8:30 AM – 4:30 PM");
+
+      // === LAB STATUS SNAPSHOT ===
+      // One student-readable row. Do not CountRows(PrintRequests) for lab-wide totals.
+      Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+      If(
+          !IsBlank(varLabStatus),
+          Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+          Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+      );
 
       // === DATE/TIME FORMATS ===
-      // Consistent date formatting across the app
       Set(varDateFormatShort, "mmm d, yyyy");            // e.g., "Feb 20, 2026"
-      Set(varDateFormatFull, "mmmm d, yyyy h:mm AM/PM"); // e.g., "February 20, 2026 3:45 PM"
 
       // === NAVIGATION ===
-      // Screen transition effect - change to customize navigation feel
       Set(varScreenTransition, ScreenTransition.Fade);
 
       // === STATUS COLORS ===

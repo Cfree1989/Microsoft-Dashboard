@@ -11,6 +11,10 @@ Screens:
             BorderStyle: =BorderStyle.None
             Fill: =Color.Transparent
             Height: =varHeaderHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: '=Parent.Width    '
           Children:
             - recHeaderBg:
@@ -41,6 +45,10 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =varNavHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: =Parent.Width
             Y: =Parent.Height - varNavHeight
           Children:
@@ -136,6 +144,10 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =Parent.Height
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Visible: =varIsLoading
             Width: =Parent.Width
           Children:
@@ -176,6 +188,10 @@ Screens:
           Properties:
             Fill: =varColorBg
             Height: =Parent.Height - varHeaderHeight - varNavHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: =Parent.Width
             Y: =varHeaderHeight
           Children:
@@ -184,7 +200,8 @@ Screens:
                 Variant: Classic
                 Layout: Vertical
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  BorderColor: =varColorBorderLight
+                  BorderThickness: =varInputBorderThickness
                   DataSource: =PrintRequests
                   DefaultMode: =FormMode.New
                   FocusedBorderThickness: =varFocusedBorderThickness
@@ -342,7 +359,7 @@ Screens:
                               DisplayName: varMeName,
                               Email: varMeEmail
                           }
-                        Width: =442
+                        Width: =440
                         X: =2
                         Y: =0
                       Children:
@@ -537,7 +554,7 @@ Screens:
                         MaxLength: =16
                         Required: =true
                         Update: =DataCardValue30.Text
-                        Width: =442
+                        Width: =440
                         X: =0
                         Y: =1
                       Children:
@@ -545,7 +562,6 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -672,7 +688,7 @@ Screens:
                         DisplayName: =DataSourceInfo([@PrintRequests],DataSourceInfo.DisplayName,Discipline)
                         Required: =true
                         Update: =DataCardValue6.Selected
-                        Width: =442
+                        Width: =440
                         X: =2
                         Y: =1
                       Children:
@@ -680,14 +696,13 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
                               FontWeight: =FontWeight.Bold
                               Height: =34
                               Text: =Parent.DisplayName
-                              Width: =Parent.Width - 60
+                              Width: =112
                               Wrap: =false
                               X: =30
                               Y: =10
@@ -764,6 +779,20 @@ Screens:
                               Width: =30
                               Wrap: =false
                               Y: =DataCardKey6.Y
+                        - lblDisciplineRequired:
+                            Control: Label
+                            Properties:
+                              BorderColor: =RGBA(0, 18, 107, 1)
+                              Color: =varColorDanger
+                              Font: =varAppFont
+                              Height: =DataCardKey6.Height
+                              Italic: =true
+                              Size: =12
+                              Text: ="(Required)"
+                              Visible: =IsBlank(DataCardValue6.Selected.Value)
+                              Width: =85
+                              X: =DataCardKey6.X + Min(DataCardKey6.Width, 108) + 8
+                              Y: =DataCardKey6.Y
                         - Label1:
                             Control: Label
                             Properties:
@@ -781,9 +810,10 @@ Screens:
                         DataField: ="Course"
                         Default: =ThisItem.'Course Number'
                         DisplayName: =DataSourceInfo([@PrintRequests],DataSourceInfo.DisplayName,'Course Number')
+                        Height: =99
                         Required: =false
                         Update: =Value(DataCardValue5.Text)
-                        Width: =442
+                        Width: =440
                         X: =3
                         Y: =1
                       Children:
@@ -873,7 +903,7 @@ Screens:
                         DisplayName: ="Project Type"
                         Required: =true
                         Update: =DataCardValue7.Selected
-                        Width: =442
+                        Width: =440
                         X: =0
                         Y: =2
                       Children:
@@ -881,14 +911,13 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
                               FontWeight: =FontWeight.Bold
                               Height: =34
                               Text: =Parent.DisplayName
-                              Width: =Parent.Width - 60
+                              Width: =135
                               Wrap: =false
                               X: =30
                               Y: =2
@@ -960,6 +989,20 @@ Screens:
                               SelectionTagFill: =RGBA(255, 255, 255, 1)
                               X: =40
                               Y: =40
+                        - lblProjectTypeRequired:
+                            Control: Label
+                            Properties:
+                              BorderColor: =RGBA(0, 18, 107, 1)
+                              Color: =varColorDanger
+                              Font: =varAppFont
+                              Height: =DataCardKey7.Height
+                              Italic: =true
+                              Size: =12
+                              Text: ="(Required)"
+                              Visible: =IsBlank(DataCardValue7.Selected.Value)
+                              Width: =85
+                              X: =DataCardKey7.X + Min(DataCardKey7.Width, 128) + 8
+                              Y: =DataCardKey7.Y
                   - Method_DataCard1:
                       Control: TypedDataCard
                       Variant: ClassicComboBoxEdit
@@ -971,7 +1014,7 @@ Screens:
                         Height: =280
                         Required: =true
                         Update: =DataCardValue8.Selected
-                        Width: =442
+                        Width: =440
                         X: =1
                         Y: =2
                       Children:
@@ -979,7 +1022,6 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -1113,7 +1155,7 @@ Screens:
                         Height: =200
                         Required: =true
                         Update: =DataCardValue10.Selected
-                        Width: =442
+                        Width: =440
                         X: =2
                         Y: =2
                       Children:
@@ -1121,7 +1163,6 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -1255,14 +1296,13 @@ Screens:
                         DisplayName: =DataSourceInfo([@PrintRequests],DataSourceInfo.DisplayName,Color)
                         Required: =true
                         Update: =DataCardValue9.Selected
-                        Width: =442
+                        Width: =440
                         X: =0
                         Y: =3
                       Children:
                         - DataCardKey9:
                             Control: Label
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -1373,7 +1413,7 @@ Screens:
                         DisplayName: ="Due Date"
                         Required: =false
                         Update: =DataCardValue11.SelectedDate
-                        Width: =442
+                        Width: =440
                         X: =1
                         Y: =3
                       Children:
@@ -1381,7 +1421,6 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -1460,7 +1499,7 @@ Screens:
                         MaxLength: =DataSourceInfo([@PrintRequests], DataSourceInfo.MaxLength, Notes)
                         Required: =false
                         Update: =DataCardValue12.Text
-                        Width: =442
+                        Width: =440
                         X: =2
                         Y: =3
                       Children:
@@ -1468,7 +1507,6 @@ Screens:
                             Control: Label
                             MetadataKey: FieldName
                             Properties:
-                              AutoHeight: =true
                               BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =RGBA(51, 51, 51, 1)
                               Font: =varAppFont
@@ -1712,8 +1750,8 @@ Screens:
                               Text: ="(Required)"
                               Visible: =CountRows(DataCardValue31.Attachments) = 0
                               Width: =85
-                              X: =955
-                              Y: =85
+                              X: =786
+                              Y: =11
                   - Status_DataCard1:
                       Control: TypedDataCard
                       Variant: ClassicComboBoxEdit

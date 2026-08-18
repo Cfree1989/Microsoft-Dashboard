@@ -4,23 +4,44 @@ Screens:
       Fill: =varColorBg
       LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
       OnVisible: |-
-        =Set(
-            varNeedsConfirmCount,
-            CountRows(
-                Filter(
-                    If(
-                        !IsBlank(varMeEntraId),
-                        Filter(
-                            PrintRequests,
-                            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                        ),
-                        Filter(
-                            PrintRequests,
-                            StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                        )
+        =Refresh(LabStatus);
+        Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
+        If(
+            !IsBlank(varLabStatus),
+            Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
+            Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
+        );
+        With(
+            {
+                wMine: If(
+                    !IsBlank(varMeEntraId),
+                    Filter(
+                        PrintRequests,
+                        StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
                     ),
-                    Status.Value = "Pending",
-                    Not(StudentConfirmed)
+                    Filter(
+                        PrintRequests,
+                        StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                    )
+                )
+            },
+            Set(
+                varNeedsConfirmCount,
+                CountRows(
+                    Filter(
+                        wMine,
+                        Status.Value = "Pending",
+                        Not(StudentConfirmed)
+                    )
+                )
+            );
+            Set(
+                varPickupReadyCount,
+                CountRows(
+                    Filter(
+                        wMine,
+                        Status.Value = "Completed"
+                    )
                 )
             )
         )
@@ -31,6 +52,10 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =varHeaderHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: =Parent.Width
           Children:
             - recHeaderBgHome:
@@ -57,10 +82,16 @@ Screens:
           Control: GroupContainer
           Variant: ManualLayout
           Properties:
+            DropShadow: =DropShadow.None
             Fill: =Color.Transparent
-            Height: =80
-            Width: '=Parent.Width    '
-            Y: =varHeaderHeight + 30
+            Height: =conLabToday.Height
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Width: =conRequestsCard.Width
+            X: =conActionCards.X + conRequestsCard.X
+            Y: =conLabToday.Y
           Children:
             - lblWelcome:
                 Control: Label
@@ -71,9 +102,12 @@ Screens:
                   Fill: =Color.Transparent
                   Font: =varAppFont
                   FontWeight: =FontWeight.Semibold
-                  Size: =18
+                  Height: =57
+                  Size: =30
                   Text: ="Welcome, " & First(Split(varMeName, " ")).Value & "!"
-                  Width: =Parent.Width
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =11
             - lblSubtitle:
                 Control: Label
                 Properties:
@@ -93,43 +127,51 @@ Screens:
                 Properties:
                   BorderColor: =Color.Transparent
                   BorderThickness: =0
-                  Color: =varColorWarning
+                  Color: =If(varNeedsConfirmCount > 0, varColorWarning, varColorSuccess)
                   Fill: =Color.Transparent
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =36
+                  Height: =61
                   HoverBorderColor: =Color.Transparent
-                  HoverColor: =varColorWarning
-                  HoverFill: =ColorFade(varColorWarning, 85%)
+                  HoverColor: =Self.Color
+                  HoverFill: =ColorFade(Self.Color, 85%)
                   OnSelect: =Navigate(scrMyRequests, varScreenTransition)
                   PressedBorderColor: =Color.Transparent
-                  PressedColor: =varColorWarning
-                  PressedFill: =ColorFade(varColorWarning, 75%)
+                  PressedFill: =ColorFade(Self.Color, 75%)
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
                   RadiusTopLeft: =varBtnBorderRadius
                   RadiusTopRight: =varBtnBorderRadius
-                  Size: =14
                   Text: |-
                     =If(
-                        varNeedsConfirmCount = 1,
-                        "You have a print waiting for your OK — tap to confirm",
-                        "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+                        varNeedsConfirmCount > 0,
+                        If(
+                            varNeedsConfirmCount = 1,
+                            "You have a print waiting for your OK — tap to confirm",
+                            "You have " & varNeedsConfirmCount & " prints waiting for your OK — tap to confirm"
+                        ),
+                        If(
+                            varPickupReadyCount = 1,
+                            "You have a print ready for pickup — tap to view",
+                            "You have " & varPickupReadyCount & " prints ready for pickup — tap to view"
+                        )
                     )
-                  Visible: =varNeedsConfirmCount > 0
-                  Width: =500
-                  X: =(Parent.Width - Self.Width) / 2
-                  Y: =lblWelcome.Y + lblWelcome.Height
+                  Visible: =varNeedsConfirmCount > 0 || varPickupReadyCount > 0
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =lblWelcome.Y + lblWelcome.Height + 4
       - conActionCards:
           Control: GroupContainer
           Variant: ManualLayout
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            DropShadow: =DropShadow.None
             Fill: =Color.Transparent
-            Height: =350
+            Height: =lblHoursBanner.Y - Self.Y - 12
             Width: =Parent.Width - (varSpacingXL * 2)
             X: =varSpacingXL
-            Y: =conWelcome.Y + conWelcome.Height + 30
+            Y: =conLabToday.Y + conLabToday.Height + 12
           Children:
             - conSubmitCard:
                 Control: GroupContainer
@@ -138,12 +180,10 @@ Screens:
                   BorderColor: =varColorBorderLight
                   BorderThickness: =1
                   Fill: =varColorBgCard
-                  Height: =Parent.Height
-                  RadiusBottomLeft: =varRadiusMedium
-                  RadiusBottomRight: =varRadiusMedium
-                  RadiusTopLeft: =varRadiusMedium
-                  RadiusTopRight: =varRadiusMedium
-                  Width: =(Parent.Width - 80) / 2
+                  Height: =Parent.Height - varSpacingMD * 2
+                  Width: =(Parent.Width - varSpacingSM * 2 - varSpacingXL) / 2
+                  X: =varSpacingSM
+                  Y: =varSpacingMD
                 Children:
                   - icnSubmit:
                       Control: Classic/Icon
@@ -166,7 +206,7 @@ Screens:
                         Height: =30
                         Size: =16
                         Text: ="Submit New Request"
-                        Width: '=Parent.Width    '
+                        Width: =Parent.Width
                         Y: =icnSubmit.Y + icnSubmit.Height + 20
                   - lblSubmitDesc:
                       Control: Label
@@ -216,13 +256,10 @@ Screens:
                   BorderColor: =varColorBorderLight
                   BorderThickness: =1
                   Fill: =varColorBgCard
-                  Height: =Parent.Height
-                  RadiusBottomLeft: =varRadiusMedium
-                  RadiusBottomRight: =varRadiusMedium
-                  RadiusTopLeft: =varRadiusMedium
-                  RadiusTopRight: =varRadiusMedium
-                  Width: =(Parent.Width - 80) / 2
-                  X: =Parent.Width - conSubmitCard.Width
+                  Height: =Parent.Height - varSpacingMD * 2
+                  Width: =(Parent.Width - varSpacingSM * 2 - varSpacingXL) / 2
+                  X: =conSubmitCard.X + conSubmitCard.Width + varSpacingXL
+                  Y: =varSpacingMD
                 Children:
                   - icnRequests:
                       Control: Classic/Icon
@@ -263,7 +300,15 @@ Screens:
                                   "1 estimate waiting for your OK",
                                   varNeedsConfirmCount & " estimates waiting for your OK"
                               ),
-                              "View status, confirm estimates, or manage your existing requests"
+                              If(
+                                  varPickupReadyCount > 0,
+                                  If(
+                                      varPickupReadyCount = 1,
+                                      "1 print ready for pickup",
+                                      varPickupReadyCount & " prints ready for pickup"
+                                  ),
+                                  "View status, confirm estimates, or manage your existing requests"
+                              )
                           )
                         Width: =Parent.Width - (varSpacingLG * 2)
                         X: =varSpacingLG
@@ -338,6 +383,10 @@ Screens:
           Properties:
             Fill: =Color.Transparent
             Height: =varNavHeight
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
             Width: =Parent.Width
             Y: =Parent.Height - varNavHeight
           Children:
@@ -427,3 +476,176 @@ Screens:
                   Width: =(Parent.Width - 80) / 3
                   X: =Parent.Width - Self.Width - varSpacingXL
                   Y: =(Parent.Height - Self.Height) / 2
+      - conLabToday:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =varColorBorderLight
+            BorderThickness: =1
+            Fill: =varColorBgCard
+            Height: =If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)
+            Width: =conSubmitCard.Width
+            X: =conActionCards.X + conSubmitCard.X
+            Y: =varHeaderHeight + 20
+          Children:
+            - lblLabTodayTitle:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =28
+                  Size: =14
+                  Text: ="Lab Status:"
+                  Width: =124
+                  X: =16
+                  Y: =12
+            - btnBusyLevel:
+                Control: Classic/Button
+                Properties:
+                  BorderThickness: =0
+                  Color: |-
+                    =If(
+                        varLabStatus.BusyLevel.Value = "Typical",
+                        RGBA(0, 0, 0, 1),
+                        Color.White
+                    )
+                  DisplayMode: =DisplayMode.View
+                  Fill: |-
+                    =Switch(
+                        varLabStatus.BusyLevel.Value,
+                        "Quiet",
+                        RGBA(16, 124, 16, 1),
+                        "Typical",
+                        RGBA(255, 185, 0, 1),
+                        "Busy",
+                        varColorWarning,
+                        "Packed",
+                        RGBA(209, 52, 56, 1),
+                        varColorNeutral
+                    )
+                  Font: =varAppFont
+                  Height: =28
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =14
+                  RadiusBottomRight: =14
+                  RadiusTopLeft: =14
+                  RadiusTopRight: =14
+                  Size: =11
+                  Text: =Coalesce(varLabStatus.BusyLevel.Value, "—")
+                  Width: =Parent.Width - (lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM) - 16
+                  X: =lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM
+                  Y: =12
+            - lblLabCounts:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =28
+                  Size: =14
+                  Text: |-
+                    =If(
+                        Coalesce(varLabStatus.JobsWaiting, 0) = 1,
+                        "1 waiting",
+                        Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
+                    ) & "  ·  " & If(
+                        Coalesce(varLabStatus.JobsPrinting, 0) = 1,
+                        "1 printing",
+                        Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
+                    )
+                  Width: =lblFilamentChip.X - Self.X - varSpacingSM
+                  X: =16
+                  Y: =61
+            - lblLabWait:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =29
+                  Size: =10
+                  Text: |-
+                    =Coalesce(
+                        varLabStatus.TypicalWaitText,
+                        "Typical wait after you confirm: 1–3 lab days"
+                    ) & If(
+                        IsBlank(varLabStatus.UpdatedAt),
+                        "",
+                        "  ·  Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
+                    )
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =114
+            - lblLabStaffMessage:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorWarning
+                  Font: =varAppFont
+                  Height: =24
+                  Size: =11
+                  Text: =varLabStatus.StaffMessage
+                  Visible: =!IsBlank(varLabStatus.StaffMessage)
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =144
+            - lblFilamentChip:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness * 2
+                  Color: =varColorText
+                  Fill: =Color.White
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =2
+                  Font: =varAppFont
+                  Height: =28
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =varColorText
+                  HoverFill: =Color.White
+                  PressedBorderColor: =varInputBorderColor
+                  PressedColor: =varColorText
+                  PressedFill: =Color.White
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Size: =11
+                  TabIndex: =-1
+                  Text: ="Filament " & Coalesce(varLabStatus.FilamentWaiting, 0)
+                  Width: =120
+                  X: =lblResinChip.X - Self.Width - varSpacingSM
+                  Y: =61
+            - lblResinChip:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness * 2
+                  Color: =varColorText
+                  Fill: =Color.White
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =2
+                  Font: =varAppFont
+                  Height: =28
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =varColorText
+                  HoverFill: =Color.White
+                  PressedBorderColor: =varInputBorderColor
+                  PressedColor: =varColorText
+                  PressedFill: =Color.White
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Size: =11
+                  TabIndex: =-1
+                  Text: ="Resin " & Coalesce(varLabStatus.ResinWaiting, 0)
+                  Width: =100
+                  X: =Parent.Width - 16 - Self.Width
+                  Y: =61
