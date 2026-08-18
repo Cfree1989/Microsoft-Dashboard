@@ -205,7 +205,7 @@ Screens:
                   DataSource: =PrintRequests
                   DefaultMode: =FormMode.New
                   FocusedBorderThickness: =varFocusedBorderThickness
-                  Height: =Parent.Height - (varSpacingXL * 2) - 120
+                  Height: =526
                   OnFailure: |-
                     =Set(varIsLoading, false);
                     Notify(
@@ -702,7 +702,7 @@ Screens:
                               FontWeight: =FontWeight.Bold
                               Height: =34
                               Text: =Parent.DisplayName
-                              Width: =112
+                              Width: =95
                               Wrap: =false
                               X: =30
                               Y: =10
@@ -987,7 +987,7 @@ Screens:
                               SelectionFill: =RGBA(219, 219, 219, 1)
                               SelectionTagColor: =RGBA(50, 50, 50, 1)
                               SelectionTagFill: =RGBA(255, 255, 255, 1)
-                              X: =40
+                              X: =30
                               Y: =40
                         - lblProjectTypeRequired:
                             Control: Label
@@ -1128,7 +1128,7 @@ Screens:
                               SelectionFill: =RGBA(219, 219, 219, 1)
                               SelectionTagColor: =RGBA(50, 50, 50, 1)
                               SelectionTagFill: =RGBA(255, 255, 255, 1)
-                              X: =40
+                              X: =30
                               Y: =40
                         - lblMethodRequired:
                             Control: Label
@@ -1270,7 +1270,7 @@ Screens:
                               SelectionFill: =RGBA(219, 219, 219, 1)
                               SelectionTagColor: =RGBA(50, 50, 50, 1)
                               SelectionTagFill: =RGBA(255, 255, 255, 1)
-                              X: =40
+                              X: =30
                               Y: =40
                         - lblPrinterRequired:
                             Control: Label
@@ -1387,7 +1387,7 @@ Screens:
                               SelectionFill: =RGBA(219, 219, 219, 1)
                               SelectionTagColor: =RGBA(50, 50, 50, 1)
                               SelectionTagFill: =RGBA(255, 255, 255, 1)
-                              X: =46
+                              X: =30
                               Y: =49
                         - lblColorRequired:
                             Control: Label
@@ -1980,7 +1980,7 @@ Screens:
                   Text: ="SUBMIT REQUEST"
                   Width: =Parent.Width - (varSpacingXL * 2)
                   X: =varSpacingXL
-                  Y: =548
+                  Y: =588
             - lblValidationMessage:
                 Control: Label
                 Properties:
@@ -2044,4 +2044,4 @@ Screens:
                     ))
                   Width: =548
                   X: =409
-                  Y: =btnSubmit.Y - 70
+                  Y: =550

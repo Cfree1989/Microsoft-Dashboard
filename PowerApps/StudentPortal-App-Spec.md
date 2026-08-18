@@ -96,9 +96,11 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-18: Home Studio layout (live).** Welcome **X = 715**, greeting **Size 30** / Height **57** / **Y = 11**. Lab Status **X = 28**. BusyLevel pill **X = 140**, Width **467**. Counts **Size 14**, **Y = 61**, copy is **“N waiting · N printing”** (no “jobs”). Filament **X = 379** / Resin **X = 507**, both **Y = 61**. Wait line centered, **Y = 114**. Action cards **Height = 395**, **Y = 12**; Submit **X = 8**, My Requests **X = 695**. `DropShadow.None` on welcome and action-card row. My Requests card radius omitted again (Studio default).
 - **2026-08-18: Home pickup line.** `varPickupReadyCount` is this student’s **Completed** rows (same identity filter as confirm). `btnNeedsYou` shows confirm first (orange); if none, pickup (green). Visible when either count > 0. My Requests card copy follows the same priority. Recount on Home **OnVisible** and My Requests **Refresh**.
 - **2026-08-18: Submit required labels.** Added `lblDisciplineRequired` and `lblProjectTypeRequired` (`IsBlank(Selected.Value)`). `lblAttachmentsRequired` X/Y sit on `DataCardKey32` (was 955/85). Method/Printer/Color/TigerCard already used field-specific Visible.
-- **2026-08-18: Required tag clip.** `DataCardKey6` / `DataCardKey7` were `Parent.Width - 60`, so “(Required)” started past the card edge and showed as “(Re”. Live widths match the other field names: Discipline **112**, Project Type **135** (Method 79, Printer 78, Color 59, TigerCard 171).
+- **2026-08-18: Required tag clip.** `DataCardKey6` / `DataCardKey7` were `Parent.Width - 60`, so “(Required)” started past the card edge and showed as “(Re”. Live widths: Discipline **95**, Project Type **135** (Method 79, Printer 78, Color 59, TigerCard 171).
 - **2026-08-18: Submit layout restored.** Dropdowns, field Y, Attachments Size 20, and Printer **Height 200** are back to the original form. Discipline / Project Type “(Required)” use `Min(DataCardKey.Width, 108|128) + 8` so the tag stays next to the title if the FieldName width stretches.
 - **2026-08-18: Submit cards 440.** Visible DataCards are **Width = 440** (were 442). Three 442 cards overflowed the form and clipped “(Required)” into the next column. Hidden Status / StudentEntraId stay **442**. Course Number **Height = 99**. `frmSubmit` border is `varColorBorderLight` / `varInputBorderThickness`. `lblAttachmentsRequired` is **X = 786, Y = 11** (file-picker column), not `DataCardKey32.Width + 5`.
+- **2026-08-18: Submit button lower.** Live `frmSubmit` **Height = 526** (was `Parent.Height - 40 - 120`). `btnSubmit` **Y = 588**. `lblValidationMessage` **Y = 550**. Discipline title width **95** (was 112). Project Type title **X = 38**; its ComboBox **X = 30**.
+- **2026-08-18: Submit title/dropdown X.** Match Discipline: label and ComboBox **X = 30**. Project Type title was **38**; Method/Printer ComboBoxes were **40**; Color ComboBox was **46**.
 - **2026-08-18: Messages button alert.** `btnViewMessages` is solid `varColorDanger` (white text) when `LookUp(RequestComments, RequestID = ThisItem.ID)` finds a row; otherwise the blue outline. Label stays **Messages** — no count.
 - **2026-08-17: Item 9 — My Requests filters + filename.** Open / Done / All are a **horizontal gallery** (`galMyRequestTabs`) like Staff `galStatusTabs`: Height 55, TemplateSize 148, TemplatePadding 3, button Width 141 / Size 10 / X 5 / Y 4. Left under the header. Selected uses `ThisItem.Color` (`RGBA(70, 130, 220, 1)`); idle is light gray + 1px border. Counts are this student’s rows. Names stay Open / Done / All.
 - **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
@@ -1986,7 +1988,7 @@ In Tree view, ensure controls inside `conLoadingOverlay` are ordered:
 | X | `varSpacingXL` |
 | Y | `varSpacingXL` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
-| Height | `Parent.Height - (varSpacingXL * 2) - 120` |
+| Height | `526` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `varInputBorderThickness` |
 
@@ -2364,7 +2366,7 @@ This image helps students locate the 16-digit POS number on their Tiger Card.
 
 > ⚠️ **Important - Internal Name:** The SharePoint column's display name is "Discipline" but its **internal name** is `Department`. PowerApps `Choices()` function requires the internal name, which you can find in the column's URL when editing it in SharePoint (look for `Field=Department`).
 
-45b. Click `DataCardKey6` (the “Discipline” field name). Set **Width** to `112` — not `Parent.Width - 60`, or the Required tag clips.
+45b. Click `DataCardKey6` (the “Discipline” field name). Set **Width** to `95` — not `Parent.Width - 60`, or the Required tag clips.
 
 46. Click on `Discipline_DataCard1` itself (the card, not the ComboBox).
 47. Set these properties:
@@ -2890,7 +2892,7 @@ For each required field below, add a new label inside the DataCard positioned ne
 
 > 💡 **How it works:** Each "(Required)" label is positioned right after the field name and only shows when the field is empty. The red italic text provides clear visual feedback that disappears as students complete each required field.
 
-> ⚠️ **Field name width:** `DataCardKey` must be sized to the word, not `Parent.Width - 60`. Otherwise the Required label starts past the card edge and clips to “(Re”. Live: Discipline **112**, Project Type **135**, Method **79**, Printer **78**, Color **59**, TigerCard Number **171**. Discipline / Project Type also cap the tag X with `Min(DataCardKey.Width, 108|128) + 8`. Visible Submit DataCards are **Width = 440** (not 442) so three columns fit without covering the tag.
+> ⚠️ **Field name width:** `DataCardKey` must be sized to the word, not `Parent.Width - 60`. Otherwise the Required label starts past the card edge and clips to “(Re”. Live: Discipline **95**, Project Type **135**, Method **79**, Printer **78**, Color **59**, TigerCard Number **171**. Discipline / Project Type also cap the tag X with `Min(DataCardKey.Width, 108|128) + 8`. Visible Submit DataCards are **Width = 440** (not 442) so three columns fit without covering the tag.
 
 ---
 
@@ -3077,7 +3079,7 @@ Set(varHasInvalidFile, CountRows(varInvalidFiles) > 0)
 |----------|-------|
 | Text | `"SUBMIT REQUEST"` |
 | X | `varSpacingXL` |
-| Y | `frmSubmit.Y + frmSubmit.Height + varSpacingMD` |
+| Y | `588` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `varBtnHeightLarge` |
 | Fill | `varColorPrimary` |
@@ -3145,7 +3147,7 @@ This label shows students exactly which fields need attention — but only after
 | Property | Value |
 |----------|-------|
 | X | `varSpacingXL` |
-| Y | `btnSubmit.Y - 70` |
+| Y | `550` |
 | Width | `Parent.Width - (varSpacingXL * 2)` |
 | Height | `60` |
 | Align | `Align.Center` |
