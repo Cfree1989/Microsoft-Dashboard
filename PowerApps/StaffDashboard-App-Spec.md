@@ -13684,9 +13684,9 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - 600) / 2` |
+| X | `(Parent.Width - Min(varModalMaxWidth, Parent.Width - varModalMargin)) / 2` |
 | Y | `(Parent.Height - 750) / 2` |
-| Width | `600` |
+| Width | `Min(varModalMaxWidth, Parent.Width - varModalMargin)` |
 | Height | `750` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
@@ -13726,12 +13726,12 @@ scrDashboard
 |----------|-------|
 | Text | `"Student: " & varSelectedItem.Student.DisplayName & " (" & varSelectedItem.StudentEmail & ")"` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 38` |
-| Width | `400` |
-| Height | `20` |
+| Y | `54` |
+| Width | `560` |
+| Height | `25` |
 | Font | `varAppFont` |
 | Size | `12` |
-| Color | `varColorText` |
+| Color | `varColorTextMuted` |
 
 ---
 
@@ -13926,8 +13926,8 @@ If the thread still overlaps after these updates, check these exact issues:
 | Property | Value |
 |----------|-------|
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 315` |
-| Width | `560` |
+| Y | `427` |
+| Width | `recViewMsgModal.Width - 40` |
 | Height | `1` |
 | Fill | `RGBA(200, 200, 200, 1)` |
 
@@ -13943,7 +13943,7 @@ If the thread still overlaps after these updates, check these exact issues:
 |----------|-------|
 | Text | `"Performing Action As"` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 325` |
+| Y | `433` |
 | Width | `200` |
 | Height | `20` |
 | Font | `Font.'Open Sans'` |
@@ -13963,8 +13963,8 @@ If the thread still overlaps after these updates, check these exact issues:
 |----------|-------|
 | Items | `colStaff` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 348` |
-| Width | `250` |
+| Y | `456` |
+| Width | `283` |
 | Height | `36` |
 | DisplayFields | `["MemberName"]` |
 | SearchFields | `["MemberName"]` |
@@ -14047,7 +14047,7 @@ Staff do not type a subject. Set **Visible** = `false` on this input and **`lblV
 |----------|-------|
 | Text | `"Message"` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 395` |
+| Y | `499` |
 | Width | `150` |
 | Height | `20` |
 | Font | `Font.'Open Sans'` |
@@ -14067,9 +14067,9 @@ Staff do not type a subject. Set **Visible** = `false` on this input and **`lblV
 |----------|-------|
 | Default | `""` |
 | X | `recViewMsgModal.X + 20` |
-| Y | `recViewMsgModal.Y + 418` |
-| Width | `560` |
-| Height | `90` |
+| Y | `499` |
+| Width | `recViewMsgModal.Width - 40` |
+| Height | `114` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | Font | `varAppFont` |
@@ -14126,12 +14126,12 @@ Classic **Attachments** always includes a drop-target band and an inner scrollba
 
 | Property | Value |
 |----------|-------|
-| X | `recViewMsgModal.X + 450` |
-| Y | `recViewMsgModal.Y + 552` |
+| X | `recViewMsgModal.X + recViewMsgModal.Width - 150` |
+| Y | `475` |
 | Width | `130` |
 | Height | `22` |
-| Size | `8` |
-| Align | `Align.Center` |
+| Size | `9` |
+| Align | `Align.Right` |
 
 61. Set **Text:**
 
@@ -14156,7 +14156,7 @@ varColorTextMuted
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recViewMsgModal.X + 340` |
+| X | `721` |
 | Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
 | Width | `100` |
 | Height | `varBtnHeight` |
@@ -14195,17 +14195,17 @@ Reset(ddViewMsgStaff)
 
 | Property | Value |
 |----------|-------|
-| Text | `"📧 Send Message"` |
-| X | `recViewMsgModal.X + 450` |
+| Text | `"Send Message"` |
+| X | `recViewMsgModal.X + recViewMsgModal.Width - 150` |
 | Y | `recViewMsgModal.Y + recViewMsgModal.Height - 50` |
 | Width | `130` |
-| Height | `varBtnHeight` |
+| Height | `35` |
 | Fill | `varColorPrimary` |
 | Color | `Color.White` |
-| HoverFill | `varColorPrimaryHover` |
-| PressedFill | `varColorPrimaryPressed` |
-| BorderColor | `Color.Transparent` |
-| BorderThickness | `0` |
+| HoverFill | `ColorFade(varColorPrimary, -15%)` |
+| PressedFill | `ColorFade(varColorPrimary, -25%)` |
+| BorderColor | `varColorBorder` |
+| BorderThickness | `varInputBorderThickness` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
 | RadiusTopLeft | `varBtnBorderRadius` |
 | RadiusTopRight | `varBtnBorderRadius` |
@@ -16481,9 +16481,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
-| **2026-08-21: Messages compose layout** | Studio positions: staff **Y = 433 / 456**, combo **Width = 283**, body **Y = 499 Height = 114**, attachments **Y = 624**, picker **Y = 644**. **AddMedia Fill** only covers the caption text; **`recViewMsgAttachBg`** is the white field. |
-| **2026-08-21: Compact screenshot picker** | Replaced classic **Attachments** (`attViewMsg`) with **Add picture** (`addPicViewMsg`, Height **48**) plus thumbnail **`imgViewMsgShot`**. Send passes `.Media` / `.FileName` to Flow K. No flow or list change. |
-| **2026-08-21: Attach picker chrome** | Restored **`lblViewMsgAttachLabel`** (**Attachments**). **`attViewMsg` Height = 100** so the control does not inner-scroll. **`recViewMsgAttachMask`** covers the unused drop-target band while empty. |
+| **2026-08-21: Messages compose layout** | Studio positions: staff **Y = 433 / 456**, combo **Width = 283**, body **Y = 499 Height = 114**, attachments **Y = 624**, picker **Y = 644**. **AddMedia Fill** only covers the caption text; **`recViewMsgAttachBg`** is the white field. Rebuild tables in this spec match those live values. |
+| **2026-08-21: Compact screenshot picker** | Replaced classic **Attachments** with **Add picture** (`addPicViewMsg`) plus thumbnail **`imgViewMsgShot`**. Send passes `.Media` / `.FileName` to Flow K. No flow or list change. |
 | **2026-08-21: Message screenshots** | Messages modal sends a screenshot through **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
 | **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff` Width = 283**. |
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |

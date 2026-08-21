@@ -125,14 +125,14 @@ The Data pane may show this flow as **`PowerAppV2->InitializevarSuccess`**. Send
 ```powerfx
 'PowerAppV2->InitializevarSuccess'.Run(
     {
-        contentBytes: First(attViewMsg.Attachments).Value,
-        name: First(attViewMsg.Attachments).Name
+        contentBytes: addPicViewMsg.Media,
+        name: Coalesce(addPicViewMsg.FileName, "slicer-screenshot.png")
     },
     Text(varNewComment.ID)
 )
 ```
 
-One screenshot per send (`MaxAttachments = 1`). Canvas cannot call a flow inside `ForAll`.
+One screenshot per send (`addPicViewMsg`). Canvas cannot call a flow inside `ForAll`.
 
 If Studio shows a different `.Run(` shape after you add the flow, match Studio — then update this spec and `btnViewMsgSend`.
 
