@@ -131,6 +131,8 @@ App:
       // === PAYMENT FLOW SCRATCH (Flow H / Flow I + App Checker types) ===
       // Initialize before any control references these; flow .Run() overwrites varFlowResult.
       Set(varFlowResult, {success: "false", message: "", paymentid: ""});
+      Set(varNewComment, Blank());
+      Set(varAttachOk, true);
       Set(varPickedPlatesText, "");
       Set(varPickedPlateIDsText, "");
       Set(varPickedPlateIDsList, "");

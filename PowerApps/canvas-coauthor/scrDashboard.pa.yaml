@@ -8141,10 +8141,10 @@ Screens:
                 Variant: VariableHeight
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =335
+                  Height: =305
                   Items: =Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =8
-                  TemplateSize: =80
+                  TemplateSize: =recVMsgBg.Height
                   Width: =560
                   X: =recViewMsgModal.X + 20
                   Y: =recViewMsgModal.Y + 75
@@ -8234,6 +8234,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtViewMsgSubject);
                     Reset(txtViewMsgBody);
+                    Reset(addPicViewMsg);
                     Reset(ddViewMsgStaff)
                   PaddingBottom: =0
                   PaddingLeft: =0
@@ -8272,7 +8273,7 @@ Screens:
                   Text: ="Performing Action As"
                   Width: =200
                   X: =recViewMsgModal.X + 20
-                  Y: =449
+                  Y: =433
             - ddViewMsgStaff:
                 Control: Classic/ComboBox
                 Properties:
@@ -8300,9 +8301,9 @@ Screens:
                   SelectMultiple: =false
                   SelectionColor: =varDropdownSelectionColor
                   SelectionFill: =varDropdownSelectionFill
-                  Width: =250
+                  Width: =283
                   X: =recViewMsgModal.X + 20
-                  Y: =472
+                  Y: =456
             - lblViewMsgSubjectLabel:
                 Control: Label
                 Properties:
@@ -8313,6 +8314,7 @@ Screens:
                   Height: =20
                   Size: =12
                   Text: ="Subject"
+                  Visible: =false
                   Width: =100
                   X: =recViewMsgModal.X + 290
                   Y: =449
@@ -8331,6 +8333,7 @@ Screens:
                   HoverFill: =varInputHoverFill
                   MaxLength: =200
                   Size: =varInputFontSize
+                  Visible: =false
                   Width: =recViewMsgModal.Width - 310
                   X: =recViewMsgModal.X + 290
                   Y: =472
@@ -8345,7 +8348,7 @@ Screens:
                   Size: =12
                   Text: ="Message"
                   X: =recViewMsgModal.X + 20
-                  Y: =519
+                  Y: =499
             - txtViewMsgBody:
                 Control: Classic/TextInput
                 Properties:
@@ -8354,12 +8357,53 @@ Screens:
                   Default: =""
                   FocusedBorderColor: =varColorPrimary
                   Font: =varAppFont
-                  Height: =130
+                  Height: =114
                   HintText: ="Type your message to the student..."
                   Mode: =TextMode.MultiLine
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
-                  Y: =542
+                  Y: =499
+            - lblViewMsgAttachLabel:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =18
+                  Size: =12
+                  Text: ="Attachments"
+                  Width: =250
+                  X: =recViewMsgModal.X + 20
+                  Y: =624
+            - recViewMsgAttachBg:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Width: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.Width - 40, recViewMsgModal.Width - 120)
+                  X: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.X + 20, recViewMsgModal.X + 100)
+                  Y: =644
+            - addPicViewMsg:
+                Control: AddMedia
+                Properties:
+                  AccessibleLabel: ="Add screenshot"
+                  BorderColor: =Color.Transparent
+                  ChangePictureText: ="Change screenshot"
+                  Color: =varColorText
+                  Fill: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =48
+                  HoverFill: =Color.Transparent
+                  PressedFill: =Color.Transparent
+                  Size: =12
+                  Text: ="Add screenshot"
+                  Width: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.Width - 40, recViewMsgModal.Width - 120)
+                  X: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.X + 20, recViewMsgModal.X + 100)
+                  Y: =644
             - lblViewMsgCharCount:
                 Control: Label
                 Properties:
@@ -8372,7 +8416,7 @@ Screens:
                   Text: =Len(txtViewMsgBody.Text) & " characters"
                   Width: =130
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 150
-                  Y: =676
+                  Y: =475
             - btnViewMsgMarkRead:
                 Control: Classic/Button
                 Properties:
@@ -8454,6 +8498,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtViewMsgSubject);
                     Reset(txtViewMsgBody);
+                    Reset(addPicViewMsg);
                     Reset(ddViewMsgStaff)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -8476,9 +8521,7 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: |-
                     =If(
-                        !IsBlank(ddViewMsgStaff.Selected) && 
-                        !IsBlank(txtViewMsgSubject.Text) && 
-                        Len(txtViewMsgSubject.Text) >= 3 &&
+                        !IsBlank(ddViewMsgStaff.Selected) &&
                         !IsBlank(txtViewMsgBody.Text) &&
                         Len(txtViewMsgBody.Text) >= 10,
                         DisplayMode.Edit,
@@ -8495,19 +8538,23 @@ Screens:
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
                     Set(varLoadingMessage, "Sending message...");
+                    Set(varAttachOk, true);
 
-                    // Create the message in RequestComments with Direction field
                     Set(
-                        varMessageSaved,
+                        varNewComment,
                         IfError(
                             Patch(
                                 RequestComments,
                                 Defaults(RequestComments),
                                 {
-                                    Title: txtViewMsgSubject.Text,
+                                    Title: Left(Trim(txtViewMsgBody.Text), 200),
                                     RequestID: varSelectedItem.ID,
-                                    ReqKey: varSelectedItem.ReqKey,
-                                    Message: txtViewMsgBody.Text,
+                                    ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
+                                    Message: txtViewMsgBody.Text & If(
+                                        !IsBlank(addPicViewMsg.Media),
+                                        Char(10) & Char(10) & "[1 screenshot attached]",
+                                        ""
+                                    ),
                                     Author0: {
                                         '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
                                         Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
@@ -8522,16 +8569,49 @@ Screens:
                                     SentAt: Now(),
                                     ReadByStudent: false,
                                     ReadByStaff: true,
-                                    StudentEmail: varSelectedItem.StudentEmail
+                                    StudentEmail: varSelectedItem.StudentEmail,
+                                    ReadyToEmail: false
                                 }
-                            );
-                            true,
-                            false
+                            ),
+                            Blank()
+                        )
+                    );
+                    Set(varMessageSaved, !IsBlank(varNewComment.ID));
+
+                    If(
+                        varMessageSaved && !IsBlank(addPicViewMsg.Media),
+                        Set(
+                            varAttachOk,
+                            With(
+                                {
+                                    wResult: IfError(
+                                        'PowerAppV2->InitializevarSuccess'.Run(
+                                            {
+                                                contentBytes: addPicViewMsg.Media,
+                                                name: Coalesce(addPicViewMsg.FileName, "slicer-screenshot.png")
+                                            },
+                                            Text(varNewComment.ID)
+                                        ),
+                                        {success: "false"}
+                                    )
+                                },
+                                Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                            )
                         )
                     );
 
                     If(
-                        varMessageSaved,
+                        varMessageSaved && varAttachOk,
+                        IfError(
+                            Patch(
+                                RequestComments,
+                                varNewComment,
+                                { ReadyToEmail: true }
+                            );
+                            true,
+                            Notify("Message saved, but the student email was not released. Try Send again.", NotificationType.Warning);
+                            false
+                        );
                         ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
                         IfError(
                             Patch(
@@ -8557,9 +8637,14 @@ Screens:
                         );
                         Reset(txtViewMsgSubject);
                         Reset(txtViewMsgBody);
+                        Reset(addPicViewMsg);
                         Reset(ddViewMsgStaff);
                         Notify("Message sent! Student will receive email notification.", NotificationType.Success),
-                        Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        If(
+                            varMessageSaved && !varAttachOk,
+                            Notify("Message saved, but the screenshot did not upload. The student was not emailed.", NotificationType.Error),
+                            Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        )
                     );
 
                     // === HIDE LOADING ===
@@ -8590,6 +8675,18 @@ Screens:
                   Width: =560
                   X: =recViewMsgModal.X + 20
                   Y: =54
+            - imgViewMsgShot:
+                Control: Image
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Image: =addPicViewMsg.Media
+                  Visible: =!IsBlank(addPicViewMsg.Media)
+                  Width: =72
+                  X: =recViewMsgModal.X + 20
+                  Y: =644
       - conExportModal:
           Control: GroupContainer
           Variant: ManualLayout

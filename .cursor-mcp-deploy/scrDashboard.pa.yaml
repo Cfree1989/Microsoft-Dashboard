@@ -8141,7 +8141,7 @@ Screens:
                 Variant: VariableHeight
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =280
+                  Height: =305
                   Items: =Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =8
                   TemplateSize: =recVMsgBg.Height
@@ -8234,7 +8234,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtViewMsgSubject);
                     Reset(txtViewMsgBody);
-                    Reset(attViewMsg);
+                    Reset(addPicViewMsg);
                     Reset(ddViewMsgStaff)
                   PaddingBottom: =0
                   PaddingLeft: =0
@@ -8273,7 +8273,7 @@ Screens:
                   Text: ="Performing Action As"
                   Width: =200
                   X: =recViewMsgModal.X + 20
-                  Y: =393
+                  Y: =433
             - ddViewMsgStaff:
                 Control: Classic/ComboBox
                 Properties:
@@ -8301,9 +8301,9 @@ Screens:
                   SelectMultiple: =false
                   SelectionColor: =varDropdownSelectionColor
                   SelectionFill: =varDropdownSelectionFill
-                  Width: =recViewMsgModal.Width - 40
+                  Width: =283
                   X: =recViewMsgModal.X + 20
-                  Y: =416
+                  Y: =456
             - lblViewMsgSubjectLabel:
                 Control: Label
                 Properties:
@@ -8348,7 +8348,7 @@ Screens:
                   Size: =12
                   Text: ="Message"
                   X: =recViewMsgModal.X + 20
-                  Y: =459
+                  Y: =499
             - txtViewMsgBody:
                 Control: Classic/TextInput
                 Properties:
@@ -8357,12 +8357,12 @@ Screens:
                   Default: =""
                   FocusedBorderColor: =varColorPrimary
                   Font: =varAppFont
-                  Height: =80
+                  Height: =114
                   HintText: ="Type your message to the student..."
                   Mode: =TextMode.MultiLine
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
-                  Y: =482
+                  Y: =499
             - lblViewMsgAttachLabel:
                 Control: Label
                 Properties:
@@ -8375,49 +8375,35 @@ Screens:
                   Text: ="Attachments"
                   Width: =250
                   X: =recViewMsgModal.X + 20
-                  Y: =568
-            - attViewMsg:
-                Control: Attachments
-                Properties:
-                  AccessibleLabel: ="Add attachments"
-                  AddAttachmentText: ="Add Attachments"
-                  AddedItemFill: =varChevronFill
-                  BorderColor: =varInputBorderColor
-                  BorderThickness: =varInputBorderThickness
-                  DisplayMode: =DisplayMode.Edit
-                  DropTargetBackgroundColor: =Color.White
-                  DropTargetBorderColor: =Color.Transparent
-                  DropTargetBorderStyle: =BorderStyle.None
-                  DropTargetBorderThickness: =0
-                  DropTargetTextColor: =Color.White
-                  FocusedBorderThickness: =varFocusedBorderThickness
-                  Font: =varAppFont
-                  Height: =100
-                  HoverFill: =varDropdownHoverFill
-                  ItemColor: =RGBA(255, 255, 255, 1)
-                  ItemFill: =varChevronBackground
-                  ItemHoverFill: =varDropdownHoverFill
-                  MaxAttachments: =1
-                  NoAttachmentsText: =""
-                  PaddingBottom: =0
-                  PaddingLeft: =6
-                  PaddingRight: =0
-                  PaddingTop: =0
-                  PressedColor: =varDropdownPressedColor
-                  PressedFill: =varDropdownPressedFill
-                  Size: =12
-                  Width: =recViewMsgModal.Width - 40
-                  X: =recViewMsgModal.X + 20
-                  Y: =588
-            - recViewMsgAttachMask:
+                  Y: =624
+            - recViewMsgAttachBg:
                 Control: Rectangle
                 Properties:
-                  Fill: =varColorBgCard
-                  Height: =64
-                  Visible: =CountRows(attViewMsg.Attachments) = 0
-                  Width: =recViewMsgModal.Width - 40
-                  X: =recViewMsgModal.X + 20
-                  Y: =588
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Width: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.Width - 40, recViewMsgModal.Width - 120)
+                  X: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.X + 20, recViewMsgModal.X + 100)
+                  Y: =644
+            - addPicViewMsg:
+                Control: AddMedia
+                Properties:
+                  AccessibleLabel: ="Add screenshot"
+                  BorderColor: =Color.Transparent
+                  ChangePictureText: ="Change screenshot"
+                  Color: =varColorText
+                  Fill: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =48
+                  HoverFill: =Color.Transparent
+                  PressedFill: =Color.Transparent
+                  Size: =12
+                  Text: ="Add screenshot"
+                  Width: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.Width - 40, recViewMsgModal.Width - 120)
+                  X: =If(IsBlank(addPicViewMsg.Media), recViewMsgModal.X + 20, recViewMsgModal.X + 100)
+                  Y: =644
             - lblViewMsgCharCount:
                 Control: Label
                 Properties:
@@ -8430,7 +8416,7 @@ Screens:
                   Text: =Len(txtViewMsgBody.Text) & " characters"
                   Width: =130
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 150
-                  Y: =459
+                  Y: =475
             - btnViewMsgMarkRead:
                 Control: Classic/Button
                 Properties:
@@ -8512,7 +8498,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtViewMsgSubject);
                     Reset(txtViewMsgBody);
-                    Reset(attViewMsg);
+                    Reset(addPicViewMsg);
                     Reset(ddViewMsgStaff)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
@@ -8565,8 +8551,8 @@ Screens:
                                     RequestID: varSelectedItem.ID,
                                     ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
                                     Message: txtViewMsgBody.Text & If(
-                                        CountRows(attViewMsg.Attachments) > 0,
-                                        Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
+                                        !IsBlank(addPicViewMsg.Media),
+                                        Char(10) & Char(10) & "[1 screenshot attached]",
                                         ""
                                     ),
                                     Author0: {
@@ -8593,15 +8579,17 @@ Screens:
                     Set(varMessageSaved, !IsBlank(varNewComment.ID));
 
                     If(
-                        varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
+                        varMessageSaved && !IsBlank(addPicViewMsg.Media),
                         Set(
                             varAttachOk,
                             With(
                                 {
-                                    wFile: First(attViewMsg.Attachments),
                                     wResult: IfError(
                                         'PowerAppV2->InitializevarSuccess'.Run(
-                                            {contentBytes: First(attViewMsg.Attachments).Value, name: First(attViewMsg.Attachments).Name},
+                                            {
+                                                contentBytes: addPicViewMsg.Media,
+                                                name: Coalesce(addPicViewMsg.FileName, "slicer-screenshot.png")
+                                            },
                                             Text(varNewComment.ID)
                                         ),
                                         {success: "false"}
@@ -8649,7 +8637,7 @@ Screens:
                         );
                         Reset(txtViewMsgSubject);
                         Reset(txtViewMsgBody);
-                        Reset(attViewMsg);
+                        Reset(addPicViewMsg);
                         Reset(ddViewMsgStaff);
                         Notify("Message sent! Student will receive email notification.", NotificationType.Success),
                         If(
@@ -8687,6 +8675,18 @@ Screens:
                   Width: =560
                   X: =recViewMsgModal.X + 20
                   Y: =54
+            - imgViewMsgShot:
+                Control: Image
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Image: =addPicViewMsg.Media
+                  Visible: =!IsBlank(addPicViewMsg.Media)
+                  Width: =72
+                  X: =recViewMsgModal.X + 20
+                  Y: =644
       - conExportModal:
           Control: GroupContainer
           Variant: ManualLayout

@@ -13619,8 +13619,9 @@ scrDashboard
     ├── lblViewMsgCharCount         ← Character count display
     ├── txtViewMsgBody              ← Message body input
     ├── lblViewMsgAttachLabel       ← "Attachments"
-    ├── attViewMsg                  ← Unbound Attachments picker (not a form)
-    ├── recViewMsgAttachMask        ← Covers drop target when empty
+    ├── recViewMsgAttachBg          ← White field behind Add screenshot
+    ├── addPicViewMsg               ← Add picture (AddMedia), not Attachments
+    ├── imgViewMsgShot              ← Thumbnail after a screenshot is picked
     ├── lblViewMsgBodyLabel         ← "Message"
     ├── txtViewMsgSubject           ← Subject input
     ├── lblViewMsgSubjectLabel      ← "Subject"
@@ -13775,7 +13776,7 @@ Set(varShowViewMessagesModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtViewMsgSubject);
 Reset(txtViewMsgBody);
-Reset(attViewMsg);
+Reset(addPicViewMsg);
 Reset(ddViewMsgStaff)
 ```
 
@@ -13793,7 +13794,7 @@ Reset(ddViewMsgStaff)
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 75` |
 | Width | `560` |
-| Height | `335` |
+| Height | `305` |
 | TemplateSize | `recVMsgBg.Height` |
 | TemplatePadding | `8` |
 | ShowScrollbar | `true` |
@@ -14081,33 +14082,39 @@ Staff do not type a subject. Set **Visible** = `false` on this input and **`lblV
 | DisabledBorderColor | `varInputBorderColor` |
 | HintText | `"Type your message to the student..."` |
 
-> **Live layout:** Modal height **750**. Gallery **280**. Staff **Y = 393**. Message body **Y = 482**, **Height = 80**. Attachments **Y = 588**, **Height = 100**.
+> **Live layout (Studio, 2026-08-21):** Modal height **750**. Gallery **305** at **Y = recViewMsgModal.Y + 75**. Separator **Y = 427**. Staff label **Y = 433**. **`ddViewMsgStaff` Y = 456**, **Width = 283**. Character count **Y = 475**. Message label and body **Y = 499**, body **Height = 114**. Attachments label **Y = 624**. Screenshot picker / thumbnail / white field **Y = 644**, **Height = 48**.
 
 ---
 
-### Screenshot picker (attViewMsg) — no form
+### Screenshot picker (addPicViewMsg) — Add picture, not Attachments
 
 This is a file picker only. It is **not** inside a form and does **not** use `SubmitForm`. Saving the file is Flow K.
 
-57a. Insert **Attachments** (or copy `DataCardValue13` from **`frmAttachmentsEdit`**). **Rename it:** `attViewMsg`. Give it **Height = 100** so the drop target and **Add Attachments** row both fit and the control does not show an inner scrollbar. Cover the drop-target band with **`recViewMsgAttachMask`** (same X/Width, **Height = 64**, **Fill = `varColorBgCard`**, **Visible** = `CountRows(attViewMsg.Attachments) = 0`) so an empty picker shows only the add-file row. After a file is chosen, the mask hides so the file name is visible.
+Classic **Attachments** always includes a drop-target band and an inner scrollbar when that band is clipped. Use **Add picture** (`AddMedia`) instead: one compact tap row. After a pick, a thumbnail appears beside **Change screenshot**.
 
-57b. Clear **Items** (do not bind `Parent.Default`). Set:
+**AddMedia `Fill` only paints behind the words**, not the whole control. Put **`recViewMsgAttachBg`** (white rectangle, same X/Y/Width/Height) **under** `addPicViewMsg`, and set **`addPicViewMsg.Fill`** = `Color.Transparent`.
+
+57a. Insert **Media** → **Add picture**. **Rename** the AddMedia control **`addPicViewMsg`**. Insert a **Rectangle** named **`recViewMsgAttachBg`** and an **Image** named **`imgViewMsgShot`**.
+
+57b. Set **`addPicViewMsg`:**
 
 | Property | Value |
 |----------|-------|
-| X | `recViewMsgModal.X + 20` |
-| Y | `588` |
-| Width | `recViewMsgModal.Width - 40` |
-| Height | `100` |
-| DisplayMode | `DisplayMode.Edit` |
-| MaxAttachments | `1` |
-| MaxAttachmentSize | `10` |
-| AddAttachmentText | `"Add Attachments"` |
-| NoAttachmentsText | `""` |
-| AccessibleLabel | `"Add attachments"` |
-| TabIndex | `0` |
+| X | `If(IsBlank(addPicViewMsg.Media), recViewMsgModal.X + 20, recViewMsgModal.X + 100)` |
+| Y | `644` |
+| Width | `If(IsBlank(addPicViewMsg.Media), recViewMsgModal.Width - 40, recViewMsgModal.Width - 120)` |
+| Height | `48` |
+| Fill | `Color.Transparent` |
+| BorderColor | `Color.Transparent` |
+| Text | `"Add screenshot"` |
+| ChangePictureText | `"Change screenshot"` |
+| AccessibleLabel | `"Add screenshot"` |
 
-57c. **`lblViewMsgAttachLabel`**: **Text** = `"Attachments"`, **Y = 568**, **Visible** = `true`.
+57c. Set **`recViewMsgAttachBg`** to the same X / Y / Width / Height as **`addPicViewMsg`**, **Fill** = `Color.White`, **BorderColor** = `varInputBorderColor`. Keep it **below** the AddMedia control in z-order.
+
+57d. Set **`imgViewMsgShot`:** **Image** = `addPicViewMsg.Media`, **Y = 644**, **Width = 72**, **Height = 48**, **Fill** = `Color.White`, **ImagePosition** = `ImagePosition.Fit`, **Visible** = `!IsBlank(addPicViewMsg.Media)`.
+
+57e. **`lblViewMsgAttachLabel`**: **Text** = `"Attachments"`, **Y = 624**, **Visible** = `true`.
 
 ---
 
@@ -14174,7 +14181,7 @@ Set(varShowViewMessagesModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtViewMsgSubject);
 Reset(txtViewMsgBody);
-Reset(attViewMsg);
+Reset(addPicViewMsg);
 Reset(ddViewMsgStaff)
 ```
 
@@ -14239,8 +14246,8 @@ Set(
                     RequestID: varSelectedItem.ID,
                     ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
                     Message: txtViewMsgBody.Text & If(
-                    CountRows(attViewMsg.Attachments) > 0,
-                    Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
+                    !IsBlank(addPicViewMsg.Media),
+                    Char(10) & Char(10) & "[1 screenshot attached]",
                     ""
                 ),
                 Author0: {
@@ -14267,7 +14274,7 @@ Set(
 Set(varMessageSaved, !IsBlank(varNewComment.ID));
 
 If(
-    varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
+    varMessageSaved && !IsBlank(addPicViewMsg.Media),
     Set(
         varAttachOk,
         With(
@@ -14275,8 +14282,8 @@ If(
                 wResult: IfError(
                     'PowerAppV2->InitializevarSuccess'.Run(
                         {
-                            contentBytes: First(attViewMsg.Attachments).Value,
-                            name: First(attViewMsg.Attachments).Name
+                            contentBytes: addPicViewMsg.Media,
+                            name: Coalesce(addPicViewMsg.FileName, "slicer-screenshot.png")
                         },
                         Text(varNewComment.ID)
                     ),
@@ -14325,7 +14332,7 @@ If(
     );
     Reset(txtViewMsgSubject);
     Reset(txtViewMsgBody);
-    Reset(attViewMsg);
+    Reset(addPicViewMsg);
     Reset(ddViewMsgStaff);
     Notify("Message sent! Student will receive email notification.", NotificationType.Success),
     If(
@@ -14340,7 +14347,7 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> **Screenshots:** `attViewMsg` is an **unbound** Attachments control (not inside a form). Power Apps cannot `Patch` list attachments. Each file is sent to **`Flow-(K)-Comment-AddAttachment`**, then the app sets **`ReadyToEmail = true`**. Flow D emails the student and attaches those files. Close/Cancel also **`Reset(attViewMsg)`**.
+> **Screenshots:** `addPicViewMsg` is classic **Add picture** (`AddMedia`), not an Attachments control. Power Apps cannot `Patch` list attachments. The image is sent to **`Flow-(K)-Comment-AddAttachment`**, then the app sets **`ReadyToEmail = true`**. Flow D emails the student and attaches that file. Close/Cancel also **`Reset(addPicViewMsg)`**.
 
 > **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages. If the comment Patch fails, staff see an error and the job stamp is not updated. If the comment saves but LastAction fails, they still get a warning, not a silent miss. If a screenshot upload fails, **`ReadyToEmail` stays No** so the student is not emailed without the picture.
 
@@ -16271,13 +16278,14 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 | Control | Type |
 |---------|------|
-| `attViewMsg` | Attachments |
+| `addPicViewMsg` | AddMedia |
 | `btnViewMsgCancel` | Classic/Button |
 | `btnViewMsgClose` | Classic/Button |
 | `btnViewMsgMarkRead` | Classic/Button |
 | `btnViewMsgSend` | Classic/Button |
 | `ddViewMsgStaff` | Classic/ComboBox |
 | `galViewMessages` | Gallery |
+| `imgViewMsgShot` | Image |
 | `lblViewMsgAttachLabel` | Label |
 | `lblViewMsgBodyLabel` | Label |
 | `lblViewMsgCharCount` | Label |
@@ -16285,7 +16293,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `lblViewMsgSubjectLabel` | Label |
 | `lblViewMsgSubtitle` | Label |
 | `lblViewMsgTitle` | Label |
-| `recViewMsgAttachMask` | Rectangle |
+| `recViewMsgAttachBg` | Rectangle |
 | `recViewMsgModal` | Rectangle |
 | `recViewMsgOverlay` | Rectangle |
 | `recViewMsgSeparator` | Rectangle |
@@ -16473,9 +16481,11 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
+| **2026-08-21: Messages compose layout** | Studio positions: staff **Y = 433 / 456**, combo **Width = 283**, body **Y = 499 Height = 114**, attachments **Y = 624**, picker **Y = 644**. **AddMedia Fill** only covers the caption text; **`recViewMsgAttachBg`** is the white field. |
+| **2026-08-21: Compact screenshot picker** | Replaced classic **Attachments** (`attViewMsg`) with **Add picture** (`addPicViewMsg`, Height **48**) plus thumbnail **`imgViewMsgShot`**. Send passes `.Media` / `.FileName` to Flow K. No flow or list change. |
 | **2026-08-21: Attach picker chrome** | Restored **`lblViewMsgAttachLabel`** (**Attachments**). **`attViewMsg` Height = 100** so the control does not inner-scroll. **`recViewMsgAttachMask`** covers the unused drop-target band while empty. |
-| **2026-08-21: Message screenshots** | Messages modal has unbound **`attViewMsg`**. Send Patches **`ReadyToEmail = false`**, uploads each file with **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
-| **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff`** uses the full compose width. |
+| **2026-08-21: Message screenshots** | Messages modal sends a screenshot through **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
+| **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff` Width = 283**. |
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
 
 # Next Steps

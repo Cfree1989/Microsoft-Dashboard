@@ -9,7 +9,7 @@ The canvas app **cannot** `Patch` SharePoint list attachments, and this picker i
 **Related Documents:**
 - `SharePoint/RequestComments-List-Setup.md` — `ReadyToEmail`, list attachments enabled
 - `PowerAutomate/Flow-(D)-Message-Notifications.md` — sends the email after `ReadyToEmail = Yes`
-- `PowerApps/StaffDashboard-App-Spec.md` — `attViewMsg` + `btnViewMsgSend.OnSelect`
+- `PowerApps/StaffDashboard-App-Spec.md` — `addPicViewMsg` + `btnViewMsgSend.OnSelect`
 
 ---
 
@@ -19,7 +19,7 @@ Add inputs in this exact order.
 
 | # | Name | Type | Expression | Description |
 |---|------|------|------------|-------------|
-| 1 | Screenshot | File | Dynamic content **Screenshot** content / name | The image from the unbound Attachments picker |
+| 1 | Screenshot | File | Dynamic content **Screenshot** content / name | The PNG/JPG from **Add picture** (`addPicViewMsg.Media`) |
 | 2 | CommentID | Text | `triggerBody()['text']` | `RequestComments.ID` of the row created by Send |
 
 > **File input:** After you add the File input, rename it from `File Content` to `Screenshot`. In later actions, pick **Screenshot** from dynamic content.
