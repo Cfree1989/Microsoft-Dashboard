@@ -545,20 +545,26 @@ ClearCollect(colTimeSlots,
     {Idx: 16, Label: "4:30 PM",  Minutes: 990}
 );
 
-// === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
+// === SCHEDULE: COLOR PALETTE (18 categorical hues; TextHex for header initials) ===
 ClearCollect(colSchedColors,
-    {Idx: 0,  Hex: "#7B3F2B", Light: "#E8C9B8"},
-    {Idx: 1,  Hex: "#4A7C59", Light: "#B8D9C4"},
-    {Idx: 2,  Hex: "#C87941", Light: "#F0D4B0"},
-    {Idx: 3,  Hex: "#8B5E3C", Light: "#D9C0A8"},
-    {Idx: 4,  Hex: "#2E6B4F", Light: "#A8D4BE"},
-    {Idx: 5,  Hex: "#B34A2A", Light: "#EAB89A"},
-    {Idx: 6,  Hex: "#5B7A3A", Light: "#C0D4A0"},
-    {Idx: 7,  Hex: "#9B4520", Light: "#E8B898"},
-    {Idx: 8,  Hex: "#3D7060", Light: "#AACCB8"},
-    {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
-    {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
-    {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
+    {Idx: 0,  Hex: "#1976D2", Light: "#BBDEFB", TextHex: "#FFFFFF"},
+    {Idx: 1,  Hex: "#F57C00", Light: "#FFE0B2", TextHex: "#FFFFFF"},
+    {Idx: 2,  Hex: "#00897B", Light: "#B2DFDB", TextHex: "#FFFFFF"},
+    {Idx: 3,  Hex: "#C2185B", Light: "#F8BBD0", TextHex: "#FFFFFF"},
+    {Idx: 4,  Hex: "#F9A825", Light: "#FFF9C4", TextHex: "#1A1A1A"},
+    {Idx: 5,  Hex: "#3F51B5", Light: "#C5CAE9", TextHex: "#FFFFFF"},
+    {Idx: 6,  Hex: "#43A047", Light: "#C8E6C9", TextHex: "#FFFFFF"},
+    {Idx: 7,  Hex: "#E53935", Light: "#FFCDD2", TextHex: "#FFFFFF"},
+    {Idx: 8,  Hex: "#00ACC1", Light: "#B2EBF2", TextHex: "#1A1A1A"},
+    {Idx: 9,  Hex: "#8E24AA", Light: "#E1BEE7", TextHex: "#FFFFFF"},
+    {Idx: 10, Hex: "#E64A19", Light: "#FFCCBC", TextHex: "#FFFFFF"},
+    {Idx: 11, Hex: "#0288D1", Light: "#B3E5FC", TextHex: "#FFFFFF"},
+    {Idx: 12, Hex: "#C0CA33", Light: "#F0F4C3", TextHex: "#1A1A1A"},
+    {Idx: 13, Hex: "#6A1B9A", Light: "#E1BEE7", TextHex: "#FFFFFF"},
+    {Idx: 14, Hex: "#00695C", Light: "#B2DFDB", TextHex: "#FFFFFF"},
+    {Idx: 15, Hex: "#EC407A", Light: "#F8BBD0", TextHex: "#FFFFFF"},
+    {Idx: 16, Hex: "#1A237E", Light: "#C5CAE9", TextHex: "#FFFFFF"},
+    {Idx: 17, Hex: "#546E7A", Light: "#CFD8DC", TextHex: "#FFFFFF"}
 );
 
 // Named formula (App.Formulas): always stays in sync with colAllBuildPlates
@@ -784,7 +790,7 @@ Set(varLoadingMessage, "")
 | `varSchedScrollVersion` | Schedule screen: bumps `conSchedScrollBody` template height when changed | Number |
 | `colEditShifts` | Schedule screen: in-memory shift rows for the editor gallery | Table |
 | `colTimeSlots` | Schedule screen: `{Idx, Label, Minutes}` rows for the HTML grid (Idx 0–16) | Table |
-| `colSchedColors` | Schedule screen: `{Idx, Hex, Light}` palette rows for staff blocks | Table |
+| `colSchedColors` | Schedule screen: `{Idx, Hex, Light, TextHex}` — 18 categorical palette rows; stamped onto `colSchedStaff` by StaffID rank | Table |
 | `varShowRejectModal` | ID of item being rejected (0=hidden) | Number |
 | `varShowApprovalModal` | ID of item being approved (0=hidden) | Number |
 | `varBuildPlatesOpenedFromApproval` | Tracks whether Build Plates was opened from the Approval modal | Boolean |
@@ -14846,7 +14852,7 @@ Add the new controls to your Tree view. The Timer and Audio controls are invisib
 5. **Choice columns** on `StaffShifts` (`Day`, `ShiftStart`, `ShiftEnd`) must be written as `{Value: "text"}`, not plain strings.
 6. **Reorder panel sizes to content, not to screen.** Don't revert `Height` to `Parent.Height - Self.Y`; use `Min(CountRows(colStaff) * 40 + 8, Parent.Height - Self.Y)` so the background hugs the last row instead of stretching to the bottom.
 7. **AidType weekly hour caps are fixed in canvas formulas (not SharePoint).** `lblSchedAidInfo` and the sortable totals (`MaxH`) use Work Study 13, Graduate Assistant 20, otherwise **7** (Chancellor's Student Aid). The schedule **roster** is filtered by **Role** (`Student Worker` / `Graduate Assistant`), not by an exact `AidType` string. Totals abbrev is **WS** / **GA** / **CSA**.
-8. **Reuse `colStaff`; load shifts simply.** `scrSchedule.OnVisible` and the Save rebuild filter **`colStaff`** in memory (compare **`AidType`** as text, not **`AidType.Value`**). Do **not** query the **`Staff`** list again. Load **`StaffShifts`** with **`!IsBlank(StaffEmail)`**, then match student-worker emails on the tablet. Nested **`With`** for **`colSchedLookup`**: person once, then color from **`sr.StaffID`**.
+8. **Reuse `colStaff`; load shifts simply.** `scrSchedule.OnVisible` and the Save rebuild filter **`colStaff`** in memory (compare **`AidType`** as text, not **`AidType.Value`**). Do **not** query the **`Staff`** list again. Load **`StaffShifts`** with **`!IsBlank(StaffEmail)`**, then match student-worker emails on the tablet. Stamp schedule colors on **`colSchedStaff`** by **StaffID rank** from **`colSchedColors`**; **`colSchedLookup`** copies **`sr.ColorHex`** / **`sr.ColorLight`**.
 9. **Name dropdown stays empty.** **`drpSchedName.DefaultSelectedItems`** is **`Blank()`**. Do **not** default from **`User().Email`** — the app always runs as the owner account.
 
 ### Authoring workflow (canvas-authoring MCP)
@@ -16379,6 +16385,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
+| **2026-08-21: Schedule 18-color categorical roster** | **`colSchedColors`**: 18 hues with **`Hex` / `Light` / `TextHex`**. Schedule stamps colors onto **`colSchedStaff`** by **StaffID ascending rank** (not `Mod(StaffID, 12)`). Grid/totals consume stamped fields; column order still **`SchedSortOrder`**. See [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md). |
 
 # Next Steps
 

@@ -171,27 +171,33 @@ ClearCollect(colTimeSlots,
 
 ### 1C — Add the colSchedColors collection
 
-A 12-color palette of warm earth tones that sits well against `varColorBgCard` (cream). Each staff member's color is assigned by `StaffID mod 12` — automatic, no manual assignment needed.
+An **18-color categorical palette** (high-contrast hues, not earth tones). Colors are **stamped onto `colSchedStaff`** by StaffID roster rank on Schedule load/save — not `Mod(SharePoint ID, N)`. Grid column order still uses `SchedSortOrder` (display ≠ color index).
 
 ```
-// === SCHEDULE: COLOR PALETTE (warm earth tones matching reference) ===
+// === SCHEDULE: COLOR PALETTE (18 categorical hues; TextHex for header initials) ===
 ClearCollect(colSchedColors,
-    {Idx: 0,  Hex: "#7B3F2B", Light: "#E8C9B8"},
-    {Idx: 1,  Hex: "#4A7C59", Light: "#B8D9C4"},
-    {Idx: 2,  Hex: "#C87941", Light: "#F0D4B0"},
-    {Idx: 3,  Hex: "#8B5E3C", Light: "#D9C0A8"},
-    {Idx: 4,  Hex: "#2E6B4F", Light: "#A8D4BE"},
-    {Idx: 5,  Hex: "#B34A2A", Light: "#EAB89A"},
-    {Idx: 6,  Hex: "#5B7A3A", Light: "#C0D4A0"},
-    {Idx: 7,  Hex: "#9B4520", Light: "#E8B898"},
-    {Idx: 8,  Hex: "#3D7060", Light: "#AACCB8"},
-    {Idx: 9,  Hex: "#A06030", Light: "#DEC0A0"},
-    {Idx: 10, Hex: "#6B3A5A", Light: "#CCA8C0"},
-    {Idx: 11, Hex: "#4E7A8A", Light: "#B0CCd8"}
+    {Idx: 0,  Hex: "#1976D2", Light: "#BBDEFB", TextHex: "#FFFFFF"},
+    {Idx: 1,  Hex: "#F57C00", Light: "#FFE0B2", TextHex: "#FFFFFF"},
+    {Idx: 2,  Hex: "#00897B", Light: "#B2DFDB", TextHex: "#FFFFFF"},
+    {Idx: 3,  Hex: "#C2185B", Light: "#F8BBD0", TextHex: "#FFFFFF"},
+    {Idx: 4,  Hex: "#F9A825", Light: "#FFF9C4", TextHex: "#1A1A1A"},
+    {Idx: 5,  Hex: "#3F51B5", Light: "#C5CAE9", TextHex: "#FFFFFF"},
+    {Idx: 6,  Hex: "#43A047", Light: "#C8E6C9", TextHex: "#FFFFFF"},
+    {Idx: 7,  Hex: "#E53935", Light: "#FFCDD2", TextHex: "#FFFFFF"},
+    {Idx: 8,  Hex: "#00ACC1", Light: "#B2EBF2", TextHex: "#1A1A1A"},
+    {Idx: 9,  Hex: "#8E24AA", Light: "#E1BEE7", TextHex: "#FFFFFF"},
+    {Idx: 10, Hex: "#E64A19", Light: "#FFCCBC", TextHex: "#FFFFFF"},
+    {Idx: 11, Hex: "#0288D1", Light: "#B3E5FC", TextHex: "#FFFFFF"},
+    {Idx: 12, Hex: "#C0CA33", Light: "#F0F4C3", TextHex: "#1A1A1A"},
+    {Idx: 13, Hex: "#6A1B9A", Light: "#E1BEE7", TextHex: "#FFFFFF"},
+    {Idx: 14, Hex: "#00695C", Light: "#B2DFDB", TextHex: "#FFFFFF"},
+    {Idx: 15, Hex: "#EC407A", Light: "#F8BBD0", TextHex: "#FFFFFF"},
+    {Idx: 16, Hex: "#1A237E", Light: "#C5CAE9", TextHex: "#FFFFFF"},
+    {Idx: 17, Hex: "#546E7A", Light: "#CFD8DC", TextHex: "#FFFFFF"}
 );
 ```
 
-> **Each record stores two colors:** `Hex` is the saturated body color used for slots that contain a shift. `Light` is the tint used for the legend/header cells so every staff column has a consistent identity color that doesn't wash out against the cream card background.
+> **Each record stores three colors:** `Hex` is the saturated body color for shift cells and initials headers. `Light` is the totals-row tint. `TextHex` is the initials text on header cells (dark on gold/cyan/lime so they stay readable). With ≤18 active student workers, each person gets a unique slot; `Mod(..., 18)` only wraps if the roster ever exceeds the palette.
 
 ### 1D — Add schedule state variables and empty edit collection
 
@@ -268,29 +274,60 @@ After making all changes, press **Ctrl+S** to save, then click **Run** (▶) to 
 ```
 // Roster comes from colStaff (loaded at app start). Do not query Staff again.
 // Do not default the name dropdown from User().Email — this app always runs as the owner account.
+// Color slots: unique by StaffID rank (Mod(..., 18) only if roster exceeds palette).
 ClearCollect(
     colSchedStaff,
-    ForAll(
-        Filter(
-            colStaff,
-            Active = true &&
-            (
-                Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
-                Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
-            )
-        ),
+    With(
         {
-            StaffID:        StaffID,
-            MemberName:     Trim(
-                                First(Split(Trim(MemberName), " ")).Value & " " &
-                                Last(Split(Trim(MemberName), " ")).Value
-                            ),
-            MemberEmail:    Lower(Trim(MemberEmail)),
-            Role:           Role,
-            Active:         Active,
-            AidType:        AidType,
-            SchedSortOrder: Coalesce(SchedSortOrder, 10)
-        }
+            roster: Sort(
+                ForAll(
+                    Filter(
+                        colStaff,
+                        Active = true &&
+                        (
+                            Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                            Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
+                        )
+                    ),
+                    {
+                        StaffID:        StaffID,
+                        MemberName:     Trim(
+                                            First(Split(Trim(MemberName), " ")).Value & " " &
+                                            Last(Split(Trim(MemberName), " ")).Value
+                                        ),
+                        MemberEmail:    Lower(Trim(MemberEmail)),
+                        Role:           Role,
+                        Active:         Active,
+                        AidType:        AidType,
+                        SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                    }
+                ),
+                StaffID,
+                SortOrder.Ascending
+            )
+        },
+        ForAll(
+            Sequence(CountRows(roster)) As i,
+            With(
+                {
+                    p: Index(roster, i.Value),
+                    cr: LookUp(colSchedColors, Idx = Mod(i.Value - 1, 18))
+                },
+                {
+                    StaffID:        p.StaffID,
+                    MemberName:     p.MemberName,
+                    MemberEmail:    p.MemberEmail,
+                    Role:           p.Role,
+                    Active:         p.Active,
+                    AidType:        p.AidType,
+                    SchedSortOrder: p.SchedSortOrder,
+                    ColorIdx:       Mod(i.Value - 1, 18),
+                    ColorHex:       cr.Hex,
+                    ColorLight:     cr.Light,
+                    ColorText:      cr.TextHex
+                }
+            )
+        )
     )
 );
 
@@ -319,22 +356,19 @@ ClearCollect(
         colShifts As sh,
         With(
             { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
-            With(
-                { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
-                {
-                    ShiftID:    sh.ShiftID,
-                    Email:      sh.Email,
-                    Name:       sr.MemberName,
-                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                    Day:        sh.Day,
-                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                    ColorHex:   cr.Hex,
-                    ColorLight: cr.Light,
-                    SortOrder:  sr.SchedSortOrder
-                }
-            )
+            {
+                ShiftID:    sh.ShiftID,
+                Email:      sh.Email,
+                Name:       sr.MemberName,
+                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                Day:        sh.Day,
+                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                ColorHex:   sr.ColorHex,
+                ColorLight: sr.ColorLight,
+                SortOrder:  sr.SchedSortOrder
+            }
         )
     )
 );
@@ -348,7 +382,7 @@ Set(varSchedTotalsSortDesc, true);
 Set(varSchedScrollVersion, Coalesce(varSchedScrollVersion, 0) + 1)
 ```
 
-> **What `colSchedLookup` does:** One record per row in `StaffShifts` (after matching emails to `colSchedStaff`). Nested **`With`** looks up the person once (`sr`) then the color (`cr` from `sr.StaffID`) — do not `LookUp(colSchedStaff, …)` twice in one record literal. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
+> **What `colSchedLookup` does:** One record per row in `StaffShifts` (after matching emails to `colSchedStaff`). Colors come from fields **stamped on `sr`** (`ColorHex` / `ColorLight`) — do not `LookUp(colSchedColors, Mod(StaffID, …))` here. Grid column order still uses `SchedSortOrder`. The HTML grid checks whether a time slot falls inside **any** shift for that person and day using `Filter` / `CountRows` — no artificial cap on shifts per day.
 
 ---
 
@@ -745,13 +779,10 @@ With(
                 "<td style='height:" & Text(H) & "px;background:#e8e0d8;border:1px solid #bdbdbd;'></td>",
                 Concat(
                     dayStaff As s,
-                    With(
-                        {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
-                        "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;border:1px solid #bdbdbd;overflow:hidden;white-space:nowrap;'>" &
-                        Left(First(Split(Trim(s.MemberName), " ")).Value, 1) &
-                        Left(Last(Split(Trim(s.MemberName), " ")).Value, 1) &
-                        "</td>"
-                    )
+                    "<td style='height:" & Text(H) & "px;background:" & Coalesce(s.ColorHex, "#8B4513") & ";text-align:center;vertical-align:middle;color:" & Coalesce(s.ColorText, "#fff") & ";font-weight:700;font-size:10px;border:1px solid #bdbdbd;overflow:hidden;white-space:nowrap;'>" &
+                    Left(First(Split(Trim(s.MemberName), " ")).Value, 1) &
+                    Left(Last(Split(Trim(s.MemberName), " ")).Value, 1) &
+                    "</td>"
                 )
             )
         )
@@ -787,10 +818,9 @@ With(
                                 dayStaff As s,
                                 With(
                                     {
-                                        cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
                                         on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
                                     },
-                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
+                                    "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(s.ColorHex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
                                 )
                             )
                         )
@@ -810,7 +840,7 @@ With(
 - Outer `<div style='overflow-x:auto;overflow-y:hidden;width:100%;height:100%;…'>` so horizontal overflow can still fit if needed without the grid taking over vertical scrolling.
 - **Single master `<table>`** with `border-collapse:collapse`, `table-layout:fixed`, `width:100%`, and **per-cell** `border:1px solid #bdbdbd` (plus `border-top:1px solid #d7ccc8` on every slot row, including the first, so the grid line under the legend is visible). One outer rounded border wraps the whole table (`border:2px solid #d7ccc8;border-radius:10px`).
 - **Header rows:** Row 1 — left/right **corner** cells (`rowspan=2`, 80px) bracket Mon–Fri **`<th>`** cells (dynamic `colspan` from `CountRows(dayStaff)`). Row 2 — staff **initials** `<td>`s (one per staff column); empty placeholder `<td>` for a day with no staff.
-- **Slot rows:** one **`<tr style='height:{H}px'>`** per **`Filter(colTimeSlots, Idx < 16)`**. Cell order: **left time label** | Mon columns… | Tue… | … | **right time label** (same text as left). **`With({ dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"), si: slot.Idx }, …)`** keeps the Mon/Wed/Fri vs Tue/Thu day banding visible down the grid while staff shift blocks still use each person's saturated `Hex` color.
+- **Slot rows:** one **`<tr style='height:{H}px'>`** per **`Filter(colTimeSlots, Idx < 16)`**. Cell order: **left time label** | Mon columns… | Tue… | … | **right time label** (same text as left). **`With({ dayCellBg: Switch(dn.Value, "Monday", "#e2d3c2", "Tuesday", "#fbf1e5", "Wednesday", "#e2d3c2", "Thursday", "#fbf1e5", "Friday", "#e2d3c2", "#fbf1e5"), si: slot.Idx }, …)`** keeps the Mon/Wed/Fri vs Tue/Thu day banding visible down the grid while staff shift blocks still use each person's stamped **`ColorHex`**.
 - **Per day filtering (reduces visual clutter):** For each day, `With({dayStaff: Filter(st As person, CountRows(Filter(colSchedLookup, Email = person.MemberEmail && Day = dn.Value)) > 0)}, …)` so only staff with shifts on that day get columns. **`H = 28`** for header, legend, and slot row heights (same pitch everywhere).
 - **No shifts:** for a day with `CountRows(dayStaff)=0`, emit **one** `<td rowspan='{slotCount}' …>No shifts</td>` on the **first** slot row (`slot.Idx = Min(…)` / `minSlotIdx` in the YAML); emit `""` for that day on later slot rows so column counts stay valid.
 - **Gallery `TemplateSize`:** the scroll template’s grid segment uses the same **28px** slot pitch as the HtmlViewer (`80 + 56 + CountRows(Filter(colTimeSlots, Idx < 16)) * 28` in the formula’s grid part) so the body height matches the rendered grid.
@@ -899,27 +929,57 @@ If(
             varSchedSaved,
             ClearCollect(
                 colSchedStaff,
-                ForAll(
-                    Filter(
-                        colStaff,
-                        Active = true &&
-                        (
-                            Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
-                            Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
-                        )
-                    ),
+                With(
                     {
-                        StaffID:        StaffID,
-                        MemberName:     Trim(
-                                            First(Split(Trim(MemberName), " ")).Value & " " &
-                                            Last(Split(Trim(MemberName), " ")).Value
-                                        ),
-                        MemberEmail:    Lower(Trim(MemberEmail)),
-                        Role:           Role,
-                        Active:         Active,
-                        AidType:        AidType,
-                        SchedSortOrder: Coalesce(SchedSortOrder, 10)
-                    }
+                        roster: Sort(
+                            ForAll(
+                                Filter(
+                                    colStaff,
+                                    Active = true &&
+                                    (
+                                        Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                                        Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
+                                    )
+                                ),
+                                {
+                                    StaffID:        StaffID,
+                                    MemberName:     Trim(
+                                                        First(Split(Trim(MemberName), " ")).Value & " " &
+                                                        Last(Split(Trim(MemberName), " ")).Value
+                                                    ),
+                                    MemberEmail:    Lower(Trim(MemberEmail)),
+                                    Role:           Role,
+                                    Active:         Active,
+                                    AidType:        AidType,
+                                    SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                                }
+                            ),
+                            StaffID,
+                            SortOrder.Ascending
+                        )
+                    },
+                    ForAll(
+                        Sequence(CountRows(roster)) As i,
+                        With(
+                            {
+                                p: Index(roster, i.Value),
+                                cr: LookUp(colSchedColors, Idx = Mod(i.Value - 1, 18))
+                            },
+                            {
+                                StaffID:        p.StaffID,
+                                MemberName:     p.MemberName,
+                                MemberEmail:    p.MemberEmail,
+                                Role:           p.Role,
+                                Active:         p.Active,
+                                AidType:        p.AidType,
+                                SchedSortOrder: p.SchedSortOrder,
+                                ColorIdx:       Mod(i.Value - 1, 18),
+                                ColorHex:       cr.Hex,
+                                ColorLight:     cr.Light,
+                                ColorText:      cr.TextHex
+                            }
+                        )
+                    )
                 )
             );
             ClearCollect(
@@ -944,22 +1004,19 @@ If(
                     colShifts As sh,
                     With(
                         { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
-                        With(
-                            { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
-                            {
-                                ShiftID:    sh.ShiftID,
-                                Email:      sh.Email,
-                                Name:       sr.MemberName,
-                                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                                Day:        sh.Day,
-                                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                                ColorHex:   cr.Hex,
-                                ColorLight: cr.Light,
-                                SortOrder:  sr.SchedSortOrder
-                            }
-                        )
+                        {
+                            ShiftID:    sh.ShiftID,
+                            Email:      sh.Email,
+                            Name:       sr.MemberName,
+                            Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                        Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                            Day:        sh.Day,
+                            StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                            EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                            ColorHex:   sr.ColorHex,
+                            ColorLight: sr.ColorLight,
+                            SortOrder:  sr.SchedSortOrder
+                        }
                     )
                 )
             );
@@ -1051,6 +1108,7 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 | TemplateSize | `28` |
 | Height | `=Max(CountRows(colSchedStaff), 1) * 28` |
 | ShowScrollbar | `false` |
+| Row tint | `RowFill: Coalesce(p.ColorLight, "#ECEFF1")` on each totals row (from stamped `colSchedStaff`, not a live `LookUp` on `StaffID`) |
 
 > **Why native controls instead of HTML here?** Power Apps can't do true click-to-sort inside `HtmlViewer`. Moving totals into a gallery keeps the week grid fast while allowing real sorting, while the surrounding scroll body keeps the entire page on one vertical scrollbar.
 
@@ -1099,7 +1157,7 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 **App.OnStart:**
 - [ ] `colStaff` includes `StaffID`, `AidType`, `SchedSortOrder` (no shift time fields). Loaded with `Filter(Staff, Active = true)` only — **no manager/AidType filter here** (that filter lives on `scrSchedule` and builds `colSchedStaff`, not `colStaff`)
 - [ ] `colTimeSlots` has **17** rows (Idx `0`–`15` for grid starts, Idx `16` = `"4:30 PM"` end boundary), correct labels and minute values; schedule **HtmlText** uses **`Filter(colTimeSlots, Idx < 16)`** for row count and gutters so the grid stays 16 rows tall
-- [ ] `colSchedColors` has 12 color entries
+- [ ] `colSchedColors` has **18** color entries (`Idx`, `Hex`, `Light`, `TextHex`)
 - [ ] `colEditShifts` initialized empty (`ClearCollect` dummy row then `Clear`)
 - [ ] `varSchedSelectedEmail`, `varSchedEditSaving`, `varSchedTotalsSortBy`, `varSchedTotalsSortDesc` initialized
 - [ ] App starts without errors
@@ -1111,7 +1169,7 @@ so the totals gallery opens sorted by **Total hours, descending** (heaviest sche
 - [ ] `btnNavSchedule` navigates to `scrSchedule`
 
 **scrSchedule:**
-- [ ] `OnVisible` builds `colSchedStaff` from in-memory **`colStaff`** (not a second `Staff` query), loads `colShifts` with `Filter(StaffShifts, !IsBlank(StaffEmail))` then matches emails on the tablet, and builds `colSchedLookup` (one `LookUp` of the person, then color from `sr.StaffID`)
+- [ ] `OnVisible` builds `colSchedStaff` from in-memory **`colStaff`** (not a second `Staff` query), stamps `ColorIdx`/`ColorHex`/`ColorLight`/`ColorText` by **StaffID rank**, loads `colShifts` with `Filter(StaffShifts, !IsBlank(StaffEmail))` then matches emails on the tablet, and builds `colSchedLookup` (colors from `sr.ColorHex` / `sr.ColorLight`)
 - [ ] Header bar has back button + title
 - [ ] Selecting a name fills `galEditShifts` from `colShifts`
 - [ ] **+ Add shift** appends rows; delete removes a row
@@ -1326,5 +1384,6 @@ To clear everyone's shifts at once, open **StaffShifts** in SharePoint **Edit in
 | **2026-08-14: Roster from memory + simple shift load** | **`OnVisible`** / **Save** rebuild `colSchedStaff` from **`colStaff`** (`AidType` compared as text). Shifts load with **`Filter(StaffShifts, !IsBlank(StaffEmail))`**, then emails are matched on the tablet. **`colSchedLookup`** looks up the person once (`sr`) then color from **`sr.StaffID`**. **`drpSchedName.DefaultSelectedItems`** stays **`Blank()`** (shared owner login — do not use `User().Email`). |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` choice is **Chancellor's Student Aid**. Hour caps still **WS 13 / CSA 7 / GA 20**; totals abbrev **CSA**. |
 | **2026-08-18: Roster by Role, not AidType text** | **`colSchedStaff`** includes active **Student Worker** and **Graduate Assistant** only. Exact `AidType` string match was dropping CSA people after the rename (Power Apps did not treat the new choice as equal to the formula). |
+| **2026-08-21: 18-color categorical roster** | Replaced 12 earth tones with **18** categorical hues (`Hex` / `Light` / `TextHex`). **`OnVisible`** / **Save** stamp colors on **`colSchedStaff`** by **StaffID ascending rank** (`Sequence` + `Index`; `Mod(..., 18)` only past 18 people). Grid/totals use stamped fields — no `Mod(StaffID, 12)`. Column order still **`SchedSortOrder`**. Header initials use **`ColorText`** (dark on gold/cyan/lime). Totals **`RowFill`** = `Coalesce(p.ColorLight, "#ECEFF1")`. |
 
 

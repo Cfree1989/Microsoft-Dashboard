@@ -5,29 +5,60 @@ Screens:
       OnVisible: |-
         =// Roster comes from colStaff (loaded at app start). Do not query Staff again.
         // Do not default the name dropdown from User().Email — this app always runs as the owner account.
+        // Color slots: unique by StaffID rank (Mod(..., 18) only if roster exceeds palette).
         ClearCollect(
             colSchedStaff,
-            ForAll(
-                Filter(
-                    colStaff,
-                    Active = true &&
-                    (
-                        Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
-                        Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
-                    )
-                ),
+            With(
                 {
-                    StaffID:        StaffID,
-                    MemberName:     Trim(
-                                        First(Split(Trim(MemberName), " ")).Value & " " &
-                                        Last(Split(Trim(MemberName), " ")).Value
-                                    ),
-                    MemberEmail:    Lower(Trim(MemberEmail)),
-                    Role:           Role,
-                    Active:         Active,
-                    AidType:        AidType,
-                    SchedSortOrder: Coalesce(SchedSortOrder, 10)
-                }
+                    roster: Sort(
+                        ForAll(
+                            Filter(
+                                colStaff,
+                                Active = true &&
+                                (
+                                    Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                                    Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
+                                )
+                            ),
+                            {
+                                StaffID:        StaffID,
+                                MemberName:     Trim(
+                                                    First(Split(Trim(MemberName), " ")).Value & " " &
+                                                    Last(Split(Trim(MemberName), " ")).Value
+                                                ),
+                                MemberEmail:    Lower(Trim(MemberEmail)),
+                                Role:           Role,
+                                Active:         Active,
+                                AidType:        AidType,
+                                SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                            }
+                        ),
+                        StaffID,
+                        SortOrder.Ascending
+                    )
+                },
+                ForAll(
+                    Sequence(CountRows(roster)) As i,
+                    With(
+                        {
+                            p: Index(roster, i.Value),
+                            cr: LookUp(colSchedColors, Idx = Mod(i.Value - 1, 18))
+                        },
+                        {
+                            StaffID:        p.StaffID,
+                            MemberName:     p.MemberName,
+                            MemberEmail:    p.MemberEmail,
+                            Role:           p.Role,
+                            Active:         p.Active,
+                            AidType:        p.AidType,
+                            SchedSortOrder: p.SchedSortOrder,
+                            ColorIdx:       Mod(i.Value - 1, 18),
+                            ColorHex:       cr.Hex,
+                            ColorLight:     cr.Light,
+                            ColorText:      cr.TextHex
+                        }
+                    )
+                )
             )
         );
         // Simple SharePoint load (email present). Match student workers on the tablet.
@@ -53,22 +84,19 @@ Screens:
                 colShifts As sh,
                 With(
                     { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
-                    With(
-                        { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
-                        {
-                            ShiftID:    sh.ShiftID,
-                            Email:      sh.Email,
-                            Name:       sr.MemberName,
-                            Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                        Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                            Day:        sh.Day,
-                            StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                            EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                            ColorHex:   cr.Hex,
-                            ColorLight: cr.Light,
-                            SortOrder:  sr.SchedSortOrder
-                        }
-                    )
+                    {
+                        ShiftID:    sh.ShiftID,
+                        Email:      sh.Email,
+                        Name:       sr.MemberName,
+                        Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                    Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                        Day:        sh.Day,
+                        StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                        EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                        ColorHex:   sr.ColorHex,
+                        ColorLight: sr.ColorLight,
+                        SortOrder:  sr.SchedSortOrder
+                    }
                 )
             )
         );
@@ -423,27 +451,57 @@ Screens:
                                 varSchedSaved,
                                 ClearCollect(
                                     colSchedStaff,
-                                    ForAll(
-                                        Filter(
-                                            colStaff,
-                                            Active = true &&
-                                            (
-                                                Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
-                                                Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
-                                            )
-                                        ),
+                                    With(
                                         {
-                                            StaffID:        StaffID,
-                                            MemberName:     Trim(
-                                                                First(Split(Trim(MemberName), " ")).Value & " " &
-                                                                Last(Split(Trim(MemberName), " ")).Value
-                                                            ),
-                                            MemberEmail:    Lower(Trim(MemberEmail)),
-                                            Role:           Role,
-                                            Active:         Active,
-                                            AidType:        AidType,
-                                            SchedSortOrder: Coalesce(SchedSortOrder, 10)
-                                        }
+                                            roster: Sort(
+                                                ForAll(
+                                                    Filter(
+                                                        colStaff,
+                                                        Active = true &&
+                                                        (
+                                                            Lower(Trim(Coalesce(Role.Value, ""))) = "student worker" ||
+                                                            Lower(Trim(Coalesce(Role.Value, ""))) = "graduate assistant"
+                                                        )
+                                                    ),
+                                                    {
+                                                        StaffID:        StaffID,
+                                                        MemberName:     Trim(
+                                                                            First(Split(Trim(MemberName), " ")).Value & " " &
+                                                                            Last(Split(Trim(MemberName), " ")).Value
+                                                                        ),
+                                                        MemberEmail:    Lower(Trim(MemberEmail)),
+                                                        Role:           Role,
+                                                        Active:         Active,
+                                                        AidType:        AidType,
+                                                        SchedSortOrder: Coalesce(SchedSortOrder, 10)
+                                                    }
+                                                ),
+                                                StaffID,
+                                                SortOrder.Ascending
+                                            )
+                                        },
+                                        ForAll(
+                                            Sequence(CountRows(roster)) As i,
+                                            With(
+                                                {
+                                                    p: Index(roster, i.Value),
+                                                    cr: LookUp(colSchedColors, Idx = Mod(i.Value - 1, 18))
+                                                },
+                                                {
+                                                    StaffID:        p.StaffID,
+                                                    MemberName:     p.MemberName,
+                                                    MemberEmail:    p.MemberEmail,
+                                                    Role:           p.Role,
+                                                    Active:         p.Active,
+                                                    AidType:        p.AidType,
+                                                    SchedSortOrder: p.SchedSortOrder,
+                                                    ColorIdx:       Mod(i.Value - 1, 18),
+                                                    ColorHex:       cr.Hex,
+                                                    ColorLight:     cr.Light,
+                                                    ColorText:      cr.TextHex
+                                                }
+                                            )
+                                        )
                                     )
                                 );
                                 ClearCollect(
@@ -468,22 +526,19 @@ Screens:
                                         colShifts As sh,
                                         With(
                                             { sr: LookUp(colSchedStaff, MemberEmail = sh.Email) },
-                                            With(
-                                                { cr: LookUp(colSchedColors, Idx = Mod(sr.StaffID, 12)) },
-                                                {
-                                                    ShiftID:    sh.ShiftID,
-                                                    Email:      sh.Email,
-                                                    Name:       sr.MemberName,
-                                                    Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
-                                                                Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
-                                                    Day:        sh.Day,
-                                                    StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
-                                                    EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
-                                                    ColorHex:   cr.Hex,
-                                                    ColorLight: cr.Light,
-                                                    SortOrder:  sr.SchedSortOrder
-                                                }
-                                            )
+                                            {
+                                                ShiftID:    sh.ShiftID,
+                                                Email:      sh.Email,
+                                                Name:       sr.MemberName,
+                                                Initials:   Left(First(Split(Trim(sr.MemberName), " ")).Value, 1) &
+                                                            Left(Last(Split(Trim(sr.MemberName), " ")).Value, 1),
+                                                Day:        sh.Day,
+                                                StartSlot:  Coalesce(LookUp(colTimeSlots, Label = sh.ShiftStart).Idx, -1),
+                                                EndSlot:    Coalesce(LookUp(colTimeSlots, Label = sh.ShiftEnd).Idx, -1),
+                                                ColorHex:   sr.ColorHex,
+                                                ColorLight: sr.ColorLight,
+                                                SortOrder:  sr.SchedSortOrder
+                                            }
                                         )
                                     )
                                 );
@@ -572,13 +627,10 @@ Screens:
                                     "<td style='height:" & Text(H) & "px;background:#e8e0d8;border:1px solid #bdbdbd;'></td>",
                                     Concat(
                                         dayStaff As s,
-                                        With(
-                                            {cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12))},
-                                            "<td style='height:" & Text(H) & "px;background:" & Coalesce(cr.Hex, "#8B4513") & ";text-align:center;vertical-align:middle;color:#fff;font-weight:700;font-size:10px;border:1px solid #bdbdbd;overflow:hidden;white-space:nowrap;'>" &
-                                            Left(First(Split(Trim(s.MemberName), " ")).Value, 1) &
-                                            Left(Last(Split(Trim(s.MemberName), " ")).Value, 1) &
-                                            "</td>"
-                                        )
+                                        "<td style='height:" & Text(H) & "px;background:" & Coalesce(s.ColorHex, "#8B4513") & ";text-align:center;vertical-align:middle;color:" & Coalesce(s.ColorText, "#fff") & ";font-weight:700;font-size:10px;border:1px solid #bdbdbd;overflow:hidden;white-space:nowrap;'>" &
+                                        Left(First(Split(Trim(s.MemberName), " ")).Value, 1) &
+                                        Left(Last(Split(Trim(s.MemberName), " ")).Value, 1) &
+                                        "</td>"
                                     )
                                 )
                             )
@@ -614,10 +666,9 @@ Screens:
                                                     dayStaff As s,
                                                     With(
                                                         {
-                                                            cr: LookUp(colSchedColors, Idx = Mod(s.StaffID, 12)),
                                                             on: CountRows(Filter(colSchedLookup, Email = s.MemberEmail && Day = dn.Value && si >= StartSlot && si < EndSlot)) > 0
                                                         },
-                                                        "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(cr.Hex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
+                                                        "<td style='border:1px solid #bdbdbd;" & brd & If(on, "background:" & Coalesce(s.ColorHex, "#8B4513") & ";", "background:" & dayCellBg & ";") & "'></td>"
                                                     )
                                                 )
                                             )
@@ -875,7 +926,7 @@ Screens:
                                         FriH:      fH,
                                         TotalH:    mH + tuH + wH + thH + fH,
                                         MaxH:      maxH,
-                                        RowFill:   Coalesce(LookUp(colSchedColors, Idx = Mod(p.StaffID, 12)).Light, "#f5f0ea")
+                                        RowFill:   Coalesce(p.ColorLight, "#ECEFF1")
                                     }
                                 )
                             )
