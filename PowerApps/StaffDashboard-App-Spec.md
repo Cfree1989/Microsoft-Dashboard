@@ -13618,8 +13618,9 @@ scrDashboard
     ├── btnViewMsgMarkRead          ← "Mark All Read" button (visible when unread)
     ├── lblViewMsgCharCount         ← Character count display
     ├── txtViewMsgBody              ← Message body input
-    ├── lblViewMsgAttachLabel       ← "Screenshot (optional)"
+    ├── lblViewMsgAttachLabel       ← "Attachments"
     ├── attViewMsg                  ← Unbound Attachments picker (not a form)
+    ├── recViewMsgAttachMask        ← Covers drop target when empty
     ├── lblViewMsgBodyLabel         ← "Message"
     ├── txtViewMsgSubject           ← Subject input
     ├── lblViewMsgSubjectLabel      ← "Subject"
@@ -14080,7 +14081,7 @@ Staff do not type a subject. Set **Visible** = `false` on this input and **`lblV
 | DisabledBorderColor | `varInputBorderColor` |
 | HintText | `"Type your message to the student..."` |
 
-> **Live layout:** Modal height **750**. Gallery **280**. Body **Y = 476**, **Height = 90** so the screenshot picker fits above the buttons.
+> **Live layout:** Modal height **750**. Gallery **280**. Staff **Y = 393**. Message body **Y = 482**, **Height = 80**. Attachments **Y = 588**, **Height = 100**.
 
 ---
 
@@ -14088,7 +14089,8 @@ Staff do not type a subject. Set **Visible** = `false` on this input and **`lblV
 
 This is a file picker only. It is **not** inside a form and does **not** use `SubmitForm`. Saving the file is Flow K.
 
-57a. Copy the Attachments control out of **`frmAttachmentsEdit`** (select `DataCardValue13` only) and paste it into **`conViewMessagesModal`**, **or** insert **Attachments** if Studio allows it on the screen. **Rename it:** `attViewMsg`.
+57a. Insert **Attachments** (or copy `DataCardValue13` from **`frmAttachmentsEdit`**). **Rename it:** `attViewMsg`. Give it **Height = 100** so the drop target and **Add Attachments** row both fit and the control does not show an inner scrollbar. Cover the drop-target band with **`recViewMsgAttachMask`** (same X/Width, **Height = 64**, **Fill = `varColorBgCard`**, **Visible** = `CountRows(attViewMsg.Attachments) = 0`) so an empty picker shows only the add-file row. After a file is chosen, the mask hides so the file name is visible.
+
 57b. Clear **Items** (do not bind `Parent.Default`). Set:
 
 | Property | Value |
@@ -14096,16 +14098,16 @@ This is a file picker only. It is **not** inside a form and does **not** use `Su
 | X | `recViewMsgModal.X + 20` |
 | Y | `588` |
 | Width | `recViewMsgModal.Width - 40` |
-| Height | `64` |
+| Height | `100` |
 | DisplayMode | `DisplayMode.Edit` |
 | MaxAttachments | `1` |
 | MaxAttachmentSize | `10` |
-| AddAttachmentText | `"Attach screenshot"` |
-| NoAttachmentsText | `"PNG or JPG of the slice"` |
-| AccessibleLabel | `"Attach a screenshot of the sliced file"` |
+| AddAttachmentText | `"Add Attachments"` |
+| NoAttachmentsText | `""` |
+| AccessibleLabel | `"Add attachments"` |
 | TabIndex | `0` |
 
-57c. Add label **`lblViewMsgAttachLabel`** above it (**Y = 570**, Text `"Screenshot (optional)"`).
+57c. **`lblViewMsgAttachLabel`**: **Text** = `"Attachments"`, **Y = 568**, **Visible** = `true`.
 
 ---
 
@@ -16283,6 +16285,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `lblViewMsgSubjectLabel` | Label |
 | `lblViewMsgSubtitle` | Label |
 | `lblViewMsgTitle` | Label |
+| `recViewMsgAttachMask` | Rectangle |
 | `recViewMsgModal` | Rectangle |
 | `recViewMsgOverlay` | Rectangle |
 | `recViewMsgSeparator` | Rectangle |
@@ -16470,6 +16473,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
+| **2026-08-21: Attach picker chrome** | Restored **`lblViewMsgAttachLabel`** (**Attachments**). **`attViewMsg` Height = 100** so the control does not inner-scroll. **`recViewMsgAttachMask`** covers the unused drop-target band while empty. |
 | **2026-08-21: Message screenshots** | Messages modal has unbound **`attViewMsg`**. Send Patches **`ReadyToEmail = false`**, uploads each file with **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
 | **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff`** uses the full compose width. |
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
