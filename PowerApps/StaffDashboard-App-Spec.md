@@ -14096,7 +14096,7 @@ This is a file picker only. It is **not** inside a form and does **not** use `Su
 | Width | `recViewMsgModal.Width - 40` |
 | Height | `64` |
 | DisplayMode | `DisplayMode.Edit` |
-| MaxAttachments | `3` |
+| MaxAttachments | `1` |
 | MaxAttachmentSize | `10` |
 | AddAttachmentText | `"Attach screenshot"` |
 | NoAttachmentsText | `"PNG or JPG of the slice"` |
@@ -14232,11 +14232,11 @@ Set(
         Patch(
             RequestComments,
             Defaults(RequestComments),
-            {
-                Title: txtViewMsgSubject.Text,
-                RequestID: varSelectedItem.ID,
-                ReqKey: varSelectedItem.ReqKey,
-                Message: txtViewMsgBody.Text & If(
+                {
+                    Title: txtViewMsgSubject.Text,
+                    RequestID: varSelectedItem.ID,
+                    ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
+                    Message: txtViewMsgBody.Text & If(
                     CountRows(attViewMsg.Attachments) > 0,
                     Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
                     ""
@@ -14266,25 +14266,22 @@ Set(varMessageSaved, !IsBlank(varNewComment.ID));
 
 If(
     varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
-    ForAll(
-        attViewMsg.Attachments As f,
-        If(
-            varAttachOk,
-            Set(
-                varAttachOk,
-                With(
-                    {
-                        wResult: IfError(
-                            'Flow-(K)-Comment-AddAttachment'.Run(
-                                {contentBytes: f.Value, name: f.Name},
-                                Text(varNewComment.ID)
-                            ),
-                            {success: "false"}
-                        )
-                    },
-                    Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+    Set(
+        varAttachOk,
+        With(
+            {
+                wResult: IfError(
+                    'PowerAppV2->InitializevarSuccess'.Run(
+                        {
+                            contentBytes: First(attViewMsg.Attachments).Value,
+                            name: First(attViewMsg.Attachments).Name
+                        },
+                        Text(varNewComment.ID)
+                    ),
+                    {success: "false"}
                 )
-            )
+            },
+            Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
         )
     )
 );

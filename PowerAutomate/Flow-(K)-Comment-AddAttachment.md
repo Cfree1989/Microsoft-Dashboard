@@ -50,55 +50,89 @@ Power Apps reads these as lowercase: `success`, `message`.
 5. **Add an input** → **File** → rename to `Screenshot`
 6. **Add an input** → **Text** → name `CommentID` → description `RequestComments ID`
 
-### Step 2: Initialize result variables (root level)
+### Step 2: Initialize varSuccess
 
-1. **Initialize variable** → `Initialize varSuccess`
-   - Name: `varSuccess` | Type: Boolean | Value: `true`
-2. **Initialize variable** → `Initialize varMessage`
-   - Name: `varMessage` | Type: String | Value: empty
+**+ Add an action** → **Initialize variable**
 
-### Step 3: Add attachment
+- Rename: `Initialize varSuccess`
+- Name: `varSuccess`
+- Type: Boolean
+- Value: `true`
 
-1. **SharePoint – Add attachment**
-2. Rename: `Add Screenshot to Comment`
-3. Retry policy: Exponential interval, Count `4`, Interval `PT1M`, Minimum `PT20S`, Maximum `PT1H`
-4. Fill in:
-   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
-   - **List Name:** `RequestComments`
-   - **Id:** Expression `int(triggerBody()['text'])`
-   - **File Name:** dynamic content **Screenshot name** (or expression from the test run)
-   - **File Content:** dynamic content **Screenshot content**
+### Step 3: Initialize varMessage
 
-Configure **Configure run after** on a parallel failure path, or wrap with **Scope** if you prefer. Minimum: add a second path — **Configure run after**: has failed / timed out → **Set variable** `varSuccess` = `false`, `varMessage` = `Could not attach screenshot.`
+**+ Add an action** under varSuccess → **Initialize variable** (a second card)
 
-On success, **Set variable** `varMessage` = `Screenshot attached.`
+- Rename: `Initialize varMessage`
+- Name: `varMessage`
+- Type: String
+- Value: leave empty
 
-### Step 4: Respond to Power Apps
+Until this card exists, **Set variable** will only list `varSuccess`.
 
-1. **Respond to a Power App or flow**
-2. Add outputs:
-   - **Success** (Text): Expression `toLower(string(variables('varSuccess')))`
-   - **Message** (Text): `variables('varMessage')`
+### Step 4: Add Screenshot to Comment
 
-Use lowercase `"true"` / `"false"` so the canvas `Text(success) = "true"` check works (same as Flow H / I).
+**+ Add an action** → SharePoint **Add attachment**. Rename: `Add Screenshot to Comment`.
+
+**Settings:** Exponential retry 4 / PT1M / PT20S / PT1H.
+
+**Parameters:**
+
+| Field | Value |
+|--------|--------|
+| Site | Digital Fabrication Lab |
+| List | `RequestComments` |
+| Id | `int(triggerBody()['text'])` |
+| File Name | `triggerBody()?['file']?['name']` |
+| File Content | `triggerBody()?['file']?['contentBytes']` |
+
+### Step 5: Set varMessage attached
+
+**+ Add an action** under Add Screenshot → **Set variable**
+
+- Rename: `Set varMessage attached`
+- Name: pick **`varMessage`**
+- Value: click **Enter custom value**, then type `Screenshot attached.` (do not pick true/false)
+
+
+### Step 6: Respond to Power Apps
+
+**+ Add an action** under Set varMessage. Search **Respond to a Power App or flow** (Power Apps connector). Rename the card: `Respond to Power Apps`.
+
+On **Parameters**, click **Add an output** twice (both **Text**):
+
+| What you name the output | Where | What you enter |
+|--------------------------|--------|----------------|
+| `Success` | **Value** box next to that output → **fx** | `toLower(string(variables('varSuccess')))` |
+| `Message` | **Value** box next to that output → **fx** | `variables('varMessage')` |
+
+Do not type those into the **name** of the output. Name is `Success` / `Message`. The formulas go in **Value** as expressions (**fx** → paste → Add).
+
+Canvas order:
+
+`When Power Apps calls a flow (V2)` → `Initialize varSuccess` → `Initialize varMessage` → `Add Screenshot to Comment` → `Set varMessage attached` → `Respond`
+
+If Add attachment fails, the flow fails and the Staff app `IfError` treats it as a failed upload.
 
 ---
 
 ## Power Apps call
 
-Add this flow in the Staff Console **Power Automate** pane (lightning bolt), same as Flow C / H / I. The **Data** panel name must be exactly `Flow-(K)-Comment-AddAttachment`.
+Add this flow in the Staff Console **Power Automate** pane (lightning bolt), same as Flow C / H / I. The flow title is `Flow-(K)-Comment-AddAttachment`. Studio may bind it as **`PowerAppV2->InitializevarSuccess`** — that is the `.Run` name.
+
+The Data pane may show this flow as **`PowerAppV2->InitializevarSuccess`**. Send uses that identifier for `.Run`. File argument is **Screenshot**; text is **CommentID**.
 
 ```powerfx
-'Flow-(K)-Comment-AddAttachment'.Run(
+'PowerAppV2->InitializevarSuccess'.Run(
     {
-        contentBytes: f.Value,
-        name: f.Name
+        contentBytes: First(attViewMsg.Attachments).Value,
+        name: First(attViewMsg.Attachments).Name
     },
     Text(varNewComment.ID)
 )
 ```
 
-`f` is each row of `attViewMsg.Attachments` inside `ForAll`. First argument is the File input; second is `CommentID`.
+One screenshot per send (`MaxAttachments = 1`). Canvas cannot call a flow inside `ForAll`.
 
 If Studio shows a different `.Run(` shape after you add the flow, match Studio — then update this spec and `btnViewMsgSend`.
 
@@ -112,7 +146,7 @@ If Studio shows a different `.Run(` shape after you add the flow, match Studio �
 - [ ] SharePoint message row shows the PNG on the paperclip
 - [ ] Flow D has **not** emailed yet until `ReadyToEmail` is Yes
 - [ ] Respond returns `success` = `true`
-- [ ] A bad CommentID returns `success` = `false` and the app does **not** set `ReadyToEmail`
+- [ ] A failed Add attachment fails the flow; the app does **not** set `ReadyToEmail`
 
 ---
 

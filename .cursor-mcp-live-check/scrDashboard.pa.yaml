@@ -8390,7 +8390,7 @@ Screens:
                   ItemColor: =RGBA(255, 255, 255, 1)
                   ItemFill: =varChevronBackground
                   ItemHoverFill: =varDropdownHoverFill
-                  MaxAttachments: =3
+                  MaxAttachments: =1
                   NoAttachmentsText: ="PNG or JPG of the slice"
                   PaddingBottom: =4
                   PaddingLeft: =5
@@ -8538,10 +8538,6 @@ Screens:
                     Set(varIsLoading, true);
                     Set(varLoadingMessage, "Sending message...");
                     Set(varAttachOk, true);
-                    If(
-                        CountRows(attViewMsg.Attachments) > 0,
-                        Notify("Screenshots need Flow K. This send emails the text only.", NotificationType.Warning)
-                    );
 
                     Set(
                         varNewComment,
@@ -8553,7 +8549,11 @@ Screens:
                                     Title: txtViewMsgSubject.Text,
                                     RequestID: varSelectedItem.ID,
                                     ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
-                                    Message: txtViewMsgBody.Text,
+                                    Message: txtViewMsgBody.Text & If(
+                                        CountRows(attViewMsg.Attachments) > 0,
+                                        Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
+                                        ""
+                                    ),
                                     Author0: {
                                         '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
                                         Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
@@ -8569,7 +8569,7 @@ Screens:
                                     ReadByStudent: false,
                                     ReadByStaff: true,
                                     StudentEmail: varSelectedItem.StudentEmail,
-                                    ReadyToEmail: true
+                                    ReadyToEmail: false
                                 }
                             ),
                             Blank()
@@ -8578,7 +8578,37 @@ Screens:
                     Set(varMessageSaved, !IsBlank(varNewComment.ID));
 
                     If(
-                        varMessageSaved,
+                        varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
+                        Set(
+                            varAttachOk,
+                            With(
+                                {
+                                    wFile: First(attViewMsg.Attachments),
+                                    wResult: IfError(
+                                        'PowerAppV2->InitializevarSuccess'.Run(
+                                            {contentBytes: First(attViewMsg.Attachments).Value, name: First(attViewMsg.Attachments).Name},
+                                            Text(varNewComment.ID)
+                                        ),
+                                        {success: "false"}
+                                    )
+                                },
+                                Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                            )
+                        )
+                    );
+
+                    If(
+                        varMessageSaved && varAttachOk,
+                        IfError(
+                            Patch(
+                                RequestComments,
+                                varNewComment,
+                                { ReadyToEmail: true }
+                            );
+                            true,
+                            Notify("Message saved, but the student email was not released. Try Send again.", NotificationType.Warning);
+                            false
+                        );
                         ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
                         IfError(
                             Patch(
@@ -8607,7 +8637,11 @@ Screens:
                         Reset(attViewMsg);
                         Reset(ddViewMsgStaff);
                         Notify("Message sent! Student will receive email notification.", NotificationType.Success),
-                        Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        If(
+                            varMessageSaved && !varAttachOk,
+                            Notify("Message saved, but the screenshot did not upload. The student was not emailed.", NotificationType.Error),
+                            Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        )
                     );
 
                     // === HIDE LOADING ===
