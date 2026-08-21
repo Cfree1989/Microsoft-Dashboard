@@ -272,7 +272,7 @@ This guide covers comprehensive testing for **five Power Automate cloud flows** 
 | **Flow A (PR-Create)** | New request processing | SharePoint Create | ReqKey generation, filename validation, confirmation emails |
 | **Flow B (PR-Audit)** | Change tracking & notifications | SharePoint Modify | Field change logging, automated emails, estimate confirmations |
 | **Flow C (PR-Action)** | Staff action logging | Power Apps | Audit trail from dashboard actions |
-| **Flow D (PR-Message)** | Send notifications | SharePoint Create (RequestComments) | Threaded email notifications to students |
+| **Flow D (PR-Message)** | Send notifications | SharePoint Create **or** Modify (`ReadyToEmail` + blank `MessageID`) | Threaded email to students, with comment screenshots |
 | **Flow E (PR-Mailbox)** | Inbound reply processing | Outlook Email | Process student email replies |
 
 ### Why Testing Matters
@@ -3412,6 +3412,7 @@ Based on Power Automate documentation:
 - [Flow H (Payment-SaveSingle)](./Flow-(H)-Payment-SaveSingle.md)
 - [Flow I (Payment-SaveBatch)](./Flow-(I)-Payment-SaveBatch.md)
 - [Flow J (PR-LabStatus): Refresh queue snapshot](./Flow-(J)-LabStatus-Refresh.md)
+- [Flow K (Comment-AddAttachment): Screenshot on message](./Flow-(K)-Comment-AddAttachment.md)
 
 ### Key Expressions Reference
 

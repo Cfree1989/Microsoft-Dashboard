@@ -8382,7 +8382,6 @@ Screens:
                   AddedItemFill: =varChevronFill
                   BorderColor: =varInputBorderColor
                   BorderThickness: =varInputBorderThickness
-                  DisplayMode: =DisplayMode.Edit
                   DropTargetBorderStyle: =BorderStyle.Solid
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
@@ -8392,7 +8391,6 @@ Screens:
                   ItemFill: =varChevronBackground
                   ItemHoverFill: =varDropdownHoverFill
                   MaxAttachments: =3
-                  MaxAttachmentSize: =10
                   NoAttachmentsText: ="PNG or JPG of the slice"
                   PaddingBottom: =4
                   PaddingLeft: =5
@@ -8400,7 +8398,6 @@ Screens:
                   PaddingTop: =4
                   PressedColor: =varDropdownPressedColor
                   PressedFill: =varDropdownPressedFill
-                  TabIndex: =0
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
                   Y: =640

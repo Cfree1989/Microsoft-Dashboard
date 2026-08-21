@@ -1,7 +1,7 @@
 # Flow D (PR-Message)
 
 **Full Name:** PR-Message: Send notifications  
-**Trigger:** SharePoint — When an item is **created** (List: `RequestComments`)
+**Trigger:** SharePoint — When an item is **created or modified** (List: `RequestComments`)
 
 **Purpose:** Send email notifications when messages are exchanged between staff and students, with email threading support for reply tracking.
 
@@ -11,14 +11,19 @@
 
 This flow runs automatically when a new message is added to the RequestComments list. Here's what happens:
 
-1. **Look up print request details** (ReqKey, student info)
-2. **Initialize ThreadID variable** (must be at root level before any conditions)
-3. **Check direction** (Outbound = staff message, Inbound = student reply)
-4. **If outbound:** Check for existing thread (reuse ThreadID or generate new one)
-5. **Generate MessageID** for email threading
-6. **Send threaded email** to student from shared mailbox
-7. **Update message** with threading info (ThreadID, MessageID)
-8. **Log to audit** for tracking
+1. **Trigger only when ready:** `ReadyToEmail` is Yes **and** `MessageID` is still empty (skips inbound, drafts, and the post-send update)
+2. **Look up print request details** (ReqKey, student info)
+3. **Initialize ThreadID** (root level, before any conditions)
+4. **Initialize EmailAttachments** (root level empty array)
+5. **Check direction** (Outbound = staff message, Inbound = student reply)
+6. **If outbound:** Check for existing thread (reuse ThreadID or generate new one)
+7. **Generate MessageID** for email threading
+8. **Check author role** (Staff)
+9. **Get comment attachments**
+10. **Has screenshots?** If yes, get each file’s content into `EmailAttachments`
+11. **Send threaded email** to student from shared mailbox, with those files attached
+12. **Update message** with threading info (ThreadID, MessageID) — that update does **not** email again
+13. **Log to audit** for tracking
 
 ---
 
@@ -32,7 +37,9 @@ This flow runs automatically when a new message is added to the RequestComments 
 
 ## Prerequisites
 
-- [ ] `RequestComments` SharePoint list created with threading columns (see `RequestComments-Schema-Update.md`)
+- [ ] `RequestComments` SharePoint list created with threading columns **and** `ReadyToEmail` (see `SharePoint/RequestComments-List-Setup.md`)
+- [ ] List attachments enabled on `RequestComments`
+- [ ] Staff app + Flow K deployed together with this trigger change (old Send never sets `ReadyToEmail`, so those messages would never email)
 - [ ] `PrintRequests` list with `NeedsAttention` field
 - [ ] `AuditLog` list exists
 - [ ] Shared mailbox `coad-fablab@lsu.edu` configured
@@ -83,11 +90,55 @@ This flow runs automatically when a new message is added to the RequestComments 
 **UI steps:**
 1. Go to **Power Automate** → **Create** → **Automated cloud flow**
 2. Name: `Flow-(D)-Message-Notifications`
-3. Choose trigger: **SharePoint – When an item is created**
+3. Choose trigger: **SharePoint – When an item is created or modified**
 4. Fill in:
    - **Site address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
    - **List name:** `RequestComments`
 5. Click **Create**
+6. **Trigger settings (required — prevents double email):**
+   - Click the trigger **…** → **Settings**
+   - **Split on:** **On**
+     - **Array:** `@triggerOutputs()?['body/value']`
+     - **Split-on tracking ID:** `@guid()`
+   - **Concurrency control:** On, **Degree of parallelism:** `1`
+   - **Trigger conditions:** add **both** of these (Settings → Trigger conditions → Add):
+
+```
+@equals(triggerBody()?['ReadyToEmail'], true)
+```
+
+```
+@empty(coalesce(triggerBody()?['MessageID'], ''))
+```
+
+> **Why these conditions:** The app creates the row with `ReadyToEmail = No`. After screenshots upload, it sets `ReadyToEmail = Yes` (flow starts). After this flow writes `MessageID`, later edits to the same item do not send again. Use **created or modified** so the email waits until files are on the row.
+
+### Editing an existing Flow D (trigger swap)
+
+1. Click the **first card** → SharePoint **When an item is created or modified**
+2. Same site, list **RequestComments**
+3. Settings: Split on **Array** `@triggerOutputs()?['body/value']`, **tracking ID** `@guid()`, concurrency **1**, the two trigger conditions above
+4. Rebind fields that used the old trigger:
+
+| Action | Field | Expression or dynamic content |
+|--------|--------|--------------------------------|
+| Get Print Request | Id | `triggerOutputs()?['body/RequestID']` |
+| Send Threaded Email | To | Dynamic content: trigger **StudentEmail**, or fx `triggerOutputs()?['body/StudentEmail']` |
+| Send Threaded Email | Subject | `concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()?['body/Title'])` |
+| Send Threaded Email | Body | Include `@{triggerOutputs()?['body/Message']}` and `@{triggerOutputs()?['body/Author0']?['DisplayName']}` |
+| Update Message with Threading | Id | `triggerOutputs()?['body/ID']` |
+| Update Message with Threading | RequestID | `triggerOutputs()?['body/RequestID']` |
+| Update Message with Threading | Message | `triggerOutputs()?['body/Message']` |
+
+5. Then add Step 10 and Step 11 before send.
+
+#### To
+
+1. Click **inside** the To field so **Dynamic content** / **Expression** opens.
+2. Pick **StudentEmail** from **When an item is created or modified**, or fx `triggerOutputs()?['body/StudentEmail']` then **Add**.
+3. If StudentEmail is not in the list: Compose with that expression, then pick the Compose in To.
+
+**Mailbox:** `coad-fablab@lsu.edu`
 
 ---
 
@@ -130,7 +181,23 @@ This flow runs automatically when a new message is added to the RequestComments 
 
 ---
 
-### Step 4: Check Direction (Skip Inbound Messages)
+### Step 4: Initialize EmailAttachments Variable (Root Level)
+
+**What this does:** Creates an empty array at root level. Screenshot files are appended here in Step 11. Initialize Variable cannot sit inside a condition.
+
+**UI steps:**
+1. Click **+ New step**
+2. Search for and select **Initialize variable**
+3. Rename the action to: `Initialize EmailAttachments`
+   - Click the **three dots (…)** → **Rename** → type `Initialize EmailAttachments`
+4. Fill in:
+   - **Name:** Type `EmailAttachments`
+   - **Type:** Select `Array`
+   - **Value:** Click **Expression** tab (fx) → paste `json('[]')` → click **Update** (empty array — stays empty when there is no screenshot)
+
+---
+
+### Step 5: Check Direction (Skip Inbound Messages)
 
 **What this does:** Flow D only sends emails for outbound (staff) messages. Inbound messages are processed by Flow E. This check prevents duplicate processing.
 
@@ -144,7 +211,7 @@ This flow runs automatically when a new message is added to the RequestComments 
    - **Middle:** Select **is equal to**
    - **Right box:** Type `Outbound` (without quotes)
 
-**YES Branch:** Continue with email sending (Steps 5-9)  
+**YES Branch:** Continue with email sending (Steps 6–14)  
 **NO Branch:** Terminate flow (inbound messages don't need email notification)
 
 #### NO Branch — Terminate (Inbound Message)
@@ -160,7 +227,7 @@ This flow runs automatically when a new message is added to the RequestComments 
 
 ---
 
-### Step 5: Check for Existing Thread (Inside YES Branch)
+### Step 6: Check for Existing Thread (Inside YES Branch)
 
 **What this does:** Determines if this is the first message in a conversation or a reply to an existing thread. Looks for any previous outbound messages for the same request.
 
@@ -193,7 +260,7 @@ concat('RequestID eq ', triggerOutputs()?['body/RequestID'], ' and Direction eq 
 
 ---
 
-### Step 6: Set ThreadID Based on Thread Existence
+### Step 7: Set ThreadID Based on Thread Existence
 
 **What this does:** Sets the ThreadID variable — either reuses an existing ThreadID for replies, or generates a new one for new conversations. This ensures all messages about the same request stay grouped in the student's email client.
 
@@ -238,7 +305,7 @@ concat(outputs('Get_Print_Request')?['body/ReqKey'], '-', formatDateTime(utcNow(
 
 ---
 
-### Step 7: Generate Message ID
+### Step 8: Generate Message ID
 
 **What this does:** Creates a unique Message-ID for email threading. This ID follows email standards and helps email clients group related messages together.
 
@@ -261,7 +328,7 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
 
 ---
 
-### Step 8: Check Author Role
+### Step 9: Check Author Role
 
 **What this does:** Verifies this is a staff message before sending email. This is a safety check since we already filtered by Direction = Outbound.
 
@@ -275,19 +342,74 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
    - **Middle:** Select **is equal to**
    - **Right box:** Type `Staff` (without quotes)
 
-**YES Branch:** Staff message confirmed → Send email to student (Step 9)  
+**YES Branch:** Staff message confirmed → Get attachments, then email (Steps 10–14)  
 **NO Branch:** Not a staff message → Terminate (shouldn't happen if Direction = Outbound)
 
 ---
 
-### Step 9: YES Branch (Staff → Email Student)
+### Step 10: Get Comment Attachments
 
-**What this does:** Sends a threaded email notification to the student, updates the message record with threading info, and logs the action to the audit trail.
-
-#### Step 9a: Send Threaded Email
+**What this does:** Reads list attachments on this `RequestComments` row. They are already on the item because the app only sets `ReadyToEmail` after Flow K finishes.
 
 **UI steps:**
-1. Click **+ Add an action** in the YES (green) branch of "Check if Staff Message"
+1. Click **+ Add an action** in the YES (green) branch of "Check if Staff Message" (**before** Send Threaded Email)
+2. Search for **Get attachments** (SharePoint)
+3. Rename to: `Get Comment Attachments`
+   - Click the **three dots (…)** → **Rename** → type `Get Comment Attachments`
+4. Retry policy: Exponential interval, Count `4`, Interval `PT1M`, Minimum `PT20S`, Maximum `PT1H`
+5. Fill in:
+   - **Site Address:** `https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab`
+   - **List Name:** `RequestComments`
+   - **Id:** Expression `triggerOutputs()?['body/ID']`
+
+The files are `body('Get_Comment_Attachments')` (an array).
+
+---
+
+### Step 11: Has Screenshots
+
+**What this does:** If the comment has files, load each one into the `EmailAttachments` array. If not, leave the array empty and continue to send.
+
+**UI steps:**
+1. Click **+ Add an action** after `Get Comment Attachments`
+2. Search for and select **Condition**
+3. Rename the condition to: `Has Screenshots`
+   - Click the **three dots (…)** → **Rename** → type `Has Screenshots` (no `?` in the name)
+4. Set up condition:
+   - **Left box:** Expression `length(body('Get_Comment_Attachments'))`
+   - **Middle:** is greater than
+   - **Right box:** `0`
+
+#### YES branch (has files)
+
+5. **Apply to each** named `For Each Screenshot`
+   - Output: `body('Get_Comment_Attachments')`
+6. Inside the loop: **Get attachment content** (SharePoint)
+   - Rename: `Get Screenshot Content`
+   - Site / List: same as Step 10
+   - **Id:** `triggerOutputs()?['body/ID']`
+   - **File Identifier:** `items('For_Each_Screenshot')?['Id']`
+7. Still inside the loop: **Append to array variable** (search **Variable** → **Append to array variable**)
+   - Rename: `Append Screenshot to EmailAttachments`
+   - **Name:** `EmailAttachments` (the array from Step 4)
+   - **Value:** click **fx**, paste, **Add**:
+
+```
+addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_Screenshot')?['DisplayName'], items('For_Each_Screenshot')?['Name'])), 'ContentBytes', body('Get_Screenshot_Content'))
+```
+
+   Value shows a purple `addProperty(...)` pill.
+
+#### NO branch (no files)
+
+Do nothing (array stays `[]`). After this condition, **both** branches continue to Step 12 (send email).
+
+---
+
+### Step 12: Send Threaded Email
+
+**UI steps:**
+1. Click **+ Add an action** after the **Has Screenshots** condition (outside both of its branches, still inside Check if Staff Message = YES)
 2. Search for and select **Send an email from a shared mailbox (V2)** (Office 365 Outlook)
 3. Rename the action to: `Send Threaded Email to Student`
    - Click the **three dots (…)** → **Rename** → type `Send Threaded Email to Student`
@@ -297,8 +419,8 @@ concat('<', variables('ThreadID'), '-', formatDateTime(utcNow(), 'HHmmss'), '@fa
    - **Count:** `4` | **Interval:** `PT1M` | **Minimum interval:** `PT20S` | **Maximum interval:** `PT1H`
    - Click **Done**
 5. Fill in:
-   - **Original Mailbox Address:** Type `coad-fablab@lsu.edu`
-   - **To:** Click **Expression** tab (fx) → paste: `triggerOutputs()?['body/StudentEmail']` → click **Update**
+   - **Original Mailbox Address:** `coad-fablab@lsu.edu`
+   - **To:** Dynamic content → trigger **StudentEmail**, or fx `triggerOutputs()?['body/StudentEmail']` (see **To** under Step 1)
    - **Subject:** Click **Expression** tab (fx) → paste this expression → click **Update**:
 ```
 concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()?['body/Title'])
@@ -312,27 +434,27 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 <p class="editor-paragraph">Hi @{outputs('Get_Print_Request')?['body/Student']?['DisplayName']},<br><br>You have a new message about your print request.<br><br>MESSAGE:<br>@{triggerOutputs()?['body/Message']}<br><br>---<br>Request: @{outputs('Get_Print_Request')?['body/ReqKey']}<br>From: @{triggerOutputs()?['body/Author0']?['DisplayName']}<br><br>You can reply directly to this email, and your response will be added to your request.<br><br>Digital Fabrication Lab<br>Room 113 Art Building<br>coad-fablab@lsu.edu</p>
 ```
 
-> 💡 **HTML Email:** The Message field contains HTML from the Rich Text Editor, which may include embedded images as base64 data URIs. Any pasted screenshots will display inline in the email.
+> 💡 **Screenshots:** Files go on the email as attachments from `EmailAttachments`. Message text stays plain.
 
-**Complete expressions reference:**
-| Field | Expression |
-|-------|------------|
-| Student Name | `outputs('Get_Print_Request')?['body/Student']?['DisplayName']` |
-| Message Body (HTML) | `triggerOutputs()?['body/Message']` |
-| ReqKey | `outputs('Get_Print_Request')?['body/ReqKey']` |
-| Author Name | `triggerOutputs()?['body/Author0']?['DisplayName']` |
 
 > ⚠️ **Important:** Use `Author0` (the custom Person column), not `Author` (the built-in "Created By" field). `Author` would always show whoever is logged into Power Apps, not the staff member selected in the "Performing Action As" dropdown.
 
-7. In the **Advanced parameters** section, click **Show all** to expand additional fields
-8. **Is HTML:** Toggle to **Yes**
-9. **Importance:** Select `Normal`
+7. Open **Advanced parameters** → **Show all** (if Attachments is not already visible)
+8. **Is HTML:** **Yes**
+9. **Importance:** `Normal`
+10. **Attachments:** leave CC/BCC empty. On the **Attachments** row, click the **array / T** icon on the right (switches from **+ Add new item** to one field). Click **fx** and set:
+
+```
+variables('EmailAttachments')
+```
+
+Leave the array empty only if you skipped Steps 4 and 11. With those steps in place, `[]` is text-only; files from Step 11 go on the email.
 
 > **Note:** The Office 365 Outlook connector's "Send an email from a shared mailbox (V2)" action automatically handles Message-ID generation. We store our generated MessageID in SharePoint for reference and future threading.
 
 ---
 
-#### Step 9b: Update RequestComments with Threading Info
+#### Step 13: Update RequestComments with Threading Info
 
 **What this does:** Stores the ThreadID and MessageID back on the comment record for tracking and threading future messages.
 
@@ -360,7 +482,7 @@ concat('[', outputs('Get_Print_Request')?['body/ReqKey'], '] ', triggerOutputs()
 
 ---
 
-#### Step 9c: Log to Audit
+#### Step 14: Log to Audit
 
 **What this does:** Creates an audit trail entry recording that a message was sent to the student.
 
@@ -396,11 +518,11 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 
 ---
 
-### Step 10: NO Branch (Not Staff Message — Safety Terminate)
+### Step 15: NO Branch (Not Staff Message — Safety Terminate)
 
-**What this does:** This branch handles the edge case where AuthorRole is not "Staff". Since we already filter by Direction = Outbound in Step 3, this should rarely execute. It's a safety net to prevent unexpected behavior.
+**What this does:** This branch handles the edge case where AuthorRole is not "Staff". Since we already filter by Direction = Outbound in Step 5, this should rarely execute. It's a safety net to prevent unexpected behavior.
 
-> **Note:** This branch exists for completeness. Flow D only processes outbound messages from staff. Inbound student replies are handled by Flow E (PR-Mailbox).
+> **Note:** This branch exists for completeness. Flow D only processes outbound messages from staff. Inbound student replies are handled by Flow E (PR-Mailbox). Direction was already filtered in Step 5.
 
 **UI steps:**
 1. Click **+ Add an action** in the NO (red) branch of "Check if Staff Message"
@@ -425,17 +547,20 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 ### Basic Functionality
 - [ ] Staff sends message via Power Apps → Student receives email
 - [ ] Email subject contains `[REQ-00001]` prefix format
-- [ ] Email body contains message content (HTML formatted)
-- [ ] Email body displays embedded images from rich text editor
+- [ ] Email body contains message content (plain text in the HTML wrapper)
+- [ ] Email includes screenshot files when staff attached them in the messages modal
+- [ ] Text-only messages still send with no files
 - [ ] Email body contains reply instructions
 - [ ] Email body contains request details (ReqKey, Author name)
 - [ ] AuditLog entry created with correct fields
 
-### Rich Text / Image Support
-- [ ] Pasted screenshots in message display correctly in email
-- [ ] Multiple images in single message all display
-- [ ] Bold, italic, and list formatting preserved in email
-- [ ] Large images (>100KB) still send successfully
+### ReadyToEmail / screenshots
+- [ ] New comment with `ReadyToEmail = No` does **not** start Flow D
+- [ ] After `ReadyToEmail = Yes`, student receives the email
+- [ ] PNG attached via Flow K appears on the student email
+- [ ] Flow D writing ThreadID/MessageID does **not** send a second email
+- [ ] Two screenshots on one message both arrive on the email
+- [ ] A 2–5 MB slice screenshot still sends
 
 ### Email Threading
 - [ ] First message creates new ThreadID (format: `REQ-00001-20260112143052`)
@@ -514,6 +639,7 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 | Variable Name | Type | Purpose |
 |---------------|------|---------|
 | ThreadID | String | Stores the thread identifier for email grouping |
+| EmailAttachments | Array | `{Name, ContentBytes}` objects for the Outlook send |
 
 ### Common Utility Expressions
 
@@ -530,7 +656,8 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  TRIGGER: RequestComments item created                          │
+│  TRIGGER: RequestComments created or modified                   │
+│  Conditions: ReadyToEmail = true AND MessageID empty            │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -539,26 +666,29 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 3: Initialize ThreadID (ROOT LEVEL - Required!)           │
-│  → Create empty ThreadID variable BEFORE any conditions         │
+│  Step 3: Initialize ThreadID (ROOT LEVEL)                       │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 4: Check if Outbound Message                              │
+│  Step 4: Initialize EmailAttachments (ROOT LEVEL, empty array)  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 5: Check if Outbound Message                              │
 │  → Direction = "Outbound"?                                      │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (Inbound)        │ YES (Outbound)                            │
-│ → Stop Flow -       │ → Continue to Step 5                      │
+│ → Stop Flow -       │ → Continue to Step 6                      │
 │   Inbound Message   │                                           │
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓ (YES only)
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 5: Get Existing Thread Messages                           │
+│  Step 6: Get Existing Thread Messages                           │
 │  → Find previous outbound messages for same request             │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 6: Check if Thread Exists                                 │
+│  Step 7: Check if Thread Exists                                 │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (New Thread)     │ YES (Existing Thread)                     │
 │ → Generate New      │ → Use Existing ThreadID                   │
@@ -566,31 +696,43 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 7: Generate MessageID                                     │
+│  Step 8: Generate MessageID                                     │
 │  → Create unique email Message-ID                               │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 8: Check if Staff Message                                 │
+│  Step 9: Check if Staff Message                                 │
 │  → AuthorRole = "Staff"?                                        │
 ├─────────────────────┬───────────────────────────────────────────┤
 │ NO (Not Staff)      │ YES (Staff)                               │
-│ → Stop Flow - Not   │ → Continue to Step 9                      │
+│ → Stop Flow - Not   │ → Continue to Step 10                     │
 │   Staff Message     │                                           │
 └─────────────────────┴───────────────────────────────────────────┘
                               ↓ (YES only)
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 9a: Send Threaded Email to Student                        │
-│  → Email with [REQ-00001] subject prefix                        │
+│  Step 10: Get Comment Attachments                               │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 9b: Update Message with Threading                         │
+│  Step 11: Has Screenshots                                      │
+├─────────────────────┬───────────────────────────────────────────┤
+│ NO                  │ YES                                       │
+│ → leave array empty │ → For Each Screenshot: get content,       │
+│                     │   append to EmailAttachments              │
+└─────────────────────┴───────────────────────────────────────────┘
+                              ↓ (both)
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 12: Send Threaded Email to Student                        │
+│  → Email with [REQ-00001] subject prefix + EmailAttachments     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 13: Update Message with Threading                         │
 │  → Store ThreadID, MessageID on RequestComments item            │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Step 9c: Log Message Sent                                      │
+│  Step 14: Log Message Sent                                      │
 │  → Create AuditLog entry                                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -610,13 +752,15 @@ concat('Staff message sent to ', triggerOutputs()?['body/StudentEmail'], ' in th
 | **Flow E** | Inbound | Student → Staff (processes email replies) |
 
 **Message Lifecycle:**
-1. Staff writes message in Power Apps
-2. Power Apps creates RequestComments item (Direction: Outbound)
-3. **Flow D** sends email to student with `[REQ-00001]` subject
-4. Student replies to email
-5. **Flow E** receives reply, parses `[REQ-00001]` from subject
-6. **Flow E** creates new RequestComments item (Direction: Inbound)
-7. **Flow E** sets NeedsAttention = Yes on PrintRequest
+1. Staff writes message (and optionally attaches screenshots) in Power Apps
+2. Power Apps creates RequestComments item with `ReadyToEmail = No`
+3. Flow K attaches each screenshot to that row
+4. Power Apps sets `ReadyToEmail = Yes`
+5. **Flow D** sends email to student with `[REQ-00001]` subject and those files
+6. Student replies to email
+7. **Flow E** receives reply, parses `[REQ-00001]` from subject
+8. **Flow E** creates new RequestComments item (Direction: Inbound)
+9. **Flow E** sets NeedsAttention = Yes on PrintRequest
 
 See `Flow-(E)-Mailbox-InboundReplies.md` for inbound processing documentation.
 
@@ -628,11 +772,16 @@ See `Flow-(E)-Mailbox-InboundReplies.md` for inbound processing documentation.
 
 | Symptom | Check | Solution |
 |---------|-------|----------|
+| Flow never starts (no run in history) | Trigger conditions / Split on | Array `@triggerOutputs()?['body/value']`, tracking ID `@guid()`. Conditions: `@equals(triggerBody()?['ReadyToEmail'], true)` and MessageID empty. |
 | Flow runs but no email | Direction field | Ensure message has `Direction = Outbound` |
+| Email has no screenshot | Attachments timing | Do not set `ReadyToEmail` until Flow K succeeds. Confirm the row’s paperclip in SharePoint. |
 | Flow runs but no email | AuthorRole field | Ensure comment has `AuthorRole = Staff` |
 | Email action fails | StudentEmail field | Verify StudentEmail is populated on the comment |
 | Email action fails | Mailbox permissions | Flow owner needs "Send As" on `coad-fablab@lsu.edu` |
 | Email action fails | Shared mailbox | Verify `coad-fablab@lsu.edu` exists and is accessible |
+| Flow checker missing To / Id / RequestID / Message | Trigger swap | Rebind using the table under **Editing an existing Flow D** |
+| Save fails: `InvalidWorkflowRunActionName` / `?` | Action rename | Rename `Has Screenshots?` to `Has Screenshots` |
+| Flow checker: circular loop on Update Message with Threading | Expected | Trigger conditions skip the run once `MessageID` is set |
 
 **How to check:**
 1. Open the flow run history
@@ -695,18 +844,22 @@ Use these exact names when renaming actions in Power Automate:
 |------|-------------|-----------|
 | 2 | Get item (SharePoint) | `Get Print Request` |
 | 3 | Initialize variable | `Initialize ThreadID` |
-| 4 | Condition | `Check if Outbound Message` |
-| 4 (NO) | Terminate | `Stop Flow - Inbound Message` |
-| 5 | Get items (SharePoint) | `Get Existing Thread Messages` |
-| 6 | Condition | `Check if Thread Exists` |
-| 6 (YES) | Set variable | `Use Existing ThreadID` |
-| 6 (NO) | Set variable | `Generate New ThreadID` |
-| 7 | Compose | `Generate MessageID` |
-| 8 | Condition | `Check if Staff Message` |
-| 9a | Send email (V2) | `Send Threaded Email to Student` |
-| 9b | Update item (SharePoint) | `Update Message with Threading` |
-| 9c | Create item (SharePoint) | `Log Message Sent` |
-| 10 | Terminate | `Stop Flow - Not Staff Message` |
+| 4 | Initialize variable | `Initialize EmailAttachments` |
+| 5 | Condition | `Check if Outbound Message` |
+| 5 (NO) | Terminate | `Stop Flow - Inbound Message` |
+| 6 | Get items (SharePoint) | `Get Existing Thread Messages` |
+| 7 | Condition | `Check if Thread Exists` |
+| 7 (YES) | Set variable | `Use Existing ThreadID` |
+| 7 (NO) | Set variable | `Generate New ThreadID` |
+| 8 | Compose | `Generate MessageID` |
+| 9 | Condition | `Check if Staff Message` |
+| 10 | Get attachments (SharePoint) | `Get Comment Attachments` |
+| 11 | Condition | `Has Screenshots` |
+| 11 (YES) | Apply to each / Get attachment content / Append to array | `For Each Screenshot` / `Get Screenshot Content` |
+| 12 | Send email (V2) | `Send Threaded Email to Student` |
+| 13 | Update item (SharePoint) | `Update Message with Threading` |
+| 14 | Create item (SharePoint) | `Log Message Sent` |
+| 15 | Terminate | `Stop Flow - Not Staff Message` |
 
 **Why rename actions?**
 - Makes flow easier to read and debug
@@ -731,7 +884,7 @@ Use these exact names when renaming actions in Power Automate:
 
 ## Error Handling Notes
 
-- **Infinite Loop Prevention:** Flow only triggers on CREATE, not MODIFY
+- **Double-send prevention:** Trigger runs on create **or** modify, but only when `ReadyToEmail` is true **and** `MessageID` is empty. Writing `MessageID` after send does not start another run. Concurrency on the trigger is 1.
 - **Direction Filtering:** Inbound messages terminate early (processed by Flow E)
 - **Author Validation:** Non-staff messages terminate with success status
 - **Email Delivery:** Uses shared mailbox for consistent sender identity

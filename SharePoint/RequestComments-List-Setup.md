@@ -29,7 +29,9 @@ The RequestComments list stores all messages exchanged between staff and student
 
 ## Step 2: Add Columns
 
-After creating the list, add these 13 columns:
+After creating the list, add these 14 columns:
+
+> **Attachments:** Leave list attachments **enabled** (List settings → Advanced settings → Attachments). Staff screenshots are saved as real files on the message row, not in the Message text. Do not turn attachments off.
 
 ### Column 1: RequestID (Number)
 
@@ -163,6 +165,22 @@ After creating the list, add these 13 columns:
 5. **Require that this column contains information:** No
 6. Click **Save**
 
+### Column 14: ReadyToEmail (Yes/No)
+
+**Purpose:** Flow D only sends the student email after the app finishes uploading any screenshots. Default is No so a brand-new row does not email before the files exist.
+
+1. Click **+ Add column** → **Yes/No**
+2. **Name:** `ReadyToEmail`
+3. **Description:** `Yes when the message (and any screenshots) are ready for Flow D to email the student`
+4. **Default value:** No
+5. Click **Save**
+
+**How staff Send uses it:**
+1. App creates the `RequestComments` row with `ReadyToEmail = No`
+2. If there are screenshots, Flow K attaches each file to that row
+3. App sets `ReadyToEmail = Yes`
+4. Flow D (created **or** modified) sends the threaded email, including those files, then writes `MessageID` so it will not send again
+
 ---
 
 ## Step 3: Security Configuration
@@ -266,6 +284,7 @@ This approach is simpler and supports bi-directional messaging.
 | ThreadID | Single line | No | - | Thread grouping |
 | MessageID | Single line | No | - | Email Message-ID header |
 | InReplyTo | Single line | No | - | Parent message reference |
+| ReadyToEmail | Yes/No | No | No | Flow D may email only when Yes |
 
 ---
 
@@ -273,8 +292,8 @@ This approach is simpler and supports bi-directional messaging.
 
 ### Outbound Messages (Staff → Student)
 
-1. Staff sends message via Power Apps dashboard
-2. Flow D generates:
+1. Staff sends message via Power Apps dashboard (`ReadyToEmail` stays **No** until screenshots finish uploading)
+2. App sets `ReadyToEmail = Yes`; Flow D generates:
    - `ThreadID`: `REQ-00001-{timestamp}` (new thread) or existing ThreadID (reply)
    - `MessageID`: `<{ThreadID}@fablab.lsu.edu>`
 3. Email sent with:
@@ -336,7 +355,9 @@ first(split(last(split(triggerOutputs()?['body/Subject'], '[')), ']'))
 ## Verification Checklist
 
 - [ ] List created with name "RequestComments"
-- [ ] All 13 columns added
+- [ ] All 14 columns added
+- [ ] ReadyToEmail Yes/No defaults to No
+- [ ] List attachments remain enabled (Advanced settings)
 - [ ] AuthorRole has choices: Staff, Student
 - [ ] Direction has choices: Outbound, Inbound (default: Outbound)
 - [ ] SentAt has "Include time" enabled

@@ -354,8 +354,9 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
     - **Flow G (Export-MonthlyTransactions)**
     - **Flow H (Payment-SaveSingle)**
     - **Flow I (Payment-SaveBatch)**
+    - **Flow K (Comment-AddAttachment)**
 
-> 💡 **Why only C, G, H, I?** Flows A and B are automatic SharePoint triggers — they run on their own when items are created/modified. Only the instant flows are called from Power Apps buttons.
+> 💡 **Why only C, G, H, I, K?** Flows A, B, D, and E are automatic SharePoint/Outlook triggers — they run on their own. Only the instant flows are called from Power Apps buttons. **Flow K** uploads a screenshot onto the message row; **Flow D** emails the student after `ReadyToEmail = Yes`.
 
 | Flow | Trigger Type | Add to Power Apps? |
 |------|-------------|-------------------|
@@ -365,6 +366,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 | **Flow G (Export-MonthlyTransactions)** | **Instant (Power Apps)** | ✅ **Yes** |
 | **Flow H (Payment-SaveSingle)** | **Instant (Power Apps)** | ✅ **Yes** |
 | **Flow I (Payment-SaveBatch)** | **Instant (Power Apps)** | ✅ **Yes** |
+| **Flow K (Comment-AddAttachment)** | **Instant (Power Apps V2, file)** | ✅ **Yes** |
 
 ### Verification
 
@@ -380,6 +382,7 @@ https://lsumail2.sharepoint.com/sites/Team-ASDN-DigitalFabricationLab
 - ✅ Flow-(G)-Export-MonthlyTransactions
 - ✅ Flow-(H)-Payment-SaveSingle
 - ✅ Flow-(I)-Payment-SaveBatch
+- ✅ Flow-(K)-Comment-AddAttachment
 
 > ⚠️ **Flow Name Note:** Formulas use quoted names exactly as above. If your flow titles differ in Power Apps, change every `'...'.Run(` to match the **Data** panel name.
 
@@ -481,6 +484,8 @@ Set(varPaymentRecordedAt, Now());
 // === PAYMENT FLOW SCRATCH (Flow H / Flow I + App Checker types) ===
 // Initialize before any control references these; flow .Run() overwrites varFlowResult.
 Set(varFlowResult, {success: "false", message: "", paymentid: ""});
+Set(varNewComment, Blank());
+Set(varAttachOk, true);
 Set(varPickedPlatesText, "");
 Set(varPickedPlateIDsText, "");
 Set(varPickedPlateIDsList, "");
@@ -846,6 +851,8 @@ Set(varLoadingMessage, "")
 | `varPickedPlateIDsText` | Comma-separated `PlateKey` values passed to Flow H | Text |
 | `varPickedPlateIDsList` | Comma-separated numeric `BuildPlates.ID` values passed to Flow H | Text |
 | `varFlowResult` | Last instant-flow response (`success`, `message`, `paymentid` — lowercase) | Record |
+| `varNewComment` | `RequestComments` row just created by Send Message (used to attach screenshots then set `ReadyToEmail`) | Record |
+| `varAttachOk` | False if any Flow K screenshot upload failed on this Send | Boolean |
 | `varBaseCost` | Payment modal: base cost before own-material discount | Number |
 | `varFinalCost` | Payment modal: final cost after discount | Number |
 | `varPlaySound` | Boolean trigger for Audio; use `Reset(audNotification); Set(varPlaySound, true)` to play | Boolean |
@@ -13611,6 +13618,8 @@ scrDashboard
     ├── btnViewMsgMarkRead          ← "Mark All Read" button (visible when unread)
     ├── lblViewMsgCharCount         ← Character count display
     ├── txtViewMsgBody              ← Message body input
+    ├── lblViewMsgAttachLabel       ← "Screenshot (optional)"
+    ├── attViewMsg                  ← Unbound Attachments picker (not a form)
     ├── lblViewMsgBodyLabel         ← "Message"
     ├── txtViewMsgSubject           ← Subject input
     ├── lblViewMsgSubjectLabel      ← "Subject"
@@ -13765,6 +13774,7 @@ Set(varShowViewMessagesModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtViewMsgSubject);
 Reset(txtViewMsgBody);
+Reset(attViewMsg);
 Reset(ddViewMsgStaff)
 ```
 
@@ -14055,7 +14065,7 @@ If the thread still overlaps after these updates, check these exact issues:
 | X | `recViewMsgModal.X + 20` |
 | Y | `recViewMsgModal.Y + 418` |
 | Width | `560` |
-| Height | `130` |
+| Height | `90` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | Font | `varAppFont` |
@@ -14067,6 +14077,33 @@ If the thread still overlaps after these updates, check these exact issues:
 | HoverFill | `varInputHoverFill` |
 | DisabledBorderColor | `varInputBorderColor` |
 | HintText | `"Type your message to the student..."` |
+
+> **Live layout:** Modal height **750**. Gallery **280**. Body **Y = 476**, **Height = 90** so the screenshot picker fits above the buttons.
+
+---
+
+### Screenshot picker (attViewMsg) — no form
+
+This is a file picker only. It is **not** inside a form and does **not** use `SubmitForm`. Saving the file is Flow K.
+
+57a. Copy the Attachments control out of **`frmAttachmentsEdit`** (select `DataCardValue13` only) and paste it into **`conViewMessagesModal`**, **or** insert **Attachments** if Studio allows it on the screen. **Rename it:** `attViewMsg`.
+57b. Clear **Items** (do not bind `Parent.Default`). Set:
+
+| Property | Value |
+|----------|-------|
+| X | `recViewMsgModal.X + 20` |
+| Y | `588` |
+| Width | `recViewMsgModal.Width - 40` |
+| Height | `64` |
+| DisplayMode | `DisplayMode.Edit` |
+| MaxAttachments | `3` |
+| MaxAttachmentSize | `10` |
+| AddAttachmentText | `"Attach screenshot"` |
+| NoAttachmentsText | `"PNG or JPG of the slice"` |
+| AccessibleLabel | `"Attach a screenshot of the sliced file"` |
+| TabIndex | `0` |
+
+57c. Add label **`lblViewMsgAttachLabel`** above it (**Y = 570**, Text `"Screenshot (optional)"`).
 
 ---
 
@@ -14133,6 +14170,7 @@ Set(varShowViewMessagesModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtViewMsgSubject);
 Reset(txtViewMsgBody);
+Reset(attViewMsg);
 Reset(ddViewMsgStaff)
 ```
 
@@ -14185,10 +14223,11 @@ If(
 // === SHOW LOADING ===
 Set(varIsLoading, true);
 Set(varLoadingMessage, "Sending message...");
+Set(varAttachOk, true);
 
-// Create the message in RequestComments with Direction field
+// Create the message first with ReadyToEmail = false so Flow D waits for screenshots
 Set(
-    varMessageSaved,
+    varNewComment,
     IfError(
         Patch(
             RequestComments,
@@ -14197,7 +14236,11 @@ Set(
                 Title: txtViewMsgSubject.Text,
                 RequestID: varSelectedItem.ID,
                 ReqKey: varSelectedItem.ReqKey,
-                Message: txtViewMsgBody.Text,
+                Message: txtViewMsgBody.Text & If(
+                    CountRows(attViewMsg.Attachments) > 0,
+                    Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
+                    ""
+                ),
                 Author0: {
                     '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
                     Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
@@ -14212,16 +14255,52 @@ Set(
                 SentAt: Now(),
                 ReadByStudent: false,
                 ReadByStaff: true,
-                StudentEmail: varSelectedItem.StudentEmail
+                StudentEmail: varSelectedItem.StudentEmail,
+                ReadyToEmail: false
             }
-        );
-        true,
-        false
+        ),
+        Blank()
+    )
+);
+Set(varMessageSaved, !IsBlank(varNewComment.ID));
+
+If(
+    varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
+    ForAll(
+        attViewMsg.Attachments As f,
+        If(
+            varAttachOk,
+            Set(
+                varAttachOk,
+                With(
+                    {
+                        wResult: IfError(
+                            'Flow-(K)-Comment-AddAttachment'.Run(
+                                {contentBytes: f.Value, name: f.Name},
+                                Text(varNewComment.ID)
+                            ),
+                            {success: "false"}
+                        )
+                    },
+                    Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                )
+            )
+        )
     )
 );
 
 If(
-    varMessageSaved,
+    varMessageSaved && varAttachOk,
+    IfError(
+        Patch(
+            RequestComments,
+            varNewComment,
+            { ReadyToEmail: true }
+        );
+        true,
+        Notify("Message saved, but the student email was not released. Try Send again.", NotificationType.Warning);
+        false
+    );
     ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
     IfError(
         Patch(
@@ -14247,9 +14326,14 @@ If(
     );
     Reset(txtViewMsgSubject);
     Reset(txtViewMsgBody);
+    Reset(attViewMsg);
     Reset(ddViewMsgStaff);
     Notify("Message sent! Student will receive email notification.", NotificationType.Success),
-    Notify("Could not send the message. Please try again.", NotificationType.Error)
+    If(
+        varMessageSaved && !varAttachOk,
+        Notify("Message saved, but the screenshot did not upload. The student was not emailed.", NotificationType.Error),
+        Notify("Could not send the message. Please try again.", NotificationType.Error)
+    )
 );
 
 // === HIDE LOADING ===
@@ -14257,7 +14341,9 @@ Set(varIsLoading, false);
 Set(varLoadingMessage, "")
 ```
 
-> **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages. If the comment Patch fails, staff see an error and the job stamp is not updated. If the comment saves but LastAction fails, they still get a warning, not a silent miss.
+> **Screenshots:** `attViewMsg` is an **unbound** Attachments control (not inside a form). Power Apps cannot `Patch` list attachments. Each file is sent to **`Flow-(K)-Comment-AddAttachment`**, then the app sets **`ReadyToEmail = true`**. Flow D emails the student and attaches those files. Close/Cancel also **`Reset(attViewMsg)`**.
+
+> **Note:** After sending, the modal stays open so staff can see the new message appear in the conversation. The compose fields are reset for easy follow-up messages. If the comment Patch fails, staff see an error and the job stamp is not updated. If the comment saves but LastAction fails, they still get a warning, not a silent miss. If a screenshot upload fails, **`ReadyToEmail` stays No** so the student is not emailed without the picture.
 
 ---
 
@@ -16186,12 +16272,14 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 | Control | Type |
 |---------|------|
+| `attViewMsg` | Attachments |
 | `btnViewMsgCancel` | Classic/Button |
 | `btnViewMsgClose` | Classic/Button |
 | `btnViewMsgMarkRead` | Classic/Button |
 | `btnViewMsgSend` | Classic/Button |
 | `ddViewMsgStaff` | Classic/ComboBox |
 | `galViewMessages` | Gallery |
+| `lblViewMsgAttachLabel` | Label |
 | `lblViewMsgBodyLabel` | Label |
 | `lblViewMsgCharCount` | Label |
 | `lblViewMsgStaffLabel` | Label |
@@ -16385,7 +16473,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Pickup location** | **`varPickupLocation`** is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Export modal copy: additive lab is Art Building 113; subtractive remains Art Building 123. **Pushed to live Staff Console 17 August 2026.** Run **OnStart**. |
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
-| **2026-08-21: Schedule 18-color categorical roster** | **`colSchedColors`**: 18 hues with **`Hex` / `Light` / `TextHex`**. Schedule stamps colors onto **`colSchedStaff`** by **StaffID ascending rank** (not `Mod(StaffID, 12)`). Grid/totals consume stamped fields; column order still **`SchedSortOrder`**. See [`StaffDashboard-Schedule-Screen.md`](./StaffDashboard-Schedule-Screen.md). |
+| **2026-08-21: Message screenshots** | Messages modal has unbound **`attViewMsg`**. Send Patches **`ReadyToEmail = false`**, uploads each file with **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
 
 # Next Steps
 

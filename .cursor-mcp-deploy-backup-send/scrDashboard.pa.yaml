@@ -8141,7 +8141,7 @@ Screens:
                 Variant: VariableHeight
                 Properties:
                   BorderColor: =RGBA(0, 18, 107, 1)
-                  Height: =335
+                  Height: =280
                   Items: =Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =8
                   TemplateSize: =80
@@ -8260,7 +8260,7 @@ Screens:
                   Height: =1
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
-                  Y: =427
+                  Y: =370
             - lblViewMsgStaffLabel:
                 Control: Label
                 Properties:
@@ -8273,7 +8273,7 @@ Screens:
                   Text: ="Performing Action As"
                   Width: =200
                   X: =recViewMsgModal.X + 20
-                  Y: =449
+                  Y: =392
             - ddViewMsgStaff:
                 Control: Classic/ComboBox
                 Properties:
@@ -8303,7 +8303,7 @@ Screens:
                   SelectionFill: =varDropdownSelectionFill
                   Width: =250
                   X: =recViewMsgModal.X + 20
-                  Y: =472
+                  Y: =414
             - lblViewMsgSubjectLabel:
                 Control: Label
                 Properties:
@@ -8316,7 +8316,7 @@ Screens:
                   Text: ="Subject"
                   Width: =100
                   X: =recViewMsgModal.X + 290
-                  Y: =449
+                  Y: =392
             - txtViewMsgSubject:
                 Control: Classic/TextInput
                 Properties:
@@ -8334,7 +8334,7 @@ Screens:
                   Size: =varInputFontSize
                   Width: =recViewMsgModal.Width - 310
                   X: =recViewMsgModal.X + 290
-                  Y: =472
+                  Y: =414
             - lblViewMsgBodyLabel:
                 Control: Label
                 Properties:
@@ -8346,7 +8346,7 @@ Screens:
                   Size: =12
                   Text: ="Message"
                   X: =recViewMsgModal.X + 20
-                  Y: =519
+                  Y: =458
             - txtViewMsgBody:
                 Control: Classic/TextInput
                 Properties:
@@ -8355,12 +8355,12 @@ Screens:
                   Default: =""
                   FocusedBorderColor: =varColorPrimary
                   Font: =varAppFont
-                  Height: =80
+                  Height: =90
                   HintText: ="Type your message to the student..."
                   Mode: =TextMode.MultiLine
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
-                  Y: =542
+                  Y: =476
             - lblViewMsgAttachLabel:
                 Control: Label
                 Properties:
@@ -8373,7 +8373,7 @@ Screens:
                   Text: ="Screenshot (optional)"
                   Width: =250
                   X: =recViewMsgModal.X + 20
-                  Y: =626
+                  Y: =570
             - attViewMsg:
                 Control: Attachments
                 Properties:
@@ -8386,7 +8386,7 @@ Screens:
                   DropTargetBorderStyle: =BorderStyle.Solid
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =48
+                  Height: =64
                   HoverFill: =varDropdownHoverFill
                   ItemColor: =RGBA(255, 255, 255, 1)
                   ItemFill: =varChevronBackground
@@ -8403,7 +8403,7 @@ Screens:
                   TabIndex: =0
                   Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
-                  Y: =640
+                  Y: =588
             - lblViewMsgCharCount:
                 Control: Label
                 Properties:
@@ -8416,7 +8416,7 @@ Screens:
                   Text: =Len(txtViewMsgBody.Text) & " characters"
                   Width: =130
                   X: =recViewMsgModal.X + recViewMsgModal.Width - 150
-                  Y: =622
+                  Y: =458
             - btnViewMsgMarkRead:
                 Control: Classic/Button
                 Properties:
@@ -8541,11 +8541,8 @@ Screens:
                     Set(varIsLoading, true);
                     Set(varLoadingMessage, "Sending message...");
                     Set(varAttachOk, true);
-                    If(
-                        CountRows(attViewMsg.Attachments) > 0,
-                        Notify("Screenshots need Flow K. This send emails the text only.", NotificationType.Warning)
-                    );
 
+                    // Create the message first with ReadyToEmail = false so Flow D waits for screenshots
                     Set(
                         varNewComment,
                         IfError(
@@ -8555,8 +8552,12 @@ Screens:
                                 {
                                     Title: txtViewMsgSubject.Text,
                                     RequestID: varSelectedItem.ID,
-                                    ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
-                                    Message: txtViewMsgBody.Text,
+                                    ReqKey: varSelectedItem.ReqKey,
+                                    Message: txtViewMsgBody.Text & If(
+                                        CountRows(attViewMsg.Attachments) > 0,
+                                        Char(10) & Char(10) & "[" & CountRows(attViewMsg.Attachments) & " screenshot" & If(CountRows(attViewMsg.Attachments) = 1, "", "s") & " attached]",
+                                        ""
+                                    ),
                                     Author0: {
                                         '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
                                         Claims: "i:0#.f|membership|" & ddViewMsgStaff.Selected.MemberEmail,
@@ -8572,7 +8573,7 @@ Screens:
                                     ReadByStudent: false,
                                     ReadByStaff: true,
                                     StudentEmail: varSelectedItem.StudentEmail,
-                                    ReadyToEmail: true
+                                    ReadyToEmail: false
                                 }
                             ),
                             Blank()
@@ -8581,7 +8582,42 @@ Screens:
                     Set(varMessageSaved, !IsBlank(varNewComment.ID));
 
                     If(
-                        varMessageSaved,
+                        varMessageSaved && CountRows(attViewMsg.Attachments) > 0,
+                        ForAll(
+                            attViewMsg.Attachments As f,
+                            If(
+                                varAttachOk,
+                                Set(
+                                    varAttachOk,
+                                    With(
+                                        {
+                                            wResult: IfError(
+                                                'Flow-(K)-Comment-AddAttachment'.Run(
+                                                    {contentBytes: f.Value, name: f.Name},
+                                                    Text(varNewComment.ID)
+                                                ),
+                                                {success: "false"}
+                                            )
+                                        },
+                                        Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                                    )
+                                )
+                            )
+                        )
+                    );
+
+                    If(
+                        varMessageSaved && varAttachOk,
+                        IfError(
+                            Patch(
+                                RequestComments,
+                                varNewComment,
+                                { ReadyToEmail: true }
+                            );
+                            true,
+                            Notify("Message saved, but the student email was not released. Try Send again.", NotificationType.Warning);
+                            false
+                        );
                         ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince));
                         IfError(
                             Patch(
@@ -8610,7 +8646,11 @@ Screens:
                         Reset(attViewMsg);
                         Reset(ddViewMsgStaff);
                         Notify("Message sent! Student will receive email notification.", NotificationType.Success),
-                        Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        If(
+                            varMessageSaved && !varAttachOk,
+                            Notify("Message saved, but the screenshot did not upload. The student was not emailed.", NotificationType.Error),
+                            Notify("Could not send the message. Please try again.", NotificationType.Error)
+                        )
                     );
 
                     // === HIDE LOADING ===
