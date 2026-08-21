@@ -13793,7 +13793,7 @@ Reset(ddViewMsgStaff)
 | Y | `recViewMsgModal.Y + 75` |
 | Width | `560` |
 | Height | `335` |
-| TemplateSize | `80` |
+| TemplateSize | `recVMsgBg.Height` |
 | TemplatePadding | `8` |
 | ShowScrollbar | `true` |
 
@@ -13901,13 +13901,13 @@ Reset(ddViewMsgStaff)
 
 > **Note:** Using `AutoHeight` with `Overflow.Hidden` allows each message to expand to fit its content without showing a scrollbar on the label itself. Do not set a fixed `Height` or `Overflow.Scroll` on this label. The gallery scrolls to show all messages rather than each message having its own scrollbar.
 
-> **How the layout works:** In a flexible height gallery, items stack correctly when the controls inside each item are allowed to size naturally. The message body sits below `lblVMsgAuthor`, and the background grows to the bottom of `lblVMsgContent`; then Power Apps places the next message underneath the fully rendered bubble automatically.
+> **How the layout works:** **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`**. The bubble is `Max(56, lblVMsgContent.Y + lblVMsgContent.Height + 10)`. A fixed TemplateSize such as `80` makes long messages overlap the next row.
 
 ### Common Fixes If Messages Still Overlap
 
 If the thread still overlaps after these updates, check these exact issues:
 
-- `galViewMessages` was inserted as **Vertical** instead of **Blank flexible height gallery**
+- `galViewMessages.TemplateSize` is a fixed number such as `80` instead of `recVMsgBg.Height`
 - `lblVMsgAuthor` still has a fixed `Height` like `18`
 - `lblVMsgContent` still has a fixed `Height` like `146`
 - `lblVMsgContent` still uses `Overflow.Scroll`
@@ -14030,6 +14030,8 @@ If the thread still overlaps after these updates, check these exact issues:
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
 | DisabledBorderColor | `varInputBorderColor` |
+
+Staff do not type a subject. Set **Visible** = `false` on this input and **`lblViewMsgSubjectLabel`**. Send fills SharePoint **Title** with `Left(Trim(txtViewMsgBody.Text), 200)`.
 
 ---
 
@@ -14207,9 +14209,7 @@ Reset(ddViewMsgStaff)
 
 ```powerfx
 If(
-    !IsBlank(ddViewMsgStaff.Selected) && 
-    !IsBlank(txtViewMsgSubject.Text) && 
-    Len(txtViewMsgSubject.Text) >= 3 &&
+    !IsBlank(ddViewMsgStaff.Selected) &&
     !IsBlank(txtViewMsgBody.Text) &&
     Len(txtViewMsgBody.Text) >= 10,
     DisplayMode.Edit,
@@ -14233,7 +14233,7 @@ Set(
             RequestComments,
             Defaults(RequestComments),
                 {
-                    Title: txtViewMsgSubject.Text,
+                    Title: Left(Trim(txtViewMsgBody.Text), 200),
                     RequestID: varSelectedItem.ID,
                     ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
                     Message: txtViewMsgBody.Text & If(
@@ -16471,6 +16471,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-17: Job card label alignment** | **`lblJobId`**, **`lblDiscipline`**, and **`lblCourse`** values sit at **`X = 75`**. **`lblEstimates`** is **`Y = 131`**. Live Staff Console and `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` match. |
 | **2026-08-18: Chancellor's Student Aid** | SharePoint `AidType` is **Chancellor's Student Aid**. Caps **WS 13 / CSA 7 / GA 20**. Roster is **Role** = Student Worker or Graduate Assistant so the new choice text cannot hide people. |
 | **2026-08-21: Message screenshots** | Messages modal has unbound **`attViewMsg`**. Send Patches **`ReadyToEmail = false`**, uploads each file with **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
+| **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff`** uses the full compose width. |
+| **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
 
 # Next Steps
 

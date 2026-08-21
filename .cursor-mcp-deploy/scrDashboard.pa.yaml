@@ -8144,7 +8144,7 @@ Screens:
                   Height: =335
                   Items: =Sort(Filter(colAllRequestComments, RequestID = varSelectedItem.ID), SentAt, SortOrder.Descending)
                   TemplatePadding: =8
-                  TemplateSize: =80
+                  TemplateSize: =recVMsgBg.Height
                   Width: =560
                   X: =recViewMsgModal.X + 20
                   Y: =recViewMsgModal.Y + 75
@@ -8301,7 +8301,7 @@ Screens:
                   SelectMultiple: =false
                   SelectionColor: =varDropdownSelectionColor
                   SelectionFill: =varDropdownSelectionFill
-                  Width: =250
+                  Width: =recViewMsgModal.Width - 40
                   X: =recViewMsgModal.X + 20
                   Y: =472
             - lblViewMsgSubjectLabel:
@@ -8314,6 +8314,7 @@ Screens:
                   Height: =20
                   Size: =12
                   Text: ="Subject"
+                  Visible: =false
                   Width: =100
                   X: =recViewMsgModal.X + 290
                   Y: =449
@@ -8332,6 +8333,7 @@ Screens:
                   HoverFill: =varInputHoverFill
                   MaxLength: =200
                   Size: =varInputFontSize
+                  Visible: =false
                   Width: =recViewMsgModal.Width - 310
                   X: =recViewMsgModal.X + 290
                   Y: =472
@@ -8518,9 +8520,7 @@ Screens:
                   DisabledBorderColor: =RGBA(166, 166, 166, 1)
                   DisplayMode: |-
                     =If(
-                        !IsBlank(ddViewMsgStaff.Selected) && 
-                        !IsBlank(txtViewMsgSubject.Text) && 
-                        Len(txtViewMsgSubject.Text) >= 3 &&
+                        !IsBlank(ddViewMsgStaff.Selected) &&
                         !IsBlank(txtViewMsgBody.Text) &&
                         Len(txtViewMsgBody.Text) >= 10,
                         DisplayMode.Edit,
@@ -8546,7 +8546,7 @@ Screens:
                                 RequestComments,
                                 Defaults(RequestComments),
                                 {
-                                    Title: txtViewMsgSubject.Text,
+                                    Title: Left(Trim(txtViewMsgBody.Text), 200),
                                     RequestID: varSelectedItem.ID,
                                     ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
                                     Message: txtViewMsgBody.Text & If(
