@@ -10200,18 +10200,27 @@ scrDashboard
 | Size | `14` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 **Replace the existing `OnSelect` formula with:**
 
-> **Batched `StaffNotes`:** While the modal is open, `+ Add Plate`, `Mark Printing`, and `Mark Done` **do not** append `PrintRequests.StaffNotes` per click. They increment `varPendingBuildPlateAddCount`, `varPendingBuildPlateMarkPrintingCount`, and `varPendingBuildPlateMarkDoneCount`. On **✕** or **Done**, if any counter is greater than zero, the app **once** patches `StaffNotes` with up to three compact `BUILD PLATE: [Summary] …` lines (add batch, printing batch, completed batch), then resets the counters, closes the modal, and clears collections. **Machine dropdown** changes still log immediately (unchanged). **Remove plate** still logs immediately.
+> **Batched `StaffNotes`:** While the modal is open, `+ Add Plate`, `Mark Printing`, and `Mark Done` **do not** append `PrintRequests.StaffNotes` per click. They increment `varPendingBuildPlateAddCount`, `varPendingBuildPlateMarkPrintingCount`, and `varPendingBuildPlateMarkDoneCount`. On **✕** or **Done**, capture those counts, zero them, hide the modal immediately, then **once** patch `StaffNotes` with up to three compact `BUILD PLATE: [Summary] …` lines (add batch, printing batch, completed batch). The notes `Patch` uses `{ ID: wReqId }` so it does not collide with a **Mark Done** label-lock write that just updated the same job. **✕** / **Done** are disabled while `varIsLoading` is true (including during **Mark Done** / **Mark Printing**). A second close click is a no-op if the modal is already hidden. **Machine dropdown** changes still log immediately (unchanged). **Remove plate** still logs immediately.
 
 ```powerfx
 If(
-    !IsBlank(varSelectedItem) && (varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0 || varPendingBuildPlateMarkDoneCount > 0),
+    varIsLoading || varShowBuildPlatesModal = 0,
+    false,
     With(
         {
             wReqId: varSelectedItem.ID,
-            wBase: LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+            wFromApproval: Coalesce(varBuildPlatesOpenedFromApproval, false),
+            wAdd: Coalesce(varPendingBuildPlateAddCount, 0),
+            wPrint: Coalesce(varPendingBuildPlateMarkPrintingCount, 0),
+            wDone: Coalesce(varPendingBuildPlateMarkDoneCount, 0),
+            wBase: Coalesce(
+                LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes,
+                varSelectedItem.StaffNotes
+            ),
             wTS: Text(Now(), "m/d h:mmam/pm"),
             wMachList: Concat(
                 Distinct(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID, Status.Value = "Printing"), Machine.Value),
@@ -10219,56 +10228,61 @@ If(
                 ", "
             )
         },
-        With(
-            {
-                wAddLine: If(
-                    varPendingBuildPlateAddCount > 0,
-                    "BUILD PLATE: [Summary] Added " & Text(varPendingBuildPlateAddCount) & " plate(s); total now " & Text(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
-                    Blank()
-                ),
-                wPrintLine: If(
-                    varPendingBuildPlateMarkPrintingCount > 0,
-                    "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkPrintingCount) & " plate(s) queued -> printing" & If(!IsBlank(wMachList), " on " & wMachList, "") & " [Changes] [Reason] [Context] [Comment] - " & wTS,
-                    Blank()
-                ),
-                wDoneLine: If(
-                    varPendingBuildPlateMarkDoneCount > 0,
-                    "BUILD PLATE: [Summary] " & Text(varPendingBuildPlateMarkDoneCount) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
-                    Blank()
-                )
-            },
+        Set(varIsLoading, true);
+        Set(varLoadingMessage, "Saving...");
+        Set(varPendingBuildPlateAddCount, 0);
+        Set(varPendingBuildPlateMarkPrintingCount, 0);
+        Set(varPendingBuildPlateMarkDoneCount, 0);
+        Set(varShowBuildPlatesModal, 0);
+        If(
+            !IsBlank(wReqId) && (wAdd > 0 || wPrint > 0 || wDone > 0),
             With(
                 {
-                    wSuffix: Concatenate(
-                        If(varPendingBuildPlateAddCount > 0, wAddLine, ""),
-                        If(varPendingBuildPlateMarkPrintingCount > 0, If(varPendingBuildPlateAddCount > 0, " | ", "") & wPrintLine, ""),
-                        If(varPendingBuildPlateMarkDoneCount > 0, If(varPendingBuildPlateAddCount > 0 || varPendingBuildPlateMarkPrintingCount > 0, " | ", "") & wDoneLine, "")
+                    wAddLine: If(
+                        wAdd > 0,
+                        "BUILD PLATE: [Summary] Added " & Text(wAdd) & " plate(s); total now " & Text(CountRows(Filter(colAllBuildPlates, RequestID = wReqId))) & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                        Blank()
+                    ),
+                    wPrintLine: If(
+                        wPrint > 0,
+                        "BUILD PLATE: [Summary] " & Text(wPrint) & " plate(s) queued -> printing" & If(!IsBlank(wMachList), " on " & wMachList, "") & " [Changes] [Reason] [Context] [Comment] - " & wTS,
+                        Blank()
+                    ),
+                    wDoneLine: If(
+                        wDone > 0,
+                        "BUILD PLATE: [Summary] " & Text(wDone) & " plate(s) printing -> completed [Changes] [Reason] [Context] [Comment] - " & wTS,
+                        Blank()
                     )
                 },
-                IfError(
-                    Patch(
-                        PrintRequests,
-                        LookUp(PrintRequests, ID = wReqId),
-                        { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
-                    );
-                    true,
-                    Notify("Could not save build plate activity to notes.", NotificationType.Warning);
-                    false
+                With(
+                    {
+                        wSuffix: Concatenate(
+                            If(wAdd > 0, wAddLine, ""),
+                            If(wPrint > 0, If(wAdd > 0, " | ", "") & wPrintLine, ""),
+                            If(wDone > 0, If(wAdd > 0 || wPrint > 0, " | ", "") & wDoneLine, "")
+                        )
+                    },
+                    IfError(
+                        Patch(
+                            PrintRequests,
+                            { ID: wReqId },
+                            { StaffNotes: If(IsBlank(wBase), wSuffix, Concatenate(wBase, " | ", wSuffix)) }
+                        );
+                        true,
+                        Notify("Could not save build plate activity to notes.", NotificationType.Warning);
+                        false
+                    )
                 )
             )
-        )
+        );
+        If(!wFromApproval, Set(varSelectedItem, Blank()));
+        Clear(colBuildPlates);
+        Clear(colBuildPlatesIndexed);
+        Set(varBuildPlatesOpenedFromApproval, false);
+        Set(varIsLoading, false);
+        Set(varLoadingMessage, "")
     )
-);
-Set(varPendingBuildPlateAddCount, 0);
-Set(varPendingBuildPlateMarkPrintingCount, 0);
-Set(varPendingBuildPlateMarkDoneCount, 0);
-Set(varShowBuildPlatesModal, 0);
-If(!Coalesce(varBuildPlatesOpenedFromApproval, false), Set(varSelectedItem, Blank()));
-ClearCollect(colBuildPlates, Blank());
-Clear(colBuildPlates);
-ClearCollect(colBuildPlatesIndexed, Blank());
-Clear(colBuildPlatesIndexed);
-Set(varBuildPlatesOpenedFromApproval, false)
+)
 ```
 
 ---
@@ -10601,10 +10615,6 @@ With(
     )
 );
 
-// Hide loading overlay
-Set(varIsLoading, false);
-Set(varLoadingMessage, "")
-;
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
@@ -10628,6 +10638,8 @@ ClearCollect(colBuildPlatesIndexed,
     )
 );
 ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
 // BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
@@ -10703,32 +10715,36 @@ With(
         // Lock labels if this is the first completed plate
         If(
             wShouldLockLabels,
-            ForAll(
-                AddColumns(
-                    colBuildPlates As plate,
-                    FrozenLabel,
-                    Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
-                ) As plateToLock,
-                Patch(
-                    BuildPlates,
-                    LookUp(BuildPlates, ID = plateToLock.ID),
-                    { 
-                        DisplayLabel: plateToLock.FrozenLabel,
-                        // Preserve ReqKey in label-locking updates
-                        ReqKey: plateToLock.ReqKey
-                    }
-                )
-            );
-            Set(
-                varSelectedItem,
-                Patch(
-                    PrintRequests,
-                    wFreshRequest,
-                    {
-                        BuildPlateLabelsLocked: true,
-                        BuildPlateOriginalTotal: CountRows(colBuildPlates)
-                    }
-                )
+            IfError(
+                ForAll(
+                    AddColumns(
+                        colBuildPlates As plate,
+                        FrozenLabel,
+                        Text(CountRows(Filter(colBuildPlates As priorPlate, priorPlate.ID <= plate.ID))) & "/" & Text(CountRows(colBuildPlates))
+                    ) As plateToLock,
+                    Patch(
+                        BuildPlates,
+                        LookUp(BuildPlates, ID = plateToLock.ID),
+                        { 
+                            DisplayLabel: plateToLock.FrozenLabel,
+                            ReqKey: plateToLock.ReqKey
+                        }
+                    )
+                );
+                Set(
+                    varSelectedItem,
+                    Patch(
+                        PrintRequests,
+                        { ID: wFreshRequest.ID },
+                        {
+                            BuildPlateLabelsLocked: true,
+                            BuildPlateOriginalTotal: CountRows(colBuildPlates)
+                        }
+                    )
+                );
+                true,
+                Notify("Plate completed, but labels could not be locked.", NotificationType.Warning);
+                true
             )
         );
         // Defer StaffNotes until Build Plates modal closes (batched with other plate actions)
@@ -10739,11 +10755,7 @@ With(
     )
 );
 
-// Hide loading overlay
-Set(varIsLoading, false);
-Set(varLoadingMessage, "");
-
-// Refresh collection
+// Refresh collections while overlay still blocks Close/Done
 ClearCollect(colBuildPlates,
     Sort(Filter(BuildPlates, RequestID = varSelectedItem.ID), ID, SortOrder.Ascending)
 );
@@ -10767,6 +10779,8 @@ ClearCollect(colBuildPlatesIndexed,
     )
 );
 ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+Set(varIsLoading, false);
+Set(varLoadingMessage, "");
 // BuildPlateSummary recalculates automatically from colAllBuildPlates.
 ```
 
@@ -10776,6 +10790,8 @@ ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince))
 >
 > 🔒 **Concurrency Protection & Field Preservation:**
 > - Both status buttons now use `IfError()` to catch patch conflicts when clicking too quickly
+> - Keep `varIsLoading` true until the plate collections finish refreshing so **✕** / **Done** cannot start a `PrintRequests` notes write while **Mark Done** is still locking labels
+> - Label lock is wrapped in `IfError`; a lock failure does not undo the plate `Completed` status
 > - **Critical:** All Patch operations explicitly preserve `ReqKey` and other required fields (`RequestID`, `PlateKey`, `Machine`, `Title`)
 > - Without explicit field preservation, SharePoint may clear values during update, causing "orphaned" plates that don't show up in filtered views
 > - Loading overlay (`varIsLoading`) prevents double-clicks while patch is in progress
@@ -11067,12 +11083,13 @@ Set(varLoadingMessage, "")
 | Size | `varBtnFontSize` |
 | Font | `varAppFont` |
 | FocusedBorderThickness | `varFocusedBorderThickness` |
+| DisplayMode | `If(varIsLoading, DisplayMode.Disabled, DisplayMode.Edit)` |
 
 **Replace the existing `OnSelect` formula with:**
 
-`btnBuildPlatesDone` uses the **same** `OnSelect` formula as **`btnBuildPlatesClose`** in `scrDashboard.pa.yaml`: batched `StaffNotes` flush (when any `varPendingBuildPlate*Count` is greater than zero), reset all three pending counters, `Set(varShowBuildPlatesModal, 0)`, conditional `Set(varSelectedItem, Blank())`, then clear `colBuildPlates` / `colBuildPlatesIndexed` and `Set(varBuildPlatesOpenedFromApproval, false)`.
+`btnBuildPlatesDone` uses the **same** `OnSelect` formula as **`btnBuildPlatesClose`** in `scrDashboard.pa.yaml`: if the modal is already hidden or a save is in progress, do nothing; otherwise capture pending counts, zero them, hide the modal, patch batched `StaffNotes` with `{ ID: wReqId }` when any count is greater than zero, then `Clear` the working collections.
 
-> 💡 **Same as Close button:** Flush runs **before** clearing `varSelectedItem` so the `Patch` target is still valid.
+> 💡 **Same as Close button:** Counts are captured into `With` locals before `varSelectedItem` is cleared. The notes `Patch` does not use a cached `LookUp` record, so **Mark Done** then **✕** does not hit a SharePoint version conflict. Do not use `ClearCollect(..., Blank())` — that briefly gives the gallery a blank row and can throw a generic “could not be completed” banner.
 
 ---
 
@@ -16486,6 +16503,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-21: Message screenshots** | Messages modal sends a screenshot through **`Flow-(K)-Comment-AddAttachment`**, then sets **`ReadyToEmail = true`**. Flow D emails when that flag is Yes and **`MessageID`** is still blank, and attaches those files. See [`Flow-(D)-Message-Notifications.md`](../PowerAutomate/Flow-(D)-Message-Notifications.md) and [`Flow-(K)-Comment-AddAttachment.md`](../PowerAutomate/Flow-(K)-Comment-AddAttachment.md). |
 | **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff` Width = 283**. |
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
+| **2026-08-24: Build Plates Mark Done then ✕** | **Mark Done** then **✕** could warn “Could not save build plate activity to notes” even though the plate was already `Completed`: Close patched `StaffNotes` against a stale SharePoint version after the first-complete label-lock write. **✕** / **Done** now disable while `varIsLoading`, hide the modal before the notes write, patch with `{ ID: wReqId }`, and `Clear` collections instead of `ClearCollect(..., Blank())`. Label lock is `IfError`. |
 
 # Next Steps
 
