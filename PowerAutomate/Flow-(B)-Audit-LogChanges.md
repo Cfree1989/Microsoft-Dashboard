@@ -146,6 +146,36 @@ Replace `FieldName` with the SharePoint internal column name (e.g., `StudentConf
 
 **Test Step 1:** Save and verify trigger shows no errors → Should see flow in "My flows"
 
+### Step 1a: Initialize email attachment arrays (ROOT — before any condition)
+
+**What this does:** Creates two empty arrays used later when a rejection or estimate email might include a slicer screenshot. Power Automate only allows **Initialize variable** at the **top of the flow**. If you put these cards inside **Check Status Rejected**, **Check Status Pending**, or **Skip if System Update**, Save fails with `InvalidVariableInitialization`.
+
+**Do this immediately after the trigger**, before Step 2. The canvas should read:
+
+`When an item is created or modified` → `Initialize RejectEmailAttachments` → `Initialize ApproveEmailAttachments` → (Step 2 condition)
+
+**UI steps:**
+
+1. Under the SharePoint trigger, click **+** → **Add an action**.
+2. Search **Initialize variable** → add it.
+3. Click the **three dots (…)** → **Rename** → Type `Initialize RejectEmailAttachments`
+4. Fill in:
+   - **Name:** `RejectEmailAttachments` (this is the **variable** name, not the action title)
+   - **Type:** **Array**
+   - **Value:** Click **fx** → paste `json('[]')` → **Add**
+5. Under that card, click **+** → **Add an action** → **Initialize variable** again.
+6. **Rename:** `Initialize ApproveEmailAttachments`
+7. Fill in:
+   - **Name:** `ApproveEmailAttachments`
+   - **Type:** **Array**
+   - **Value:** **fx** → `json('[]')` → **Add**
+
+**Verify:** Both cards are purple **Initialize variable** actions **outside** every condition. Save should succeed.
+
+You will **Append** to these arrays later (Step 7a Action 5b / Step 7b Action 2b). You will **not** initialize them again.
+
+**Test Step 1a:** Save. If you see `InvalidVariableInitialization`, the card is still nested — drag it up until it sits directly under the trigger.
+
 ### Step 2: Add System Update Condition (CRITICAL - GET THIS RIGHT)
 
 **What this does:** Prevents Flow B from running when system processes update items, avoiding infinite loops. This was the main issue causing audit logs to not appear.
@@ -805,21 +835,21 @@ Some display names differ from internal field names. Always use internal names i
 
 > **Why:** Staff may attach a slicer screenshot in the Reject modal. The app creates a `RequestComments` row with `Title` starting `[RejectShot]`, uploads via Flow K, and keeps `ReadyToEmail = false` so Flow D does **not** send a second email. Flow B finds that row and attaches its files to this rejection email only. Do **not** read attachments from `PrintRequests` (those are student STLs).
 
-1. **Initialize variable** → Rename `Initialize RejectEmailAttachments`
-   - Name: `RejectEmailAttachments`
-   - Type: Array
-   - Value: Expression `json('[]')`
-2. **Get items** (SharePoint) → Rename `Get RejectShot Comment`
+> **Already built in Step 1a:** `RejectEmailAttachments` starts as `[]`. Do **not** add another Initialize here. Do not add extra Compose/Select “convert attachments” cards.
+
+**Where:** Inside **Check Status Rejected → True**, **after** Compose Formatted Reasons Text and **before** Send Rejection Email.
+
+1. **+ Add an action** → SharePoint **Get items** → Rename `Get RejectShot Comment`
    - Site: Digital Fabrication Lab
    - List: `RequestComments`
    - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[RejectShot]')`
    - Order By: `Created desc`
    - Top Count: `1`
-3. **Condition** → Rename `Has RejectShot Comment`
+2. **+ Add an action** → **Condition** → Rename `Has RejectShot Comment`
    - Left: Expression `length(body('Get_RejectShot_Comment')?['value'])`
    - is greater than
    - Right: `0`
-4. **YES branch:**
+3. **YES branch:**
    - **Compose** → Rename `Compose RejectShot CommentID` → Inputs: Expression `first(body('Get_RejectShot_Comment')?['value'])?['ID']`
    - **Get attachments** → Rename `Get RejectShot Attachments`
      - List: `RequestComments`
@@ -827,18 +857,19 @@ Some display names differ from internal field names. Always use internal names i
    - **Condition** → Rename `Has RejectShot Files`
      - Left: Expression `length(body('Get_RejectShot_Attachments'))`
      - is greater than `0`
-   - **YES (has files):** **Apply to each** `For Each RejectShot` on `body('Get_RejectShot_Attachments')`
+   - **YES (has files):** **Apply to each** → Rename `For Each RejectShot`
+     - Select an output: Expression `body('Get_RejectShot_Attachments')`
      - Inside: **Get attachment content** → Rename `Get RejectShot Content`
        - List: `RequestComments`
        - Id: Expression `outputs('Compose_RejectShot_CommentID')`
        - File Identifier: `items('For_Each_RejectShot')?['Id']`
      - Inside: **Append to array variable** → Rename `Append RejectShot to RejectEmailAttachments`
-       - **Name** (variable): `RejectEmailAttachments`
+       - **Name** (variable): `RejectEmailAttachments` (created in Step 1a)
        - **Value** (fx):
        ```
        addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_RejectShot')?['DisplayName'], items('For_Each_RejectShot')?['Name'])), 'ContentBytes', body('Get_RejectShot_Content'))
        ```
-5. **NO branches:** leave empty (send text-only).
+4. **NO branches:** leave empty (send text-only).
 
 **Action 6: Send Rejection Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
@@ -926,20 +957,20 @@ Some display names differ from internal field names. Always use internal names i
 **Action 2b: Optional approve screenshot (from RequestComments)**
 
 > Same pattern as reject: Staff Approve modal creates `Title` starting `[ApproveShot]`, Flow K uploads, `ReadyToEmail = false`. Attach those files to the estimate email only.
+>
+> **Already built in Step 1a:** `ApproveEmailAttachments`. Do **not** initialize it inside **Check Status Pending**. If a nested Initialize is still there, delete it.
 
-1. **Initialize variable** → Rename `Initialize ApproveEmailAttachments`
-   - Name: `ApproveEmailAttachments`
-   - Type: Array
-   - Value: Expression `json('[]')`
-2. **Get items** → Rename `Get ApproveShot Comment`
+**Inside Check Status Pending → True** (after Get Current Pending Data, before Send Estimate Email):
+
+1. **Get items** → Rename `Get ApproveShot Comment`
    - List: `RequestComments`
    - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[ApproveShot]')`
    - Order By: `Created desc`
    - Top Count: `1`
-3. **Condition** → Rename `Has ApproveShot Comment`
+2. **Condition** → Rename `Has ApproveShot Comment`
    - Left: Expression `length(body('Get_ApproveShot_Comment')?['value'])`
    - is greater than `0`
-4. **YES branch of `Has ApproveShot Comment`:** these are separate actions, nested inside True (same layout as Action 5b).
+3. **YES branch of `Has ApproveShot Comment`:** these are separate actions, nested inside True (same layout as Action 5b).
    - **Compose** (Data Operations) → Rename `Compose ApproveShot CommentID`
      - Inputs: Expression `first(body('Get_ApproveShot_Comment')?['value'])?['ID']`
    - **Get attachments** (SharePoint) → Rename `Get ApproveShot Attachments`
@@ -957,12 +988,12 @@ Some display names differ from internal field names. Always use internal names i
        - Id: Expression `outputs('Compose_ApproveShot_CommentID')`
        - File Identifier: Expression `items('For_Each_ApproveShot')?['Id']`
      - Inside the loop (after Get content): **Append to array variable** → Rename `Append ApproveShot to ApproveEmailAttachments`
-       - **Name** (variable dropdown): `ApproveEmailAttachments`
+       - **Name** (variable dropdown): `ApproveEmailAttachments` (created in Step 1a)
        - **Value** (fx):
        ```
        addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_ApproveShot')?['DisplayName'], items('For_Each_ApproveShot')?['Name'])), 'ContentBytes', body('Get_ApproveShot_Content'))
        ```
-5. **NO branches** (`Has ApproveShot Comment` and `Has ApproveShot Files`): leave empty. The estimate email still sends; Attachments is `[]`.
+4. **NO branches** (`Has ApproveShot Comment` and `Has ApproveShot Files`): leave empty. The estimate email still sends; Attachments is `[]`.
 
 On **Send Estimate Email**, switch Attachments to array mode (T icon, not **+ Add new item**) and set **fx** `variables('ApproveEmailAttachments')`.
 
