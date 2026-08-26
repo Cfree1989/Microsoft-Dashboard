@@ -3,6 +3,17 @@ Screens:
     Properties:
       Fill: =varColorBg
       LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
+      OnVisible: |-
+        =IfError(
+            ClearCollect(
+                colStudentCommentIndex,
+                Filter(
+                    RequestComments,
+                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                )
+            ),
+            Clear(colStudentCommentIndex)
+        )
     Children:
       - conHeader2:
           Control: GroupContainer
@@ -94,6 +105,16 @@ Screens:
                                 )
                             )
                         )
+                    );
+                    IfError(
+                        ClearCollect(
+                            colStudentCommentIndex,
+                            Filter(
+                                RequestComments,
+                                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                            )
+                        ),
+                        Clear(colStudentCommentIndex)
                     );
                     Notify("Requests refreshed!", NotificationType.Information)
                   PressedBorderColor: =Self.Fill
@@ -670,21 +691,21 @@ Screens:
                       Properties:
                         BorderColor: |-
                           =If(
-                              !IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)),
+                              !IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)),
                               varColorDanger,
                               varColorPrimary
                           )
                         BorderThickness: =varInputBorderThickness
                         Color: |-
                           =If(
-                              !IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)),
+                              !IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)),
                               Color.White,
                               varColorPrimary
                           )
                         DisabledBorderColor: =RGBA(166, 166, 166, 1)
                         Fill: |-
                           =If(
-                              !IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)),
+                              !IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)),
                               varColorDanger,
                               Color.White
                           )
@@ -695,19 +716,19 @@ Screens:
                         HoverColor: =Color.White
                         HoverFill: |-
                           =If(
-                              !IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)),
+                              !IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)),
                               ColorFade(varColorDanger, -15%),
                               varColorPrimary
                           )
                         OnSelect: |-
                           =Set(varSelectedItem, ThisItem);
                           Set(varShowViewMessagesModal, ThisItem.ID);
-                          ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
+                          ClearCollect(colStudentRequestComments, Filter(colStudentCommentIndex, RequestID = ThisItem.ID))
                         PressedBorderColor: =Self.Fill
                         PressedColor: =Self.Fill
                         PressedFill: |-
                           =If(
-                              !IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)),
+                              !IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)),
                               ColorFade(varColorDanger, -25%),
                               ColorFade(varColorPrimary, -15%)
                           )

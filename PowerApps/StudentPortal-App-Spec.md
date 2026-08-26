@@ -80,6 +80,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 ### Live coauthor notes
 
+- **2026-08-26: My Requests tab error spam.** Open / Done / All only change `varMyRequestsFilter`, but each card’s Messages button ran `LookUp(RequestComments, …)` on **five** properties. SharePoint 403 (`E_ACCESSDENIED`) then replayed on every tab click. Cache this student’s comments in **`colStudentCommentIndex`** on `scrMyRequests.OnVisible` and Refresh (`IfError` + `StudentEmail = varMeEmail || varMeUPN`). Button styling and the thread modal read that collection only. Grant students **Read** on **RequestComments** so the cache is not empty (red Messages still needs list access once per visit).
 - **2026-08-26: Home confirm banner after OnStart.** `App.OnStart` still initializes counts to 0 (schema). **Run OnStart does not re-fire `scrHome.OnVisible`**, so the banner stayed hidden until the student left Home and came back. OnStart now `Refresh(PrintRequests)` and recounts at the end. Home OnVisible skips the count until `varMeEmail` / `varMeEntraId` exist so a racing first paint cannot overwrite a good count with an empty filter.
 - **2026-08-26: Home confirm banner refresh.** `scrHome.OnVisible` now `Concurrent(Refresh(PrintRequests), Refresh(LabStatus))` before counting Pending-confirm / Completed-pickup jobs. Previously Home only refreshed LabStatus, so the orange “waiting for your OK” line could stay hidden after an estimate email until SharePoint cache caught up or the student used My Requests **Refresh**.
 - **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` instead of `Items`. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`**. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white**.
@@ -103,9 +104,9 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-18: Submit cards 440.** Visible DataCards are **Width = 440** (were 442). Three 442 cards overflowed the form and clipped “(Required)” into the next column. Hidden Status / StudentEntraId stay **442**. Course Number **Height = 99**. `frmSubmit` border is `varColorBorderLight` / `varInputBorderThickness`. `lblAttachmentsRequired` is **X = 786, Y = 11** (file-picker column), not `DataCardKey32.Width + 5`.
 - **2026-08-18: Submit button lower.** Live `frmSubmit` **Height = 526** (was `Parent.Height - 40 - 120`). `btnSubmit` **Y = 588**. `lblValidationMessage` **Y = 550**. Discipline title width **95** (was 112). Project Type title **X = 38**; its ComboBox **X = 30**.
 - **2026-08-18: Submit title/dropdown X.** Match Discipline: label and ComboBox **X = 30**. Project Type title was **38**; Method/Printer ComboBoxes were **40**; Color ComboBox was **46**.
-- **2026-08-18: Messages button alert.** `btnViewMessages` is solid `varColorDanger` (white text) when `LookUp(RequestComments, RequestID = ThisItem.ID)` finds a row; otherwise the blue outline. Label stays **Messages** — no count.
+- **2026-08-18: Messages button alert.** `btnViewMessages` is solid `varColorDanger` (white text) when `LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)` finds a row; otherwise the blue outline. Label stays **Messages** — no count. (2026-08-26: index collection, not live `RequestComments`.)
 - **2026-08-17: Item 9 — My Requests filters + filename.** Open / Done / All are a **horizontal gallery** (`galMyRequestTabs`) like Staff `galStatusTabs`: Height 55, TemplateSize 148, TemplatePadding 3, button Width 141 / Size 10 / X 5 / Y 4. Left under the header. Selected uses `ThisItem.Color` (`RGBA(70, 130, 220, 1)`); idle is light gray + 1px border. Counts are this student’s rows. Names stay Open / Done / All.
-- **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Loads **only that job’s** `RequestComments` into `colStudentRequestComments` (no full-list cache). No compose — students still reply by email. Requires the **RequestComments** SharePoint list added as a data source in Studio.
+- **2026-08-17: Item 9 — Message history (read-only).** My Requests cards have a **Messages** button. It opens a Staff-style thread modal (`conViewMessagesModal`): cream box, Outbound (staff, blue, SENT) vs Inbound (student, cream, REPLY) bubbles, newest first. Thread comes from **`colStudentCommentIndex`** (this student’s comments, loaded on screen visible / Refresh). No compose — students still reply by email. Requires **RequestComments** as a data source **and student Read** on that list.
 - **2026-08-17: Item 9 — Lab hours banner.** Home (`lblHoursBanner`) and My Requests (`lblHoursBannerMyRequests`) show a page footer above the nav (not on cards). Copy uses **`varLabHours`** (`Mon–Fri 8:30 AM – 4:30 PM`) and **`varPickupLocation`**. **Open now** (green) weekdays 8:30–4:30 local time; otherwise **Closed now** (orange). Classic button, `DisplayMode.View` (no I-beam). Run **OnStart**.
 - **2026-08-17: Item 9 — File download.** My Requests **Files** opens `conFilesModal`, sized like Staff (`500×450`, cream). Title **Attachments - ReqKey** (18–20pt primary). View-only Attachments control: grey chips (`ItemFill = varChevronBackground`, white text), **Attachments** field label, no attach/delete, no Performing Action As. **Close** is the Staff grey Cancel button. Tap the file name to download.
 - **2026-08-17: Card buttons match Staff Console.** Status badge is always tab blue `RGBA(70, 130, 220, 1)` (white text, radius 10). **Cancel Request** matches Staff **Reject** (solid `varColorDanger`, white text, `varBtnHeight`). **Confirm Estimate** matches Staff **Approve** (solid green, `varBtnHeight`, not bold shouty). **Messages** and **Files** match Staff **Files** (white fill, blue border/text, fill blue on hover).
@@ -343,6 +344,10 @@ Set(varSelectedItem, LookUp(PrintRequests, false));
 // Pending estimates waiting for the student to confirm (Home "needs you" line)
 Set(varNeedsConfirmCount, 0);
 Set(varPickupReadyCount, 0);
+
+Set(varMyRequestsFilter, "Open");
+ClearCollect(colStudentCommentIndex, Filter([{RequestID: 0}], false));
+Clear(colStudentRequestComments);
 
 // === FORM STATE ===
 // Track if user attempted to submit (for showing validation errors)
@@ -619,6 +624,8 @@ RadiusBottomRight: varRadiusXSmall
 | `varNeedsConfirmCount` | Pending jobs waiting for student OK (Home line) | Number |
 | `varPickupReadyCount` | Completed jobs ready for pickup (Home line) | Number |
 | `varMyRequestsFilter` | My Requests chip: Open, Done, or All | Text |
+| `colStudentCommentIndex` | This student’s `RequestComments` rows (My Requests OnVisible / Refresh) | Table |
+| `colStudentRequestComments` | Thread for the open Messages modal (from `colStudentCommentIndex`) | Table |
 | `varShowCancelModal` | ID of item for cancel confirmation (0=hidden) | Number |
 | `varShowViewMessagesModal` | ID of item for message history modal (0=hidden) | Number |
 | `varShowFilesModal` | ID of item for file download modal (0=hidden) | Number |
@@ -3444,6 +3451,20 @@ The PowerApps Attachment control defaults to **10MB** max file size. To allow 3D
 1. In the Tree view, click **+ New screen** → **Blank**.
 2. **Rename it:** `scrMyRequests`
 3. Set **Fill:** `varColorBg`
+4. Set **OnVisible** (loads this student’s messages once; tab chips must not query SharePoint):
+
+```powerfx
+IfError(
+    ClearCollect(
+        colStudentCommentIndex,
+        Filter(
+            RequestComments,
+            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        )
+    ),
+    Clear(colStudentCommentIndex)
+)
+```
 
 ---
 
@@ -3576,6 +3597,16 @@ With(
             )
         )
     )
+);
+IfError(
+    ClearCollect(
+        colStudentCommentIndex,
+        Filter(
+            RequestComments,
+            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        )
+    ),
+    Clear(colStudentCommentIndex)
 );
 Notify("Requests refreshed!", NotificationType.Information)
 ```
@@ -3974,14 +4005,14 @@ Set(varShowCancelModal, ThisItem.ID)
 | Property | Value |
 |----------|-------|
 | Text | `"Messages"` |
-| Fill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), varColorDanger, Color.White)` |
-| Color | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), Color.White, varColorPrimary)` |
-| BorderColor | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), varColorDanger, varColorPrimary)` |
+| Fill | `If(!IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)), varColorDanger, Color.White)` |
+| Color | `If(!IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)), Color.White, varColorPrimary)` |
+| BorderColor | `If(!IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)), varColorDanger, varColorPrimary)` |
 | BorderThickness | `varInputBorderThickness` |
-| HoverFill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -15%), varColorPrimary)` |
+| HoverFill | `If(!IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -15%), varColorPrimary)` |
 | HoverColor | `Color.White` |
 | HoverBorderColor | `ColorFade(Self.BorderColor, 20%)` |
-| PressedFill | `If(!IsBlank(LookUp(RequestComments, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -25%), ColorFade(varColorPrimary, -15%))` |
+| PressedFill | `If(!IsBlank(LookUp(colStudentCommentIndex, RequestID = ThisItem.ID)), ColorFade(varColorDanger, -25%), ColorFade(varColorPrimary, -15%))` |
 | Size | `10` |
 
 38c. Set **OnSelect:**
@@ -3989,10 +4020,10 @@ Set(varShowCancelModal, ThisItem.ID)
 ```powerfx
 Set(varSelectedItem, ThisItem);
 Set(varShowViewMessagesModal, ThisItem.ID);
-ClearCollect(colStudentRequestComments, Filter(RequestComments, RequestID = ThisItem.ID))
+ClearCollect(colStudentRequestComments, Filter(colStudentCommentIndex, RequestID = ThisItem.ID))
 ```
 
-> Requires the **RequestComments** SharePoint list as a data source (same site as PrintRequests). Do not `ClearCollect` the whole comments list on OnStart.
+> Requires the **RequestComments** SharePoint list as a data source (same site as PrintRequests). Load **`colStudentCommentIndex`** on My Requests **OnVisible** / Refresh (`StudentEmail` = this student). Do **not** `LookUp(RequestComments)` on card paint — Open / Done / All re-render the gallery and will 403-spam if the student cannot read the list.
 
 #### Action: Files Button (Download attachments)
 
@@ -5136,6 +5167,9 @@ Set(varShowCancelModal, 0);
 Set(varSelectedItem, LookUp(PrintRequests, false));  // Typed blank
 Set(varNeedsConfirmCount, 0);
 Set(varPickupReadyCount, 0);
+Set(varMyRequestsFilter, "Open");
+ClearCollect(colStudentCommentIndex, Filter([{RequestID: 0}], false));
+Clear(colStudentRequestComments);
 Set(varSubmitAttempted, false);  // For validation message display
 Set(varInvalidFiles, Table());   // Files with invalid names
 Set(varHasInvalidFile, false);   // Quick check for submit button

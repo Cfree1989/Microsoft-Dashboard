@@ -195,11 +195,11 @@ Do not put slicer screenshots on `PrintRequests` attachments (those are student 
 
 Since students need to see messages from staff (not just their own), use view-based filtering:
 
-1. **Keep default permissions** (all authenticated users can read)
-2. **Filter in Power Apps** to show only relevant messages per request
-3. **SharePoint views** filter by current user context
+1. **Grant students Read** on this list (site Members often do **not** include students). Without Read, Student Portal **My Requests** used to 403 (`E_ACCESSDENIED`) on every Open / Done / All click.
+2. **Filter in Power Apps** to this student’s `StudentEmail` (`colStudentCommentIndex`), then to the open job.
+3. **SharePoint views** can still filter by current user for staff.
 
-This approach is simpler and supports bi-directional messaging.
+Do not use PrintRequests-style “only their own” item-level security here — staff-created rows would be invisible to the student.
 
 ---
 

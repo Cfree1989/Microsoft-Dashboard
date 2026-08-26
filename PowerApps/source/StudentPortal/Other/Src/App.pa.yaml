@@ -47,6 +47,10 @@ App:
       // My Requests status chips: Open | Done | All
       Set(varMyRequestsFilter, "Open");
 
+      // Message-button cache (in-memory). Do not LookUp(RequestComments) on gallery paint.
+      ClearCollect(colStudentCommentIndex, Filter([{RequestID: 0}], false));
+      Clear(colStudentRequestComments);
+
       // === FORM STATE ===
       // Track if user attempted to submit (for showing validation errors)
       Set(varSubmitAttempted, false);
