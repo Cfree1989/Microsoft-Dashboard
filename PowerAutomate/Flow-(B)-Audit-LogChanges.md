@@ -842,9 +842,16 @@ Some display names differ from internal field names. Always use internal names i
 1. **+ Add an action** → SharePoint **Get items** → Rename `Get RejectShot Comment`
    - Site: Digital Fabrication Lab
    - List: `RequestComments`
-   - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[RejectShot]')`
+   - **Filter Query:** Click **fx** (do not type `[RejectShot]` into an expression — Power Automate treats `[...]` as indexing and the filter finds nothing). Paste:
+
+```
+concat('RequestID eq ', triggerOutputs()?['body/ID'], ' and substringof(''RejectShot'',Title)')
+```
+
    - Order By: `Created desc`
    - Top Count: `1`
+
+> After a test run: open **Get RejectShot Comment**. `body/value` must have 1 item. Empty `[]` = this filter still wrong, or no `[RejectShot]` row on that RequestID (check RequestComments in SharePoint; paperclip = Flow K worked).
 2. **+ Add an action** → **Condition** → Rename `Has RejectShot Comment`
    - Left: Expression `length(body('Get_RejectShot_Comment')?['value'])`
    - is greater than
@@ -964,7 +971,11 @@ Some display names differ from internal field names. Always use internal names i
 
 1. **Get items** → Rename `Get ApproveShot Comment`
    - List: `RequestComments`
-   - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[ApproveShot]')`
+   - **Filter Query:** **fx** (same `[...]` trap as reject). Paste:
+
+```
+concat('RequestID eq ', triggerOutputs()?['body/ID'], ' and substringof(''ApproveShot'',Title)')
+```
    - Order By: `Created desc`
    - Top Count: `1`
 2. **Condition** → Rename `Has ApproveShot Comment`

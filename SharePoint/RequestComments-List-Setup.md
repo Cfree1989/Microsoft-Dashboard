@@ -212,6 +212,8 @@ This approach is simpler and supports bi-directional messaging.
 1. Click **+ Add view** → Name: `All Messages` → **Create**
 2. Click the view dropdown → **Edit current view**
 3. **Check these columns:**
+   - ☑ Title (built-in with the list — reject/approve screenshots prefix `[RejectShot]` / `[ApproveShot]` here)
+   - ☑ Attachments (paperclip; Flow K files)
    - ☑ ReqKey
    - ☑ Message
    - ☑ Author
@@ -220,6 +222,7 @@ This approach is simpler and supports bi-directional messaging.
    - ☑ SentAt
    - ☑ ThreadID
    - ☑ ReadByStaff
+   - ☑ ReadyToEmail
 4. **Sort section:**
    - First sort by: `SentAt`
    - Select: "Show items in descending order"
