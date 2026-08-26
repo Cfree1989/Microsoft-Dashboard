@@ -167,6 +167,43 @@ App:
           {Status: "Rejected", Color: varColorDanger},
           {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
           {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
-      ))
+      ));
+
+      // Home banner counts. Run OnStart zeros these earlier and does not re-fire scrHome.OnVisible.
+      Refresh(PrintRequests);
+      With(
+          {
+              wMine: If(
+                  !IsBlank(varMeEntraId),
+                  Filter(
+                      PrintRequests,
+                      StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                  ),
+                  Filter(
+                      PrintRequests,
+                      StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                  )
+              )
+          },
+          Set(
+              varNeedsConfirmCount,
+              CountRows(
+                  Filter(
+                      wMine,
+                      Status.Value = "Pending",
+                      Not(StudentConfirmed)
+                  )
+              )
+          );
+          Set(
+              varPickupReadyCount,
+              CountRows(
+                  Filter(
+                      wMine,
+                      Status.Value = "Completed"
+                  )
+              )
+          )
+      )
     StartScreen: =scrHome
     Theme: =PowerAppsTheme

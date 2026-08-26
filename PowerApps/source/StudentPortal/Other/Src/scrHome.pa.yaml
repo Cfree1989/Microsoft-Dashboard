@@ -4,43 +4,50 @@ Screens:
       Fill: =varColorBg
       LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
       OnVisible: |-
-        =Refresh(LabStatus);
+        =Concurrent(
+            Refresh(PrintRequests),
+            Refresh(LabStatus)
+        );
         Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
         If(
             !IsBlank(varLabStatus),
             Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
             Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
         );
-        With(
-            {
-                wMine: If(
-                    !IsBlank(varMeEntraId),
-                    Filter(
-                        PrintRequests,
-                        StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
-                    ),
-                    Filter(
-                        PrintRequests,
-                        StudentEmail = varMeEmail || StudentEmail = varMeUPN
+        // Skip if identity is not ready yet (StartScreen OnVisible can race OnStart).
+        If(
+            !IsBlank(varMeEmail) || !IsBlank(varMeEntraId),
+            With(
+                {
+                    wMine: If(
+                        !IsBlank(varMeEntraId),
+                        Filter(
+                            PrintRequests,
+                            StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                        ),
+                        Filter(
+                            PrintRequests,
+                            StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                        )
                     )
-                )
-            },
-            Set(
-                varNeedsConfirmCount,
-                CountRows(
-                    Filter(
-                        wMine,
-                        Status.Value = "Pending",
-                        Not(StudentConfirmed)
+                },
+                Set(
+                    varNeedsConfirmCount,
+                    CountRows(
+                        Filter(
+                            wMine,
+                            Status.Value = "Pending",
+                            Not(StudentConfirmed)
+                        )
                     )
-                )
-            );
-            Set(
-                varPickupReadyCount,
-                CountRows(
-                    Filter(
-                        wMine,
-                        Status.Value = "Completed"
+                );
+                Set(
+                    varPickupReadyCount,
+                    CountRows(
+                        Filter(
+                            wMine,
+                            Status.Value = "Completed"
+                        )
                     )
                 )
             )

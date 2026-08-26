@@ -1224,7 +1224,7 @@ Screens:
                         OnSelect: =Select(Parent)
                         Size: =10
                         Text: |-
-                          =If(IsBlank(ThisItem.Author0.DisplayName), "Unknown", With({parts: Split(ThisItem.Author0.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value)) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")
+                          =If(IsBlank(ThisItem.'Author (Author0)'.DisplayName), "Unknown", With({parts: Split(ThisItem.'Author (Author0)'.DisplayName, " ")}, First(parts).Value & " " & Last(parts).Value)) & " • " & Text(ThisItem.SentAt, "mmm d, yyyy h:mm AM/PM")
                         Width: =recVMsgBg.Width - 95
                         X: =recVMsgBg.X + 32
                         Y: =6

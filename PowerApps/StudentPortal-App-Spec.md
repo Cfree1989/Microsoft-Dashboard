@@ -80,12 +80,14 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 ### Live coauthor notes
 
+- **2026-08-26: Home confirm banner after OnStart.** `App.OnStart` still initializes counts to 0 (schema). **Run OnStart does not re-fire `scrHome.OnVisible`**, so the banner stayed hidden until the student left Home and came back. OnStart now `Refresh(PrintRequests)` and recounts at the end. Home OnVisible skips the count until `varMeEmail` / `varMeEntraId` exist so a racing first paint cannot overwrite a good count with an empty filter.
+- **2026-08-26: Home confirm banner refresh.** `scrHome.OnVisible` now `Concurrent(Refresh(PrintRequests), Refresh(LabStatus))` before counting Pending-confirm / Completed-pickup jobs. Previously Home only refreshed LabStatus, so the orange “waiting for your OK” line could stay hidden after an estimate email until SharePoint cache caught up or the student used My Requests **Refresh**.
 - **2026-08-14: Item 1 — Form 3+ and Staff Console dropdown/status colors.** Resin printer `Items` / `DefaultSelectedItems` use **`Form 3+ (5.7×5.7×7.3in)`** only (not `Form 3`). Method `OnChange` resets the printer combo so resin auto-selects Form 3+. Classic ComboBox defaults to **IsSearchable = true**, which fills the flyout from sample `ComboBoxSample` instead of `Items`. Discipline/Project Type/Method/Printer/Color now use **`IsSearchable = false`** and **`SelectMultiple = false`**. Discipline `Items` uses internal name **`Department`**. Selected-value chip uses **`SelectionTagFill` white**.
 - **2026-08-14: Item 2 — Confirm and Cancel saves.** `btnConfirmYes` / `btnCancelYes` wrap `Patch` in **`IfError`**, set `varIsLoading`, and toast success only after a successful save. Failure keeps the modal open and shows an error. `conLoadingOverlayMyRequests` shows **Saving...**. Confirm/Cancel buttons use `DisplayMode.Disabled` while loading.
 - **2026-08-14: Item 3 — Cancel does not wipe Notes.** Cancel no longer Patches `Notes`. It appends `"Canceled by student {date}"` to **`StaffNotes`** (pipe-separated, same as Staff Console) and sets `LastActionAt`. `lblCancelMessage` warns when status is **Ready to Print** (staff may already be preparing; email/visit lab). Cancel remains allowed in Uploaded, Pending, and Ready to Print.
 - **2026-08-14: Item 4 — My Requests filter.** Gallery `Items` prefers **`StudentEntraId = Text(varMeEntraId)`** (SharePoint text vs GUID), with **`StudentEmail = varMeEmail` or `varMeUPN`** as fallback for older rows. If Entra ID is blank, filter email only — never `StudentEntraId = Blank()`. No `Lower()` on SharePoint columns (`varMeEmail` / `varMeUPN` are already Lower in OnStart). Empty state uses **`galMyRequests.AllItemsCount = 0`**. Index **StudentEntraId** and **StudentEmail** in SharePoint list settings.
 - **2026-08-14: Item 5 — Staff Console chrome.** `varColorHeader` is **`RGBA(77, 77, 77, 1)`** (same as Staff `recHeader`). Header height **55**. Titles are white Open Sans Semibold 18 (`Print Lab Student Portal` / `New Print Request` / `My Print Requests`). Refresh is a Staff-style header button (22px, radius 4). Welcome `Fill = Color.Transparent` (no Studio purple). Home action cards use **`varColorBgCard`**. ReqKey shows **`Job #{ID}`** until Flow A fills `ReqKey`. Rejected cards show **`RejectionComment`**, else **`RejectionReason`**. No logo — Staff live header has none.
-- **2026-08-14: Item 6 — Home “needs you” line.** `scrHome.OnVisible` counts this student’s **Pending** rows where `StudentConfirmed` is not true (same identity filter as My Requests). **`btnNeedsYou`** (Classic button, not a label) is **500px** wide and centered, orange text on a transparent fill (peach chip on hover only), and navigates to My Requests. Hidden when the count is 0. The My Requests card description switches to “N estimate(s) waiting for your OK.” Confirm success decrements `varNeedsConfirmCount`.
+- **2026-08-14: Item 6 — Home “needs you” line.** `scrHome.OnVisible` counts this student’s **Pending** rows where `StudentConfirmed` is not true (same identity filter as My Requests). **`btnNeedsYou`** (Classic button, not a label) is **500px** wide and centered, orange text on a transparent fill (peach chip on hover only), and navigates to My Requests. Hidden when the count is 0. The My Requests card description switches to “N estimate(s) waiting for your OK.” Confirm success decrements `varNeedsConfirmCount`. (2026-08-26: OnVisible also `Refresh(PrintRequests)` so this count is not stale after an estimate email.)
 - **2026-08-14: Item 7 (partial) — Method “(Required)”.** `lblMethodRequired.Visible` is **`IsBlank(DataCardValue8.Selected.Value)`**. It no longer uses the TigerCard `Len(DataCardValue30.Text) <> 16` copy-paste. Submit layout left unchanged.
 - **2026-08-14: Item 8 — Unused OnStart variables.** Removed 23 App Checker unused vars (pricing, leftover hover/radius/input/dropdown-selection aliases, `varCurrentScreen`, `varFormSubmitted`, `varDateFormatFull`, and others never bound on a control). Combo selected-row colors stay hardcoded `RGBA(219,219,219)` / `RGBA(50,50,50)` on the five dropdowns.
 - **2026-08-17: Pickup location.** `varPickupLocation` is **`Room 113 Art Building`** (was Room 145 Atkinson Hall). Run **OnStart** to pick it up.
@@ -94,7 +96,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 - **2026-08-18: Lab Status chip borders.** Classic buttons in **View** drop the chrome, so `BorderColor` / `DisabledBorderColor` never showed. Live chips are **Edit**, `OnSelect = false`, white fill, **2px** `varInputBorderColor` stroke, radius `12`.
 - **2026-08-18: Lab Status + Welcome on one row.** Removed **How it works**. Lab Status is **left**; Welcome is **right**. Submit / My Requests sit under that row.
 - **2026-08-18: Home Studio layout (live).** Welcome **X = 715**, greeting **Size 30** / Height **57** / **Y = 11**. Lab Status **X = 28**. BusyLevel pill **X = 140**, Width **467**. Counts **Size 14**, **Y = 61**, copy is **“N waiting · N printing”** (no “jobs”). Filament **X = 379** / Resin **X = 507**, both **Y = 61**. Wait line centered, **Y = 114**. Action cards **Height = 395**, **Y = 12**; Submit **X = 8**, My Requests **X = 695**. `DropShadow.None` on welcome and action-card row. My Requests card radius omitted again (Studio default).
-- **2026-08-18: Home pickup line.** `varPickupReadyCount` is this student’s **Completed** rows (same identity filter as confirm). `btnNeedsYou` shows confirm first (orange); if none, pickup (green). Visible when either count > 0. My Requests card copy follows the same priority. Recount on Home **OnVisible** and My Requests **Refresh**.
+- **2026-08-18: Home pickup line.** `varPickupReadyCount` is this student’s **Completed** rows (same identity filter as confirm). `btnNeedsYou` shows confirm first (orange); if none, pickup (green). Visible when either count > 0. My Requests card copy follows the same priority. Recount on Home **OnVisible** (after `Refresh(PrintRequests)`) and My Requests **Refresh**.
 - **2026-08-18: Submit required labels.** Added `lblDisciplineRequired` and `lblProjectTypeRequired` (`IsBlank(Selected.Value)`). `lblAttachmentsRequired` X/Y sit on `DataCardKey32` (was 955/85). Method/Printer/Color/TigerCard already used field-specific Visible.
 - **2026-08-18: Required tag clip.** `DataCardKey6` / `DataCardKey7` were `Parent.Width - 60`, so “(Required)” started past the card edge and showed as “(Re”. Live widths: Discipline **95**, Project Type **135** (Method 79, Printer 78, Color 59, TigerCard 171).
 - **2026-08-18: Submit layout restored.** Dropdowns, field Y, Attachments Size 20, and Printer **Height 200** are back to the original form. Discipline / Project Type “(Required)” use `Min(DataCardKey.Width, 108|128) + 8` so the tag stays next to the title if the FieldName width stretches.
@@ -460,6 +462,43 @@ Set(varStatusColors, Table(
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
+
+// Home banner counts. Run OnStart zeros these earlier and does not re-fire scrHome.OnVisible.
+Refresh(PrintRequests);
+With(
+    {
+        wMine: If(
+            !IsBlank(varMeEntraId),
+            Filter(
+                PrintRequests,
+                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            ),
+            Filter(
+                PrintRequests,
+                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            )
+        )
+    },
+    Set(
+        varNeedsConfirmCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Pending",
+                Not(StudentConfirmed)
+            )
+        )
+    );
+    Set(
+        varPickupReadyCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Completed"
+            )
+        )
+    )
+)
 ```
 
 5. Press **Enter** or click away to confirm.
@@ -470,7 +509,7 @@ Set(varStatusColors, Table(
 7. Click **Run OnStart**.
 8. Wait for it to complete (you'll see a brief loading indicator).
 
-> 💡 **Tip:** You can also press **F5** to preview the app, which automatically runs OnStart.
+> 💡 **Tip:** You can also press **F5** to preview the app, which automatically runs OnStart. After **Run OnStart** on Home, the confirm/pickup banner should appear when OnStart finishes (OnStart recounts; it does not re-run Home **OnVisible**).
 
 ### Understanding the Styling Variables
 
@@ -769,48 +808,55 @@ We use **prefixes** to identify control types at a glance:
 
 3. With `scrHome` selected, set these properties:
    - **Fill:** `varColorBg`
-   - **OnVisible:** paste the formula below (loads the LabStatus snapshot, then counts this student’s Pending-confirm jobs and Completed-pickup jobs)
+   - **OnVisible:** paste the formula below (refreshes this student’s PrintRequests plus the LabStatus snapshot, then counts Pending-confirm jobs and Completed-pickup jobs)
 
 **⬇️ FORMULA: Paste into scrHome OnVisible**
 
 ```powerfx
-Refresh(LabStatus);
+Concurrent(
+    Refresh(PrintRequests),
+    Refresh(LabStatus)
+);
 Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
 If(
     !IsBlank(varLabStatus),
     Set(varLabHours, Coalesce(varLabStatus.LabHours, varLabHours));
     Set(varPickupLocation, Coalesce(varLabStatus.PickupLocation, varPickupLocation))
 );
-With(
-    {
-        wMine: If(
-            !IsBlank(varMeEntraId),
-            Filter(
-                PrintRequests,
-                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
-            ),
-            Filter(
-                PrintRequests,
-                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+// Skip if identity is not ready yet (StartScreen OnVisible can race OnStart).
+If(
+    !IsBlank(varMeEmail) || !IsBlank(varMeEntraId),
+    With(
+        {
+            wMine: If(
+                !IsBlank(varMeEntraId),
+                Filter(
+                    PrintRequests,
+                    StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                ),
+                Filter(
+                    PrintRequests,
+                    StudentEmail = varMeEmail || StudentEmail = varMeUPN
+                )
             )
-        )
-    },
-    Set(
-        varNeedsConfirmCount,
-        CountRows(
-            Filter(
-                wMine,
-                Status.Value = "Pending",
-                Not(StudentConfirmed)
+        },
+        Set(
+            varNeedsConfirmCount,
+            CountRows(
+                Filter(
+                    wMine,
+                    Status.Value = "Pending",
+                    Not(StudentConfirmed)
+                )
             )
-        )
-    );
-    Set(
-        varPickupReadyCount,
-        CountRows(
-            Filter(
-                wMine,
-                Status.Value = "Completed"
+        );
+        Set(
+            varPickupReadyCount,
+            CountRows(
+                Filter(
+                    wMine,
+                    Status.Value = "Completed"
+                )
             )
         )
     )
@@ -5118,14 +5164,54 @@ Set(varStatusColors, Table(
     {Status: "Canceled", Color: RGBA(138, 136, 134, 1)},
     {Status: "Archived", Color: RGBA(96, 94, 92, 1)}
 ))
+
+// Home banner counts. Run OnStart zeros these earlier and does not re-fire scrHome.OnVisible.
+Refresh(PrintRequests);
+With(
+    {
+        wMine: If(
+            !IsBlank(varMeEntraId),
+            Filter(
+                PrintRequests,
+                StudentEntraId = Text(varMeEntraId) || StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            ),
+            Filter(
+                PrintRequests,
+                StudentEmail = varMeEmail || StudentEmail = varMeUPN
+            )
+        )
+    },
+    Set(
+        varNeedsConfirmCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Pending",
+                Not(StudentConfirmed)
+            )
+        )
+    );
+    Set(
+        varPickupReadyCount,
+        CountRows(
+            Filter(
+                wMine,
+                Status.Value = "Completed"
+            )
+        )
+    )
+)
 ```
 
 ## Home Lab today (staff business)
 
-**Load snapshot** (`App.OnStart` and `scrHome.OnVisible`; also `btnRefresh`):
+**Load snapshot** (`App.OnStart` loads LabStatus then recounts Home banner jobs from PrintRequests; `scrHome.OnVisible` refreshes both lists; My Requests `btnRefresh` refreshes both):
 
 ```powerfx
-Refresh(LabStatus);
+Concurrent(
+    Refresh(PrintRequests),
+    Refresh(LabStatus)
+);
 Set(varLabStatus, LookUp(LabStatus, Title = "Current"));
 If(
     !IsBlank(varLabStatus),
