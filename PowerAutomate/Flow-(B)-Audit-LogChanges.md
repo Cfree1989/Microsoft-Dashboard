@@ -801,6 +801,45 @@ Some display names differ from internal field names. Always use internal names i
    • The model is messy
    ```
 
+**Action 5b: Optional reject screenshot (from RequestComments)**
+
+> **Why:** Staff may attach a slicer screenshot in the Reject modal. The app creates a `RequestComments` row with `Title` starting `[RejectShot]`, uploads via Flow K, and keeps `ReadyToEmail = false` so Flow D does **not** send a second email. Flow B finds that row and attaches its files to this rejection email only. Do **not** read attachments from `PrintRequests` (those are student STLs).
+
+1. **Initialize variable** → Rename `Initialize RejectEmailAttachments`
+   - Name: `RejectEmailAttachments`
+   - Type: Array
+   - Value: Expression `json('[]')`
+2. **Get items** (SharePoint) → Rename `Get RejectShot Comment`
+   - Site: Digital Fabrication Lab
+   - List: `RequestComments`
+   - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[RejectShot]')`
+   - Order By: `Created desc`
+   - Top Count: `1`
+3. **Condition** → Rename `Has RejectShot Comment`
+   - Left: Expression `length(body('Get_RejectShot_Comment')?['value'])`
+   - is greater than
+   - Right: `0`
+4. **YES branch:**
+   - **Compose** → Rename `Compose RejectShot CommentID` → Inputs: Expression `first(body('Get_RejectShot_Comment')?['value'])?['ID']`
+   - **Get attachments** → Rename `Get RejectShot Attachments`
+     - List: `RequestComments`
+     - Id: Expression `outputs('Compose_RejectShot_CommentID')`
+   - **Condition** → Rename `Has RejectShot Files`
+     - Left: Expression `length(body('Get_RejectShot_Attachments'))`
+     - is greater than `0`
+   - **YES (has files):** **Apply to each** `For Each RejectShot` on `body('Get_RejectShot_Attachments')`
+     - Inside: **Get attachment content** → Rename `Get RejectShot Content`
+       - List: `RequestComments`
+       - Id: Expression `outputs('Compose_RejectShot_CommentID')`
+       - File Identifier: `items('For_Each_RejectShot')?['Id']`
+     - Inside: **Append to array variable** → Rename `Append RejectShot to RejectEmailAttachments`
+       - **Name** (variable): `RejectEmailAttachments`
+       - **Value** (fx):
+       ```
+       addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_RejectShot')?['DisplayName'], items('For_Each_RejectShot')?['Name'])), 'ContentBytes', body('Get_RejectShot_Content'))
+       ```
+5. **NO branches:** leave empty (send text-only).
+
 **Action 6: Send Rejection Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Rejection Email`
@@ -813,6 +852,7 @@ Some display names differ from internal field names. Always use internal names i
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Rejected_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('[', outputs('Get_Current_Rejected_Data')?['body/ReqKey'], '] Your 3D Print request has been rejected')`
+   - **Attachments:** Expression `variables('RejectEmailAttachments')` (empty array when no screenshot)
    - **Body:** Click **Code View button (`</>`)** at top right → Paste the HTML below (expressions will auto-resolve):
 
 ```html
@@ -822,6 +862,7 @@ Some display names differ from internal field names. Always use internal names i
 > 💡 **Email Structure Notes:**
 > - **Rejection reasons** display as a bulleted list (one per line with • prefix) from `RejectionReason` field
 > - **STAFF COMMENTS** section has header on its own line, then `(Staff Name): Comment` on next line — only appears if staff entered comments
+> - **Screenshot attachment** appears when staff picked a file on Reject (`[RejectShot]` comment + Flow K). Text-only reject is unchanged.
 >
 > **Field Usage:**
 > - `RejectionReason` — Multi-select choice field for structured reasons (displayed as bullets)
@@ -856,7 +897,7 @@ Some display names differ from internal field names. Always use internal names i
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Type `Rejection notification sent to student`
 
-**Test Step 7a:** Change status to "Rejected" → Verify rejection email sent and logged in AuditLog
+**Test Step 7a:** Change status to "Rejected" → Verify rejection email sent and logged in AuditLog. With a Reject modal screenshot: email has the PNG; Flow D did not run for that comment (`ReadyToEmail` stayed No).
 
 ---
 
@@ -882,6 +923,49 @@ Some display names differ from internal field names. Always use internal names i
    - **List Name:** `PrintRequests`
    - **Id:** Click **Expression** → Type `triggerOutputs()?['body/ID']`
 
+**Action 2b: Optional approve screenshot (from RequestComments)**
+
+> Same pattern as reject: Staff Approve modal creates `Title` starting `[ApproveShot]`, Flow K uploads, `ReadyToEmail = false`. Attach those files to the estimate email only.
+
+1. **Initialize variable** → Rename `Initialize ApproveEmailAttachments`
+   - Name: `ApproveEmailAttachments`
+   - Type: Array
+   - Value: Expression `json('[]')`
+2. **Get items** → Rename `Get ApproveShot Comment`
+   - List: `RequestComments`
+   - Filter Query: `RequestID eq @{triggerOutputs()?['body/ID']} and startswith(Title,'[ApproveShot]')`
+   - Order By: `Created desc`
+   - Top Count: `1`
+3. **Condition** → Rename `Has ApproveShot Comment`
+   - Left: Expression `length(body('Get_ApproveShot_Comment')?['value'])`
+   - is greater than `0`
+4. **YES branch of `Has ApproveShot Comment`:** these are separate actions, nested inside True (same layout as Action 5b).
+   - **Compose** (Data Operations) → Rename `Compose ApproveShot CommentID`
+     - Inputs: Expression `first(body('Get_ApproveShot_Comment')?['value'])?['ID']`
+   - **Get attachments** (SharePoint) → Rename `Get ApproveShot Attachments`
+     - Site: Digital Fabrication Lab
+     - List: `RequestComments`
+     - Id: Expression `outputs('Compose_ApproveShot_CommentID')`
+   - **Condition** → Rename `Has ApproveShot Files`
+     - Left: Expression `length(body('Get_ApproveShot_Attachments'))`
+     - is greater than
+     - Right: `0`
+   - **YES (has files):** **Apply to each** → Rename `For Each ApproveShot`
+     - Select an output: Expression `body('Get_ApproveShot_Attachments')`
+     - Inside the loop: **Get attachment content** (SharePoint) → Rename `Get ApproveShot Content`
+       - List: `RequestComments`
+       - Id: Expression `outputs('Compose_ApproveShot_CommentID')`
+       - File Identifier: Expression `items('For_Each_ApproveShot')?['Id']`
+     - Inside the loop (after Get content): **Append to array variable** → Rename `Append ApproveShot to ApproveEmailAttachments`
+       - **Name** (variable dropdown): `ApproveEmailAttachments`
+       - **Value** (fx):
+       ```
+       addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_ApproveShot')?['DisplayName'], items('For_Each_ApproveShot')?['Name'])), 'ContentBytes', body('Get_ApproveShot_Content'))
+       ```
+5. **NO branches** (`Has ApproveShot Comment` and `Has ApproveShot Files`): leave empty. The estimate email still sends; Attachments is `[]`.
+
+On **Send Estimate Email**, switch Attachments to array mode (T icon, not **+ Add new item**) and set **fx** `variables('ApproveEmailAttachments')`.
+
 **Action 3: Send Estimate Email**
 1. **+ Add an action** → **Send an email from a shared mailbox (V2)**
 2. **Rename:** Click **three dots (…)** → **Rename** → Type `Send Estimate Email`
@@ -894,11 +978,13 @@ Some display names differ from internal field names. Always use internal names i
    - **Shared Mailbox:** Type `coad-fablab@lsu.edu`
    - **To:** Click **Expression** → Type `outputs('Get_Current_Pending_Data')?['body/StudentEmail']`
    - **Subject:** Click **Expression** → Type `concat('[', outputs('Get_Current_Pending_Data')?['body/ReqKey'], '] Estimate ready for your 3D print')`
+   - **Attachments:** Expression `variables('ApproveEmailAttachments')`
    - **Body:** Click **Code View button (`</>`)** → Paste the content below (expressions will auto-resolve):
 
 > **Note:** The hyperlink uses an HTML `<a href="...">` anchor tag. This is required because the rich text editor's Insert link button doesn't support dynamic content in URLs. When using Code View, the `@{...}` expression inside the href attribute will resolve correctly.
 >
 > **Approval note behavior:** The email template below uses `ApprovalComment` as the student-facing note source. The conditional expression omits the entire **STAFF NOTE** section when the field is blank.
+> **Screenshot:** Optional Approve modal PNG is attached via Action 2b (`[ApproveShot]`). Text-only approve is unchanged.
 
 ```
 <p class="editor-paragraph">Hi @{outputs('Get_Current_Pending_Data')?['body/Student']?['DisplayName']},<br><br>Your 3D print estimate is Approved! Before we start printing, please review and confirm the details below.<br><br>⚠️ WE WILL NOT RUN YOUR PRINT WITHOUT YOUR CONFIRMATION.<br><br>ESTIMATE DETAILS:<br>- Request: @{outputs('Get_Current_Pending_Data')?['body/ReqKey']}<br>- Estimated Cost: $@{if(equals(outputs('Get_Current_Pending_Data')?['body/EstimatedCost'], null), 'TBD', outputs('Get_Current_Pending_Data')?['body/EstimatedCost'])}<br>- Color: @{outputs('Get_Current_Pending_Data')?['body/Color']?['Value']}<br>- Print Time: @{if(equals(outputs('Get_Current_Pending_Data')?['body/EstHours'], null), 'TBD', concat(string(outputs('Get_Current_Pending_Data')?['body/EstHours']), ' hours'))}@{if(empty(outputs('Get_Current_Pending_Data')?['body/ApprovalComment']), '', concat('<br><br>STAFF NOTE:<br>', outputs('Get_Current_Pending_Data')?['body/ApprovalComment']))}<br><br>TO CONFIRM THIS ESTIMATE:</p><br><p class="editor-paragraph"><a href="https://apps.powerapps.com/play/e/default-2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8/a/d47fb3d1-176f-4f5a-adae-93185d79eb17?tenantId=2d4dad3f-50ae-47d9-83a0-9ae2b1f466f8" class="editor-link">Open Student Portal</a><br><br>1. Click the link above to open the Student Portal<br>2. Click "VIEW REQUESTS" to see your print requests<br>3. Find your request showing "Pending" status with the estimate<br>4. Click the green "CONFIRM ESTIMATE" button on your request card<br>5. Review the estimate details and click "I CONFIRM THIS ESTIMATE"<br><br>If you have any questions or concerns about the estimate, please contact us before confirming.<br><br>Thank you,<br>LSU Digital Fabrication Lab<br><br>Lab Hours: Monday-Friday 8:30 AM - 4:30 PM<br>Email: coad-fablab@lsu.edu<br>Location: Room 113 Art Building<br><br>---<br>This is an automated message from the LSU Digital Fabrication Lab.</p>
@@ -950,7 +1036,7 @@ Some display names differ from internal field names. Always use internal names i
    - **FlowRunId:** Click **Expression** → Type `workflow()['run']['name']`
    - **Notes:** Type `Estimate notification sent to student with confirmation link`
 
-**Test Step 7b:** Change status to "Pending" → Verify estimate email sent with cost details, includes the `ApprovalComment` note when provided, and is logged
+**Test Step 7b:** Change status to "Pending" → Verify estimate email sent with cost details, includes the `ApprovalComment` note when provided, and is logged. With an Approve modal screenshot: email has the PNG; Flow D did not run for that comment.
 
 ---
 
@@ -1238,7 +1324,10 @@ Update these sections in the email templates for your lab:
 
 ### Email Notifications
 - [ ] Status change to "Rejected" sends rejection email + audit log
+- [ ] Reject with screenshot: rejection email includes the PNG; `[RejectShot]` comment stays `ReadyToEmail = No` (no Flow D)
+- [ ] Reject without screenshot: text-only rejection email unchanged
 - [ ] Status change to "Pending" sends estimate email + audit log
+- [ ] Approve with screenshot: estimate email includes the PNG; `[ApproveShot]` comment stays `ReadyToEmail = No` (no Flow D)
 - [ ] Status change to "Completed" sends pickup email + audit log
 - [ ] Email audit entries include proper System actor and timestamps
 - [ ] No duplicate emails sent during multi-field updates

@@ -1192,6 +1192,10 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
         btnApprovalCancel
         txtApprovalComments
         lblApprovalCommentsLabel
+        lblApprovalAttachLabel
+        addPicApproval
+        imgApprovalShot
+        recApprovalAttachBg
         lblApprovalCostValue
         lblApprovalCostLabel
         txtEstimatedTime
@@ -1208,6 +1212,10 @@ Here's the **complete Tree view** exactly as it should appear in Power Apps afte
     ▼ conRejectModal                  ← Step 10 (Reject Modal Container)
         btnRejectConfirm
         btnRejectCancel
+        imgRejectShot
+        addPicReject
+        recRejectAttachBg
+        lblRejectAttachLabel
         txtRejectComments
         lblRejectCommentsLabel
         chkNotJoined
@@ -3278,7 +3286,11 @@ scrDashboard
 └── conRejectModal             ← CONTAINER (set Visible here only!)
     ├── btnRejectConfirm       ← Confirm Rejection button
     ├── btnRejectCancel        ← Cancel button
-    ├── txtRejectComments      ← Multi-line text input for staff comments
+    ├── imgRejectShot          ← Thumbnail when screenshot picked
+    ├── addPicReject           ← Add picture (optional slicer screenshot)
+    ├── recRejectAttachBg      ← White field behind Add screenshot
+    ├── lblRejectAttachLabel   ← "Screenshot (optional)"
+    ├── txtRejectComments      ← Multi-line text input for staff comments (Height 90)
     ├── lblRejectCommentsLabel ← "Additional Comments:"
     ├── chkNotJoined           ← Checkbox: Parts not joined
     ├── chkOverhangs           ← Checkbox: Excessive overhangs
@@ -3566,7 +3578,7 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 442` |
 | Width | `560` |
-| Height | `120` |
+| Height | `90` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | Font | `varAppFont` |
@@ -3577,12 +3589,26 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | HoverBorderColor | `varInputBorderColor` |
 | HoverFill | `varInputHoverFill` |
 | DisabledBorderColor | `varInputBorderColor` |
-| HintText | `"Add any additional details for the student..."` |
+| HintText | `"Provide specific feedback for the student..."` |
 
 > 💡 **Data Storage:**
 > - `RejectionComment` field: Staff comment for student-facing rejection emails
 > - `RejectionReason` field: Structured reasons as multi-select choices (displayed as bullets)
 > - `StaffNotes` field: Activity log for internal tracking only (not shown in emails)
+> - Optional screenshot: `addPicReject` → `RequestComments` Title `[RejectShot]…` via Flow K; **`ReadyToEmail` stays false**; Flow B attaches the file to the rejection email
+
+### Screenshot picker (addPicReject)
+
+Copy the Messages compact Add picture pattern (`recViewMsgAttachBg` / `addPicViewMsg` / `imgViewMsgShot`):
+
+| Control | Role |
+|---------|------|
+| `lblRejectAttachLabel` | `"Screenshot (optional)"` at Y ≈ 540 |
+| `recRejectAttachBg` | White field under AddMedia |
+| `addPicReject` | AddMedia — Y 560, Height 48 |
+| `imgRejectShot` | Thumbnail when `!IsBlank(addPicReject.Media)` |
+
+Close / Cancel / success must **`Reset(addPicReject)`**.
 
 ---
 
@@ -3620,6 +3646,7 @@ Set(varShowRejectModal, 0);
 Set(varSelectedItem, Blank());
 Reset(txtRejectComments);
 Reset(ddRejectStaff);
+Reset(addPicReject);
 Reset(chkTooSmall);
 Reset(chkGeometry);
 Reset(chkNotSolid);
@@ -3682,6 +3709,8 @@ If(
 > Staff cannot confirm a blank rejection. Pick at least one canned reason or type a comment (and pick Performing Action As).
 
 46. Set **OnSelect:**
+
+> **Screenshot order (live):** If `addPicReject.Media` is set, create a `RequestComments` row with `Title` starting `[RejectShot]`, call Flow K (`PowerAppV2->InitializevarSuccess`), keep `ReadyToEmail = false`, refresh `colAllRequestComments`, then Patch `PrintRequests` to Rejected. If the comment save or upload fails, **do not** reject. Canonical formula is in `PowerApps/canvas-coauthor/scrDashboard.pa.yaml` → `btnRejectConfirm.OnSelect`.
 
 ```powerfx
 // === SHOW LOADING ===
@@ -3823,11 +3852,15 @@ scrDashboard
 └── conApprovalModal             ← CONTAINER (set Visible here only!)
     ├── btnApprovalConfirm       ← Confirm Approval button
     ├── btnApprovalCancel        ← Cancel button
+    ├── imgApprovalShot          ← Thumbnail when screenshot picked
+    ├── addPicApproval           ← Add picture (optional slicer screenshot)
+    ├── recApprovalAttachBg      ← White field behind Add screenshot
+    ├── lblApprovalAttachLabel   ← "Screenshot (optional)"
     ├── btnApproveAddPlates      ← Open Build Plates modal button (right side)
     ├── lblApprovePlatesInfo     ← "Build Plates: 1 plate on..." (right side)
     ├── ddSlicedOnComputer       ← Slicing computer dropdown (right side)
     ├── lblSlicedOnLabel         ← "Computer:" (right side)
-    ├── txtApprovalComments      ← Multi-line text input
+    ├── txtApprovalComments      ← Multi-line text input (Height 60)
     ├── lblApprovalCommentsLabel ← "Additional Comments:"
     ├── lblApprovalCostValue     ← Auto-calculated cost display
     ├── chkApprovalOwnMaterial   ← "Student provided own material (70% discount)"
@@ -4310,7 +4343,7 @@ If(
 | X | `recApprovalModal.X + 20` |
 | Y | `recApprovalModal.Y + 425` |
 | Width | `560` |
-| Height | `100` |
+| Height | `60` |
 | HintText | `"Add any special instructions for this job..."` |
 | Font | `varAppFont` |
 | BorderColor | `varInputBorderColor` |
@@ -4326,6 +4359,11 @@ If(
 > 💡 **Data Storage:**
 > - `ApprovalComment` field: Clean staff note for student-facing estimate emails
 > - `StaffNotes` field: Internal audit/history entry with estimate details, comment, and timestamp
+> - Optional screenshot: `addPicApproval` → `RequestComments` Title `[ApproveShot]…` via Flow K; **`ReadyToEmail` stays false**; Flow B attaches the file to the estimate email
+
+### Screenshot picker (addPicApproval)
+
+Same compact Add picture pattern as Messages / Reject. Place below the shrunk comments box (label Y ≈ modal+490, picker Y ≈ modal+508). Cancel / Close / success **`Reset(addPicApproval)`**. Confirm uploads before Patching Status to Pending (canonical: `btnApprovalConfirm.OnSelect` in `canvas-coauthor/scrDashboard.pa.yaml`).
 
 ---
 
@@ -8264,7 +8302,7 @@ Set(varLoadingMessage, "")
 | Printing | Ready to Print | Printer jam, wrong filament, need to reassign |
 | Completed | Printing | Print has defect, needs reprint |
 | Completed | Ready to Print | Complete redo needed |
-| Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate **TigerCASH** receipt in `TransactionNumber` rejected the sibling job — **Check** / **Code** references are not uniqueness-gated in Flow H / Flow I). |
+| Paid & Picked Up | Completed | Reopen a request closed in error (e.g., single-save ran against a multi-job POS receipt; duplicate **TigerCASH** receipt in `TransactionNumber` rejected the sibling job in the **same payment month** — **Check** / **Code** references are not uniqueness-gated in Flow H / Flow I). |
 
 > ⚠️ **Paid & Picked Up revert is a recovery path, not a payment undo.** Reverting the request status **does not** delete any `Payments` row — those ledger entries remain the record of money actually collected at the POS. Staff use this revert to redo work on a completed request and then re-run checkout (single or batch) on the cleaned-up request. See **Plate cascade on Paid & Picked Up → Completed** and **Payment-field cascade on Paid & Picked Up → Completed** below for what the revert does touch.
 
@@ -8921,7 +8959,7 @@ Set(varLoadingMessage, "")
 > 🧹 **Cleanup guidance — orphaned or refunded Payment row.** The request row is cleaned automatically on revert, but `Payments` rows are not. You only need to delete a `Payments` row manually in two situations:
 >
 > 1. **TigerCASH refund issued.** If the student was refunded through TigerCASH, the monthly export (`Flow-(G)-Export-MonthlyTransactions`) will still include the charge. Screenshot the row for audit, then delete it in SharePoint before month-end so the export reconciles with the TigerCASH report.
-> 2. **Duplicate TigerCASH receipt retry.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job as **TigerCASH**, hit a duplicate **receipt** error on the sibling (Flow H / Flow I only enforce uniqueness when `PaymentType` is **TigerCASH**), and reverted the first job to rerun as a batch, the original `Payments` row blocks re-use of that **same TigerCASH receipt string**. Delete it in SharePoint (after screenshotting for audit), then re-run the batch with the real combined weight/amount and the original receipt in `TransactionNumber` so the monthly export lands in the right period. **Check** and **Code** (`Grant/Program Code`) values may repeat across rows; you should not need this cleanup for those payment types.
+> 2. **Duplicate TigerCASH receipt retry.** If a staffer ran `Flow-(H)-Payment-SaveSingle` for one job as **TigerCASH**, hit a duplicate **receipt** error on the sibling (Flow H / Flow I only enforce uniqueness when `PaymentType` is **TigerCASH**, and only **within the same `PaymentDate` calendar month**), and reverted the first job to rerun as a batch, the original `Payments` row blocks re-use of that **same TigerCASH receipt string in that month**. Delete it in SharePoint (after screenshotting for audit), then re-run the batch with the real combined weight/amount and the original receipt in `TransactionNumber` so the monthly export lands in the right period. **Check** and **Code** (`Grant/Program Code`) values may repeat across rows; you should not need this cleanup for those payment types.
 >
 > In all other cases (student is re-paying without a refund, redo-the-print scenario, partial-payment flow, etc.), leave the `Payments` rows alone — the cleared request fields are enough, and the ledger entries are finance's source of truth.
 
@@ -9914,7 +9952,7 @@ Set(varLoadingMessage, "")
 
 > 💡 **Batch history guidance:** Canonical batch payment history must come from the one consolidated `Payments` row created for the checkout. Use `BatchRequestIDs`, `BatchReqKeys`, and `BatchAllocationSummary` for the per-request breakdown. Do not treat appended `StaffNotes` text as authoritative history.
 >
-> 💡 **Transaction number guidance:** For batch payments, `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable.
+> 💡 **Transaction number guidance:** For batch payments, `TransactionNumber` should contain the receipt / approval identifier so finance exports remain reconcilable. **TigerCASH** receipts must be unique among other TigerCASH rows in the **same `PaymentDate` calendar month** (consecutive POS numbers may repeat in a later month). **Check** / **Code** references may repeat.
 >
 > 💡 **Single-method batch pricing:** The batch modal and `Flow-(I)-Payment-SaveBatch` only run when every selected row shares the same `Method.Value`, so the live cost preview and saved allocations use one rate family (`varFilamentRate` or `varResinGramRate`) for the whole checkout.
 >
@@ -15989,6 +16027,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 | Control | Type |
 |---------|------|
+| `addPicApproval` | AddMedia |
 | `btnApprovalCancel` | Classic/Button |
 | `btnApprovalClose` | Classic/Button |
 | `btnApprovalConfirm` | Classic/Button |
@@ -15996,6 +16035,8 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `chkApprovalOwnMaterial` | Classic/CheckBox |
 | `ddApprovalStaff` | Classic/ComboBox |
 | `ddSlicedOnComputer` | Classic/ComboBox |
+| `imgApprovalShot` | Image |
+| `lblApprovalAttachLabel` | Label |
 | `lblApprovalCommentsLabel` | Label |
 | `lblApprovalCostLabel` | Label |
 | `lblApprovalCostValue` | Label |
@@ -16006,6 +16047,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `lblApprovalWeightLabel` | Label |
 | `lblApprovePlatesInfo` | Label |
 | `lblSlicedOnLabel` | Label |
+| `recApprovalAttachBg` | Rectangle |
 | `recApprovalModal` | Rectangle |
 | `recApprovalOverlay` | Rectangle |
 | `txtApprovalComments` | Classic/TextInput |
@@ -16242,6 +16284,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 
 | Control | Type |
 |---------|------|
+| `addPicReject` | AddMedia |
 | `btnRejectCancel` | Classic/Button |
 | `btnRejectClose` | Classic/Button |
 | `btnRejectConfirm` | Classic/Button |
@@ -16253,11 +16296,14 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | `chkScale` | Classic/CheckBox |
 | `chkTooSmall` | Classic/CheckBox |
 | `ddRejectStaff` | Classic/ComboBox |
+| `imgRejectShot` | Image |
+| `lblRejectAttachLabel` | Label |
 | `lblRejectCommentsLabel` | Label |
 | `lblRejectReasonsLabel` | Label |
 | `lblRejectStaffLabel` | Label |
 | `lblRejectStudent` | Label |
 | `lblRejectTitle` | Label |
+| `recRejectAttachBg` | Rectangle |
 | `recRejectModal` | Rectangle |
 | `recRejectOverlay` | Rectangle |
 | `txtRejectComments` | Classic/TextInput |
@@ -16504,6 +16550,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-21: Messages subject hidden** | **`txtViewMsgSubject`** and its label are **`Visible = false`**. Send no longer requires a subject. **Title** is `Left(Trim(txtViewMsgBody.Text), 200)` for SharePoint and the email subject suffix. **`ddViewMsgStaff` Width = 283**. |
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
 | **2026-08-24: Build Plates Mark Done then ✕** | **Mark Done** then **✕** could warn “Could not save build plate activity to notes” even though the plate was already `Completed`: Close patched `StaffNotes` against a stale SharePoint version after the first-complete label-lock write. **✕** / **Done** now disable while `varIsLoading`, hide the modal before the notes write, patch with `{ ID: wReqId }`, and `Clear` collections instead of `ClearCollect(..., Blank())`. Label lock is `IfError`. |
+| **2026-08-26: Reject / Approve screenshots** | Optional **Add picture** on Reject (`addPicReject`) and Approve (`addPicApproval`). Confirm creates a `RequestComments` row (`Title` `[RejectShot]` / `[ApproveShot]`), uploads via Flow K, keeps **`ReadyToEmail = false`**, then Patches status. Flow B attaches those files to the rejection / estimate email. Failed upload does not reject or approve. Build Plates repo hardening restored to live in the same push. |
 
 # Next Steps
 

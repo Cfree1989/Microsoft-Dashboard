@@ -1807,6 +1807,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtRejectComments);
                     Reset(ddRejectStaff);
+                    Reset(addPicReject);
                     Reset(chkTooSmall);
                     Reset(chkGeometry);
                     Reset(chkNotSolid);
@@ -2004,7 +2005,7 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =155
+                  Height: =90
                   HintText: ="Provide specific feedback for the student..."
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
@@ -2017,6 +2018,16 @@ Screens:
                   Width: =880
                   X: =239
                   Y: =442
+            - recRejectAttachBg:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Width: =If(IsBlank(addPicReject.Media), recRejectModal.Width - 40, recRejectModal.Width - 120)
+                  X: =If(IsBlank(addPicReject.Media), recRejectModal.X + 20, recRejectModal.X + 100)
+                  Y: =560
             - btnRejectCancel:
                 Control: Classic/Button
                 Properties:
@@ -2035,6 +2046,7 @@ Screens:
                     Set(varSelectedItem, Blank());
                     Reset(txtRejectComments);
                     Reset(ddRejectStaff);
+                    Reset(addPicReject);
                     Reset(chkTooSmall);
                     Reset(chkGeometry);
                     Reset(chkNotSolid);
@@ -2087,11 +2099,14 @@ Screens:
                     =// === SHOW LOADING ===
                     Set(varIsLoading, true);
                     Set(varLoadingMessage, "Rejecting request...");
+                    Set(varAttachOk, true);
+                    Set(varNewComment, Blank());
 
                     // Note: Data is stored in three separate fields for clean separation:
                     // - RejectionReason: Multi-select choice field for structured reasons (displayed as bullets in email)
                     // - RejectionComment: Plain text staff comment for student-facing email display
                     // - StaffNotes: Activity log entry for internal tracking (includes rejection reasons for easy reference in Notes modal)
+                    // Optional screenshot: RequestComments row Title starts with [RejectShot], ReadyToEmail stays false (Flow B attaches; Flow D does not email)
 
                     // Build rejection reasons table (for RejectionReason choice column)
                     // Filter to only include selected checkboxes, then map to Value records
@@ -2110,64 +2125,135 @@ Screens:
                         )
                     );
 
-                    // Update the SharePoint item
+                    // Upload screenshot first (if any) so Flow B can attach it when status becomes Rejected
+                    If(
+                        !IsBlank(addPicReject.Media),
+                        Set(
+                            varNewComment,
+                            IfError(
+                                Patch(
+                                    RequestComments,
+                                    Defaults(RequestComments),
+                                    {
+                                        Title: Left("[RejectShot] " & Trim(txtRejectComments.Text), 200),
+                                        RequestID: varSelectedItem.ID,
+                                        ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
+                                        Message: Trim(txtRejectComments.Text) & If(
+                                            !IsBlank(Trim(txtRejectComments.Text)),
+                                            Char(10) & Char(10),
+                                            ""
+                                        ) & "[1 screenshot attached]",
+                                        Author0: {
+                                            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                                            Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
+                                            Department: "",
+                                            DisplayName: ddRejectStaff.Selected.MemberName,
+                                            Email: ddRejectStaff.Selected.MemberEmail,
+                                            JobTitle: "",
+                                            Picture: ""
+                                        },
+                                        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+                                        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
+                                        SentAt: Now(),
+                                        ReadByStudent: false,
+                                        ReadByStaff: true,
+                                        StudentEmail: varSelectedItem.StudentEmail,
+                                        ReadyToEmail: false
+                                    }
+                                ),
+                                Blank()
+                            )
+                        );
+                        If(
+                            IsBlank(varNewComment.ID),
+                            Set(varAttachOk, false),
+                            Set(
+                                varAttachOk,
+                                With(
+                                    {
+                                        wResult: IfError(
+                                            'PowerAppV2->InitializevarSuccess'.Run(
+                                                {
+                                                    contentBytes: addPicReject.Media,
+                                                    name: Coalesce(addPicReject.FileName, "slicer-screenshot.png")
+                                                },
+                                                Text(varNewComment.ID)
+                                            ),
+                                            {success: "false"}
+                                        )
+                                    },
+                                    Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                                )
+                            );
+                            If(
+                                varAttachOk,
+                                ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince))
+                            )
+                        )
+                    );
+
+                    // Update the SharePoint item only after screenshot upload succeeds (or none was picked)
                     // Using LookUp to get fresh record avoids concurrency conflicts
-                    Set(
-                        varRejectSaved,
-                        IfError(
-                            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
-                                Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
-                                NeedsAttention: false,
-                                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
-                                LastActionBy: {
-                                    Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
-                                    Discipline: "",
-                                    DisplayName: ddRejectStaff.Selected.MemberName,
-                                    Email: ddRejectStaff.Selected.MemberEmail,
-                                    JobTitle: "",
-                                    Picture: ""
-                                },
-                                LastActionAt: Now(),
-                                RejectionReason: varRejectionReasonsTable,
-                                RejectionComment: txtRejectComments.Text,
-                                StaffNotes: Concatenate(
-                                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
-                                    "REJECTED by " &
-                                    With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
-                                    ": [Summary] " & Concat(varRejectionReasonsTable, Value, "; ") & " [Changes] [Reason] [Context] " &
-                                    " [Comment] " &
-                                    Trim(
-                                        Substitute(
+                    If(
+                        varAttachOk,
+                        Set(
+                            varRejectSaved,
+                            IfError(
+                                Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+                                    Status: LookUp(Choices(PrintRequests.Status), Value = "Rejected"),
+                                    NeedsAttention: false,
+                                    LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Rejected"),
+                                    LastActionBy: {
+                                        Claims: "i:0#.f|membership|" & ddRejectStaff.Selected.MemberEmail,
+                                        Discipline: "",
+                                        DisplayName: ddRejectStaff.Selected.MemberName,
+                                        Email: ddRejectStaff.Selected.MemberEmail,
+                                        JobTitle: "",
+                                        Picture: ""
+                                    },
+                                    LastActionAt: Now(),
+                                    RejectionReason: varRejectionReasonsTable,
+                                    RejectionComment: txtRejectComments.Text,
+                                    StaffNotes: Concatenate(
+                                        If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                                        "REJECTED by " &
+                                        With({n: ddRejectStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                                        ": [Summary] " & Concat(varRejectionReasonsTable, Value, "; ") & " [Changes] [Reason] [Context] " &
+                                        " [Comment] " &
+                                        Trim(
                                             Substitute(
                                                 Substitute(
                                                     Substitute(
                                                         Substitute(
                                                             Substitute(
-                                                                Substitute(txtRejectComments.Text, " | ", "; "),
-                                                                " ~~ ",
-                                                                "; "
+                                                                Substitute(
+                                                                    Substitute(txtRejectComments.Text, " | ", "; "),
+                                                                    " ~~ ",
+                                                                    "; "
+                                                                ),
+                                                                "[Summary]",
+                                                                "(Summary)"
                                                             ),
-                                                            "[Summary]",
-                                                            "(Summary)"
+                                                            "[Changes]",
+                                                            "(Changes)"
                                                         ),
-                                                        "[Changes]",
-                                                        "(Changes)"
+                                                        "[Reason]",
+                                                        "(Reason)"
                                                     ),
-                                                    "[Reason]",
-                                                    "(Reason)"
+                                                    "[Context]",
+                                                    "(Context)"
                                                 ),
-                                                "[Context]",
-                                                "(Context)"
-                                            ),
-                                            "[Comment]",
-                                            "(Comment)"
-                                        )
-                                    ) &
-                                    " - " & Text(Now(), "m/d h:mmam/pm")
-                                )
-                            }),
-                            Blank()
-                        )
+                                                "[Comment]",
+                                                "(Comment)"
+                                            )
+                                        ) &
+                                        " - " & Text(Now(), "m/d h:mmam/pm")
+                                    )
+                                }),
+                                Blank()
+                            )
+                        ),
+                        Set(varRejectSaved, Blank())
                     );
 
                     If(
@@ -2191,6 +2277,7 @@ Screens:
                         Set(varSelectedItem, Blank());
                         Reset(txtRejectComments);
                         Reset(ddRejectStaff);
+                        Reset(addPicReject);
                         Reset(chkTooSmall);
                         Reset(chkGeometry);
                         Reset(chkNotSolid);
@@ -2198,7 +2285,11 @@ Screens:
                         Reset(chkMessy);
                         Reset(chkOverhangs);
                         Reset(chkNotJoined),
-                        Notify("Request could not be rejected. No changes were saved.", NotificationType.Error)
+                        If(
+                            !varAttachOk,
+                            Notify("Screenshot did not upload. Request was not rejected.", NotificationType.Error),
+                            Notify("Request could not be rejected. No changes were saved.", NotificationType.Error)
+                        )
                     );
 
                     // === HIDE LOADING ===
@@ -2216,6 +2307,49 @@ Screens:
                   Width: =150
                   X: =969
                   Y: =680
+            - lblRejectAttachLabel:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =18
+                  Size: =12
+                  Text: ="Screenshot (optional)"
+                  Width: =250
+                  X: =recRejectModal.X + 20
+                  Y: =540
+            - addPicReject:
+                Control: AddMedia
+                Properties:
+                  AccessibleLabel: ="Add screenshot"
+                  BorderColor: =Color.Transparent
+                  ChangePictureText: ="Change screenshot"
+                  Color: =varColorText
+                  Fill: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =48
+                  HoverFill: =Color.Transparent
+                  PressedFill: =Color.Transparent
+                  Size: =12
+                  Text: ="Add screenshot"
+                  Width: =If(IsBlank(addPicReject.Media), recRejectModal.Width - 40, recRejectModal.Width - 120)
+                  X: =If(IsBlank(addPicReject.Media), recRejectModal.X + 20, recRejectModal.X + 100)
+                  Y: =560
+            - imgRejectShot:
+                Control: Image
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Image: =addPicReject.Media
+                  Visible: =!IsBlank(addPicReject.Media)
+                  Width: =72
+                  X: =recRejectModal.X + 20
+                  Y: =560
       - conApprovalModal:
           Control: GroupContainer
           Variant: ManualLayout
@@ -2274,7 +2408,8 @@ Screens:
                     Reset(txtApprovalComments);
                     Reset(ddApprovalStaff);
                     Reset(ddSlicedOnComputer);
-                    Reset(chkApprovalOwnMaterial)
+                    Reset(chkApprovalOwnMaterial);
+                    Reset(addPicApproval)
                   PaddingBottom: =0
                   PaddingLeft: =0
                   PaddingRight: =0
@@ -2473,7 +2608,7 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =100
+                  Height: =60
                   HintText: ="Add any special instructions for this job..."
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
@@ -2507,7 +2642,8 @@ Screens:
                     Reset(txtApprovalComments);
                     Reset(ddApprovalStaff);
                     Reset(ddSlicedOnComputer);
-                    Reset(chkApprovalOwnMaterial)
+                    Reset(chkApprovalOwnMaterial);
+                    Reset(addPicApproval)
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorNeutral, -25%)
@@ -2519,7 +2655,7 @@ Screens:
                   Text: ="Cancel"
                   Width: =120
                   X: =recApprovalModal.X + 300
-                  Y: =recApprovalModal.Y + 560
+                  Y: =recApprovalModal.Y + 568
             - btnApprovalConfirm:
                 Control: Classic/Button
                 Properties:
@@ -2547,7 +2683,233 @@ Screens:
                   HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
                   HoverColor: =RGBA(255, 255, 255, 1)
                   HoverFill: =ColorFade(varColorSuccess, -15%)
-                  OnSelect: "=// === SHOW LOADING ===\nSet(varIsLoading, true);\nSet(varLoadingMessage, \"Approving request...\");\n\n// Calculate cost (base then own-material discount; must match lblApprovalCostValue)\nSet(\n    varCalculatedCost,\n    With(\n        {\n            wBase: Max(\n                varMinimumCost,\n                Value(txtEstimatedWeight.Text) * If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    varResinRate,\n                    varFilamentRate\n                )\n            )\n        },\n        If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)\n    )\n);\n\n// Update SharePoint item with error handling\n// ⚠️ IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names\n// Using LookUp to get fresh record avoids concurrency conflicts\nSet(\n    varApprovalSaved,\n    IfError(\n        With(\n            {\n                wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))\n            },\n            Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {\n                Status: LookUp(Choices(PrintRequests.Status), Value = \"Pending\"),\n                NeedsAttention: false,\n                LastAction: LookUp(Choices(PrintRequests.LastAction), Value = \"Status Change\"),\n                LastActionBy: {\n                    Claims: \"i:0#.f|membership|\" & ddApprovalStaff.Selected.MemberEmail,\n                    Discipline: \"\",\n                    DisplayName: ddApprovalStaff.Selected.MemberName,\n                    Email: ddApprovalStaff.Selected.MemberEmail,\n                    JobTitle: \"\",\n                    Picture: \"\"\n                },\n                LastActionAt: Now(),\n                EstimatedWeight: Value(txtEstimatedWeight.Text),\n                EstimatedTime: Value(txtEstimatedTime.Text),\n                EstimatedCost: varCalculatedCost,\n                StudentOwnMaterial: chkApprovalOwnMaterial.Value,\n                SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},\n                ApprovalComment: txtApprovalComments.Text,\n                StaffNotes: Concatenate(\n                    If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), \"\", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & \" | \"),\n                    \"APPROVED by \" &\n                    With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(\" \", n) - 1) & \" \" & Left(Last(Split(n, \" \")).Value, 1) & \".\") &\n                    \": [Summary] \" & txtEstimatedWeight.Text &\n                    If(varSelectedItem.Method.Value = \"Resin\", \"mL\", \"g\") &\n                    \", $\" & Text(varCalculatedCost, \"[$-en-US]#,##0.00\") &\n                    \" [Changes] [Reason] [Context] \" &\n                    \" [Comment] \" &\n                    Trim(\n                        Substitute(\n                            Substitute(\n                                Substitute(\n                                    Substitute(\n                                        Substitute(\n                                            Substitute(\n                                                Substitute(txtApprovalComments.Text, \" | \", \"; \"),\n                                                \" ~~ \",\n                                                \"; \"\n                                            ),\n                                            \"[Summary]\",\n                                            \"(Summary)\"\n                                        ),\n                                        \"[Changes]\",\n                                        \"(Changes)\"\n                                    ),\n                                    \"[Reason]\",\n                                    \"(Reason)\"\n                                ),\n                                \"[Context]\",\n                                \"(Context)\"\n                            ),\n                            \"[Comment]\",\n                            \"(Comment)\"\n                        )\n                    ) &\n                    \" - \" & Text(Now(), \"m/d h:mmam/pm\")\n                )\n            })\n        );\n        true,\n        Set(varIsLoading, false);\n        Notify(\"Failed to save approval. Please try again.\", NotificationType.Error);\n        false\n    )\n);\n\nIf(\n    varApprovalSaved,\n    IfError(\n        'Flow-(C)-Action-LogAction'.Run(\n            Text(varSelectedItem.ID),              // RequestID\n            \"Approved\",                            // Action\n            \"Status\",                              // FieldName\n            \"Pending\",                             // NewValue\n            ddApprovalStaff.Selected.MemberEmail   // ActorEmail\n        ),\n        Notify(\"Approved, but could not log to audit.\", NotificationType.Warning)\n    );\n    Notify(\"Approved! Student will receive estimate email.\", NotificationType.Success);\n    \n    // === CREATE DEFAULT BUILD PLATE ===\n    // If staff didn't configure plates via \"Add Plates/Printers\" button, auto-create one\n    If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,\n        IfError(\n            Patch(BuildPlates, Defaults(BuildPlates), {\n                RequestID: varSelectedItem.ID,\n                ReqKey: varSelectedItem.ReqKey,\n                PlateKey: Text(GUID()),\n                Machine: If(\n                    varSelectedItem.Method.Value = \"Resin\",\n                    Coalesce(\n                        LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),\n                        LookUp(\n                            Choices([@BuildPlates].Machine),\n                            Or(StartsWith(Value, \"Form 3+\"), StartsWith(Value, \"Form 3 (\"))\n                        )\n                    ),\n                    varSelectedItem.Printer\n                ),\n                Status: {Value: \"Queued\"},\n                DisplayLabel: Blank()\n            });\n            true,\n            Notify(\"Request approved, but the default plate could not be created. Add a plate from Build Plates.\", NotificationType.Warning);\n            false\n        )\n    );\n    // Refresh plate collections for job cards\n    ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));\n    \n    // Close modal and reset\n    Set(varShowApprovalModal, 0);\n    Set(varSelectedItem, Blank());\n    Reset(txtEstimatedWeight);\n    Reset(txtEstimatedTime);\n    Reset(txtApprovalComments);\n    Reset(ddApprovalStaff);\n    Reset(ddSlicedOnComputer);\n    Reset(chkApprovalOwnMaterial)\n);\n\n// === HIDE LOADING ===\nSet(varIsLoading, false);\nSet(varLoadingMessage, \"\")"
+                  OnSelect: |-
+                    =// === SHOW LOADING ===
+                    Set(varIsLoading, true);
+                    Set(varLoadingMessage, "Approving request...");
+                    Set(varAttachOk, true);
+                    Set(varNewComment, Blank());
+
+                    // Calculate cost (base then own-material discount; must match lblApprovalCostValue)
+                    Set(
+                        varCalculatedCost,
+                        With(
+                            {
+                                wBase: Max(
+                                    varMinimumCost,
+                                    Value(txtEstimatedWeight.Text) * If(
+                                        varSelectedItem.Method.Value = "Resin",
+                                        varResinRate,
+                                        varFilamentRate
+                                    )
+                                )
+                            },
+                            If(chkApprovalOwnMaterial.Value, wBase * varOwnMaterialDiscount, wBase)
+                        )
+                    );
+
+                    // Optional screenshot: RequestComments Title starts with [ApproveShot], ReadyToEmail stays false
+                    If(
+                        !IsBlank(addPicApproval.Media),
+                        Set(
+                            varNewComment,
+                            IfError(
+                                Patch(
+                                    RequestComments,
+                                    Defaults(RequestComments),
+                                    {
+                                        Title: Left("[ApproveShot] " & Trim(txtApprovalComments.Text), 200),
+                                        RequestID: varSelectedItem.ID,
+                                        ReqKey: Coalesce(varSelectedItem.ReqKey, LookUp(PrintRequests, ID = varSelectedItem.ID).ReqKey),
+                                        Message: Trim(txtApprovalComments.Text) & If(
+                                            !IsBlank(Trim(txtApprovalComments.Text)),
+                                            Char(10) & Char(10),
+                                            ""
+                                        ) & "[1 screenshot attached]",
+                                        Author0: {
+                                            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedUser",
+                                            Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
+                                            Department: "",
+                                            DisplayName: ddApprovalStaff.Selected.MemberName,
+                                            Email: ddApprovalStaff.Selected.MemberEmail,
+                                            JobTitle: "",
+                                            Picture: ""
+                                        },
+                                        AuthorRole: LookUp(Choices(RequestComments.AuthorRole), Value = "Staff"),
+                                        Direction: LookUp(Choices(RequestComments.Direction), Value = "Outbound"),
+                                        SentAt: Now(),
+                                        ReadByStudent: false,
+                                        ReadByStaff: true,
+                                        StudentEmail: varSelectedItem.StudentEmail,
+                                        ReadyToEmail: false
+                                    }
+                                ),
+                                Blank()
+                            )
+                        );
+                        If(
+                            IsBlank(varNewComment.ID),
+                            Set(varAttachOk, false),
+                            Set(
+                                varAttachOk,
+                                With(
+                                    {
+                                        wResult: IfError(
+                                            'PowerAppV2->InitializevarSuccess'.Run(
+                                                {
+                                                    contentBytes: addPicApproval.Media,
+                                                    name: Coalesce(addPicApproval.FileName, "slicer-screenshot.png")
+                                                },
+                                                Text(varNewComment.ID)
+                                            ),
+                                            {success: "false"}
+                                        )
+                                    },
+                                    Lower(Trim(Coalesce(Text(wResult.success), ""))) = "true"
+                                )
+                            );
+                            If(
+                                varAttachOk,
+                                ClearCollect(colAllRequestComments, Filter(RequestComments, Created >= StaffCacheSince))
+                            )
+                        )
+                    );
+
+                    // Update SharePoint item only after screenshot upload succeeds (or none was picked)
+                    // IMPORTANT: Use internal column names (EstimatedWeight, EstimatedTime) not display names
+                    If(
+                        varAttachOk,
+                        Set(
+                            varApprovalSaved,
+                            IfError(
+                                With(
+                                    {
+                                        wBuildPlateCount: Max(1, CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)))
+                                    },
+                                    Patch(PrintRequests, LookUp(PrintRequests, ID = varSelectedItem.ID), {
+                                        Status: LookUp(Choices(PrintRequests.Status), Value = "Pending"),
+                                        NeedsAttention: false,
+                                        LastAction: LookUp(Choices(PrintRequests.LastAction), Value = "Status Change"),
+                                        LastActionBy: {
+                                            Claims: "i:0#.f|membership|" & ddApprovalStaff.Selected.MemberEmail,
+                                            Discipline: "",
+                                            DisplayName: ddApprovalStaff.Selected.MemberName,
+                                            Email: ddApprovalStaff.Selected.MemberEmail,
+                                            JobTitle: "",
+                                            Picture: ""
+                                        },
+                                        LastActionAt: Now(),
+                                        EstimatedWeight: Value(txtEstimatedWeight.Text),
+                                        EstimatedTime: Value(txtEstimatedTime.Text),
+                                        EstimatedCost: varCalculatedCost,
+                                        StudentOwnMaterial: chkApprovalOwnMaterial.Value,
+                                        SlicedOnComputer: {Value: ddSlicedOnComputer.Selected.Name},
+                                        ApprovalComment: txtApprovalComments.Text,
+                                        StaffNotes: Concatenate(
+                                            If(IsBlank(LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes), "", LookUp(PrintRequests, ID = varSelectedItem.ID).StaffNotes & " | "),
+                                            "APPROVED by " &
+                                            With({n: ddApprovalStaff.Selected.MemberName}, Left(n, Find(" ", n) - 1) & " " & Left(Last(Split(n, " ")).Value, 1) & ".") &
+                                            ": [Summary] " & txtEstimatedWeight.Text &
+                                            If(varSelectedItem.Method.Value = "Resin", "mL", "g") &
+                                            ", $" & Text(varCalculatedCost, "[$-en-US]#,##0.00") &
+                                            " [Changes] [Reason] [Context] " &
+                                            " [Comment] " &
+                                            Trim(
+                                                Substitute(
+                                                    Substitute(
+                                                        Substitute(
+                                                            Substitute(
+                                                                Substitute(
+                                                                    Substitute(
+                                                                        Substitute(txtApprovalComments.Text, " | ", "; "),
+                                                                        " ~~ ",
+                                                                        "; "
+                                                                    ),
+                                                                    "[Summary]",
+                                                                    "(Summary)"
+                                                                ),
+                                                                "[Changes]",
+                                                                "(Changes)"
+                                                            ),
+                                                            "[Reason]",
+                                                            "(Reason)"
+                                                        ),
+                                                        "[Context]",
+                                                        "(Context)"
+                                                    ),
+                                                    "[Comment]",
+                                                    "(Comment)"
+                                                )
+                                            ) &
+                                            " - " & Text(Now(), "m/d h:mmam/pm")
+                                        )
+                                    })
+                                );
+                                true,
+                                Notify("Failed to save approval. Please try again.", NotificationType.Error);
+                                false
+                            )
+                        ),
+                        Set(varApprovalSaved, false);
+                        Notify("Screenshot did not upload. Request was not approved.", NotificationType.Error)
+                    );
+
+                    If(
+                        varApprovalSaved,
+                        IfError(
+                            'Flow-(C)-Action-LogAction'.Run(
+                                Text(varSelectedItem.ID),
+                                "Approved",
+                                "Status",
+                                "Pending",
+                                ddApprovalStaff.Selected.MemberEmail
+                            ),
+                            Notify("Approved, but could not log to audit.", NotificationType.Warning)
+                        );
+                        Notify("Approved! Student will receive estimate email.", NotificationType.Success);
+
+                        // === CREATE DEFAULT BUILD PLATE ===
+                        If(CountRows(Filter(colAllBuildPlates, RequestID = varSelectedItem.ID)) = 0,
+                            IfError(
+                                Patch(BuildPlates, Defaults(BuildPlates), {
+                                    RequestID: varSelectedItem.ID,
+                                    ReqKey: varSelectedItem.ReqKey,
+                                    PlateKey: Text(GUID()),
+                                    Machine: If(
+                                        varSelectedItem.Method.Value = "Resin",
+                                        Coalesce(
+                                            LookUp(Choices([@BuildPlates].Machine), Value = varSelectedItem.Printer.Value),
+                                            LookUp(
+                                                Choices([@BuildPlates].Machine),
+                                                Or(StartsWith(Value, "Form 3+"), StartsWith(Value, "Form 3 ("))
+                                            )
+                                        ),
+                                        varSelectedItem.Printer
+                                    ),
+                                    Status: {Value: "Queued"},
+                                    DisplayLabel: Blank()
+                                });
+                                true,
+                                Notify("Request approved, but the default plate could not be created. Add a plate from Build Plates.", NotificationType.Warning);
+                                false
+                            )
+                        );
+                        ClearCollect(colAllBuildPlates, Filter(BuildPlates, Created >= StaffCacheSince));
+
+                        Set(varShowApprovalModal, 0);
+                        Set(varSelectedItem, Blank());
+                        Reset(txtEstimatedWeight);
+                        Reset(txtEstimatedTime);
+                        Reset(txtApprovalComments);
+                        Reset(ddApprovalStaff);
+                        Reset(ddSlicedOnComputer);
+                        Reset(chkApprovalOwnMaterial);
+                        Reset(addPicApproval)
+                    );
+
+                    // === HIDE LOADING ===
+                    Set(varIsLoading, false);
+                    Set(varLoadingMessage, "")
                   PressedBorderColor: =Self.Fill
                   PressedColor: =Self.Fill
                   PressedFill: =ColorFade(varColorSuccess, -25%)
@@ -2559,7 +2921,7 @@ Screens:
                   Text: ="Confirm Approval"
                   Width: =150
                   X: =recApprovalModal.X + 430
-                  Y: =recApprovalModal.Y + 560
+                  Y: =recApprovalModal.Y + 568
             - lblSlicedOnLabel:
                 Control: Label
                 Properties:
@@ -2699,6 +3061,59 @@ Screens:
                   Width: =240
                   X: =723
                   Y: =384
+            - lblApprovalAttachLabel:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorText
+                  Font: =varAppFont
+                  FontWeight: =FontWeight.Semibold
+                  Height: =18
+                  Size: =12
+                  Text: ="Screenshot (optional)"
+                  Width: =250
+                  X: =recApprovalModal.X + 20
+                  Y: =recApprovalModal.Y + 490
+            - recApprovalAttachBg:
+                Control: Rectangle
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Width: =If(IsBlank(addPicApproval.Media), recApprovalModal.Width - 40, recApprovalModal.Width - 120)
+                  X: =If(IsBlank(addPicApproval.Media), recApprovalModal.X + 20, recApprovalModal.X + 100)
+                  Y: =recApprovalModal.Y + 508
+            - addPicApproval:
+                Control: AddMedia
+                Properties:
+                  AccessibleLabel: ="Add screenshot"
+                  BorderColor: =Color.Transparent
+                  ChangePictureText: ="Change screenshot"
+                  Color: =varColorText
+                  Fill: =Color.Transparent
+                  FocusedBorderThickness: =varFocusedBorderThickness
+                  Font: =varAppFont
+                  Height: =48
+                  HoverFill: =Color.Transparent
+                  PressedFill: =Color.Transparent
+                  Size: =12
+                  Text: ="Add screenshot"
+                  Width: =If(IsBlank(addPicApproval.Media), recApprovalModal.Width - 40, recApprovalModal.Width - 120)
+                  X: =If(IsBlank(addPicApproval.Media), recApprovalModal.X + 20, recApprovalModal.X + 100)
+                  Y: =recApprovalModal.Y + 508
+            - imgApprovalShot:
+                Control: Image
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =varInputBorderThickness
+                  Fill: =Color.White
+                  Height: =48
+                  Image: =addPicApproval.Media
+                  Visible: =!IsBlank(addPicApproval.Media)
+                  Width: =72
+                  X: =recApprovalModal.X + 20
+                  Y: =recApprovalModal.Y + 508
       - conArchiveModal:
           Control: GroupContainer
           Variant: ManualLayout

@@ -40,7 +40,7 @@ Add inputs in the exact order listed below.
 | 6 | BatchItemIDs | Text | `triggerBody()['text']` | Comma-separated `PrintRequests.ID` values (e.g., `164, 165`) |
 | 7 | BatchItemReqKeys | Text | `triggerBody()['text_1']` | Comma-separated `ReqKey` values (e.g., `REQ-00164, REQ-00165`) |
 | 8 | TransactionNumber | Text | `triggerBody()['text_2']` | Receipt / check number / grant code |
-| 9 | PaymentType | Text | `triggerBody()['text_3']` | From Power Apps: `TigerCASH`, `Check`, or `Code` (grant / program — may map to **Grant/Program Code** on the list). Uniqueness of `TransactionNumber` is enforced only when this value is **`TigerCASH`**. |
+| 9 | PaymentType | Text | `triggerBody()['text_3']` | From Power Apps: `TigerCASH`, `Check`, or `Code` (grant / program — may map to **Grant/Program Code** on the list). Uniqueness of `TransactionNumber` is enforced only when this value is **`TigerCASH`**, and only against other TigerCASH rows in the **same calendar month** as this checkout’s **`PaymentDate`**. |
 | 10 | PayerName | Text | `triggerBody()['text_4']` | Name of the person who paid |
 | 11 | StaffEmail | Text | `triggerBody()['text_5']` | Email of the staff member processing the payment |
 | 12 | StaffName | Text | `triggerBody()['text_6']` | Full name of the staff member |
@@ -318,7 +318,7 @@ Add these actions immediately below the trigger. For each one:
 
 ## Step 2: Validate Transaction Number
 
-**What this does:** Catches two common input problems before any batch data is loaded: a TigerCard number entered as a transaction number, and (for **TigerCASH** only) a **receipt** value that already exists on another `Payments` row. **Check** and **Code** reference strings are allowed to repeat.
+**What this does:** Catches two common input problems before any batch data is loaded: a TigerCard number entered as a transaction number, and (for **TigerCASH** only) a **receipt** value that already exists on another TigerCASH `Payments` row **in the same calendar month** as this checkout’s **`PaymentDate`**. The POS issues consecutive numbers that restart, so uniqueness is **per month**, not lifetime. **Check** and **Code** reference strings are allowed to repeat.
 
 #### Action 1: Is TigerCard Number
 
@@ -401,10 +401,11 @@ length(trim(coalesce(triggerBody()['text_2'], '')))
     - **Filter Query:** click the **Expression** tab and paste:
 
 ```
-concat('TransactionNumber eq ''', trim(triggerBody()['text_2']), ''' and PaymentType eq ''TigerCASH''')
+concat('TransactionNumber eq ''', trim(triggerBody()['text_2']), ''' and PaymentType eq ''TigerCASH'' and PaymentDate ge datetime''', formatDateTime(startOfMonth(parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')), 'yyyy-MM-ddTHH:mm:ss'), ''' and PaymentDate lt datetime''', formatDateTime(addToTime(startOfMonth(parseDateTime(trim(coalesce(triggerBody()?['text_7'], '')), 'en-US', 'yyyy-MM-dd')), 1, 'Month'), 'yyyy-MM-ddTHH:mm:ss'), '''')
 ```
 
     - **Note:** Include **`and PaymentType eq 'TigerCASH'`** (same as **Flow H**) so only prior **TigerCASH** rows participate in receipt de-duplication.
+    - **Month window:** Bound **`PaymentDate`** with **`ge` first of month** and **`lt` first of next month**, using the trigger’s **`PaymentDate`** (`text_7`, same **`parseDateTime`** as **Create Consolidated Payment**). Match **Flow H** — do **not** filter on **`RecordedAt`**.
 
     - **Top Count:** type directly: `1`
 
@@ -444,14 +445,14 @@ length(body('Check_Existing_Transaction')?['value'])
 39. **Value:** click the **Expression** tab and paste:
 
 ```
-concat('TigerCASH receipt ''', trim(triggerBody()['text_2']), ''' already exists. Enter a unique POS receipt number.')
+concat('TigerCASH receipt ''', trim(triggerBody()['text_2']), ''' already exists for this payment month. Enter a unique POS receipt number.')
 ```
 
 Leave the **False** branch of `Is Duplicate Transaction` empty.
 Leave the **False** branch of `Has Transaction Number` empty. Blank transaction numbers are allowed.
 Leave the **False** branch of `Gate: Check TigerCASH Uniqueness` empty.
 
-> **Important:** The SharePoint duplicate lookup runs **only when `PaymentType` is TigerCASH`** (see **Action 4**). **Check** and **Code** batch checkouts skip it entirely.
+> **Important:** The SharePoint duplicate lookup runs **only when `PaymentType` is `TigerCASH`** (see **Action 4**). **Check** and **Code** batch checkouts skip it entirely. Reusing the same consecutive POS number in a **later month** is allowed.
 
 ---
 
@@ -1651,12 +1652,18 @@ If any of those cards are missing their value mappings, the flow can appear to "
 2. Confirm the flow returns `Success = "false"` with the status error
 3. Confirm no `Payments` row was created and no plates/requests were changed
 
-### Test 3: Duplicate TigerCASH receipt
+### Test 3: Duplicate TigerCASH receipt (same month)
 
 1. Set **`PaymentType`** to **`TigerCASH`**.
-2. Use a **`TransactionNumber`** that already exists in `Payments` from another TigerCASH row.
-3. Confirm the flow returns `Success = "false"` with the duplicate **TigerCASH receipt** message.
+2. Use a **`TransactionNumber`** that already exists on another TigerCASH `Payments` row whose **`PaymentDate`** is in the **same calendar month** as this batch’s **`PaymentDate`**.
+3. Confirm the flow returns `Success = "false"` with the duplicate **TigerCASH receipt** message (**for this payment month**).
 4. Confirm no `Payments` row was created and nothing else was written.
+
+### Test 3a: Same TigerCASH receipt in a different month (should succeed)
+
+1. Set **`PaymentType`** to **`TigerCASH`**.
+2. Reuse a **`TransactionNumber`** from a TigerCASH row in a **different** calendar month.
+3. Confirm the flow **does not** fail the duplicate step — with valid batch data it returns `Success = "true"` and writes the consolidated row.
 
 ### Test 3b: Reused reference for Check or Code batch (should succeed)
 

@@ -2,14 +2,15 @@
 
 **Full Name:** `Flow-(K)-Comment-AddAttachment`  
 **Trigger:** When Power Apps calls a flow (V2)  
-**Purpose:** Attach one screenshot (PNG/JPG) to an existing `RequestComments` row. The Staff Console calls this once per file **before** it sets `ReadyToEmail = Yes`. Flow D then emails the student with those files.
+**Purpose:** Attach one screenshot (PNG/JPG) to an existing `RequestComments` row. The Staff Console calls this from **Messages** (then sets `ReadyToEmail = Yes` so Flow D emails), and from **Reject / Approve** (keeps `ReadyToEmail = No` so Flow B attaches the file to the status email instead).
 
 The canvas app **cannot** `Patch` SharePoint list attachments, and this picker is **not** inside a form. This flow is the save path.
 
 **Related Documents:**
-- `SharePoint/RequestComments-List-Setup.md` — `ReadyToEmail`, list attachments enabled
-- `PowerAutomate/Flow-(D)-Message-Notifications.md` — sends the email after `ReadyToEmail = Yes`
-- `PowerApps/StaffDashboard-App-Spec.md` — `addPicViewMsg` + `btnViewMsgSend.OnSelect`
+- `SharePoint/RequestComments-List-Setup.md` — `ReadyToEmail`, list attachments enabled, `[RejectShot]` / `[ApproveShot]` Title convention
+- `PowerAutomate/Flow-(D)-Message-Notifications.md` — sends the message email after `ReadyToEmail = Yes`
+- `PowerAutomate/Flow-(B)-Audit-LogChanges.md` — rejection / estimate emails attach `[RejectShot]` / `[ApproveShot]` files
+- `PowerApps/StaffDashboard-App-Spec.md` — `addPicViewMsg`, `addPicReject`, `addPicApproval`
 
 ---
 
@@ -133,6 +134,8 @@ The Data pane may show this flow as **`PowerAppV2->InitializevarSuccess`**. Send
 ```
 
 One screenshot per send (`addPicViewMsg`). Canvas cannot call a flow inside `ForAll`.
+
+**Reject / Approve** use the same `.Run` with `addPicReject` / `addPicApproval` and a new `RequestComments` ID whose `Title` starts with `[RejectShot]` or `[ApproveShot]`. Those paths **do not** set `ReadyToEmail = true` — Flow B attaches the file instead of Flow D.
 
 If Studio shows a different `.Run(` shape after you add the flow, match Studio — then update this spec and `btnViewMsgSend`.
 

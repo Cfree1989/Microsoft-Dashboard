@@ -181,6 +181,14 @@ After creating the list, add these 14 columns:
 3. App sets `ReadyToEmail = Yes`
 4. Flow D (created **or** modified) sends the threaded email, including those files, then writes `MessageID` so it will not send again
 
+**Reject / Approve screenshots (same list, different email path):**
+1. Confirm with a picture creates a row whose `Title` starts with `[RejectShot]` or `[ApproveShot]`
+2. Flow K attaches the PNG; **`ReadyToEmail` stays No** (Flow D must not send)
+3. App then Patches `PrintRequests` to Rejected / Pending
+4. Flow B finds the latest matching Title for that `RequestID` and attaches those files to the status email
+
+Do not put slicer screenshots on `PrintRequests` attachments (those are student STL/print files).
+
 ---
 
 ## Step 3: Security Configuration
