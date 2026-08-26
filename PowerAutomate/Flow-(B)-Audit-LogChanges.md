@@ -872,10 +872,11 @@ concat('RequestID eq ', triggerOutputs()?['body/ID'], ' and substringof(''Reject
        - File Identifier: `items('For_Each_RejectShot')?['Id']`
      - Inside: **Append to array variable** → Rename `Append RejectShot to RejectEmailAttachments`
        - **Name** (variable): `RejectEmailAttachments` (created in Step 1a)
-       - **Value** (fx):
+       - **Value:** click **fx** (must be a purple expression pill, not black typed text), paste, **Add**:
        ```
        addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_RejectShot')?['DisplayName'], items('For_Each_RejectShot')?['Name'])), 'ContentBytes', body('Get_RejectShot_Content'))
        ```
+       In code view the value **must** start with `@addProperty(...)`. If it is a quoted string with no `@`, Outlook gets the formula text instead of a file and the email still “succeeds.”
 4. **NO branches:** leave empty (send text-only).
 
 **Action 6: Send Rejection Email**
@@ -1000,10 +1001,11 @@ concat('RequestID eq ', triggerOutputs()?['body/ID'], ' and substringof(''Approv
        - File Identifier: Expression `items('For_Each_ApproveShot')?['Id']`
      - Inside the loop (after Get content): **Append to array variable** → Rename `Append ApproveShot to ApproveEmailAttachments`
        - **Name** (variable dropdown): `ApproveEmailAttachments` (created in Step 1a)
-       - **Value** (fx):
+       - **Value:** click **fx** (purple pill, not typed text), paste, **Add**:
        ```
        addProperty(addProperty(json('{}'), 'Name', coalesce(items('For_Each_ApproveShot')?['DisplayName'], items('For_Each_ApproveShot')?['Name'])), 'ContentBytes', body('Get_ApproveShot_Content'))
        ```
+       Code view must be `@addProperty(...)`. A quoted string with no `@` attaches formula text, not the PNG.
 4. **NO branches** (`Has ApproveShot Comment` and `Has ApproveShot Files`): leave empty. The estimate email still sends; Attachments is `[]`.
 
 On **Send Estimate Email**, switch Attachments to array mode (T icon, not **+ Add new item**) and set **fx** `variables('ApproveEmailAttachments')`.

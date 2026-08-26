@@ -3290,7 +3290,7 @@ scrDashboard
     ├── addPicReject           ← Add picture (optional slicer screenshot)
     ├── recRejectAttachBg      ← White field behind Add screenshot
     ├── lblRejectAttachLabel   ← "Screenshot (optional)"
-    ├── txtRejectComments      ← Multi-line text input for staff comments (Height 90)
+    ├── txtRejectComments      ← Multi-line text input for staff comments (Height 137)
     ├── lblRejectCommentsLabel ← "Additional Comments:"
     ├── chkNotJoined           ← Checkbox: Parts not joined
     ├── chkOverhangs           ← Checkbox: Excessive overhangs
@@ -3357,9 +3357,9 @@ scrDashboard
 
 | Property | Value |
 |----------|-------|
-| X | `(Parent.Width - 720) / 2` |
-| Y | `(Parent.Height - 700) / 2` |
-| Width | `720` |
+| X | `219` |
+| Y | `34` |
+| Width | `928` |
 | Height | `700` |
 | Fill | `varColorBgCard` |
 | RadiusTopLeft | `8` |
@@ -3367,7 +3367,7 @@ scrDashboard
 | RadiusBottomLeft | `8` |
 | RadiusBottomRight | `8` |
 
-> 💡 **Wider Modal:** The 720px width provides more room for the rejection reason checkboxes and staff dropdown.
+> 💡 **Wider Modal:** Live box is **928×700** at **X 219 / Y 34** so comments, screenshot picker, and Confirm/Cancel fit without overlapping.
 
 ---
 
@@ -3577,8 +3577,8 @@ Add 7 checkboxes. For each, click **+ Insert** → **Checkbox**:
 | Default | `""` |
 | X | `recRejectModal.X + 20` |
 | Y | `recRejectModal.Y + 442` |
-| Width | `560` |
-| Height | `90` |
+| Width | `880` |
+| Height | `137` |
 | Mode | `TextMode.MultiLine` |
 | DisplayMode | `DisplayMode.Edit` |
 | Font | `varAppFont` |
@@ -3603,10 +3603,10 @@ Copy the Messages compact Add picture pattern (`recViewMsgAttachBg` / `addPicVie
 
 | Control | Role |
 |---------|------|
-| `lblRejectAttachLabel` | `"Screenshot (optional)"` at Y ≈ 540 |
-| `recRejectAttachBg` | White field under AddMedia |
-| `addPicReject` | AddMedia — Y 560, Height 48 |
-| `imgRejectShot` | Thumbnail when `!IsBlank(addPicReject.Media)` |
+| `lblRejectAttachLabel` | `"Screenshot (optional)"` at **Y 594** |
+| `recRejectAttachBg` | White field under AddMedia — **Y 614** |
+| `addPicReject` | AddMedia — **Y 618**, Height 48 |
+| `imgRejectShot` | Thumbnail at **Y 614** when `!IsBlank(addPicReject.Media)` |
 
 Close / Cancel / success must **`Reset(addPicReject)`**.
 
@@ -3621,8 +3621,8 @@ Close / Cancel / success must **`Reset(addPicReject)`**.
 | Property | Value |
 |----------|-------|
 | Text | `"Cancel"` |
-| X | `recRejectModal.X + 420` |
-| Y | `recRejectModal.Y + 630` |
+| X | `835` |
+| Y | `680` |
 | Width | `120` |
 | Height | `varBtnHeight` |
 | Fill | `varColorNeutral` |
@@ -3667,8 +3667,8 @@ Reset(chkNotJoined)
 | Property | Value |
 |----------|-------|
 | Text | `"✗ Confirm Rejection"` |
-| X | `recRejectModal.X + 550` |
-| Y | `recRejectModal.Y + 630` |
+| X | `969` |
+| Y | `680` |
 | Width | `150` |
 | Height | `varBtnHeight` |
 | Fill | `varColorDanger` |
@@ -3928,9 +3928,9 @@ scrDashboard
 | Property | Value |
 |----------|-------|
 | X | `(Parent.Width - 600) / 2` |
-| Y | `(Parent.Height - 751) / 2` |
+| Y | `64` |
 | Width | `600` |
-| Height | `670` |
+| Height | `644` |
 | Fill | `varColorBgCard` |
 
 > 💡 **Layout:** Side-by-side design with weight/time/cost on left, computer/plates on right.
@@ -16551,6 +16551,7 @@ This section is the **authoritative list of controls** in `scrDashboard` as expo
 | **2026-08-21: Message row height** | **`galViewMessages.TemplateSize`** is **`recVMsgBg.Height`** so long messages (including the screenshot line) do not overlap. |
 | **2026-08-24: Build Plates Mark Done then ✕** | **Mark Done** then **✕** could warn “Could not save build plate activity to notes” even though the plate was already `Completed`: Close patched `StaffNotes` against a stale SharePoint version after the first-complete label-lock write. **✕** / **Done** now disable while `varIsLoading`, hide the modal before the notes write, patch with `{ ID: wReqId }`, and `Clear` collections instead of `ClearCollect(..., Blank())`. Label lock is `IfError`. |
 | **2026-08-26: Reject / Approve screenshots** | Optional **Add picture** on Reject (`addPicReject`) and Approve (`addPicApproval`). Confirm creates a `RequestComments` row (`Title` `[RejectShot]` / `[ApproveShot]`), uploads via Flow K, keeps **`ReadyToEmail = false`**, then Patches status. Flow B attaches those files to the rejection / estimate email. Failed upload does not reject or approve. Build Plates repo hardening restored to live in the same push. |
+| **2026-08-26: Reject / Approve modal positions** | Pulled live Studio layout into `PowerApps/canvas-coauthor/scrDashboard.pa.yaml`. Reject: taller comments (**Height 137**), screenshot picker **Y 594 / 614 / 618**, Cancel/Confirm **Y 680**. Approve card remains **Y 64**, **Height 644**, centered **Width 600**. |
 
 # Next Steps
 

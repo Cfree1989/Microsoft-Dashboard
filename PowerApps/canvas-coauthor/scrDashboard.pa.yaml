@@ -2005,7 +2005,7 @@ Screens:
                   Default: =
                   FocusedBorderThickness: =varFocusedBorderThickness
                   Font: =varAppFont
-                  Height: =90
+                  Height: =137
                   HintText: ="Provide specific feedback for the student..."
                   HoverBorderColor: =varInputBorderColor
                   HoverFill: =varInputHoverFill
@@ -2027,7 +2027,7 @@ Screens:
                   Height: =48
                   Width: =If(IsBlank(addPicReject.Media), recRejectModal.Width - 40, recRejectModal.Width - 120)
                   X: =If(IsBlank(addPicReject.Media), recRejectModal.X + 20, recRejectModal.X + 100)
-                  Y: =560
+                  Y: =614
             - btnRejectCancel:
                 Control: Classic/Button
                 Properties:
@@ -2319,7 +2319,7 @@ Screens:
                   Text: ="Screenshot (optional)"
                   Width: =250
                   X: =recRejectModal.X + 20
-                  Y: =540
+                  Y: =594
             - addPicReject:
                 Control: AddMedia
                 Properties:
@@ -2337,7 +2337,7 @@ Screens:
                   Text: ="Add screenshot"
                   Width: =If(IsBlank(addPicReject.Media), recRejectModal.Width - 40, recRejectModal.Width - 120)
                   X: =If(IsBlank(addPicReject.Media), recRejectModal.X + 20, recRejectModal.X + 100)
-                  Y: =560
+                  Y: =618
             - imgRejectShot:
                 Control: Image
                 Properties:
@@ -2349,7 +2349,7 @@ Screens:
                   Visible: =!IsBlank(addPicReject.Media)
                   Width: =72
                   X: =recRejectModal.X + 20
-                  Y: =560
+                  Y: =614
       - conApprovalModal:
           Control: GroupContainer
           Variant: ManualLayout
