@@ -36,6 +36,8 @@ length(body('Get_Pending')?['value'])
 ```
 
 4. On **Update Current Row**, set **JobsPending** to **Count Pending**. Leave the four method columns mapped as they are now (see the Update item table below).
+
+   The new designer does **not** show a column that was added after this action was created. Under **Advanced parameters**, open **Showing 8 of 11** and turn on **JobsPending** (or click **Show all**). Then put **Count Pending**’s **Outputs** in that box. Do not reuse the Outputs token from Count Waiting or Count Printing.
 5. **Test → Manually.** Then check:
    - `JobsPending` matches the staff **Pending** tab
    - `JobsWaiting` matches **Ready to Print**
@@ -469,7 +471,7 @@ if(equals(first(body('Get_Current_Row')?['value'])?['ManualOverride'], true), fi
 first(body('Get_Current_Row')?['value'])?['ID']
 ```
 
-5. Map the fields (use **Expression** where shown; do not leave required fields empty):
+5. Map the fields (use **Expression** where shown; do not leave required fields empty). If **JobsPending** is missing, open **Advanced parameters** → **Showing 8 of 11** and turn that field on. A column added after this action was built stays hidden until you do that.
 
 | Field on the form | What to enter |
 |-------------------|---------------|
