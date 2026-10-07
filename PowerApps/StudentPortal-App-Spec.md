@@ -10,7 +10,7 @@
 > - **Tablet layout (1024×768)** — optimized for computer submission, works on mobile
 > - **Modular container structure** — clean organization, reusable patterns
 > - **Staff Dashboard styling** — consistent look across student and staff apps
-> - **Lab today card** — Quiet / Typical / Busy / Packed plus waiting and printing counts (from `LabStatus`, not other students’ jobs)
+> - **Lab today card** — Quiet / Typical / Busy / Packed plus Pending, Ready to Print, and Printing counts (from `LabStatus`, not other students’ jobs)
 
 ---
 
@@ -80,6 +80,7 @@ This app follows consistent design patterns matching the Staff Dashboard for a p
 
 ### Live coauthor notes
 
+- **2026-10-07: Lab Status queue tabs and method totals.** Home shows **Pending** (`JobsPending`), **Ready to Print** (`JobsWaiting`), and **Printing** (`JobsPrinting`), then **Filament** (`FilamentWaiting + FilamentPrinting`) and **Resin** (`ResinWaiting + ResinPrinting`). Filament + Resin equals Ready to Print + Printing. A filament job already in Printing counts on Filament. Pending is not inside the method chips. Card height is **184** ( **214** when `StaffMessage` is set). `JobsPending` is a LabStatus number column written by Flow J. BusyLevel still follows Ready to Print only.
 - **2026-08-26: My Requests tab error spam.** Open / Done / All only change `varMyRequestsFilter`, but each card’s Messages button ran `LookUp(RequestComments, …)` on **five** properties. SharePoint 403 (`E_ACCESSDENIED`) then replayed on every tab click. Cache this student’s comments in **`colStudentCommentIndex`** on `scrMyRequests.OnVisible` and Refresh (`IfError` + `StudentEmail = varMeEmail || varMeUPN`). Button styling and the thread modal read that collection only. Grant students **Read** on **RequestComments** so the cache is not empty (red Messages still needs list access once per visit).
 - **2026-08-26: Home confirm banner after OnStart.** `App.OnStart` still initializes counts to 0 (schema). **Run OnStart does not re-fire `scrHome.OnVisible`**, so the banner stayed hidden until the student left Home and came back. OnStart now `Refresh(PrintRequests)` and recounts at the end. Home OnVisible skips the count until `varMeEmail` / `varMeEntraId` exist so a racing first paint cannot overwrite a good count with an empty filter.
 - **2026-08-26: Home confirm banner refresh.** `scrHome.OnVisible` now `Concurrent(Refresh(PrintRequests), Refresh(LabStatus))` before counting Pending-confirm / Completed-pickup jobs. Previously Home only refreshed LabStatus, so the orange “waiting for your OK” line could stay hidden after an estimate email until SharePoint cache caught up or the student used My Requests **Refresh**.
@@ -688,9 +689,11 @@ This app uses a **container-based architecture** for clean organization and easy
     ▼ conLabToday                   ← Lab today / staff business (left, aligns with Submit)
         lblLabStaffMessage          ← optional note (hidden if blank)
         lblLabWait                  ← typical wait · Updated
-        lblResinChip                ← Resin N pill
-        lblFilamentChip             ← Filament N pill
-        lblLabCounts                ← N waiting · N printing
+        lblResinChip                ← Resin total (Ready to Print + Printing)
+        lblFilamentChip             ← Filament total (Ready to Print + Printing)
+        btnLabPrinting              ← Printing N
+        btnLabReady                 ← Ready to Print N
+        btnLabPending               ← Pending N
         btnBusyLevel                ← Quiet / Typical / Busy / Packed
         lblLabTodayTitle            ← "Lab Status:"
     ▼ conWelcome                    ← (right, same row as Lab Status, aligns with My Requests)
@@ -1053,7 +1056,7 @@ If(
 
 > ⚠️ **Build [LabStatus](../SharePoint/LabStatus-List-Setup.md) and [Flow J](../PowerAutomate/Flow-(J)-LabStatus-Refresh.md) first.** If the list is missing, counts show as 0 / —. The card still keeps its height so Welcome stays aligned on the right.
 
-> 💡 **What students see:** Quiet / Typical / Busy / Packed, how many jobs are waiting vs printing, Filament vs Resin waiting, a typical-wait sentence, and an optional staff note. They never see other students’ names, files, or ReqKeys.
+> 💡 **What students see:** Quiet / Typical / Busy / Packed, then **Pending**, **Ready to Print**, and **Printing**, then **Filament** and **Resin** totals (Ready to Print + Printing for that method). A typical-wait sentence and an optional staff note sit under that. They never see other students’ names, files, or ReqKeys.
 
 28. With `scrHome` selected, click **+ Insert** → **Layout** → **Container**.
 29. **Rename it:** `conLabToday`
@@ -1064,7 +1067,7 @@ If(
 | X | `conActionCards.X + conSubmitCard.X` |
 | Y | `varHeaderHeight + 20` |
 | Width | `conSubmitCard.Width` |
-| Height | `If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)` |
+| Height | `If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 184, 214)` |
 | Fill | `varColorBgCard` |
 | BorderColor | `varColorBorderLight` |
 | BorderThickness | `1` |
@@ -1148,44 +1151,62 @@ If(
 
 > 💡 Typical is gold with **black** text (same as the SharePoint column). Quiet / Busy / Packed use white text.
 
-#### Add waiting / printing counts
+#### Add queue tabs (Pending through Printing)
 
-40. Click **+ Insert** → **Text label**.
-41. **Rename it:** `lblLabCounts`
-42. Set these properties:
+40. Click **+ Insert** → **Button** (Classic). Rename it `btnLabPending`.
+41. Repeat for `btnLabReady` and `btnLabPrinting`.
+42. All three: Height `32`, Size `10`, Font `varAppFont`, Color `varColorText`, Fill `RGBA(245, 245, 245, 1)`, **Y `58`**, Align `Align.Center`, radius `varBtnBorderRadius`. Border thickness `1`. Border / Hover / Pressed / Focused border color `varInputBorderColor`. Hover and Pressed fill `Self.Fill`, Hover and Pressed color `Self.Color`, FocusedBorderThickness `0`, TabIndex `-1`. **Do not use DisplayMode.View** (that drops the border). These are readouts, not filters.
 
-| Property | Value |
-|----------|-------|
-| X | `16` |
-| Y | `61` |
-| Width | `lblFilamentChip.X - Self.X - varSpacingSM` |
-| Height | `28` |
-| Font | `varAppFont` |
-| FontWeight | `FontWeight.Semibold` |
-| Size | `14` |
-| Color | `varColorText` |
+| Control | X | Width | Text |
+|---------|---|-------|------|
+| `btnLabPending` | `16` | `(Parent.Width - 32 - varSpacingSM * 2) / 3` | formula below |
+| `btnLabReady` | `btnLabPending.X + btnLabPending.Width + varSpacingSM` | `btnLabPending.Width` | formula below |
+| `btnLabPrinting` | `btnLabReady.X + btnLabReady.Width + varSpacingSM` | `btnLabPending.Width` | formula below |
 
-**⬇️ FORMULA: Paste into lblLabCounts Text**
+> 💡 Counts match the staff dashboard tabs. **Pending** is `JobsPending` (Flow J, `Status eq 'Pending'`). **Ready to Print** is `JobsWaiting`. **Printing** is `JobsPrinting`. Uploaded, Completed, and later statuses stay off this card. Quiet / Typical / Busy / Packed still follows Ready to Print only.
+
+**⬇️ FORMULA: Paste into btnLabPending Text**
 
 ```powerfx
-If(
-    Coalesce(varLabStatus.JobsWaiting, 0) = 1,
-    "1 waiting",
-    Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
-) & "  ·  " & If(
-    Coalesce(varLabStatus.JobsPrinting, 0) = 1,
-    "1 printing",
-    Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
-)
+"Pending " & Coalesce(varLabStatus.JobsPending, 0)
 ```
 
-#### Add Filament / Resin chips
+**⬇️ FORMULA: Paste into btnLabReady Text**
+
+```powerfx
+"Ready to Print " & Coalesce(varLabStatus.JobsWaiting, 0)
+```
+
+**⬇️ FORMULA: Paste into btnLabPrinting Text**
+
+```powerfx
+"Printing " & Coalesce(varLabStatus.JobsPrinting, 0)
+```
+
+#### Add Filament / Resin totals
 
 43. Click **+ Insert** → **Button** (Classic). Rename it `lblFilamentChip`.
-44. Click **+ Insert** → **Button** (Classic). Rename it `lblResinChip`.
-45. Both chips: Height `28`, Size `11`, Fill `Color.White`, radius `12`, Color `varColorText`, **Y `61`**. **Do not use DisplayMode.View**. Use **Edit**, `OnSelect` `false`, `TabIndex` `-1`. Border: thickness `2`, `BorderColor` / Hover / Pressed / Focused all `varInputBorderColor`. Filament: Width `120`, X `lblResinChip.X - Self.Width - varSpacingSM`. Resin: Width `100`, X `Parent.Width - 16 - Self.Width`.
+44. Repeat for `lblResinChip`.
+45. Both: Height `28`, Size `10`, Fill `Color.White`, radius `12`, Color `varColorText`, **Y `98`**, border thickness `1`, border color `varInputBorderColor` (Hover and Pressed too), Hover/Pressed fill `Self.Fill`, FocusedBorderThickness `0`, TabIndex `-1`. Do not use DisplayMode.View.
 
-> 💡 These chips are **waiting** (Ready to Print) only. Printing is the total on the line above. Labels cannot round corners — use Classic buttons in View mode. Do not show `ManualOverride`.
+| Control | X | Width |
+|---------|---|-------|
+| `lblFilamentChip` | `16` | `(Parent.Width - 32 - varSpacingSM) / 2` |
+| `lblResinChip` | `lblFilamentChip.X + lblFilamentChip.Width + varSpacingSM` | `lblFilamentChip.Width` |
+
+> 💡 These are **Ready to Print + Printing** for that method. Filament + Resin equals the Ready to Print tab plus the Printing tab. Pending is not included.
+
+**⬇️ FORMULA: Paste into lblFilamentChip Text**
+
+```powerfx
+"Filament " & (Coalesce(varLabStatus.FilamentWaiting, 0) + Coalesce(varLabStatus.FilamentPrinting, 0))
+```
+
+**⬇️ FORMULA: Paste into lblResinChip Text**
+
+```powerfx
+"Resin " & (Coalesce(varLabStatus.ResinWaiting, 0) + Coalesce(varLabStatus.ResinPrinting, 0))
+```
 
 #### Add typical-wait footer
 
@@ -1196,7 +1217,7 @@ If(
 | Property | Value |
 |----------|-------|
 | X | `16` |
-| Y | `114` |
+| Y | `132` |
 | Width | `Parent.Width - 32` |
 | Height | `29` |
 | Font | `varAppFont` |
@@ -1229,7 +1250,7 @@ Coalesce(
 | Property | Value |
 |----------|-------|
 | X | `16` |
-| Y | `144` |
+| Y | `164` |
 | Width | `Parent.Width - 32` |
 | Height | `24` |
 | Font | `varAppFont` |
@@ -1710,7 +1731,9 @@ Your Tree view should now look like this (first-created at bottom, last-created 
         lblLabWait
         lblResinChip
         lblFilamentChip
-        lblLabCounts
+        btnLabPrinting
+        btnLabReady
+        btnLabPending
         btnBusyLevel
         lblLabTodayTitle
     ▼ conWelcome
@@ -4701,8 +4724,8 @@ Requires [LabStatus](../SharePoint/LabStatus-List-Setup.md) + [Flow J](../PowerA
 3. On Home, verify:
    - [ ] Cream **Lab today** card appears under the welcome line
    - [ ] BusyLevel pill matches the `Current` row (Quiet / Typical / Busy / Packed)
-   - [ ] Waiting and printing counts match LabStatus (not the student’s own job count)
-   - [ ] Filament / Resin waiting numbers match
+   - [ ] Pending, Ready to Print, and Printing tabs match those staff dashboard counts (not the student’s own job count)
+   - [ ] Filament = FilamentWaiting + FilamentPrinting, Resin = ResinWaiting + ResinPrinting, and those two chips add up to Ready to Print + Printing
    - [ ] Typical-wait sentence shows
    - [ ] Hours banner still shows Open/Closed + pickup
 4. In SharePoint, type a **StaffMessage** on `Current` (for example `XL down today`) and refresh Home
@@ -5257,7 +5280,7 @@ If(
 **conLabToday Height:**
 
 ```powerfx
-If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)
+If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 184, 214)
 ```
 
 **Align Lab Status (left) and Welcome (right) to the action cards:**
@@ -5299,21 +5322,15 @@ If(varLabStatus.BusyLevel.Value = "Typical", RGBA(0, 0, 0, 1), Color.White)
 Coalesce(varLabStatus.BusyLevel.Value, "—")
 ```
 
-**Counts and chips:**
+**Queue tabs and method totals:**
 
 ```powerfx
-If(
-    Coalesce(varLabStatus.JobsWaiting, 0) = 1,
-    "1 waiting",
-    Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
-) & "  ·  " & If(
-    Coalesce(varLabStatus.JobsPrinting, 0) = 1,
-    "1 printing",
-    Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
-)
+"Pending " & Coalesce(varLabStatus.JobsPending, 0)
+"Ready to Print " & Coalesce(varLabStatus.JobsWaiting, 0)
+"Printing " & Coalesce(varLabStatus.JobsPrinting, 0)
 
-"Filament " & Coalesce(varLabStatus.FilamentWaiting, 0)
-"Resin " & Coalesce(varLabStatus.ResinWaiting, 0)
+"Filament " & (Coalesce(varLabStatus.FilamentWaiting, 0) + Coalesce(varLabStatus.FilamentPrinting, 0))
+"Resin " & (Coalesce(varLabStatus.ResinWaiting, 0) + Coalesce(varLabStatus.ResinPrinting, 0))
 ```
 
 **Typical wait footer:**

@@ -2494,7 +2494,11 @@ _____________________________________________
 - [ ] Run **Succeeded**
 - [ ] `JobsWaiting` = count of Status **Ready to Print** (staff view)
 - [ ] `JobsPrinting` = count of Status **Printing**
+- [ ] `JobsPending` = count of Status **Pending**
 - [ ] `FilamentWaiting + ResinWaiting` = `JobsWaiting`
+- [ ] `FilamentPrinting + ResinPrinting` = `JobsPrinting`
+- [ ] Student Filament = `FilamentWaiting + FilamentPrinting`
+- [ ] Student Resin = `ResinWaiting + ResinPrinting`
 - [ ] `BusyLevel` follows 0–5 Quiet / 6–15 Typical / 16–30 Busy / 31+ Packed
 
 **Status:** [ ] PASS  [ ] FAIL

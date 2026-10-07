@@ -729,7 +729,7 @@ Screens:
                               HoverFill: =varDropdownHoverFill
                               InputTextPlaceholder: ="Associated with course number"
                               IsSearchable: =false
-                              Items: =Choices([@PrintRequests].Department)
+                              Items: =Choices([@PrintRequests].Discipline)
                               PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
                               PressedColor: =varDropdownPressedColor
                               PressedFill: =varDropdownPressedFill

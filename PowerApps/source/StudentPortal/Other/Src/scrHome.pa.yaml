@@ -490,7 +490,7 @@ Screens:
             BorderColor: =varColorBorderLight
             BorderThickness: =1
             Fill: =varColorBgCard
-            Height: =If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 148, 178)
+            Height: =If(IsBlank(varLabStatus) || IsBlank(varLabStatus.StaffMessage), 184, 214)
             Width: =conSubmitCard.Width
             X: =conActionCards.X + conSubmitCard.X
             Y: =varHeaderHeight + 20
@@ -546,28 +546,142 @@ Screens:
                   Width: =Parent.Width - (lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM) - 16
                   X: =lblLabTodayTitle.X + lblLabTodayTitle.Width + varSpacingSM
                   Y: =12
-            - lblLabCounts:
-                Control: Label
+            - btnLabPending:
+                Control: Classic/Button
                 Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Align: =Align.Center
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =1
                   Color: =varColorText
+                  Fill: =RGBA(245, 245, 245, 1)
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =0
                   Font: =varAppFont
-                  FontWeight: =FontWeight.Semibold
-                  Height: =28
-                  Size: =14
-                  Text: |-
-                    =If(
-                        Coalesce(varLabStatus.JobsWaiting, 0) = 1,
-                        "1 waiting",
-                        Coalesce(varLabStatus.JobsWaiting, 0) & " waiting"
-                    ) & "  ·  " & If(
-                        Coalesce(varLabStatus.JobsPrinting, 0) = 1,
-                        "1 printing",
-                        Coalesce(varLabStatus.JobsPrinting, 0) & " printing"
-                    )
-                  Width: =lblFilamentChip.X - Self.X - varSpacingSM
+                  Height: =32
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedBorderColor: =varInputBorderColor
+                  PressedColor: =Self.Color
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =10
+                  TabIndex: =-1
+                  Text: ="Pending " & Coalesce(varLabStatus.JobsPending, 0)
+                  Width: =(Parent.Width - 32 - varSpacingSM * 2) / 3
                   X: =16
-                  Y: =61
+                  Y: =58
+            - btnLabReady:
+                Control: Classic/Button
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =1
+                  Color: =varColorText
+                  Fill: =RGBA(245, 245, 245, 1)
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =0
+                  Font: =varAppFont
+                  Height: =32
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedBorderColor: =varInputBorderColor
+                  PressedColor: =Self.Color
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =10
+                  TabIndex: =-1
+                  Text: ="Ready to Print " & Coalesce(varLabStatus.JobsWaiting, 0)
+                  Width: =btnLabPending.Width
+                  X: =btnLabPending.X + btnLabPending.Width + varSpacingSM
+                  Y: =58
+            - btnLabPrinting:
+                Control: Classic/Button
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =1
+                  Color: =varColorText
+                  Fill: =RGBA(245, 245, 245, 1)
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =0
+                  Font: =varAppFont
+                  Height: =32
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedBorderColor: =varInputBorderColor
+                  PressedColor: =Self.Color
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =varBtnBorderRadius
+                  RadiusBottomRight: =varBtnBorderRadius
+                  RadiusTopLeft: =varBtnBorderRadius
+                  RadiusTopRight: =varBtnBorderRadius
+                  Size: =10
+                  TabIndex: =-1
+                  Text: ="Printing " & Coalesce(varLabStatus.JobsPrinting, 0)
+                  Width: =btnLabPending.Width
+                  X: =btnLabReady.X + btnLabReady.Width + varSpacingSM
+                  Y: =58
+            - lblFilamentChip:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =1
+                  Color: =varColorText
+                  Fill: =Color.White
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =0
+                  Font: =varAppFont
+                  Height: =28
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedBorderColor: =varInputBorderColor
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Size: =10
+                  TabIndex: =-1
+                  Text: ="Filament " & (Coalesce(varLabStatus.FilamentWaiting, 0) + Coalesce(varLabStatus.FilamentPrinting, 0))
+                  Width: =(Parent.Width - 32 - varSpacingSM) / 2
+                  X: =16
+                  Y: =98
+            - lblResinChip:
+                Control: Classic/Button
+                Properties:
+                  BorderColor: =varInputBorderColor
+                  BorderThickness: =1
+                  Color: =varColorText
+                  Fill: =Color.White
+                  FocusedBorderColor: =varInputBorderColor
+                  FocusedBorderThickness: =0
+                  Font: =varAppFont
+                  Height: =28
+                  HoverBorderColor: =varInputBorderColor
+                  HoverColor: =Self.Color
+                  HoverFill: =Self.Fill
+                  PressedBorderColor: =varInputBorderColor
+                  PressedFill: =Self.Fill
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Size: =10
+                  TabIndex: =-1
+                  Text: ="Resin " & (Coalesce(varLabStatus.ResinWaiting, 0) + Coalesce(varLabStatus.ResinPrinting, 0))
+                  Width: =lblFilamentChip.Width
+                  X: =lblFilamentChip.X + lblFilamentChip.Width + varSpacingSM
+                  Y: =98
             - lblLabWait:
                 Control: Label
                 Properties:
@@ -588,7 +702,7 @@ Screens:
                     )
                   Width: =Parent.Width - 32
                   X: =16
-                  Y: =114
+                  Y: =132
             - lblLabStaffMessage:
                 Control: Label
                 Properties:
@@ -601,58 +715,4 @@ Screens:
                   Visible: =!IsBlank(varLabStatus.StaffMessage)
                   Width: =Parent.Width - 32
                   X: =16
-                  Y: =144
-            - lblFilamentChip:
-                Control: Classic/Button
-                Properties:
-                  BorderColor: =varInputBorderColor
-                  BorderThickness: =varInputBorderThickness * 2
-                  Color: =varColorText
-                  Fill: =Color.White
-                  FocusedBorderColor: =varInputBorderColor
-                  FocusedBorderThickness: =2
-                  Font: =varAppFont
-                  Height: =28
-                  HoverBorderColor: =varInputBorderColor
-                  HoverColor: =varColorText
-                  HoverFill: =Color.White
-                  PressedBorderColor: =varInputBorderColor
-                  PressedColor: =varColorText
-                  PressedFill: =Color.White
-                  RadiusBottomLeft: =12
-                  RadiusBottomRight: =12
-                  RadiusTopLeft: =12
-                  RadiusTopRight: =12
-                  Size: =11
-                  TabIndex: =-1
-                  Text: ="Filament " & Coalesce(varLabStatus.FilamentWaiting, 0)
-                  Width: =120
-                  X: =lblResinChip.X - Self.Width - varSpacingSM
-                  Y: =61
-            - lblResinChip:
-                Control: Classic/Button
-                Properties:
-                  BorderColor: =varInputBorderColor
-                  BorderThickness: =varInputBorderThickness * 2
-                  Color: =varColorText
-                  Fill: =Color.White
-                  FocusedBorderColor: =varInputBorderColor
-                  FocusedBorderThickness: =2
-                  Font: =varAppFont
-                  Height: =28
-                  HoverBorderColor: =varInputBorderColor
-                  HoverColor: =varColorText
-                  HoverFill: =Color.White
-                  PressedBorderColor: =varInputBorderColor
-                  PressedColor: =varColorText
-                  PressedFill: =Color.White
-                  RadiusBottomLeft: =12
-                  RadiusBottomRight: =12
-                  RadiusTopLeft: =12
-                  RadiusTopRight: =12
-                  Size: =11
-                  TabIndex: =-1
-                  Text: ="Resin " & Coalesce(varLabStatus.ResinWaiting, 0)
-                  Width: =100
-                  X: =Parent.Width - 16 - Self.Width
-                  Y: =61
+                  Y: =164

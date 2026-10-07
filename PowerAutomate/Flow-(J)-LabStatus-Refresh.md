@@ -3,7 +3,51 @@
 **Full Name:** PR-LabStatus: Refresh queue snapshot  
 **Type:** Scheduled cloud flow (Recurrence trigger)
 
-**Purpose:** Every 15 minutes, count how many print jobs are waiting and printing (as staff, so every job is visible), then write those totals onto the single `LabStatus` row named `Current`. Students read that row in the Student Portal. They never see other people’s jobs.
+**Purpose:** Every 15 minutes, count how many print jobs are pending, ready to print, and printing (as staff, so every job is visible), then write those totals onto the single `LabStatus` row named `Current`. Students read that row in the Student Portal. They never see other people’s jobs.
+
+---
+
+## Already built? Pending tab and method totals (2026-10-07)
+
+The student Home card shows five numbers. Flow J writes the columns. The app adds the method totals. Do **not** add FilamentTotal or ResinTotal columns.
+
+| On the card | LabStatus fields | Which jobs |
+|-------------|------------------|------------|
+| Pending | `JobsPending` | Status = Pending, every method |
+| Ready to Print | `JobsWaiting` | Status = Ready to Print |
+| Printing | `JobsPrinting` | Status = Printing |
+| Filament | `FilamentWaiting + FilamentPrinting` | Filament jobs in Ready to Print or Printing |
+| Resin | `ResinWaiting + ResinPrinting` | Resin jobs in Ready to Print or Printing |
+
+**Filament + Resin = Ready to Print + Printing.** A filament job that is already Printing still counts on **Filament**. Pending jobs stay on the Pending tab only. They are not inside Filament or Resin.
+
+`FilamentWaiting`, `ResinWaiting`, `FilamentPrinting`, and `ResinPrinting` are already on the list and already filled by this flow. The only new column is **JobsPending**.
+
+1. On **LabStatus**, add a **Number** column named `JobsPending` (0 decimal places, default `0`). If the Current row is blank in that column, set it to `0`.
+2. In this flow, add **Get items** named `Get Pending` on **PrintRequests**.
+   - **Filter Query:** `Status eq 'Pending'`
+   - **Top Count:** `5000`
+   - Pagination **On**, threshold `5000`
+   - Same exponential retry as the other Get items
+3. Add **Compose** named `Count Pending`:
+
+```
+length(body('Get_Pending')?['value'])
+```
+
+4. On **Update Current Row**, set **JobsPending** to **Count Pending**. Leave the four method columns mapped as they are now (see the Update item table below).
+5. **Test → Manually.** Then check:
+   - `JobsPending` matches the staff **Pending** tab
+   - `JobsWaiting` matches **Ready to Print**
+   - `JobsPrinting` matches **Printing**
+   - `FilamentWaiting + ResinWaiting` = `JobsWaiting`
+   - `FilamentPrinting + ResinPrinting` = `JobsPrinting`
+   - Student **Filament** = `FilamentWaiting + FilamentPrinting`
+   - Student **Resin** = `ResinWaiting + ResinPrinting`
+
+Do **not** add Pending into `JobsWaiting`. BusyLevel still uses Ready to Print only.
+
+In the student app, refresh the **LabStatus** data source after the column exists. `btnLabPending` stays red until `JobsPending` is a real column.
 
 ---
 
@@ -11,12 +55,14 @@
 
 This flow does **not** email anyone and does **not** change PrintRequests. It only updates one scoreboard row.
 
-1. **Count** Ready to Print jobs (Filament and Resin separately)
-2. **Count** Printing jobs (Filament and Resin separately)
-3. **Add** those into `JobsWaiting` and `JobsPrinting`
-4. **Pick a word:** Quiet / Typical / Busy / Packed from the waiting count
-5. **Update** the `Current` row on `LabStatus`
-6. **Leave alone:** hours, pickup location, typical-wait sentence, staff message, and (if override is on) the busy word
+1. **Count** Pending jobs (every method)
+2. **Count** Ready to Print jobs (Filament and Resin separately)
+3. **Count** Printing jobs (Filament and Resin separately)
+4. **Add** the Ready to Print counts into `JobsWaiting` and the Printing counts into `JobsPrinting`. The student Filament and Resin numbers are those splits added together (`FilamentWaiting + FilamentPrinting`, same for resin). The flow does not write a separate total column.
+5. **Add** the Pending count into `JobsPending`
+6. **Pick a word:** Quiet / Typical / Busy / Packed from the Ready to Print count
+7. **Update** the `Current` row on `LabStatus`
+8. **Leave alone:** hours, pickup location, typical-wait sentence, staff message, and (if override is on) the busy word
 
 ---
 
@@ -80,10 +126,12 @@ To change the bands later, edit the **Calculate BusyLevel** Compose expression i
 ```
 Flow
 ├── Recurrence (every 15 minutes)
+├── Get Pending
 ├── Get Waiting Filament
 ├── Get Waiting Resin
 ├── Get Printing Filament
 ├── Get Printing Resin
+├── Count Pending
 ├── Count Waiting Filament
 ├── Count Waiting Resin
 ├── Count Printing Filament
@@ -100,8 +148,8 @@ Flow
 ```
 
 **Key rules:**
-1. The four **Get items** actions query `PrintRequests`. They must use **Filter Query** so you do not pull the whole list.
-2. Turn **Pagination** on (threshold 5000) on those four Get items actions. Default Get items only returns 100 rows.
+1. The five **Get items** actions query `PrintRequests`. They must use **Filter Query** so you do not pull the whole list.
+2. Turn **Pagination** on (threshold 5000) on those five Get items actions. Default Get items only returns 100 rows.
 3. **Get Current Row** is on `LabStatus`, not PrintRequests.
 4. **Update Current Row** must copy StaffMessage / hours / pickup / wait text from the existing row so they are not wiped blank.
 
@@ -212,6 +260,23 @@ Status eq 'Printing' and Method eq 'Resin'
 6. **Top Count:** `5000`
 7. Set retry + pagination
 
+---
+
+#### Action 5: Get Pending
+
+1. Click **+ New step**
+2. Search for **Get items** (SharePoint)
+3. Rename to: `Get Pending`
+4. Same site, list `PrintRequests`
+5. **Filter Query:**
+```
+Status eq 'Pending'
+```
+6. **Top Count:** `5000`
+7. Set retry + pagination
+
+> 💡 **Pending is every method.** Do not add `and Method eq 'Filament'`. The student tab matches the staff Pending count.
+
 **Test Step 2:** **Save** → **Test** → **Manually** → **Run flow**. Open the run. Each Get items **OUTPUTS** → **body** → `value` is an array. The number of objects should match what you see in PrintRequests for that Status + Method.
 
 > ⚠️ **If every Get items returns 0 but the staff dashboard is full:** the flow connection is a student account, or the Status/Method labels do not match (`Form 3` vs method `Resin` is fine — Status must be exactly `Ready to Print` and `Printing`).
@@ -257,6 +322,15 @@ length(body('Get_Printing_Filament')?['value'])
 3. Expression:
 ```
 length(body('Get_Printing_Resin')?['value'])
+```
+
+#### Action 5: Count Pending
+
+1. Click **+ New step** → **Compose**
+2. Rename to: `Count Pending`
+3. Expression:
+```
+length(body('Get_Pending')?['value'])
 ```
 
 > 💡 **Underscores:** Power Automate turns action names into `Get_Waiting_Filament`. If you renamed the Get items action differently, pick it from **Dynamic content** instead of pasting.
@@ -403,6 +477,7 @@ first(body('Get_Current_Row')?['value'])?['ID']
 | BusyLevel | Dynamic content: **Compose BusyLevel To Save** (outputs) |
 | JobsWaiting | Dynamic content: **Count Waiting** |
 | JobsPrinting | Dynamic content: **Count Printing** |
+| JobsPending | Dynamic content: **Count Pending** |
 | FilamentWaiting | Dynamic content: **Count Waiting Filament** |
 | ResinWaiting | Dynamic content: **Count Waiting Resin** |
 | FilamentPrinting | Dynamic content: **Count Printing Filament** |
@@ -455,7 +530,7 @@ utcNow()
 2. **Test** → **Manually** → **Run flow**
 3. Open **LabStatus** in SharePoint and refresh
 4. Confirm:
-   - [ ] `JobsWaiting` / `JobsPrinting` match a staff count in PrintRequests
+   - [ ] `JobsWaiting` / `JobsPrinting` / `JobsPending` match the staff Pending, Ready to Print, and Printing tabs
    - [ ] `FilamentWaiting + ResinWaiting` = `JobsWaiting`
    - [ ] `BusyLevel` matches the table in this doc
    - [ ] `LabHours` and `PickupLocation` did **not** get cleared
@@ -494,11 +569,13 @@ To return to automatic words: set **ManualOverride** back to **No**. The next ru
 
 - [ ] Flow named `PR-LabStatus: Refresh queue snapshot` (or `Flow J (PR-LabStatus)`)
 - [ ] Recurrence: every **15** minutes, Central Time
-- [ ] Four PrintRequests Get items with Filter Query + pagination 5000 + retry
+- [ ] Five PrintRequests Get items (Pending, plus Filament and Resin for Ready to Print and for Printing), each with Filter Query + pagination 5000 + retry
 - [ ] LabStatus **Get Current Row** uses `Title eq 'Current'`
 - [ ] Condition terminates if that row is missing
 - [ ] Update item is **inside If no**, not inside an Apply to each
 - [ ] Hours, pickup, wait text, staff message, and override are copied through
+- [ ] `JobsPending` / `JobsWaiting` / `JobsPrinting` match the staff Pending, Ready to Print, and Printing tabs
+- [ ] `FilamentWaiting + FilamentPrinting` is the student Filament number; same pattern for Resin
 - [ ] Manual test run succeeded
 - [ ] SharePoint Current row numbers match the live queue
 - [ ] Flow is **On**
@@ -535,6 +612,9 @@ Do these in order. Use a **staff** account.
 **Pass:**
 - [ ] FilamentWaiting + ResinWaiting = JobsWaiting
 - [ ] FilamentPrinting + ResinPrinting = JobsPrinting
+- [ ] Student Filament chip = FilamentWaiting + FilamentPrinting
+- [ ] Student Resin chip = ResinWaiting + ResinPrinting
+- [ ] Those two chips add up to JobsWaiting + JobsPrinting
 
 **Status:** [ ] PASS  [ ] FAIL
 

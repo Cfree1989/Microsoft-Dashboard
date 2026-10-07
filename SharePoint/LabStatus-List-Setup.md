@@ -149,6 +149,23 @@ Same pill shape as PrintRequests **Status** / **LastAction** (`SharePoint/Format
 
 ---
 
+### Column: JobsPending (Number) — add to the live list
+
+The Home card’s **Pending** tab reads this column. Add it on a list that already exists (2026-10-07). New lists should add it too.
+
+1. Click **+ Add column** → **Number**
+2. **Name:** `JobsPending`
+3. **Description:** `Count of PrintRequests with Status = Pending`
+4. **Number of decimal places:** 0
+5. **Default value:** `0`
+6. **Require that this column contains information:** Yes
+7. Click **Save**
+8. Open the **Current** row and set **JobsPending** to `0` if it is blank
+
+> 💡 **Pending** is the staff Pending tab: estimates waiting for a student to confirm. It is not part of `JobsWaiting` (Ready to Print).
+
+---
+
 ### Column 2: JobsWaiting (Number)
 
 1. Click **+ Add column** → **Number**
@@ -332,6 +349,7 @@ Flow J **updates** this row. It does not create it. If the row is missing, the f
 | BusyLevel | `Quiet` |
 | JobsWaiting | `0` |
 | JobsPrinting | `0` |
+| JobsPending | `0` |
 | FilamentWaiting | `0` |
 | ResinWaiting | `0` |
 | FilamentPrinting | `0` |
@@ -359,6 +377,7 @@ Flow J **updates** this row. It does not create it. If the row is missing, the f
 | BusyLevel | Choice | Yes | Quiet | Yes, unless ManualOverride = Yes |
 | JobsWaiting | Number | Yes | 0 | Yes |
 | JobsPrinting | Number | Yes | 0 | Yes |
+| JobsPending | Number | Yes | 0 | Yes |
 | FilamentWaiting | Number | Yes | 0 | Yes |
 | ResinWaiting | Number | Yes | 0 | Yes |
 | FilamentPrinting | Number | Yes | 0 | Yes |
@@ -381,7 +400,7 @@ Flow J **updates** this row. It does not create it. If the row is missing, the f
 | Current | Typical | 14 | 3 | 11 | 3 | 2 | 1 | Typical wait after you confirm: 1–3 lab days | *(blank)* | No |
 
 **What students should see on Home later:**  
-**Typical** · 14 jobs waiting · 3 printing · Filament 11 · Resin 3 · *Typical wait after you confirm: 1–3 lab days* · updated time
+**Typical** · Pending (that status count) · Ready to Print 14 · Printing 3 · Filament 13 · Resin 4 · *Typical wait after you confirm: 1–3 lab days* · updated time
 
 **What they must not see:** other students’ ReqKeys, names, files, or emails.
 
