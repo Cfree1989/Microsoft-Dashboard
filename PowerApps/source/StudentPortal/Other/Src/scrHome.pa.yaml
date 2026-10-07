@@ -549,7 +549,6 @@ Screens:
             - btnLabPending:
                 Control: Classic/Button
                 Properties:
-                  Align: =Align.Center
                   BorderColor: =varInputBorderColor
                   BorderThickness: =1
                   Color: =varColorText
@@ -562,7 +561,6 @@ Screens:
                   HoverColor: =Self.Color
                   HoverFill: =Self.Fill
                   PressedBorderColor: =varInputBorderColor
-                  PressedColor: =Self.Color
                   PressedFill: =Self.Fill
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
@@ -577,7 +575,6 @@ Screens:
             - btnLabReady:
                 Control: Classic/Button
                 Properties:
-                  Align: =Align.Center
                   BorderColor: =varInputBorderColor
                   BorderThickness: =1
                   Color: =varColorText
@@ -590,7 +587,6 @@ Screens:
                   HoverColor: =Self.Color
                   HoverFill: =Self.Fill
                   PressedBorderColor: =varInputBorderColor
-                  PressedColor: =Self.Color
                   PressedFill: =Self.Fill
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
@@ -605,7 +601,6 @@ Screens:
             - btnLabPrinting:
                 Control: Classic/Button
                 Properties:
-                  Align: =Align.Center
                   BorderColor: =varInputBorderColor
                   BorderThickness: =1
                   Color: =varColorText
@@ -618,7 +613,6 @@ Screens:
                   HoverColor: =Self.Color
                   HoverFill: =Self.Fill
                   PressedBorderColor: =varInputBorderColor
-                  PressedColor: =Self.Color
                   PressedFill: =Self.Fill
                   RadiusBottomLeft: =varBtnBorderRadius
                   RadiusBottomRight: =varBtnBorderRadius
@@ -630,6 +624,40 @@ Screens:
                   Width: =btnLabPending.Width
                   X: =btnLabReady.X + btnLabReady.Width + varSpacingSM
                   Y: =58
+            - lblLabWait:
+                Control: Label
+                Properties:
+                  Align: =Align.Center
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorTextMuted
+                  Font: =varAppFont
+                  Height: =29
+                  Size: =10
+                  Text: |-
+                    =Coalesce(
+                        varLabStatus.TypicalWaitText,
+                        "Typical wait after you confirm: 1–3 lab days"
+                    ) & If(
+                        IsBlank(varLabStatus.UpdatedAt),
+                        "",
+                        "  ·  Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
+                    )
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =132
+            - lblLabStaffMessage:
+                Control: Label
+                Properties:
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =varColorWarning
+                  Font: =varAppFont
+                  Height: =24
+                  Size: =11
+                  Text: =varLabStatus.StaffMessage
+                  Visible: =!IsBlank(varLabStatus.StaffMessage)
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =164
             - lblFilamentChip:
                 Control: Classic/Button
                 Properties:
@@ -682,37 +710,3 @@ Screens:
                   Width: =lblFilamentChip.Width
                   X: =lblFilamentChip.X + lblFilamentChip.Width + varSpacingSM
                   Y: =98
-            - lblLabWait:
-                Control: Label
-                Properties:
-                  Align: =Align.Center
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =varColorTextMuted
-                  Font: =varAppFont
-                  Height: =29
-                  Size: =10
-                  Text: |-
-                    =Coalesce(
-                        varLabStatus.TypicalWaitText,
-                        "Typical wait after you confirm: 1–3 lab days"
-                    ) & If(
-                        IsBlank(varLabStatus.UpdatedAt),
-                        "",
-                        "  ·  Updated " & Text(varLabStatus.UpdatedAt, DateTimeFormat.ShortTime)
-                    )
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =132
-            - lblLabStaffMessage:
-                Control: Label
-                Properties:
-                  BorderColor: =RGBA(0, 18, 107, 1)
-                  Color: =varColorWarning
-                  Font: =varAppFont
-                  Height: =24
-                  Size: =11
-                  Text: =varLabStatus.StaffMessage
-                  Visible: =!IsBlank(varLabStatus.StaffMessage)
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =164
